@@ -1,0 +1,129 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@variant dark (&:where(.dark, .dark *));
+
+/* Ensure Tailwind scans our files despite potential path resolution issues with accented characters */
+@source "../src/**/*.{ts,tsx,html}";
+
+/* =============================================
+   dTS Instruments — Corporate Design Tokens
+   Tailwind CSS v4 (CSS-first configuration)
+   ============================================= */
+@theme {
+  /* Corporate Colors */
+  --color-dts-primary: #003E51;
+  --color-dts-primary-dark: #002A38;
+  --color-dts-primary-light: #005A75;
+  --color-dts-secondary: #00B0B9;
+  --color-dts-secondary-dark: #008E95;
+  --color-dts-secondary-light: #33C4CC;
+
+  /* Surface Colors (Dark Mode base) */
+  --color-surface-dark: #001C25; /* Very deep corporate dark */
+  --color-surface-card-dark: #002A38; /* Matches dts-primary-dark */
+  --color-surface-hover-dark: #003E51; /* Matches dts-primary */
+
+  /* Surface Colors (Light Mode) */
+  --color-surface-light: #F0F4F8;
+  --color-surface-card-light: #FFFFFF;
+  --color-surface-hover-light: #E8EDF2;
+
+  /* Status Colors */
+  --color-status-success: #10B981;
+  --color-status-warning: #F59E0B;
+  --color-status-danger: #EF4444;
+  --color-status-info: #3B82F6;
+
+  /* Text Colors */
+  --color-text-primary-dark: #F0F4F8;
+  --color-text-secondary-dark: #94A3B8;
+  --color-text-primary-light: #0F172A;
+  --color-text-secondary-light: #64748B;
+
+  /* Typography */
+  --font-sans: 'Carlito', 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Spacing */
+  --spacing-sidebar: 240px;
+  --spacing-sidebar-collapsed: 72px;
+  --spacing-topbar: 64px;
+
+  /* Border Radius */
+  --radius-card: 12px;
+  --radius-button: 8px;
+  --radius-badge: 6px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* =============================================
+   Base Styles
+   ============================================= */
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-surface-light);
+  color: var(--color-text-primary-light);
+  font-family: var(--font-sans);
+  transition: background-color 0.3s, color 0.3s;
+}
+/* Dark mode overrides applied to body when .dark is on html/root */
+.dark body {
+  background-color: var(--color-surface-dark);
+  color: var(--color-text-primary-dark);
+}
+
+/* =============================================
+   Scrollbar Styling (Dark theme)
+   ============================================= */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-dts-primary-light);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-dts-secondary);
+}
+
+/* =============================================
+   Global Table Row Hover Effect
+   ============================================= */
+tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.dark tbody tr:hover {
+  background-color: var(--color-surface-hover-dark) !important;
+}
+
+/* =============================================
+   Global Tooltip Styling
+   ============================================= */
+.recharts-default-tooltip,
+.recharts-tooltip-item,
+.recharts-tooltip-label {
+  font-size: 11px !important;
+  font-weight: 300 !important;
+  font-family: var(--font-sans) !important;
+}
+
+/* For potential custom Tooltip components using title/aria-label */
+[title], [aria-label] {
+  font-weight: 400; /* Standard browser tooltips can't be styled, but this is a reminder */
+}
