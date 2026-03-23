@@ -26,7 +26,8 @@ COPY backend/package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY backend/ .
 # Prisma generation requires DATABASE_URL to resolve config
-ARG DATABASE_URL
+# We provide a dummy default value to avoid build failures; real value is injected at runtime
+ARG DATABASE_URL="postgresql://postgres:postgres@localhost:3000/db?schema=public"
 ENV DATABASE_URL=$DATABASE_URL
 RUN npx prisma generate
 RUN npm run build
