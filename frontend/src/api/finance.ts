@@ -51,10 +51,10 @@ export const getBudgetsData = async () => {
  */
 export const mapBudgetToAccountId = (accountCode: number): string => {
   const codeStr = accountCode.toString();
-  if (codeStr.startsWith('70') || codeStr.startsWith('74')) return 'A.1'; // Ventas / Ingresos
+  if (codeStr.startsWith('70') || codeStr.startsWith('74') || codeStr.startsWith('75')) return 'A.1'; // Ventas / Ingresos
   if (codeStr.startsWith('60')) return 'A.4'; // Aprovisionamientos
   if (codeStr.startsWith('64')) return 'A.6'; // Gastos de Personal
-  if (codeStr.startsWith('62')) return 'A.7'; // Otros Gastos de Explotación
+  if (codeStr.startsWith('62') || codeStr.startsWith('63') || codeStr.startsWith('67')) return 'A.7'; // Otros Gastos de Explotación / Tributos
   if (codeStr.startsWith('68')) return 'A.8'; // Amortización
   if (codeStr.startsWith('76')) return 'A.12'; // Ingresos Financieros
   if (codeStr.startsWith('66')) return 'A.13'; // Gastos Financieros

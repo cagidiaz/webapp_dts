@@ -76,10 +76,15 @@ export const SimulationsPage: React.FC = () => {
     const salesMod = 1 + (salesGrowth / 100);
     const costMod = 1 + (costVariation / 100);
 
-    const annualBaseSales = dataSource['A.1'] || 0;
+    // If budget mode and sales are missing, fallback to historical sales for better simulation
+    const annualBaseSales = (baselineMode === 'budget' && !dataSource['A.1'])
+      ? (baseData?.['A.1'] || 0)
+      : (dataSource['A.1'] || 0);
+
     const annualBaseCosts = Math.abs(dataSource['A.4'] || 0) + Math.abs(dataSource['A.7'] || 0); // Compras y otros gastos
     const annualBasePersonnel = Math.abs(dataSource['A.6'] || 0);
     
+    // Calculate benchmark EBITDA
     const baseEbitda = baselineMode === 'historical' 
       ? (baseData?.['A.1.TOT'] || 0) 
       : (annualBaseSales - annualBaseCosts - annualBasePersonnel);
