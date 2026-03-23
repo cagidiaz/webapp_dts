@@ -231,7 +231,19 @@ export const SimulationsPage: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} />
                     <YAxis axisLine={false} tickLine={false} />
-                    <RechartsTooltip cursor={false} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                    <RechartsTooltip 
+                      cursor={false} 
+                      contentStyle={{ 
+                        borderRadius: '12px', 
+                        border: 'none', 
+                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                        backgroundColor: '#1e293b',
+                        color: '#f8fafc'
+                      }}
+                      itemStyle={{ fontSize: '12px', fontWeight: 500 }}
+                      labelStyle={{ marginBottom: '8px', fontWeight: 600, color: '#f8fafc' }}
+                      formatter={(value: any) => formatCurrency(value as number)}
+                    />
                     <Legend />
                     <Bar dataKey={totals?.baseName || 'Base'} fill="#64748b" radius={[4, 4, 0, 0]} barSize={50} />
                     <Bar dataKey="Simulado" fill="#00B0B9" radius={[4, 4, 0, 0]} barSize={50} />
