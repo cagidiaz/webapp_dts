@@ -25,6 +25,9 @@ WORKDIR /build/backend
 COPY backend/package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY backend/ .
+# Prisma generation requires DATABASE_URL to resolve config
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
 RUN npx prisma generate
 RUN npm run build
 
