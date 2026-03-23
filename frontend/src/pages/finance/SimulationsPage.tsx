@@ -71,23 +71,31 @@ export const SimulationsPage: React.FC = () => {
   // Totals Calculation (Annual)
   const totals = useMemo(() => {
     const dataSource: any = baselineMode === 'historical' ? baseData : budgetData;
+    
+    // Debug log to confirm if data arrives at the simulation engine
+    if (dataSource) {
+      console.log(`Simulating with ${baselineMode}:`, { 
+        A1: dataSource['A.1'], 
+        A4: dataSource['A.4'], 
+        A6: dataSource['A.6'], 
+        A7: dataSource['A.7'] 
+      });
+    }
+
     if (!dataSource) return null;
 
     const salesMod = 1 + (salesGrowth / 100);
     const costMod = 1 + (costVariation / 100);
 
-    // If budget mode and sales are missing, fallback to historical sales for better simulation
     const annualBaseSales = (baselineMode === 'budget' && !dataSource['A.1'])
       ? (baseData?.['A.1'] || 0)
       : (dataSource['A.1'] || 0);
 
-    const annualBaseCosts = Math.abs(dataSource['A.4'] || 0) + Math.abs(dataSource['A.7'] || 0); // Compras y otros gastos
+    const annualBaseCosts = Math.abs(dataSource['A.4'] || 0) + Math.abs(dataSource['A.7'] || 0);
     const annualBasePersonnel = Math.abs(dataSource['A.6'] || 0);
     
-    // Calculate benchmark EBITDA
-    const baseEbitda = baselineMode === 'historical' 
-      ? (baseData?.['A.1.TOT'] || 0) 
-      : (annualBaseSales - annualBaseCosts - annualBasePersonnel);
+    // Use manual calculation for historical EBITDA too, to match the budget methodology
+    const baseEbitda = annualBaseSales - annualBaseCosts - annualBasePersonnel;
 
     const projectedSales = annualBaseSales * salesMod;
     const projectedCosts = annualBaseCosts * costMod;
