@@ -83,9 +83,5 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  },
-  "overrides": {
-    "inflight": "1.0.6",
-    "glob": "^9.0.0"
   }
 }
