@@ -13,9 +13,9 @@ async function bootstrap() {
   // Global prefix for all routes
   app.setGlobalPrefix('api');
 
-  // CORS — allow frontend dev server
+  // CORS — Allow current origin (unified domain) and dev server
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: true, // Dynamically allow the origin of the request
     credentials: true,
   });
 
