@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { 
   getBalanceData, 
   getIncomeStatementData, 
   getBudgetsData,
   groupDataByYear,
-  groupBudgetsByYear,
-  saveForecastScenario 
+  groupBudgetsByYear
 } from '../../api/finance';
 import { formatCurrency, formatPercent } from '../../api/formatters';
 import { 
@@ -22,9 +21,7 @@ import {
 import { 
   Calculator, 
   Info, 
-  Layers,
-  Save,
-  CheckCircle2
+  Layers
 } from 'lucide-react';
 
 interface FinancialData {
@@ -34,7 +31,6 @@ interface FinancialData {
 
 export const SimulationsPage: React.FC = () => {
   const [isMounted, setIsMounted] = useState(false);
-  const queryClient = useQueryClient();
   const { data: balanceRows, isLoading: isBLoading } = useQuery({ queryKey: ['balanceData'], queryFn: getBalanceData });
   const { data: incomeRows, isLoading: isILoading } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
   const { data: budgetRows, isLoading: isBudLoading } = useQuery({ queryKey: ['budgetData'], queryFn: getBudgetsData });
@@ -46,10 +42,7 @@ export const SimulationsPage: React.FC = () => {
   // Simulation State
   const [salesGrowth, setSalesGrowth] = useState(10); // +10%
   const [costVariation, setCostVariation] = useState(-5);  // Default: reduction of 5%
-  const [scenarioName, setScenarioName] = useState('Escenario Proyectado');
-  const [isSaving, setIsSaving] = useState(false);
   const [baselineMode, setBaselineMode] = useState<'historical' | 'budget'>('budget');
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Base year for simulation (projection based on previous year)
   const currentYear = new Date().getFullYear();
@@ -128,60 +121,15 @@ export const SimulationsPage: React.FC = () => {
   const isLoading = (isBLoading || isILoading || isBudLoading || !isMounted);
   if (isLoading) return <div className="p-8">Cargando simulador...</div>;
 
-  const handleSave = async () => {
-    if (!totals) return;
-    setIsSaving(true);
-    try {
-      // Save as annual projection (Jan 1st of next year)
-      const date = new Date(selectedYear + 1, 0, 1).toISOString();
-      const lines = [
-        { account_id: 'A.1', period_date: date, budget_amount: totals.sales },
-        { account_id: 'A.1.TOT', period_date: date, budget_amount: totals.ebitda }
-      ];
-
-      await saveForecastScenario(scenarioName, `Simulación Anual: ${salesGrowth}% Ventas / ${costVariation}% Costes`, lines);
-      setSaveStatus('success');
-      queryClient.invalidateQueries({ queryKey: ['scenarios'] });
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch (error) {
-      setSaveStatus('error');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
     <div className="space-y-6 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Calculator className="text-dts-secondary" size={24} />
-            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Motor de Simulación</h1>
-          </div>
-          <p className="text-sm text-gray-500 font-medium">Modelado dinámico de escenarios financieros para {currentYear}</p>
+      <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <Calculator className="text-dts-secondary" size={24} />
+          <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Motor de Simulación</h1>
         </div>
-        
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <input 
-            type="text" 
-            value={scenarioName}
-            onChange={(e) => setScenarioName(e.target.value)}
-            className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-dts-secondary outline-none transition-all"
-            placeholder="Nombre del escenario..."
-          />
-          <button 
-            onClick={handleSave}
-            disabled={isSaving || !totals}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all shadow-lg active:scale-95 disabled:opacity-50
-              ${saveStatus === 'success' ? 'bg-green-500 text-white' : 'bg-dts-secondary text-white hover:brightness-110'}
-            `}
-          >
-            {isSaving ? <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 
-             saveStatus === 'success' ? <CheckCircle2 size={18} /> : <Save size={18} />}
-            {saveStatus === 'success' ? 'Guardado' : 'Guardar'}
-          </button>
-        </div>
+        <p className="text-sm text-gray-500 font-medium">Modelado dinámico de escenarios financieros para {currentYear}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
