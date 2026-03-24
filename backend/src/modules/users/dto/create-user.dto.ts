@@ -20,4 +20,8 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   lastName: string;
+
+  @ApiProperty({ example: 'uuid-of-the-role', required: false })
+  @IsString()
+  roleId?: string;
 }

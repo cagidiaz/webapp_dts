@@ -8,6 +8,7 @@ export const TopBar: React.FC = () => {
   const location = useLocation();
   const isDark = theme === 'dark';
   const isFinanceModule = location.pathname.startsWith('/finance');
+  const isUsersModule = location.pathname.startsWith('/users');
 
   return (
     <header 
@@ -17,9 +18,9 @@ export const TopBar: React.FC = () => {
       `}
       style={{ left: isSidebarCollapsed ? 'var(--spacing-sidebar-collapsed)' : 'var(--spacing-sidebar)' }}
     >
-      {/* Search Bar - Hidden in Finance Module */}
+      {/* Search Bar - Hidden in Finance/Users Module */}
       <div className="flex-1 max-w-2xl">
-        {!isFinanceModule && (
+        {!isFinanceModule && !isUsersModule && (
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input 

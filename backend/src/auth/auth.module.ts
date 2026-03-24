@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
+import { RolesGuard } from './roles.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
@@ -16,7 +17,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
     }),
   ],
-  providers: [JwtStrategy],
-  exports: [PassportModule],
+  providers: [JwtStrategy, RolesGuard],
+  exports: [PassportModule, RolesGuard],
 })
 export class AuthModule {}
+

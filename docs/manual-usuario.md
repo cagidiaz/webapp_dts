@@ -76,6 +76,25 @@ A diferencia de la P&G, el balance no se extrapola linealmente por tiempo:
 1. **Dato de Snapshot**: Se toma el importe del último mes disponible (ej. Febrero) como la situación real a esa fecha. Al ser una "foto" del patrimonio en un momento dado, no se multiplica por el factor de tiempo.
 2. **Totales**: Los totales se recalculan automáticamente sumando todas sus subpartidas para asegurar la cuadratura contable.
 
+## 6. Gestión de Usuarios (Admin)
+
+Este módulo centraliza el control de acceso a la plataforma y solo es visible para usuarios con rol **ADMIN**.
+
+### 6.1 Panel de Control y Altas
+Ubicado en la ruta lateral **Usuarios/Administración**.
+- **Formulario de Registro**: Permite la creación inmediata de nuevos perfiles.
+  - **Validación Integrada**: El sistema comprueba en tiempo real que el email sea válido y que la contraseña tenga un mínimo de **6 caracteres**.
+  - **Mensajes de Error**: Si algún campo es incorrecto, aparecerá un aviso en rojo indicando el motivo.
+- **Gestión de Perfiles**:
+  - **Edición**: Permite actualizar nombres, emails o asignar nuevos roles a usuarios existentes.
+  - **Estado (Activo/Inactivo)**: Un administrador puede desactivar el acceso de cualquier usuario con un solo clic sin necesidad de borrar su historial.
+- **Búsqueda Avanzada**: Incluye un buscador dinámico por nombre o email y un selector para filtrar el listado por roles específicos.
+
+### 6.2 Matriz de Roles
+La plataforma dTS utiliza un sistema de control de acceso basado en roles (RBAC):
+- **ADMIN**: Control total del sistema, incluyendo la gestión de otros usuarios.
+- **DIRECCIÓN / OTROS**: Acceso a la visualización de datos de negocio (Finanzas/Ventas) según los permisos configurados en la base de datos de seguridad.
+
 ---
 
-*Manual de dTS Instruments v2.1 — Actualizado a marzo 2026.*
+*Manual de dTS Instruments v2.2 — Actualizado a marzo 2026.*

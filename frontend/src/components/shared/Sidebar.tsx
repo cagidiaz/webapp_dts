@@ -37,8 +37,14 @@ const navItems: NavItem[] = [
     ]
   },
   { name: 'Ventas', icon: PieChart, path: '/sales' },
-  { name: 'Usuarios', icon: Users, path: '/users' },
-  { name: 'Configuración', icon: Settings, path: '/settings' },
+  { 
+    name: 'Configuración', 
+    icon: Settings, 
+    children: [
+      { name: 'Gestión de Usuarios', path: '/users' },
+      { name: 'Ajustes Generales', path: '/settings' },
+    ]
+  },
 ];
 
 export const Sidebar: React.FC = () => {
