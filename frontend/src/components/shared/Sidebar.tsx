@@ -4,7 +4,6 @@ import { useUIStore } from '../../store/uiStore';
 import { 
   BarChart3, 
   PieChart, 
-  Users, 
   Settings, 
   LogOut,
   ChevronLeft,
@@ -16,11 +15,14 @@ import {
 import logo from '../../assets/Logodts_white.svg';
 import { supabase } from '../../api/supabase';
 
+import { useAuthStore } from '../../store/authStore';
+
 interface NavItem {
   name: string;
   icon: any;
   path?: string;
-  children?: { name: string; path: string }[];
+  children?: { name: string; path: string; role?: string }[];
+  role?: string;
 }
 
 const navItems: NavItem[] = [
@@ -39,7 +41,8 @@ const navItems: NavItem[] = [
   { name: 'Ventas', icon: PieChart, path: '/sales' },
   { 
     name: 'Configuración', 
-    icon: Settings, 
+    icon: Settings,
+    role: 'ADMIN',
     children: [
       { name: 'Gestión de Usuarios', path: '/users' },
       { name: 'Ajustes Generales', path: '/settings' },
@@ -49,8 +52,17 @@ const navItems: NavItem[] = [
 
 export const Sidebar: React.FC = () => {
   const { isSidebarCollapsed, toggleSidebar } = useUIStore();
+  const { profile, session } = useAuthStore();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>('Finanzas');
   const location = useLocation();
+
+  const userRole = profile?.roles?.name?.toUpperCase() || '';
+
+  // Filter nav items based on user role
+  const filteredNavItems = navItems.filter(item => {
+    if (item.role && item.role !== userRole) return false;
+    return true;
+  });
 
   const handleLogout = async () => {
     try {
@@ -91,7 +103,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Navigation Links */}
       <nav className="flex-1 py-6 flex flex-col gap-1 px-3 overflow-y-auto custom-scrollbar">
-        {navItems.map((item) => (
+        {filteredNavItems.map((item) => (
           <div key={item.name}>
             {item.children ? (
               <>
@@ -160,12 +172,16 @@ export const Sidebar: React.FC = () => {
         {!isSidebarCollapsed ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 bg-dts-primary-dark p-2 rounded-lg w-full">
-              <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center text-sm font-medium">
-                A
+              <div className="w-8 h-8 rounded-full bg-dts-secondary/20 flex items-center justify-center text-sm font-bold text-dts-secondary border border-dts-secondary/30">
+                {profile?.firstName?.[0] || 'U'}
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">Administrador</span>
-                <span className="text-xs text-dts-secondary">Súper Admin</span>
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-sm font-medium truncate">
+                  {profile?.firstName ? `${profile.firstName} ${profile.lastName}` : (session?.user?.email || 'Usuario')}
+                </span>
+                <span className="text-[10px] text-dts-secondary uppercase tracking-tighter font-bold">
+                  {profile?.roles?.name || (profile ? 'Usuario' : '...')}
+                </span>
               </div>
               <button 
                 onClick={handleLogout}

@@ -20,9 +20,14 @@ interface FinancialData {
   [key: string]: any;
 }
 
+// Helper to detect dark mode
+const isSystemDark = () => document.documentElement.classList.contains('dark');
+
 export const RatiosChartsPage: React.FC = () => {
   const { data: balanceRows, isLoading: bLoading } = useQuery({ queryKey: ['balanceData'], queryFn: getBalanceData });
   const { data: incomeRows, isLoading: iLoading } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
+  
+  const isDark = isSystemDark();
 
   const data = useMemo(() => {
     if (!balanceRows || !incomeRows) return [];
@@ -56,20 +61,33 @@ export const RatiosChartsPage: React.FC = () => {
     });
   }, [balanceRows, incomeRows]);
 
-  if (bLoading || iLoading) return <div className="p-8">Generando gráficos financieros...</div>;
+  if (bLoading || iLoading) return <div className="p-8 text-center text-gray-500">Generando gráficos financieros...</div>;
+
+  const tooltipStyles = {
+    contentStyle: { 
+      backgroundColor: isDark ? '#1e293b' : '#ffffff', 
+      borderRadius: '12px', 
+      border: 'none', 
+      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+      fontSize: '12px'
+    },
+    itemStyle: { color: isDark ? '#f1f5f9' : '#1e293b' },
+    labelStyle: { color: isDark ? '#00B0B9' : '#003E51', fontWeight: 'bold', marginBottom: '4px' },
+    cursor: { stroke: isDark ? '#334155' : '#e2e8f0', strokeWidth: 2 }
+  };
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-700">
       {/* Header */}
       <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
-        <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">EVOLUCIÓN DE RATIOS CLAVE ({Math.min(...data.map(d => d.year))}-{Math.max(...data.map(d => d.year))})</h1>
+        <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">EVOLUCIÓN DE RATIOS CLAVE ({data.length > 0 ? `${Math.min(...data.map(d => d.year))}-${Math.max(...data.map(d => d.year))}` : ''})</h1>
         <p className="text-sm text-gray-500 italic">Tendencias históricas de Rentabilidad, Solvencia y Márgenes Operativos</p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Chart 1: Rentabilidad (ROE vs ROA) */}
         <ChartCard 
-          title="RENTABILIDAD COMPARTIDA" 
+          title="RENTABILIDAD" 
           subtitle="Comparativa ROE vs ROA (%)"
           icon={<TrendingUp className="w-5 h-5 text-dts-secondary" />}
         >
@@ -81,11 +99,11 @@ export const RatiosChartsPage: React.FC = () => {
                   <stop offset="95%" stopColor="#00B0B9" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} opacity={0.5} />
               <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} unit="%" />
               <Tooltip 
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                {...tooltipStyles}
                 formatter={(val: any) => [parseFloat(val).toFixed(2) + '%', '']}
               />
               <Legend verticalAlign="top" height={36}/>
@@ -103,10 +121,10 @@ export const RatiosChartsPage: React.FC = () => {
         >
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} opacity={0.5} />
               <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} unit="%" />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+              <Tooltip {...tooltipStyles} formatter={(val: any) => [parseFloat(val).toFixed(2) + '%', '']} />
               <Legend verticalAlign="top" height={36}/>
               <Line name="Margen Neto" type="monotone" dataKey="margenNeto" stroke="#F43F5E" strokeWidth={3} dot={{ strokeWidth: 2, r: 4 }} />
               <Line name="Margen EBIT" type="monotone" dataKey="margenEbit" stroke="#10B981" strokeWidth={3} dot={{ strokeWidth: 2, r: 4 }} />
@@ -122,10 +140,10 @@ export const RatiosChartsPage: React.FC = () => {
         >
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} opacity={0.5} />
               <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+              <Tooltip {...tooltipStyles} formatter={(val: any) => [parseFloat(val).toFixed(2), '']} />
               <Legend verticalAlign="top" height={36}/>
               <Line name="Liquidez Corriente" type="stepAfter" dataKey="liquidez" stroke="#8B5CF6" strokeWidth={3} />
               <Line name="Prueba Ácida" type="stepAfter" dataKey="pruebaAcida" stroke="#4B5563" strokeDasharray="5 5" strokeWidth={2} />
@@ -141,10 +159,10 @@ export const RatiosChartsPage: React.FC = () => {
         >
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} opacity={0.5} />
               <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+              <Tooltip {...tooltipStyles} formatter={(val: any) => [parseFloat(val).toFixed(2), '']} />
               <Legend verticalAlign="top" height={36}/>
               <Area name="Ratio Solvencia" type="basis" dataKey="solvencia" stroke="#FB923C" fill="#FB923C" fillOpacity={0.1} strokeWidth={3} />
               <Area name="Ratio Endeudamiento" type="basis" dataKey="endeudamiento" stroke="#6366F1" fill="#6366F1" fillOpacity={0.05} strokeWidth={3} />

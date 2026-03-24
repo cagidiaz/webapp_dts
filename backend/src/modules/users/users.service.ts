@@ -25,7 +25,8 @@ export class UsersService {
     const { data: user, error } = await this.supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true
+      email_confirm: true,
+      user_metadata: { firstName, lastName, roleId }
     });
 
     if (error) throw new InternalServerErrorException(error.message);

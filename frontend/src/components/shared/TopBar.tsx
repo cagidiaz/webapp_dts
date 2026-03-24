@@ -2,13 +2,17 @@ import React from 'react';
 import { Search, Bell, Moon, Sun } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 
 export const TopBar: React.FC = () => {
   const { isSidebarCollapsed, theme, toggleTheme } = useUIStore();
+  const { profile } = useAuthStore();
   const location = useLocation();
   const isDark = theme === 'dark';
   const isFinanceModule = location.pathname.startsWith('/finance');
   const isUsersModule = location.pathname.startsWith('/users');
+
+  const userFullName = profile ? `${profile.firstName} ${profile.lastName}` : 'Usuario';
 
   return (
     <header 
@@ -57,9 +61,8 @@ export const TopBar: React.FC = () => {
         </button>
 
         <button className="flex items-center justify-center gap-2 pl-2">
-          <div className="w-8 h-8 rounded-full bg-linear-to-r from-dts-secondary to-dts-secondary-light flex items-center justify-center text-sm font-medium text-white shadow-sm overflow-hidden">
-             {/* Using an avatar similar to the mockup */}
-             <img src="https://ui-avatars.com/api/?name=Administrador&background=00B0B9&color=fff" alt="Usuario" />
+          <div className="w-8 h-8 rounded-full bg-linear-to-r from-dts-secondary to-dts-secondary-light flex items-center justify-center text-sm font-medium text-white shadow-sm overflow-hidden border border-white/20">
+             <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userFullName)}&background=00B0B9&color=fff`} alt="Usuario" />
           </div>
         </button>
       </div>

@@ -15,16 +15,23 @@ import {
 import { Scale } from 'lucide-react';
 
 export const BalancesPage: React.FC = () => {
+  const [isMounted, setIsMounted] = React.useState(false);
   const { data: rawRows, isLoading, error } = useQuery({
     queryKey: ['balanceData'],
     queryFn: getBalanceData,
   });
 
-  if (isLoading) return <div className="p-8">Cargando datos...</div>;
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (isLoading || !isMounted) return <div className="p-8">Cargando datos...</div>;
   if (error) return <div className="p-8 text-red-500">Error al cargar datos.</div>;
 
   const data = groupDataByYear(rawRows || [], true);
-  const years = data.map(d => d.year).sort((a, b) => b - a); // For the table columns (Descending)
+  const years = data.map(d => d.year).sort((a, b) => b - a);
+  const minYear = years.length > 0 ? Math.min(...years) : 0;
+  const maxYear = years.length > 0 ? Math.max(...years) : 0; // For the table columns (Descending)
 
   const getAmount = (year: number, code: string) => {
     const yearData = data.find(d => d.year === year) as any;
@@ -43,7 +50,7 @@ export const BalancesPage: React.FC = () => {
           <p className="text-sm text-gray-500 font-medium">Desglose estructural y comparativa multianual de situación patrimonial</p>
         </div>
         <div className="text-xs text-gray-400 bg-gray-100 dark:bg-dts-primary-dark/30 px-3 py-1.5 rounded-full font-medium">
-           Período: {Math.min(...years)} - {Math.max(...years)}
+           Período: {minYear} - {maxYear}
         </div>
       </div>
 
@@ -286,8 +293,8 @@ export const BalancesPage: React.FC = () => {
         {/* Chart 1: ACTIVO */}
         <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl shadow-card border border-gray-100 dark:border-gray-800">
           <h3 className="text-lg font-medium mb-6 text-center text-gray-700 dark:text-white uppercase tracking-wider">ACTIVO</h3>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ height: 320, width: '100%' }}>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={[...data].reverse()} margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isSystemDark() ? '#003E51' : '#E2E8F0'} />
                 <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} />
@@ -316,8 +323,8 @@ export const BalancesPage: React.FC = () => {
         {/* Chart 2: PN y PASIVO */}
         <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl shadow-card border border-gray-100 dark:border-gray-800">
           <h3 className="text-lg font-medium mb-6 text-center text-gray-700 dark:text-white uppercase tracking-wider">PATRIMONIO NETO y PASIVO</h3>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ height: 320, width: '100%' }}>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={[...data].reverse()} margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isSystemDark() ? '#003E51' : '#E2E8F0'} />
                 <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} />

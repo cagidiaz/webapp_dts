@@ -4,9 +4,12 @@ import { getBalanceData, groupDataByYear } from '../../api/finance';
 import { 
   BarChart, 
   Bar, 
-  ResponsiveContainer
+  ResponsiveContainer,
+  Tooltip,
+  Legend
 } from 'recharts';
 import { TrendingUp, Info } from 'lucide-react';
+import { formatCurrency } from '../../api/formatters';
 
 interface YearData {
   year: number;
@@ -14,28 +17,38 @@ interface YearData {
 }
 
 export const KeyPointsPage: React.FC = () => {
+  const [isMounted, setIsMounted] = useState(false);
   const { data: rawRows, isLoading, error } = useQuery({
     queryKey: ['balanceData'],
     queryFn: getBalanceData,
   });
 
-  const [selectedYear, setSelectedYear] = useState<number>(2024);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear() - 1);
 
   const data = useQueryData(rawRows || []);
   const yearData = data.find(d => d.year === selectedYear) as YearData | undefined;
-  const years = Array.from(new Set(rawRows?.map(r => r.year) || [])).sort((a,b) => b-a);
-
-  // Sync selected year when data loads
+  
+  // Sync selected year when data loads: default to the latest COMPLETE year if available
   React.useEffect(() => {
-    if (years.length > 0 && !years.includes(selectedYear)) {
-      setSelectedYear(years[0]);
+    if (data.length > 0) {
+      const fullYears = data.filter(d => !d.isEstimate);
+      const defaultYear = fullYears.length > 0 ? fullYears[0].year : data[0].year;
+      
+      if (!data.find(d => d.year === selectedYear)) {
+        setSelectedYear(defaultYear);
+      }
     }
-  }, [years, selectedYear]);
+  }, [data, selectedYear]);
 
-  if (isLoading) return <div className="p-8">Cargando datos...</div>;
+  if (isLoading || !isMounted) return <div className="p-8">Cargando datos...</div>;
   if (error) return <div className="p-8 text-red-500 text-center">Error al cargar datos financieros.</div>;
 
   // KPIs Calculations
+  // ... (calculations remain same)
   const activoCirculante = yearData?.['1.B'] || 0;
   const pasivoCorto = yearData?.['2.C'] || 0;
   const pasivoLargo = yearData?.['2.B'] || 0;
@@ -50,11 +63,22 @@ export const KeyPointsPage: React.FC = () => {
 
   // Chart Data Preparation
   const activoChartData = [
-    { name: 'Activo', Fijo: yearData?.['1.A'] || 0, Stock: yearData?.['1.B.II'] || 0, Realiz: yearData?.['1.B.III'] || 0, Dispon: yearData?.['1.B.VII'] || 0 }
+    { 
+      name: 'Activo', 
+      'Fijo': yearData?.['1.A'] || 0, 
+      'Existencias': yearData?.['1.B.II'] || 0, 
+      'Realizable': yearData?.['1.B.III'] || 0, 
+      'Disponible': yearData?.['1.B.VII'] || 0 
+    }
   ];
 
   const pasivoChartData = [
-    { name: 'PN y Pasivo', PN: patrimonioNeto, Largo: pasivoLargo, Corto: pasivoCorto }
+    { 
+      name: 'PN y Pasivo', 
+      'Patrimonio Neto': patrimonioNeto, 
+      'Largo Plazo': pasivoLargo, 
+      'Corto Plazo': pasivoCorto 
+    }
   ];
 
   return (
@@ -63,16 +87,20 @@ export const KeyPointsPage: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-surface-card-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
         <div>
           <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Análisis de 4 Puntos Clave</h1>
-          <p className="text-sm text-gray-500">Referidos al Balance del año <span className="font-medium text-dts-secondary">{selectedYear}</span></p>
+          <p className="text-sm text-gray-500">Referidos al Balance del año <span className="font-medium text-dts-secondary">{selectedYear} {yearData?.isEstimate ? '(ESTIMADO)' : ''}</span></p>
         </div>
         <div className="flex items-center gap-3">
           <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Balance a analizar:</label>
           <select 
             value={selectedYear}
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="bg-gray-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-dts-secondary focus:border-dts-secondary block w-32 p-2.5 outline-none transition-all shadow-sm"
+            className="bg-gray-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-dts-secondary focus:border-dts-secondary block w-40 p-2.5 outline-none transition-all shadow-sm"
           >
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
+            {data.map(d => (
+              <option key={d.year} value={d.year}>
+                {d.year} {d.isEstimate ? '(EST.)' : ''}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -82,9 +110,12 @@ export const KeyPointsPage: React.FC = () => {
         <div className="xl:col-span-4 space-y-6">
           {/* Table ACTIVO */}
           <div className="bg-white dark:bg-surface-card-dark border-2 border-dts-primary/20 rounded-lg overflow-hidden shadow-sm">
-            <div className="bg-dts-primary/10 px-4 py-2 font-medium text-dts-primary dark:text-dts-secondary text-sm flex justify-between items-center text-center">
-              <span>1</span> ACTIVO
-              <span>{totalActivo.toLocaleString('de-DE')}</span>
+            <div className="bg-dts-primary/10 px-4 py-2 font-medium text-dts-primary dark:text-dts-secondary text-sm flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="opacity-60 font-bold">1</span>
+                <span className="tracking-wide">ACTIVO</span>
+              </div>
+              <span className="font-bold">{totalActivo.toLocaleString('de-DE')}</span>
             </div>
             <table className="w-full text-xs">
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -119,9 +150,12 @@ export const KeyPointsPage: React.FC = () => {
 
           {/* Table PASIVO */}
           <div className="bg-white dark:bg-surface-card-dark border-2 border-gray-800/20 rounded-lg overflow-hidden shadow-sm">
-            <div className="bg-gray-800 text-white px-4 py-2 font-medium text-sm flex justify-between items-center text-center">
-              <span>2</span> PATRIMONIO NETO y PASIVO
-              <span>{totalActivo.toLocaleString('de-DE')}</span>
+            <div className="bg-gray-800 text-white px-4 py-2 font-medium text-sm flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="opacity-60 font-bold">2</span>
+                <span className="tracking-wide uppercase">Patrimonio Neto y Pasivo</span>
+              </div>
+              <span className="font-bold">{totalActivo.toLocaleString('de-DE')}</span>
             </div>
             <table className="w-full text-xs">
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -145,27 +179,50 @@ export const KeyPointsPage: React.FC = () => {
           </div>
 
           {/* Distribution Visual Chart */}
-          <div className="grid grid-cols-2 gap-4 h-48 mt-4">
+          {/* Distribution Visual Chart */}
+          <div className="grid grid-cols-2 gap-4 h-80 mt-12 mb-6">
              <div className="flex flex-col items-center">
-                <p className="text-[10px] font-medium text-gray-500 uppercase mb-2">ACTIVO</p>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={activoChartData}>
-                    <Bar dataKey="Fijo" stackId="a" fill="#94A3B8" />
-                    <Bar dataKey="Stock" stackId="a" fill="#10B981" />
-                    <Bar dataKey="Realiz" stackId="a" fill="#003E51" />
-                    <Bar dataKey="Dispon" stackId="a" fill="#00B0B9" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <p className="text-[10px] font-medium text-gray-400 uppercase mb-4">Composición Activo</p>
+                <div style={{ height: 280, width: '100%' }}>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={activoChartData} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+                      <Tooltip 
+                        cursor={false}
+                        labelFormatter={() => "Desglose Activo"}
+                        formatter={(val) => formatCurrency(Number(val))}
+                        contentStyle={{ fontSize: '10px', borderRadius: '8px', border: 'none', backgroundColor: '#1e293b' }}
+                        itemStyle={{ color: '#fff' }}
+                        labelStyle={{ color: '#00B0B9', fontWeight: 'bold', marginBottom: '4px' }}
+                      />
+                      <Legend iconSize={8} wrapperStyle={{ fontSize: '9px', paddingTop: '15px' }} />
+                      <Bar dataKey="Fijo" stackId="a" fill="#94A3B8" />
+                      <Bar dataKey="Existencias" stackId="a" fill="#10B981" />
+                      <Bar dataKey="Realizable" stackId="a" fill="#003E51" />
+                      <Bar dataKey="Disponible" stackId="a" fill="#00B0B9" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
              </div>
              <div className="flex flex-col items-center">
-                <p className="text-[10px] font-medium text-gray-500 uppercase mb-2">PN y PASIVO</p>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={pasivoChartData}>
-                    <Bar dataKey="PN" stackId="b" fill="#3B82F6" />
-                    <Bar dataKey="Largo" stackId="b" fill="#64748B" />
-                    <Bar dataKey="Corto" stackId="b" fill="#F87171" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <p className="text-[10px] font-medium text-gray-400 uppercase mb-4">Composición Pasivo</p>
+                <div style={{ height: 280, width: '100%' }}>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={pasivoChartData} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+                      <Tooltip 
+                        cursor={false}
+                        labelFormatter={() => "Desglose Pasivo"}
+                        formatter={(val) => formatCurrency(Number(val))}
+                        contentStyle={{ fontSize: '10px', borderRadius: '8px', border: 'none', backgroundColor: '#1e293b' }}
+                        itemStyle={{ color: '#fff' }}
+                        labelStyle={{ color: '#00B0B9', fontWeight: 'bold', marginBottom: '4px' }}
+                      />
+                      <Legend iconSize={8} wrapperStyle={{ fontSize: '9px', paddingTop: '15px' }} />
+                      <Bar dataKey="Patrimonio Neto" stackId="b" fill="#3B82F6" />
+                      <Bar dataKey="Largo Plazo" stackId="b" fill="#64748B" />
+                      <Bar dataKey="Corto Plazo" stackId="b" fill="#F87171" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
              </div>
           </div>
         </div>
@@ -180,7 +237,6 @@ export const KeyPointsPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
             {/* 1. LIQUIDEZ */}
             <StatusCard 
-              num="1"
               title="LIQUIDEZ"
               value={liquidezValue.toFixed(2)}
               subtext={`El circulante es ${liquidezValue.toFixed(2)} veces el exigible a corto`}
@@ -191,7 +247,6 @@ export const KeyPointsPage: React.FC = () => {
 
             {/* 3. ENDEUDAMIENTO */}
             <StatusCard 
-              num="3"
               title="ENDEUDAMIENTO"
               value={endeudamientoValue.toFixed(2)}
               subtext={`Tiene un ratio de ${endeudamientoValue.toFixed(2)} sobre fondos propios`}
@@ -202,7 +257,6 @@ export const KeyPointsPage: React.FC = () => {
 
             {/* 2. CAPITALIZACIÓN */}
             <StatusCard 
-              num="2"
               title="CAPITALIZACIÓN"
               value={`${capitalizacionValue.toFixed(1)}%`}
               subtext={`El P. Neto es el ${capitalizacionValue.toFixed(1)}% del total PN + Pasivo`}
@@ -213,7 +267,6 @@ export const KeyPointsPage: React.FC = () => {
 
             {/* 4. GARANTÍA */}
             <StatusCard 
-              num="4"
               title="GARANTÍA"
               value={garantiaValue.toFixed(2)}
               subtext={`Tiene un ratio de ${garantiaValue.toFixed(2)} (Garantía patrimonial)`}
@@ -239,18 +292,18 @@ export const KeyPointsPage: React.FC = () => {
 };
 
 // Sub-component for KPIs
-const StatusCard = ({ num, title, value, subtext, status, isGood, hint }: any) => (
+const StatusCard = ({ title, value, subtext, status, isGood, hint }: any) => (
   <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-lg border-2 border-transparent hover:border-dts-secondary/20 transition-all flex flex-col overflow-hidden group">
-    <div className="bg-red-700 text-white text-center py-1.5 font-medium text-sm flex justify-center items-center gap-4">
-      <span className="opacity-70">{num}-</span> {title}
+    <div className="bg-dts-primary-light text-white text-center py-2 font-medium text-sm flex justify-center items-center gap-4 uppercase tracking-wider">
+      {title}
     </div>
     <div className="p-4 flex-1 text-center flex flex-col justify-center gap-2">
        <p className="text-xs text-gray-500 font-medium group-hover:text-dts-secondary transition-colors">{subtext}</p>
-       <div className={`text-sm font-medium uppercase py-2 px-6 rounded-lg ${isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          Precaución, parece {status}
+       <div className={`text-[10px] font-bold uppercase py-1 px-4 rounded-full mx-auto ${isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          Situación: {status}
        </div>
        <div className={`text-4xl font-extrabold mt-2 ${isGood ? 'text-green-600' : 'text-red-600'}`}>
-         {value}
+          {value}
        </div>
     </div>
     <div className="bg-gray-50 dark:bg-white/5 p-3 text-[10px] text-gray-400 italic text-center">

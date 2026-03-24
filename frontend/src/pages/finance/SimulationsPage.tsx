@@ -33,10 +33,15 @@ interface FinancialData {
 }
 
 export const SimulationsPage: React.FC = () => {
+  const [isMounted, setIsMounted] = useState(false);
   const queryClient = useQueryClient();
-  const { data: balanceRows } = useQuery({ queryKey: ['balanceData'], queryFn: getBalanceData });
-  const { data: incomeRows } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
-  const { data: budgetRows } = useQuery({ queryKey: ['budgetData'], queryFn: getBudgetsData });
+  const { data: balanceRows, isLoading: isBLoading } = useQuery({ queryKey: ['balanceData'], queryFn: getBalanceData });
+  const { data: incomeRows, isLoading: isILoading } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
+  const { data: budgetRows, isLoading: isBudLoading } = useQuery({ queryKey: ['budgetData'], queryFn: getBudgetsData });
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Simulation State
   const [salesGrowth, setSalesGrowth] = useState(10); // +10%
@@ -45,7 +50,7 @@ export const SimulationsPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [baselineMode, setBaselineMode] = useState<'historical' | 'budget'>('budget');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  
+
   // Base year for simulation (projection based on previous year)
   const currentYear = new Date().getFullYear();
   const selectedYear = currentYear - 1; // For historical base
@@ -91,7 +96,12 @@ export const SimulationsPage: React.FC = () => {
       ? (baseData?.['A.1'] || 0)
       : (dataSource['A.1'] || 0);
 
-    const annualBaseCosts = Math.abs(dataSource['A.4'] || 0) + Math.abs(dataSource['A.7'] || 0);
+    const annualBaseCosts = 
+      Math.abs(dataSource['A.4'] || 0) + 
+      Math.abs(dataSource['A.7'] || 0) + 
+      Math.abs(dataSource['A.8'] || 0) + 
+      Math.abs(dataSource['A.13'] || 0);
+      
     const annualBasePersonnel = Math.abs(dataSource['A.6'] || 0);
     
     // Use manual calculation for historical EBITDA too, to match the budget methodology
@@ -105,12 +115,18 @@ export const SimulationsPage: React.FC = () => {
       baseName: baselineMode === 'historical' ? `Real ${selectedYear}` : `Presupuesto ${currentYear}`,
       sales: projectedSales,
       baseSales: annualBaseSales,
+      costs: projectedCosts,
+      baseCosts: annualBaseCosts,
+      basePersonnel: annualBasePersonnel,
       ebitda: projectedEbitda,
       realEbitda: baseEbitda,
       margin: (projectedEbitda / (projectedSales || 1)) * 100,
       improvement: ((projectedEbitda / (baseEbitda || 1)) - 1) * 100
     };
   }, [baseData, budgetData, baselineMode, salesGrowth, costVariation, currentYear, selectedYear]);
+
+  const isLoading = (isBLoading || isILoading || isBudLoading || !isMounted);
+  if (isLoading) return <div className="p-8">Cargando simulador...</div>;
 
   const handleSave = async () => {
     if (!totals) return;
@@ -183,6 +199,10 @@ export const SimulationsPage: React.FC = () => {
                   <span className={salesGrowth >= 0 ? 'text-green-600' : 'text-red-600'}>{salesGrowth > 0 ? '+' : ''}{salesGrowth}%</span>
                 </div>
                 <input type="range" min="-50" max="100" value={salesGrowth} onChange={(e) => setSalesGrowth(parseInt(e.target.value))} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-dts-secondary" />
+                <div className="flex justify-between mt-2 px-1 text-xs font-mono text-gray-500">
+                   <span className="font-medium">Ventas Sim.:</span>
+                   <span className="text-dts-primary dark:text-dts-secondary text-sm">{formatCurrency(totals?.sales || 0)}</span>
+                </div>
               </div>
               <div>
                 <div className="flex justify-between mb-3 text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -199,6 +219,12 @@ export const SimulationsPage: React.FC = () => {
                   onChange={(e) => setCostVariation(parseInt(e.target.value))} 
                   className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-dts-primary-light" 
                 />
+                <div className="flex justify-between mt-2 px-1 text-xs font-mono text-gray-500">
+                   <span className="font-medium">Gastos Sim.:</span>
+                   <span className={`${costVariation > 0 ? 'text-red-400' : 'text-green-500'} text-sm`}>
+                     {formatCurrency((totals?.costs || 0) + (totals?.basePersonnel || 0))}
+                   </span>
+                </div>
               </div>
               <div className="pt-6 border-t border-gray-50 dark:border-gray-800 space-y-4">
                 <div>
@@ -222,8 +248,8 @@ export const SimulationsPage: React.FC = () => {
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800">
              <h3 className="text-lg font-medium mb-8 text-dts-primary dark:text-white">Comparativa Anual Proyectada</h3>
-             <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
+             <div style={{ height: 400, width: '100%' }}>
+                <ResponsiveContainer width="100%" height={400}>
                   <BarChart data={[
                     { name: 'Ventas', [totals?.baseName || 'Base']: totals?.baseSales || 0, 'Simulado': totals?.sales || 0 },
                     { name: 'EBITDA', [totals?.baseName || 'Base']: totals?.realEbitda || 0, 'Simulado': totals?.ebitda || 0 }
