@@ -59,7 +59,7 @@ async function bootstrap() {
   const health = await appService.getHealth();
   const staticPath = join(process.cwd(), 'frontend', 'dist');
   
-  console.log(`🚀 dTS API (v1.0.4) running on http://localhost:${port}`);
+  console.log(`🚀 dTS API (v1.0.5) running on http://localhost:${port}`);
   console.log(`📡 Database status: ${health.status} (${health.database})`);
   console.log(`📂 Serving static from: ${staticPath}`);
   if (health.error) console.error(`❌ DB Error: ${health.error}`);
