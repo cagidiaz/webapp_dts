@@ -51,7 +51,7 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
-  console.log(`🚀 dTS API running on http://localhost:${port}`);
+  console.log(`🚀 dTS API (v1.0.1) running on http://localhost:${port}`);
   console.log(`📖 Swagger docs at http://localhost:${port}/api-docs`);
 }
 bootstrap();
