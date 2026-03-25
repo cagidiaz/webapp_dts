@@ -14,9 +14,7 @@ import { UsersModule } from './modules/users/users.module';
       isGlobal: true,
     }),
     ServeStaticModule.forRoot({
-      // We calculate a more robust absolute path for the frontend distribution folder
       rootPath: join(process.cwd(), 'frontend', 'dist'),
-      exclude: ['/api/:path(.*)'],
     }),
     PrismaModule,
     AuthModule,
