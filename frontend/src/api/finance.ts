@@ -192,6 +192,27 @@ export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = f
         estimatedAccounts['1.TOT'] = (estimatedAccounts['1.A'] || 0) + (estimatedAccounts['1.B'] || 0);
         // Total P+PN (2.TOT) = PN (2.A) + Non-Curr (2.B) + Corr (2.C)
         estimatedAccounts['2.TOT'] = (estimatedAccounts['2.A'] || 0) + (estimatedAccounts['2.B'] || 0) + (estimatedAccounts['2.C'] || 0);
+      } else {
+        // Income Statement Recalculation (Flows)
+        // Ensure that if we overrode components (A.1, A.4, etc.), the totals reflect it.
+        // Formula: EBIT (A.1.TOT) = Ventas(A.1) - Aprov(A.4) - Personal(A.6) - Otros(A.7) - Amort(A.8)
+        // We use Math.abs for expense accounts because they might be stored as positive or negative in DB.
+        const sales = estimatedAccounts['A.1'] || 0;
+        const cogs = Math.abs(estimatedAccounts['A.4'] || 0);
+        const labor = Math.abs(estimatedAccounts['A.6'] || 0);
+        const opex = Math.abs(estimatedAccounts['A.7'] || 0);
+        const amort = Math.abs(estimatedAccounts['A.8'] || 0);
+
+        estimatedAccounts['A.1.TOT'] = sales - cogs - labor - opex - amort;
+
+        // Formula: Net Result (A.5.TOT) = EBIT(A.1.TOT) + Financial Result (A.12 - A.13) - Taxes (estimated)
+        const finInc = estimatedAccounts['A.12'] || 0;
+        const finExp = Math.abs(estimatedAccounts['A.13'] || 0);
+        const ebt = estimatedAccounts['A.1.TOT'] + finInc - finExp;
+        
+        // Estimated Taxes (roughly 25% if positive)
+        const taxes = ebt > 0 ? ebt * 0.25 : 0;
+        estimatedAccounts['A.5.TOT'] = ebt - taxes;
       }
 
       return {
