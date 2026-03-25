@@ -1,16 +1,17 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getBalanceData, getIncomeStatementData, groupDataByYear } from '../../api/finance';
+import { getBalanceData, getIncomeStatementData, getBudgetsData, groupDataByYear } from '../../api/finance';
 import { formatCurrency, formatNumber, formatPercent } from '../../api/formatters';
 
 export const RatiosTablePage: React.FC = () => {
   const { data: balanceRows, isLoading: bLoading } = useQuery({ queryKey: ['balanceData'], queryFn: getBalanceData });
   const { data: incomeRows, isLoading: iLoading } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
+  const { data: budgetRows, isLoading: budLoading } = useQuery({ queryKey: ['budgetData'], queryFn: getBudgetsData });
 
-  if (bLoading || iLoading) return <div className="p-8">Calculando ratios...</div>;
+  if (bLoading || iLoading || budLoading) return <div className="p-8">Calculando ratios...</div>;
 
   const balances = groupDataByYear(balanceRows || []);
-  const incomes = groupDataByYear(incomeRows || []);
+  const incomes = groupDataByYear(incomeRows || [], false, budgetRows);
 
   const years = Array.from(new Set([...balances.map(b => b.year), ...incomes.map(i => i.year)])).sort((a, b) => b - a);
 

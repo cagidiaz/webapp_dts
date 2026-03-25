@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getBalanceData, getIncomeStatementData, groupDataByYear } from '../../api/finance';
+import { getBalanceData, getIncomeStatementData, getBudgetsData, groupDataByYear } from '../../api/finance';
 import { 
   LineChart, 
   Line, 
@@ -26,6 +26,7 @@ const isSystemDark = () => document.documentElement.classList.contains('dark');
 export const RatiosChartsPage: React.FC = () => {
   const { data: balanceRows, isLoading: bLoading } = useQuery({ queryKey: ['balanceData'], queryFn: getBalanceData });
   const { data: incomeRows, isLoading: iLoading } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
+  const { data: budgetRows, isLoading: budLoading } = useQuery({ queryKey: ['budgetData'], queryFn: getBudgetsData });
   
   const isDark = isSystemDark();
 
@@ -33,7 +34,7 @@ export const RatiosChartsPage: React.FC = () => {
     if (!balanceRows || !incomeRows) return [];
     
     const balances = groupDataByYear(balanceRows) as FinancialData[];
-    const incomes = groupDataByYear(incomeRows) as FinancialData[];
+    const incomes = groupDataByYear(incomeRows, false, budgetRows) as FinancialData[];
     
     const allYears = Array.from(new Set([...balances.map(b => b.year), ...incomes.map(i => i.year)])).sort((a,b) => a-b);
     
@@ -59,9 +60,9 @@ export const RatiosChartsPage: React.FC = () => {
         solvencia: b['1.TOT'] / ((b['2.B'] + b['2.C']) || 1)
       };
     });
-  }, [balanceRows, incomeRows]);
+  }, [balanceRows, incomeRows, budgetRows]);
 
-  if (bLoading || iLoading) return <div className="p-8 text-center text-gray-500">Generando gráficos financieros...</div>;
+  if (bLoading || iLoading || budLoading) return <div className="p-8 text-center text-gray-500">Generando gráficos financieros...</div>;
 
   const tooltipStyles = {
     contentStyle: { 

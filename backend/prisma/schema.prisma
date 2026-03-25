@@ -96,3 +96,28 @@ model ForecastLine {
   @@index([scenarioId, periodDate])
   @@map("forecast_lines")
 }
+
+// =============================================
+// SALES
+// =============================================
+
+model SalesBudget {
+  id            Int      @id @default(autoincrement())
+  salesRepCode  String   @map("sales_rep_code") @db.VarChar(50)
+  customerCode  String   @map("customer_code") @db.VarChar(50)
+  customerName  String?  @map("customer_name") @db.Text
+  pmCode        String?  @map("pm_code") @db.VarChar(50)
+  productId     String?  @map("product_id") @db.VarChar(50)
+  subfamilyCode String?  @map("subfamily_code") @db.VarChar(50)
+  productName   String?  @map("product_name") @db.Text
+  targetUnits   Float?   @map("target_units") @db.Real
+  unitPrice2025 Decimal? @map("unit_price_2025") @db.Decimal(18, 2)
+  unitPrice2026 Decimal? @map("unit_price_2026") @db.Decimal(18, 2)
+  targetRevenue Decimal? @map("target_revenue") @db.Decimal(18, 2)
+  workingDays   Int?     @map("working_days") @db.SmallInt
+  budgetDate    DateTime @map("budget_date") @db.Date
+  monthlyBudget Decimal? @map("monthly_budget") @db.Decimal(18, 2)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("sales_budgets")
+}

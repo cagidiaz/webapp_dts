@@ -37,13 +37,47 @@ export const getIncomeStatementData = async () => {
 };
 
 export const getBudgetsData = async () => {
-  const { data, error } = await supabase
+  const { data: genericData, error: genericError } = await supabase
     .from('budgets')
     .select('id, account_code, account_name, date, amount')
     .order('date', { ascending: false });
 
-  if (error) throw error;
-  return data as BudgetDataRow[];
+  if (genericError) throw genericError;
+
+  const { data: salesData, error: salesError } = await supabase
+    .from('sales_budgets')
+    .select('id, budget_date, monthly_budget');
+
+  if (salesError) {
+    console.error('Error fetching sales_budgets', salesError);
+    return genericData as BudgetDataRow[]; // Fallback
+  }
+
+  let mergedData = genericData as BudgetDataRow[];
+
+  // Filter out any basic 2026 'A.1' sales budgets to prevent duplication
+  mergedData = mergedData.filter(row => {
+    const is2026 = new Date(row.date).getFullYear() === 2026;
+    const isSales = mapBudgetToAccountId(row.account_code) === 'A.1';
+    return !(is2026 && isSales);
+  });
+
+  // Inject the new sales budgets
+  if (salesData && salesData.length > 0) {
+    const salesRows: BudgetDataRow[] = salesData.map(row => ({
+      id: `sales_${row.id}`,
+      account_code: 700000, // This maps to 'A.1' in mapBudgetToAccountId
+      account_name: 'Ventas (Presupuesto 2026)',
+      date: row.budget_date,
+      amount: row.monthly_budget ? Number(row.monthly_budget) : 0,
+    }));
+    mergedData = [...mergedData, ...salesRows];
+  }
+
+  // Sort descending by date
+  mergedData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return mergedData;
 };
 
 /**
@@ -87,7 +121,7 @@ export const groupBudgetsByYear = (rows: BudgetDataRow[]) => {
 /**
  * Helper to process the flat DB rows into a year-grouped structure for Recharts/Tables
  */
-export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = false) => {
+export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = false, budgetRows?: BudgetDataRow[]) => {
   const grouped: Record<number, { accounts: Record<string, {amount: number, month: number}>, maxMonth: number }> = {};
   
   rows.forEach(row => {
@@ -132,13 +166,25 @@ export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = f
             multiplier = 12 / data.maxMonth;
           } else {
             // Balance Sheet (Snapshots): 
-            // Corrected: Balance is a "Snapshot" of the moment. We do NOT extrapolate 
-            // by time, as the balance current on Feb is already the snapshot at that date.
             multiplier = 1; 
           }
         }
         estimatedAccounts[accountId] = accData.amount * multiplier;
       });
+
+      // Override with Budgets if available and it's an estimate (Income Statement only)
+      if (isEstimate && !isBalance && budgetRows) {
+         const budgetsGrouped = groupBudgetsByYear(budgetRows);
+         const budgetForYear = budgetsGrouped.find(b => b.year === year);
+         if (budgetForYear) {
+            // Override keys with budget
+            Object.keys(budgetForYear).forEach(k => {
+               if (k !== 'year' && k !== 'isBudget') {
+                  estimatedAccounts[k] = (budgetForYear as any)[k] as number;
+               }
+            });
+         }
+      }
 
       // Special handling: re-calculate totals to ensure tree consistency
       if (isBalance) {
