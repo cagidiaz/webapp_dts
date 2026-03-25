@@ -1,100 +1,94 @@
 # Manual de Usuario — WebApp dTS Instruments
 
-> Este documento se completa dinámicamente según las funcionalidades activas en la plataforma.
+> Este documento detalla el funcionamiento técnico y la procedencia de los datos de la plataforma dTS Instruments para asegurar la transparencia en el análisis de negocio.
 
 ## Índice
 
-1. [Inicio de Sesión](#1-inicio-de-sesión)
-2. [Navegación y Interfaz](#2-navegación-y-interfaz)
-3. [Módulo de Finanzas](#3-módulo-de-finanzas)
-    - 3.1 [Análisis de Balances](#31-análisis-de-balances)
-    - 3.2 [Cuadro de Mando (20 Ratios)](#32-cuadro-de-mando-20-ratios)
-    - 3.3 [Gráficos de Evolución](#33-gráficos-de-evolución)
-    - 3.4 [Simulador de Escenarios](#34-simulador-de-escenarios)
-4. [Módulo de Ventas](#4-módulo-de-ventas)
-5. [Lógica de Cálculo y Cierre Estimado](#5-lógica-de-cálculo-y-cierre-estimado)
-6. [Gestión de Usuarios (Admin)](#6-gestión-de-usuarios-admin)
+1. [Dashboard Principal](#1-dashboard-principal)
+2. [Módulo de Finanzas](#2-módulo-de-finanzas)
+    - 2.1 [Análisis de Balances](#21-análisis-de-balances)
+    - 2.2 [4 Puntos Clave (Análisis Rápido)](#22-4-puntos-clave-análisis-rápido)
+    - 2.3 [Cuadro de Mando (20 Ratios)](#23-cuadro-de-mando-20-ratios)
+    - 2.4 [Evolución de Ratios (Gráficos)](#24-evolución-de-ratios-gráficos)
+    - 2.5 [Simulador de Escenarios](#25-simulador-de-escenarios)
+3. [Lógica de Cálculo y Datos (Backend)](#3-lógica-de-cálculo-y-datos-backend)
+    - 3.1 [Fuentes de Información](#31-fuentes-de-información)
+    - 3.2 [Proyección de Cierre 2026 (Est.)](#32-proyección-de-cierre-2026-est)
+4. [Gestión de Usuarios (Admin)](#4-gestión-de-usuarios-admin)
 
 ---
 
-## 1. Inicio de Sesión
-El acceso está restringido a usuarios autorizados. Los perfiles disponibles son ADMIN, DIRECCION, VENTAS y OPERACIONES. 
-- Utilice sus credenciales para acceder al panel principal.
-- La plataforma recordará su sesión durante 24 horas.
+## 1. Dashboard Principal
+El Dashboard es el centro de monitorización en tiempo real del cumplimiento de objetivos.
+- **Ventas Cierre Est.**: Muestra la previsión de ventas a final de año. Si existe un presupuesto cargado para 2026, toma el valor objetivo del presupuesto.
+- **EBITDA Cierre Est.**: Resultado operativo proyectado antes de amortizaciones. Se calcula cruzando el presupuesto de ventas con el de gastos.
+- **Consecución Ventas (Novedad 2026)**: Compara las **Ventas Reales YTD** (lo facturado hasta hoy) contra el **Presupuesto Anual 2026**. Incluye una barra de progreso que indica el % de cumplimiento del objetivo anual.
 
-## 2. Navegación y Interfaz
-- **Sidebar**: Permite alternar entre los distintos módulos: Dashboard, Finanzas, Ventas y Ajustes.
-- **Scroll Automático**: Al cambiar de página, la aplicación reinicia el scroll al inicio del título para facilitar la lectura.
-- **Histórico**: Todas las tablas muestran por defecto los **últimos 4 años**, incluyendo el ejercicio actual proyectado.
+## 2. Módulo de Finanzas
 
-## 3. Módulo de Finanzas
-
-Este módulo agrupa las herramientas de análisis patrimonial, solvencia y rentabilidad de dTS Instruments.
-
-### 3.1 Análisis de Balances
+### 2.1 Análisis de Balances
 Ubicado en **Finanzas > Balances**.
-- **Tabla de Balances**: Muestra el Activo, Pasivo y Patrimonio Neto con un **Análisis Vertical** (debajo de cada importe aparece el % que representa sobre el total).
-- **Variación Anual**: Debajo del balance, encontrará una tabla que calcula el crecimiento o descenso (%) de cada partida respecto al año anterior.
-- **Visualización**: Los gráficos de barras laterales comparan la estructura del Activo frente al Pasivo + PN.
+- **Propósito**: Analizar la solidez patrimonial y el crecimiento de la empresa.
+- **Datos utilizados**: Provienen de la tabla `financial_balances` (Snapshots mensuales extraídos del ERP).
+- **Análisis Vertical**: Los porcentajes debajo de cada cifra indican el peso de esa partida sobre el **Total Activo** (en el activo) o sobre el **Total Pasivo + PN** (en el pasivo), permitiendo ver la estructura de capital de un vistazo.
 
-### 3.2 Cuadro de Mando (20 Ratios)
+### 2.2 4 Puntos Clave (Análisis Rápido)
+Ubicado en **Finanzas > Puntos Clave**.
+- **Propósito**: Evaluación inmediata de la salud financiera mediante semáforos (Verde/Rojo).
+- **Criterios de Evaluación**:
+  - **Liquidez**: Capacidad de pago a corto plazo. (Activo Circulante / Pasivo Corto Plazo).
+  - **Endeudamiento**: Nivel de deuda sobre fondos propios.
+  - **Capitalización**: Peso del Patrimonio Neto sobre el total.
+  - **Garantía**: Seguridad para acreedores (Activo Total / Pasivo Total).
+- **Gráficos de Composición**: Visualizan cómo se reparte el activo (fijo, existencias, disponible) y el pasivo (propio vs ajeno).
+
+### 2.3 Cuadro de Mando (20 Ratios)
 Ubicado en **Finanzas > Ratios (Tabla)**.
-- Presenta 20 indicadores clave divididos en 4 bloques: **Liquidez, Solvencia, Gestión y Rentabilidad**.
-- Cada ratio incluye una **Definición** y la **Fórmula** utilizada para su cálculo para total transparencia.
-- Los datos del año en curso aparecen con la etiqueta **(Est.)** si el ejercicio no está cerrado.
+- **Propósito**: Auditoría financiera profunda en 4 bloques: Liquidez, Solvencia, Gestión y Rentabilidad.
+- **Transparencia**: Debajo de cada indicador aparece la **Fórmula Exacta** utilizada. Por ejemplo:
+  - *DSO (Días de Cobro)*: (Clientes / Ventas) * 365.
+  - *Punto de Equilibrio*: Ventas necesarias para cubrir todos los costes fijos.
+- **Datos Proyectados (Est.)**: Para el año 2026, los ratios se calculan usando los **totales combinados de presupuestos de ventas y gastos**, asegurando que el ROA o el Margen Neto reflejen el objetivo anual y no solo la situación puntual del mes actual.
 
-### 3.3 Gráficos de Evolución
+### 2.4 Evolución de Ratios (Gráficos)
 Ubicado en **Finanzas > Ratios (Gráficos)**.
-- Visualización de tendencias en áreas críticas:
-  - **Eficiencia Operativa**: Margen Neto vs Margen de Explotación.
-  - **Rentabilidad**: ROE vs ROA.
-  - **Tesorería**: Evolución de la Liquidez y Prueba Ácida.
-  - **Solvencia**: Capacidad de garantía patrimonial.
+- Visualiza las tendencias históricas. Especialmente útil para ver si la **Eficiencia Operativa** (margen de beneficio por euro vendido) está creciendo año tras año.
+- Los nodos marcados como **(Est.)** representan la posición que la empresa debería tener al cierre del ejercicio según sus presupuestos.
 
-### 3.4 Simulador de Escenarios
+### 2.5 Simulador de Escenarios
 Ubicado en **Finanzas > Simulador**.
-Es una herramienta predictiva para modelar el cierre del año actual:
-- **Variación de Ventas**: Ajusta el crecimiento proyectado de ingresos (-10% a +50%).
-- **Variación de Costes**: Modifica la estructura de gastos. (Positivo = Aumento de costes, Negativo = Ahorro).
-- **Proyección de EBITDA**: El sistema calcula en tiempo real el nuevo EBITDA estimado y los márgenes según los cambios aplicados.
-- **Guardado**: Permite guardar escenarios con nombre propio para revisiones posteriores.
-
-## 4. Módulo de Ventas
-- *Pendiente de documentación tras la activación de módulos específicos.*
-
-## 5. Lógica de Cálculo y Cierre Estimado
-
-La aplicación dTS Instruments proyecta automáticamente el **Cierre de Año (Est.)** cuando el ejercicio actual aún no ha finalizado (ej. año 2026). 
-
-### A. Pérdidas y Ganancias (P&G) — Columnas "(Est.)"
-Para partidas de ingresos y gastos, el motor utiliza **Extrapolación Lineal**:
-- **Cerrado vs Pendiente**: Si se han subido datos de 2 meses (Enero y Febrero), el sistema suma dichos meses reales y multiplica el resultado por 6 (`12 / 2`) para proyectar el año completo.
-- **Detección de Mes**: El sistema detecta automáticamente el mes más reciente cargado para cada cuenta en la base de datos de Supabase.
-
-### B. Balance de Situación — Columnas "(Est.)"
-A diferencia de la P&G, el balance no se extrapola linealmente por tiempo:
-1. **Dato de Snapshot**: Se toma el importe del último mes disponible (ej. Febrero) como la situación real a esa fecha. Al ser una "foto" del patrimonio en un momento dado, no se multiplica por el factor de tiempo.
-2. **Totales**: Los totales se recalculan automáticamente sumando todas sus subpartidas para asegurar la cuadratura contable.
-
-## 6. Gestión de Usuarios (Admin)
-
-Este módulo centraliza el control de acceso a la plataforma y solo es visible para usuarios con rol **ADMIN**.
-
-### 6.1 Panel de Control y Altas
-Ubicado en la ruta lateral **Usuarios/Administración**.
-- **Formulario de Registro**: Permite la creación inmediata de nuevos perfiles.
-  - **Validación Integrada**: El sistema comprueba en tiempo real que el email sea válido y que la contraseña tenga un mínimo de **6 caracteres**.
-  - **Mensajes de Error**: Si algún campo es incorrecto, aparecerá un aviso en rojo indicando el motivo.
-- **Gestión de Perfiles**:
-  - **Edición**: Permite actualizar nombres, emails o asignar nuevos roles a usuarios existentes.
-  - **Estado (Activo/Inactivo)**: Un administrador puede desactivar el acceso de cualquier usuario con un solo clic sin necesidad de borrar su historial.
-- **Búsqueda Avanzada**: Incluye un buscador dinámico por nombre o email y un selector para filtrar el listado por roles específicos.
-
-### 6.2 Matriz de Roles
-La plataforma dTS utiliza un sistema de control de acceso basado en roles (RBAC):
-- **ADMIN**: Control total del sistema, incluyendo la gestión de otros usuarios.
-- **DIRECCIÓN / OTROS**: Acceso a la visualización de datos de negocio (Finanzas/Ventas) según los permisos configurados en la base de datos de seguridad.
+- Permite "jugar" con los números de 2026:
+  - **Base de Simulación**: Puedes elegir comparar tus cambios contra el *Cierre Real 2025* o contra el *Presupuesto 2026*.
+  - **Ajustes**: Al mover los sliders, el sistema recalcula el **EBITDA Proyectado**, el **Margen Bruto** y la **Tesorería Estimada** que generarías con ese nuevo escenario.
 
 ---
 
-*Manual de dTS Instruments v2.2 — Actualizado a marzo 2026.*
+## 3. Lógica de Cálculo y Datos (Backend)
+
+La plataforma dTS Instruments utiliza un motor de procesamiento que unifica datos reales de contabilidad con objetivos de negocio estratégicos.
+
+### 3.1 Fuentes de Información
+1.  **Datos Reales (Actuals)**: Registros contables mensuales subidos desde el ERP a las tablas `income_statements` y `financial_balances`.
+2.  **Presupuesto de Ventas 2026 (Sales Budgets)**: Una tabla detallada que contiene los objetivos de venta por comercial y cliente para el año 2026. Es la fuente para la partida **A.1** dEL 2026.
+3.  **Presupuesto de Gastos 2026**: Datos cargados para las partidas de Personal, Compras y Otros Gastos de explotación.
+
+### 3.2 Proyección de Cierre 2026 (Est.)
+Para el año actual (2026), la WebApp aplica la siguiente jerarquía de cálculo:
+
+- **Si NO existe presupuesto**: El sistema toma lo facturado hasta el último mes y lo **extrapola linealmente** hasta los 12 meses (Ej: si en marzo llevas 300k, estima 1.2M al final de año).
+- **Si EXISTE presupuesto**: El sistema **prioriza el presupuesto anual**. Las partidas de ventas y gastos muestran el valor total que se prevé alcanzar en diciembre.
+- **Recálculo de Totales**: Para evitar errores de márgenes (como el ROA bajo que se producía al inicio), el sistema **recalcula el EBIT y el Beneficio Neto** proyectado para 2026 sumando/restando las partidas presupuestadas y aplicando un **estimado de impuestos (25%)**.
+
+---
+
+## 4. Gestión de Usuarios (Admin)
+Módulo restringido para el control de la seguridad.
+- **Roles**: 
+  - `ADMIN`: Gestión total y de usuarios.
+  - `DIRECCION`: Visibilidad total de finanzas y ventas.
+  - `VENTAS`: Visibilidad de objetivos comerciales.
+- **Seguridad**: Todas las contraseñas están encriptadas y los accesos se validan mediante tokens JWT que expiran a las 24 horas.
+
+---
+
+*Manual de dTS Instruments v2.3 — Actualizado a 25 de marzo 2026.*

@@ -74,7 +74,12 @@ export const RatiosChartsPage: React.FC = () => {
     },
     itemStyle: { color: isDark ? '#f1f5f9' : '#1e293b' },
     labelStyle: { color: isDark ? '#00B0B9' : '#003E51', fontWeight: 'bold', marginBottom: '4px' },
-    cursor: { stroke: isDark ? '#334155' : '#e2e8f0', strokeWidth: 2 }
+    cursor: { stroke: isDark ? '#475569' : '#e2e8f0', strokeWidth: 2 }
+  };
+
+  const axisStyles = {
+    tick: { fill: isDark ? '#CBD5E1' : '#94A3B8', fontSize: 12 },
+    gridStroke: isDark ? '#475569' : '#E2E8F0'
   };
 
   return (
@@ -100,16 +105,16 @@ export const RatiosChartsPage: React.FC = () => {
                   <stop offset="95%" stopColor="#00B0B9" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} opacity={0.5} />
-              <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} unit="%" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={axisStyles.gridStroke} opacity={isDark ? 0.3 : 0.5} />
+              <XAxis dataKey="year" axisLine={false} tickLine={false} tick={axisStyles.tick} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
+              <YAxis axisLine={false} tickLine={false} tick={axisStyles.tick} unit="%" />
               <Tooltip 
                 {...tooltipStyles}
-                formatter={(val: any) => [parseFloat(val).toFixed(2) + '%', '']}
+                formatter={(val: any, name: any) => [parseFloat(val).toFixed(2) + '%', name]}
               />
               <Legend verticalAlign="top" height={36}/>
               <Area name="ROE (Fina.)" type="monotone" dataKey="roe" stroke="#00B0B9" strokeWidth={3} fillOpacity={1} fill="url(#colorRoe)" />
-              <Area name="ROA (Econ.)" type="monotone" dataKey="roa" stroke="#003E51" strokeWidth={3} fillOpacity={0.05} fill="#003E51" />
+              <Area name="ROA (Econ.)" type="monotone" dataKey="roa" stroke={isDark ? '#7DD3FC' : '#003E51'} strokeWidth={3} fillOpacity={isDark ? 0.1 : 0.05} fill={isDark ? '#7DD3FC' : '#003E51'} />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -122,10 +127,10 @@ export const RatiosChartsPage: React.FC = () => {
         >
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} opacity={0.5} />
-              <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} unit="%" />
-              <Tooltip {...tooltipStyles} formatter={(val: any) => [parseFloat(val).toFixed(2) + '%', '']} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={axisStyles.gridStroke} opacity={isDark ? 0.3 : 0.5} />
+              <XAxis dataKey="year" axisLine={false} tickLine={false} tick={axisStyles.tick} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
+              <YAxis axisLine={false} tickLine={false} tick={axisStyles.tick} unit="%" />
+              <Tooltip {...tooltipStyles} formatter={(val: any, name: any) => [parseFloat(val).toFixed(2) + '%', name]} />
               <Legend verticalAlign="top" height={36}/>
               <Line name="Margen Neto" type="monotone" dataKey="margenNeto" stroke="#F43F5E" strokeWidth={3} dot={{ strokeWidth: 2, r: 4 }} />
               <Line name="Margen EBIT" type="monotone" dataKey="margenEbit" stroke="#10B981" strokeWidth={3} dot={{ strokeWidth: 2, r: 4 }} />
@@ -141,13 +146,13 @@ export const RatiosChartsPage: React.FC = () => {
         >
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} opacity={0.5} />
-              <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} />
-              <Tooltip {...tooltipStyles} formatter={(val: any) => [parseFloat(val).toFixed(2), '']} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={axisStyles.gridStroke} opacity={isDark ? 0.3 : 0.5} />
+              <XAxis dataKey="year" axisLine={false} tickLine={false} tick={axisStyles.tick} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
+              <YAxis axisLine={false} tickLine={false} tick={axisStyles.tick} />
+              <Tooltip {...tooltipStyles} formatter={(val: any, name: any) => [parseFloat(val).toFixed(2), name]} />
               <Legend verticalAlign="top" height={36}/>
               <Line name="Liquidez Corriente" type="stepAfter" dataKey="liquidez" stroke="#8B5CF6" strokeWidth={3} />
-              <Line name="Prueba Ácida" type="stepAfter" dataKey="pruebaAcida" stroke="#4B5563" strokeDasharray="5 5" strokeWidth={2} />
+              <Line name="Prueba Ácida" type="stepAfter" dataKey="pruebaAcida" stroke={isDark ? '#94A3B8' : '#4B5563'} strokeDasharray="5 5" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -160,10 +165,10 @@ export const RatiosChartsPage: React.FC = () => {
         >
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} opacity={0.5} />
-              <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8', fontSize: 12}} />
-              <Tooltip {...tooltipStyles} formatter={(val: any) => [parseFloat(val).toFixed(2), '']} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={axisStyles.gridStroke} opacity={isDark ? 0.3 : 0.5} />
+              <XAxis dataKey="year" axisLine={false} tickLine={false} tick={axisStyles.tick} dy={10} tickFormatter={(val) => data.find(d => d.year === val)?.isEstimate ? `${val} (Est.)` : val} />
+              <YAxis axisLine={false} tickLine={false} tick={axisStyles.tick} />
+              <Tooltip {...tooltipStyles} formatter={(val: any, name: any) => [parseFloat(val).toFixed(2), name]} />
               <Legend verticalAlign="top" height={36}/>
               <Area name="Ratio Solvencia" type="basis" dataKey="solvencia" stroke="#FB923C" fill="#FB923C" fillOpacity={0.1} strokeWidth={3} />
               <Area name="Ratio Endeudamiento" type="basis" dataKey="endeudamiento" stroke="#6366F1" fill="#6366F1" fillOpacity={0.05} strokeWidth={3} />
