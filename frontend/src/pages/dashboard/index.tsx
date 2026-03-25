@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getIncomeStatementData, getBudgetsData, groupDataByYear, groupBudgetsByYear } from '../../api/finance';
-import { formatCurrency } from '../../api/formatters';
-import { TrendingUp, TrendingDown, Target } from 'lucide-react';
+import { formatCurrency, formatPercent } from '../../api/formatters';
+import { TrendingUp, TrendingDown, Target, BarChart2 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
   const { data: incomeRows, isLoading: iLoading } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
@@ -29,9 +29,17 @@ export const DashboardPage: React.FC = () => {
                        - Math.abs(currentBudget['A.6'] || 0);
     const ebitdaDeviation = budgetEbitda !== 0 ? ((realEbitda / budgetEbitda) - 1) * 100 : 0;
 
+    // Calculate raw (non-extrapolated) YTD sales for attainment metric
+    const rawYtdSales = incomeRows
+      .filter((row: any) => row.year === currentYear && row.account_id === 'A.1')
+      .reduce((sum: number, row: any) => sum + row.amount, 0);
+
+    const salesAttainment = budgetSales > 0 ? (rawYtdSales / budgetSales) * 100 : 0;
+
     return {
       realSales, budgetSales, salesDeviation,
-      realEbitda, budgetEbitda, ebitdaDeviation
+      realEbitda, budgetEbitda, ebitdaDeviation,
+      rawYtdSales, salesAttainment
     };
   }, [incomeRows, budgetRows, currentYear]);
 
@@ -78,6 +86,26 @@ export const DashboardPage: React.FC = () => {
               <span className={`text-xs font-medium ${metrics && metrics.ebitdaDeviation >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {metrics && metrics.ebitdaDeviation > 0 ? '+' : ''}{metrics?.ebitdaDeviation.toFixed(1)}%
               </span>
+           </div>
+        </div>
+
+        {/* Attainment Card */}
+        <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group">
+           <div className="flex justify-between items-start mb-4">
+             <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Consecución Ventas</p>
+             <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+               <BarChart2 size={16} />
+             </div>
+           </div>
+           <h3 className="text-3xl font-light text-dts-primary dark:text-white">{formatPercent((metrics?.salesAttainment || 0) / 100)}</h3>
+           <div className="mt-4 border-t border-gray-50 dark:border-gray-800 pt-3">
+              <div className="flex justify-between text-[10px] text-gray-400 mb-1 font-medium">
+                 <span>REAL YTD: {formatCurrency(metrics?.rawYtdSales || 0)}</span>
+                 <span>Ppto Anual</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                 <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${Math.min(metrics?.salesAttainment || 0, 100)}%` }}></div>
+              </div>
            </div>
         </div>
       </div>
