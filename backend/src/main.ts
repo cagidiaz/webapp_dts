@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { join } from 'path';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AppService } from './app.service';
@@ -53,11 +54,14 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
   
-  // Test DB connection on startup
+  // Test DB connection and static path
   const appService = app.get(AppService);
   const health = await appService.getHealth();
-  console.log(`🚀 dTS API (v1.0.3) running on http://localhost:${port}`);
+  const staticPath = join(process.cwd(), 'frontend', 'dist');
+  
+  console.log(`🚀 dTS API (v1.0.4) running on http://localhost:${port}`);
   console.log(`📡 Database status: ${health.status} (${health.database})`);
+  console.log(`📂 Serving static from: ${staticPath}`);
   if (health.error) console.error(`❌ DB Error: ${health.error}`);
   console.log(`📖 Swagger docs at http://localhost:${port}/api-docs`);
 }
