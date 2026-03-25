@@ -2,10 +2,10 @@ import axios from 'axios';
 
 /**
  * Axios client pre-configured for the dTS Instruments API.
- * Requests to /api/* are proxied by Vite dev server to NestJS backend.
+ * Uses environment variables for connectivity (Vite).
  */
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
