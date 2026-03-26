@@ -43,6 +43,15 @@ export const SimulationsPage: React.FC = () => {
   const [salesGrowth, setSalesGrowth] = useState(10); // +10%
   const [costVariation, setCostVariation] = useState(-5);  // Default: reduction of 5%
   const [baselineMode, setBaselineMode] = useState<'historical' | 'budget'>('budget');
+  const PURCHASE_RATIO_2026 = 0.6744;
+
+  // Link costs to sales for Budget 2026
+  React.useEffect(() => {
+    if (baselineMode === 'budget') {
+      const autoCost = Math.round(salesGrowth * PURCHASE_RATIO_2026);
+      setCostVariation(autoCost);
+    }
+  }, [salesGrowth, baselineMode]);
 
   // Base year for simulation (projection based on previous year)
   const currentYear = new Date().getFullYear();
@@ -157,6 +166,11 @@ export const SimulationsPage: React.FC = () => {
                   <label>Variación de Costes</label>
                   <span className={costVariation > 0 ? 'text-red-500' : 'text-green-600'}>
                     {costVariation > 0 ? '+' : ''}{costVariation}%
+                    {baselineMode === 'budget' && (
+                      <span className="ml-2 text-[10px] bg-dts-secondary/10 px-1.5 py-0.5 rounded text-dts-secondary border border-dts-secondary/20">
+                        LINKED (67.4%)
+                      </span>
+                    )}
                   </span>
                 </div>
                 <input 
@@ -165,7 +179,8 @@ export const SimulationsPage: React.FC = () => {
                   max="50" 
                   value={costVariation} 
                   onChange={(e) => setCostVariation(parseInt(e.target.value))} 
-                  className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-dts-primary-light" 
+                  disabled={baselineMode === 'budget'}
+                  className={`w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-not-allowed accent-dts-primary-light ${baselineMode === 'budget' ? 'opacity-50' : 'cursor-pointer'}`} 
                 />
                 <div className="flex justify-between mt-2 px-1 text-xs font-mono text-gray-500">
                    <span className="font-medium">Gastos Sim.:</span>

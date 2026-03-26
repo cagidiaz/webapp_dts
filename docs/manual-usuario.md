@@ -59,7 +59,9 @@ Ubicado en **Finanzas > Ratios (Gráficos)**.
 Ubicado en **Finanzas > Simulador**.
 - Permite "jugar" con los números de 2026:
   - **Base de Simulación**: Puedes elegir comparar tus cambios contra el *Cierre Real 2025* o contra el *Presupuesto 2026*.
-  - **Ajustes**: Al mover los sliders, el sistema recalcula el **EBITDA Proyectado**, el **Margen Bruto** y la **Tesorería Estimada** que generarías con ese nuevo escenario.
+    - **Ajustes**: Al mover los sliders, el sistema recalcula el **EBITDA Proyectado**, el **Margen Bruto** y la **Tesorería Estimada**.
+    - **Vinculación Inteligente (Novedad 2026)**: En el escenario de **Presupuesto 2026**, la *Variación de Costes* se bloquea y se vincula automáticamente al *Crecimiento de Ventas*.
+    - **Lógica de Vinculación**: Se basa en el **Ratio de Compras (67,44%)**. Por cada 1% de crecimiento en ventas, el sistema estima un incremento de 0,67% en los costes totales (compras proyectadas).
 
 ---
 
@@ -91,4 +93,10 @@ Módulo restringido para el control de la seguridad.
 
 ---
 
-*Manual de dTS Instruments v2.3 — Actualizado a 25 de marzo 2026.*
+---
+
+## 5. Registro de Modificaciones Técnicas
+Para un seguimiento detallado de los cambios arquitectónicos y análisis de datos, consulte la carpeta `/docs/modificaciones`. 
+- **Análisis de Ratio 2026**: Determinado mediante el estudio de la relación Compras/Gastos Totales (A.4 / Suma(A.4, A.6, A.7, A.13)) sobre el presupuesto base cargado en Supabase.
+
+*Manual de dTS Instruments v2.4 — Actualizado a 26 de marzo 2026.*
