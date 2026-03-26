@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { TrendingUp, Info } from 'lucide-react';
 import { formatCurrency } from '../../api/formatters';
+import { InfoPopover } from '../../components/ui/InfoPopover';
 
 interface YearData {
   year: number;
@@ -86,7 +87,15 @@ export const KeyPointsPage: React.FC = () => {
       {/* Header & Year Selector */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-surface-card-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
         <div>
-          <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Análisis de 4 Puntos Clave</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Análisis de 4 Puntos Clave</h1>
+            <InfoPopover 
+              title="4 Puntos Clave del Balance"
+              description="Visión ejecutiva de la salud del balance a través de las 4 métricas más vitales: Liquidez, Capitalización, Endeudamiento y Garantía patrimonial."
+              objective="Ofrecer un resumen rápido y visual del estado del balance para la alta dirección sin requerir análisis profundo de las partidas contables."
+              iconSize={20}
+            />
+          </div>
           <p className="text-sm text-gray-500">Referidos al Balance del año <span className="font-medium text-dts-secondary">{selectedYear} {yearData?.isEstimate ? '(ESTIMADO)' : ''}</span></p>
         </div>
         <div className="flex items-center gap-3">
@@ -243,6 +252,11 @@ export const KeyPointsPage: React.FC = () => {
               status={liquidezStatus(liquidezValue)}
               isGood={liquidezValue >= 1.5}
               hint="Capacidad para hacer frente a deudas a corto plazo."
+              infoProps={{
+                description: "Mide si la empresa tiene suficientes activos a corto plazo (caja, clientes, existencias) para pagar sus deudas más inmediatas.",
+                formulas: "Activo Corriente / Pasivo Corriente",
+                objective: "Debe ser > 1.5 para holgura operativa."
+              }}
             />
 
             {/* 3. ENDEUDAMIENTO */}
@@ -253,6 +267,11 @@ export const KeyPointsPage: React.FC = () => {
               status={endeudamientoStatus(endeudamientoValue)}
               isGood={endeudamientoValue < 1.0}
               hint="Volumen de deudas en relación a los fondos propios."
+              infoProps={{
+                description: "Muestra cuántos euros de financiación ajena (deuda) utiliza la empresa por cada euro de financiación propia.",
+                formulas: "(Pasivo Corriente + Pasivo No Corriente) / Patrimonio Neto",
+                objective: "Un valor < 1 indica buena independencia financiera."
+              }}
             />
 
             {/* 2. CAPITALIZACIÓN */}
@@ -263,6 +282,11 @@ export const KeyPointsPage: React.FC = () => {
               status={capitalizacionStatus(capitalizacionValue)}
               isGood={capitalizacionValue >= 30}
               hint="Proporción de fondos propios respecto a deudas."
+              infoProps={{
+                description: "Porcentaje del balance que está financiado directamente por los socios (capital propio y reservas generadas interanuales).",
+                formulas: "(Patrimonio Neto / Total PN y Pasivo) * 100",
+                objective: "Un valor superior al 30% es un claro signo de adecuada capitalización."
+              }}
             />
 
             {/* 4. GARANTÍA */}
@@ -273,6 +297,11 @@ export const KeyPointsPage: React.FC = () => {
               status={garantiaStatus(garantiaValue)}
               isGood={garantiaValue >= 1.5}
               hint="Seguridad financiera ofrecida a los acreedores."
+              infoProps={{
+                description: "Indica el respaldo patrimonial que tienen los acreedores. Es decir, cuántos euros de activo tenemos para pagar cada euro de deuda en caso de disolución.",
+                formulas: "Activo Total / Total Pasivo (Deudas)",
+                objective: "Idealmente > 1.5 para asegurar solvencia absoluta."
+              }}
             />
           </div>
 
@@ -292,10 +321,21 @@ export const KeyPointsPage: React.FC = () => {
 };
 
 // Sub-component for KPIs
-const StatusCard = ({ title, value, subtext, status, isGood, hint }: any) => (
+const StatusCard = ({ title, value, subtext, status, isGood, hint, infoProps }: any) => (
   <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-lg border-2 border-transparent hover:border-dts-secondary/20 transition-all flex flex-col overflow-hidden group">
-    <div className="bg-dts-primary-light text-white text-center py-2 font-medium text-sm flex justify-center items-center gap-4 uppercase tracking-wider">
+    <div className="bg-dts-primary-light text-white text-center py-2 font-medium text-sm flex justify-center items-center gap-4 uppercase tracking-wider relative">
       {title}
+      {infoProps && (
+        <div className="absolute right-2">
+          <InfoPopover 
+            title={title} 
+            description={infoProps.description} 
+            formulas={infoProps.formulas} 
+            objective={infoProps.objective}
+            className="text-white/60 hover:text-white"
+          />
+        </div>
+      )}
     </div>
     <div className="p-4 flex-1 text-center flex flex-col justify-center gap-2">
        <p className="text-xs text-gray-500 font-medium group-hover:text-dts-secondary transition-colors">{subtext}</p>

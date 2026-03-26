@@ -14,6 +14,7 @@ import {
   Legend 
 } from 'recharts';
 import { BarChart3, TrendingUp, ShieldCheck, Zap } from 'lucide-react';
+import { InfoPopover } from '../../components/ui/InfoPopover';
 
 interface FinancialData {
   year: number;
@@ -33,7 +34,7 @@ export const RatiosChartsPage: React.FC = () => {
   const data = useMemo(() => {
     if (!balanceRows || !incomeRows) return [];
     
-    const balances = groupDataByYear(balanceRows) as FinancialData[];
+    const balances = groupDataByYear(balanceRows, true, budgetRows, incomeRows) as FinancialData[];
     const incomes = groupDataByYear(incomeRows, false, budgetRows) as FinancialData[];
     
     const allYears = Array.from(new Set([...balances.map(b => b.year), ...incomes.map(i => i.year)])).sort((a,b) => a-b);
@@ -42,6 +43,14 @@ export const RatiosChartsPage: React.FC = () => {
       const b = balances.find(d => d.year === year) || { year };
       const i = incomes.find(d => d.year === year) || { year };
       
+      const annualSales = Math.abs(i['A.1'] || i['A.1_REAL'] || 1);
+      const annualPurchases = Math.abs(i['A.4'] || i['A.4_REAL'] || 1);
+      
+      const rotacion = annualSales / Math.abs(b['1.TOT'] || 1);
+      const dso = (Math.abs(b['1.B.III'] || 0) / annualSales) * 365;
+      const dpo = (Math.abs(b['2.C.V.1'] || 0) / annualPurchases) * 365;
+      const pmm = dso + 30;
+
       // Calculations for charts
       return {
         year,
@@ -55,6 +64,11 @@ export const RatiosChartsPage: React.FC = () => {
         // Liquidez
         liquidez: b['1.B'] / (b['2.C'] || 1),
         pruebaAcida: (b['1.B'] - b['1.B.II']) / (b['2.C'] || 1),
+        // Actividad
+        rotacion,
+        dso,
+        dpo,
+        pmm,
         // Solvencia
         endeudamiento: (b['2.B'] + b['2.C']) / (b['2.A'] || 1),
         solvencia: b['1.TOT'] / ((b['2.B'] + b['2.C']) || 1)
@@ -86,7 +100,14 @@ export const RatiosChartsPage: React.FC = () => {
     <div className="space-y-6 pb-12 animate-in fade-in duration-700">
       {/* Header */}
       <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
-        <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">EVOLUCIÓN DE RATIOS CLAVE ({data.length > 0 ? `${Math.min(...data.map(d => d.year))}-${Math.max(...data.map(d => d.year))}` : ''})</h1>
+        <div className="flex items-center gap-2 mb-1">
+          <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">EVOLUCIÓN DE RATIOS CLAVE ({data.length > 0 ? `${Math.min(...data.map(d => d.year))}-${Math.max(...data.map(d => d.year))}` : ''})</h1>
+          <InfoPopover 
+            title="Evolución de Ratios"
+            description="Gráficas históricas de los ratios más críticos para analizar tendencias a medio/largo plazo en rentabilidad, eficiencia operativa y solvencia patrimonial."
+            iconSize={20}
+          />
+        </div>
         <p className="text-sm text-gray-500 italic">Tendencias históricas de Rentabilidad, Solvencia y Márgenes Operativos</p>
       </div>
 
@@ -96,6 +117,8 @@ export const RatiosChartsPage: React.FC = () => {
           title="RENTABILIDAD" 
           subtitle="Comparativa ROE vs ROA (%)"
           icon={<TrendingUp className="w-5 h-5 text-dts-secondary" />}
+          infoDesc="Mide la rentabilidad generada tanto por los activos totales (ROA) como por el capital propio de los socios (ROE)."
+          infoFormulas={["ROE = Res. Ejercicio / Patrimonio Neto", "ROA = EBIT / Activo Total"]}
         >
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data}>
@@ -124,6 +147,7 @@ export const RatiosChartsPage: React.FC = () => {
           title="EFICIENCIA OPERATIVA" 
           subtitle="Margen Neto vs Margen de Explotación (%)"
           icon={<Zap className="w-5 h-5 text-yellow-500" />}
+          infoDesc="Analiza cuánto beneficio real retiene la empresa en relación a lo que factura, tanto a nivel operativo (EBIT) como de beneficio final neto."
         >
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>
@@ -143,6 +167,7 @@ export const RatiosChartsPage: React.FC = () => {
           title="RATIOS DE TESORERÍA" 
           subtitle="Evolución de la Liquidez y Prueba Ácida"
           icon={<BarChart3 className="w-5 h-5 text-indigo-500" />}
+          infoDesc="Muestra la capacidad de la empresa para hacer frente a sus pagos a corto plazo con los activos circulantes y sin depender totalmente de las existencias (Prueba Ácida)."
         >
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>
@@ -162,6 +187,7 @@ export const RatiosChartsPage: React.FC = () => {
           title="SOLVENCIA E INDEPENDENCIA" 
           subtitle="Ratio de Garantía Patrimonial"
           icon={<ShieldCheck className="w-5 h-5 text-green-500" />}
+          infoDesc="Visualiza la estructura financiera global. El Ratio de Solvencia superior a 1 garantiza que hay activos suficientes para pagar todas las deudas, mientras que el nivel de endeudamiento debe equilibrarse con la rentabilidad."
         >
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data}>
@@ -181,16 +207,23 @@ export const RatiosChartsPage: React.FC = () => {
 };
 
 // UI Component for Chart Container
-const ChartCard = ({ title, subtitle, icon, children }: any) => (
+const ChartCard = ({ title, subtitle, icon, infoDesc, infoFormulas, children }: any) => (
   <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 flex flex-col hover:shadow-xl transition-shadow">
-    <div className="flex items-center gap-3 mb-6">
-      <div className="p-2 bg-gray-50 dark:bg-white/5 rounded-lg">
-        {icon}
+    <div className="flex items-center gap-3 mb-6 justify-between">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-gray-50 dark:bg-white/5 rounded-lg">
+          {icon}
+        </div>
+        <div>
+          <h3 className="font-medium text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
+            {title}
+          </h3>
+          <p className="text-xs text-gray-400">{subtitle}</p>
+        </div>
       </div>
-      <div>
-        <h3 className="font-medium text-gray-800 dark:text-gray-100">{title}</h3>
-        <p className="text-xs text-gray-400">{subtitle}</p>
-      </div>
+      {infoDesc && (
+        <InfoPopover title={title} description={infoDesc} formulas={infoFormulas} />
+      )}
     </div>
     <div className="flex-1 min-h-[300px]">
       {children}

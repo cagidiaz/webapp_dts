@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getBalanceData, getIncomeStatementData, getBudgetsData, groupDataByYear } from '../../api/finance';
 import { formatCurrency, formatNumber, formatPercent } from '../../api/formatters';
+import { InfoPopover } from '../../components/ui/InfoPopover';
 
 export const RatiosTablePage: React.FC = () => {
   const { data: balanceRows, isLoading: bLoading } = useQuery({ queryKey: ['balanceData'], queryFn: getBalanceData });
@@ -10,7 +11,7 @@ export const RatiosTablePage: React.FC = () => {
 
   if (bLoading || iLoading || budLoading) return <div className="p-8">Calculando ratios...</div>;
 
-  const balances = groupDataByYear(balanceRows || []);
+  const balances = groupDataByYear(balanceRows || [], true, budgetRows, incomeRows);
   const incomes = groupDataByYear(incomeRows || [], false, budgetRows);
 
   const years = Array.from(new Set([...balances.map(b => b.year), ...incomes.map(i => i.year)])).sort((a, b) => b - a);
@@ -57,10 +58,10 @@ export const RatiosTablePage: React.FC = () => {
     {
       name: 'GESTIÓN Y ACTIVIDAD',
       ratios: [
-        { label: 'Rotación de Activo', hint: 'Eficiencia en el uso de activos.', formulaStr: 'Ventas / Activo Total', formula: (d: any) => d['A.1'] / d['1.TOT'], type: 'decimal' },
-        { label: 'Días de Cobro (DSO)', hint: 'Tiempo medio de cobro a clientes.', formulaStr: '(Clientes / Ventas) * 365', formula: (d: any) => ((d['1.B.III'] || 0) / (d['A.1'] || 1)) * 365, type: 'days' },
-        { label: 'Días de Pago (DPO)', hint: 'Tiempo medio de pago a proveedores.', formulaStr: '(Prov / Compras) * 365', formula: (d: any) => ((d['2.C.V.1'] || 0) / (d['A.4'] || 1)) * 365, type: 'days' },
-        { label: 'Periodo Medio Maduración', hint: 'Ciclo completo de explotación.', formulaStr: 'Ciclo de explotación (Aprox)', formula: (d: any) => (((d['1.B.III'] || 0) / (d['A.1'] || 1)) * 365) + 30, type: 'days' },
+        { label: 'Rotación de Activo', hint: 'Eficiencia en el uso de activos.', formulaStr: 'Ventas / Activo Total', formula: (d: any) => Math.abs(d['A.1'] || d['A.1_REAL'] || 1) / Math.abs(d['1.TOT'] || 1), type: 'decimal' },
+        { label: 'Días de Cobro (DSO)', hint: 'Tiempo medio de cobro a clientes.', formulaStr: '(Clientes / Ventas) * 365', formula: (d: any) => (Math.abs(d['1.B.III'] || 0) / Math.abs(d['A.1'] || d['A.1_REAL'] || 1)) * 365, type: 'days' },
+        { label: 'Días de Pago (DPO)', hint: 'Tiempo medio de pago a proveedores.', formulaStr: '(Prov / Compras) * 365', formula: (d: any) => (Math.abs(d['2.C.V.1'] || 0) / Math.abs(d['A.4'] || d['A.4_REAL'] || 1)) * 365, type: 'days' },
+        { label: 'Periodo Medio Maduración', hint: 'Ciclo completo de explotación.', formulaStr: 'Ciclo de explotación (Aprox)', formula: (d: any) => ((Math.abs(d['1.B.III'] || 0) / Math.abs(d['A.1'] || d['A.1_REAL'] || 1)) * 365) + 30, type: 'days' },
       ]
     },
     {
@@ -72,7 +73,8 @@ export const RatiosTablePage: React.FC = () => {
         { label: 'Margen Neto', hint: 'Beneficio final por cada euro vendido.', formulaStr: 'Res. Ejercicio / Ventas', formula: (d: any) => d['A.5.TOT'] / d['A.1'], type: 'percent' },
         { label: 'Coste Personal s/ Ventas', hint: 'Peso de la estructura de personal.', formulaStr: 'Gtos Personal / Ventas', formula: (d: any) => Math.abs(d['A.6']) / d['A.1'], type: 'percent' },
         { label: 'EBITDA / Ventas', hint: 'Capacidad de generación de caja operativa.', formulaStr: '(EBIT + Amort) / Ventas', formula: (d: any) => (d['A.1.TOT'] + Math.abs(d['A.8'] || 0)) / d['A.1'], type: 'percent' },
-        { label: 'Punto de Equilibrio (Aprox)', hint: 'Umbral de rentabilidad.', formulaStr: 'Ventas mínimas para no perder', formula: (d: any) => Math.abs(d['A.6'] + d['A.7']) / (1 - (Math.abs(d['A.4']) / d['A.1'])), type: 'currency' },
+        { label: 'Punto de Equilibrio Operativo (Aprox)', hint: 'Umbral de rentabilidad operativa.', formulaStr: 'Ventas mínimas sin considerar intereses', formula: (d: any) => Math.abs(d['A.6'] + d['A.7']) / (1 - (Math.abs(d['A.4']) / d['A.1'])), type: 'currency' },
+        { label: 'Punto de Equilibrio Total (Aprox)', hint: 'Umbral de rentabilidad total.', formulaStr: 'Ventas mínimas para EBIT + Fin. = 0', formula: (d: any) => Math.abs(d['A.6'] + d['A.7'] + d['A.13']) / (1 - (Math.abs(d['A.4']) / d['A.1'])), type: 'currency' },
       ]
     }
   ];
@@ -81,7 +83,16 @@ export const RatiosTablePage: React.FC = () => {
     <div className="space-y-6 pb-12 animate-in fade-in duration-500">
       <div className="flex justify-between items-center bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
         <div>
-          <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">CUADRO DE MANDO: 20 RATIOS</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">CUADRO DE MANDO: 20 RATIOS</h1>
+            <InfoPopover 
+              title="Cuadro de 20 Ratios" 
+              description="Análisis detallado de la salud financiera mediante ratios agrupados por actividad, rentabilidad y solvencia. En la columna de estimación (año actual), los ratios de actividad (DSO/DPO) se calculan usando ventas reales anualizadas para mantener la coherencia con el balance."
+              objective="Evaluar la eficiencia, rentabilidad y capacidad de pago de dTS Instruments a lo largo del tiempo."
+              source="Cálculos derivados de 'income_statements' y 'financial_balances'."
+              iconSize={20}
+            />
+          </div>
           <p className="text-sm text-gray-500">Análisis comparativo multianual de indicadores financieros</p>
         </div>
         <div className="flex gap-2">

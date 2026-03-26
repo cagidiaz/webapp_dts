@@ -48,7 +48,10 @@ Ubicado en **Finanzas > Ratios (Tabla)**.
 - **Transparencia**: Debajo de cada indicador aparece la **Fórmula Exacta** utilizada. Por ejemplo:
   - *DSO (Días de Cobro)*: (Clientes / Ventas) * 365.
   - *Punto de Equilibrio*: Ventas necesarias para cubrir todos los costes fijos.
-- **Datos Proyectados (Est.)**: Para el año 2026, los ratios se calculan usando los **totales combinados de presupuestos de ventas y gastos**, asegurando que el ROA o el Margen Neto reflejen el objetivo anual y no solo la situación puntual del mes actual.
+- **Datos Proyectados (Est.)**: Para el año 2026, los ratios se calculan usando los **totales combinados de presupuestos de ventas y gastos**, asegurando que el ROA o el Margen Neto reflejen el objetivo anual.
+- **Ajuste de Actividad y Balance (Novedad 2026)**: Para garantizar ratios de gestión coherentes (**DSO/DPO**), el motor de proyección diferencia entre cuentas:
+  - **Cuentas Inerciales**: (Activo Fijo, Patrimonio Neto, Pasivo LP) se proyectan como una copia exacta del último saldo real (Febrero 2026), ya que no tienen una relación directa con el volumen de ventas mensual.
+  - **Cuentas Operativas**: (Clientes, Proveedores, Existencias) se escalan automáticamente según el factor de crecimiento del presupuesto frente a la realidad. Esto permite proyectar un balance a cierre de año (Diciembre 2026) que sea proporcional a la actividad de ventas y compras prevista, manteniendo los ratios de días de cobro y pago alineados con la realidad operativa.
 
 ### 2.4 Evolución de Ratios (Gráficos)
 Ubicado en **Finanzas > Ratios (Gráficos)**.

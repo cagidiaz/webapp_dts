@@ -13,6 +13,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { Scale } from 'lucide-react';
+import { InfoPopover } from '../../components/ui/InfoPopover';
 
 export const BalancesPage: React.FC = () => {
   const [isMounted, setIsMounted] = React.useState(false);
@@ -46,6 +47,13 @@ export const BalancesPage: React.FC = () => {
           <div className="flex items-center gap-2 mb-1">
             <Scale className="text-dts-secondary" size={24} />
             <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Análisis de Balances</h1>
+            <InfoPopover 
+              title="Análisis de Balances"
+              description="Representación estructurada del Balance de Situación de la empresa (Activo, Pasivo y Patrimonio Neto)."
+              objective="Evaluar la solidez patrimonial y estudiar el peso vertical estadístico de cada masa patrimonial sobre el total de inversiones (Activo) y su método de financiación."
+              source="Tabla: 'financial_balances' extraída contablemente mensualmente."
+              iconSize={20}
+            />
           </div>
           <p className="text-sm text-gray-500 font-medium">Desglose estructural y comparativa multianual de situación patrimonial</p>
         </div>

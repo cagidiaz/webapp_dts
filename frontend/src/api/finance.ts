@@ -121,7 +121,7 @@ export const groupBudgetsByYear = (rows: BudgetDataRow[]) => {
 /**
  * Helper to process the flat DB rows into a year-grouped structure for Recharts/Tables
  */
-export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = false, budgetRows?: BudgetDataRow[]) => {
+export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = false, budgetRows?: BudgetDataRow[], incomeRowsForScaling?: FinancialDataRow[]) => {
   const grouped: Record<number, { accounts: Record<string, {amount: number, month: number}>, maxMonth: number }> = {};
   
   rows.forEach(row => {
@@ -129,9 +129,11 @@ export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = f
       grouped[row.year] = { accounts: {}, maxMonth: 0 };
     }
     
-    const rowMonth = row.month || 12; // Default to 12 if missing to avoid projecting old years
-    if (rowMonth > grouped[row.year].maxMonth) {
-      grouped[row.year].maxMonth = rowMonth;
+    const rowMonth = row.month;
+    if (rowMonth && rowMonth > 0 && rowMonth <= 12) {
+      if (rowMonth > (grouped[row.year].maxMonth || 0)) {
+        grouped[row.year].maxMonth = rowMonth;
+      }
     }
 
     if (isBalance) {
@@ -156,28 +158,29 @@ export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = f
       
       const estimatedAccounts: Record<string, number> = {};
       
-      // First, calculate raw or extrapolated amounts for each line
+      // 1. Initial pass: Extrapolate Income Statement (flows) 
+      // and capture base snapshots for Balance Sheet
       Object.entries(data.accounts).forEach(([accountId, accData]) => {
         let multiplier = 1;
-
-        if (isEstimate) {
-          if (!isBalance) {
-            // Income Statement (Flows): Linear extrapolation (e.g., 2 months -> 12 months)
-            multiplier = 12 / data.maxMonth;
-          } else {
-            // Balance Sheet (Snapshots): 
-            multiplier = 1; 
-          }
+        if (year === currentYear && !isBalance) {
+           const effectiveMonths = (data.maxMonth > 0 && data.maxMonth < 12) ? data.maxMonth : 2;
+           multiplier = 12 / effectiveMonths;
         }
+
         estimatedAccounts[accountId] = accData.amount * multiplier;
+        
+        // Specialized copy for turnover ratios (DSO/DPO)
+        if (year === currentYear && !isBalance) {
+           if (accountId === 'A.1') estimatedAccounts['A.1_REAL'] = Math.abs(accData.amount * multiplier);
+           if (accountId === 'A.4') estimatedAccounts['A.4_REAL'] = Math.abs(accData.amount * multiplier);
+        }
       });
 
-      // Override with Budgets if available and it's an estimate (Income Statement only)
+      // 2. Budget Overrides for Income Statement
       if (isEstimate && !isBalance && budgetRows) {
          const budgetsGrouped = groupBudgetsByYear(budgetRows);
          const budgetForYear = budgetsGrouped.find(b => b.year === year);
          if (budgetForYear) {
-            // Override keys with budget
             Object.keys(budgetForYear).forEach(k => {
                if (k !== 'year' && k !== 'isBudget') {
                   estimatedAccounts[k] = (budgetForYear as any)[k] as number;
@@ -186,17 +189,41 @@ export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = f
          }
       }
 
-      // Special handling: re-calculate totals to ensure tree consistency
+      // 3. Operative Scaling for Balance Sheet (NEW)
+      if (isEstimate && isBalance && budgetRows && incomeRowsForScaling) {
+        const budgetsGrouped = groupBudgetsByYear(budgetRows);
+        const b26 = budgetsGrouped.find(b => b.year === 2026);
+        
+        if (b26) {
+          // Find real run-rate from incomeRowsForScaling
+          const realIncome26 = incomeRowsForScaling.filter(r => r.year === 2026);
+          const salesReal26 = realIncome26.filter(r => r.account_id === 'A.1').reduce((s, r) => s + r.amount, 0);
+          const purchReal26 = realIncome26.filter(r => r.account_id === 'A.4').reduce((s, r) => s + r.amount, 0);
+          
+          const maxMonthInc = Math.max(...realIncome26.map(r => r.month || 0), 1);
+          const salesRunRate = (salesReal26 * (12 / maxMonthInc)) || 1;
+          const purchRunRate = (Math.abs(purchReal26) * (12 / maxMonthInc)) || 1;
+
+          const salesFactor = (b26['A.1'] || 0) / salesRunRate;
+          const purchFactor = (Math.abs(b26['A.4'] || 0)) / purchRunRate;
+
+          // Scale Operative Accounts
+          if (estimatedAccounts['1.B.III']) estimatedAccounts['1.B.III'] *= salesFactor; // Clients
+          if (estimatedAccounts['2.C.V.1']) estimatedAccounts['2.C.V.1'] *= purchFactor; // Providers
+          if (estimatedAccounts['1.B.II']) estimatedAccounts['1.B.II'] *= purchFactor; // Inventory
+        }
+      }
+
+      // 4. Final Totals Recalculation
       if (isBalance) {
-        // Total Activo (1.TOT) = Fix (1.A) + Circular (1.B)
+        estimatedAccounts['1.B'] = (estimatedAccounts['1.B.I'] || 0) + (estimatedAccounts['1.B.II'] || 0) + 
+                                   (estimatedAccounts['1.B.III'] || 0) + (estimatedAccounts['1.B.IV'] || 0) + 
+                                   (estimatedAccounts['1.B.V'] || 0) + (estimatedAccounts['1.B.VI'] || 0) + 
+                                   (estimatedAccounts['1.B.VII'] || 0);
+        
         estimatedAccounts['1.TOT'] = (estimatedAccounts['1.A'] || 0) + (estimatedAccounts['1.B'] || 0);
-        // Total P+PN (2.TOT) = PN (2.A) + Non-Curr (2.B) + Corr (2.C)
         estimatedAccounts['2.TOT'] = (estimatedAccounts['2.A'] || 0) + (estimatedAccounts['2.B'] || 0) + (estimatedAccounts['2.C'] || 0);
       } else {
-        // Income Statement Recalculation (Flows)
-        // Ensure that if we overrode components (A.1, A.4, etc.), the totals reflect it.
-        // Formula: EBIT (A.1.TOT) = Ventas(A.1) - Aprov(A.4) - Personal(A.6) - Otros(A.7) - Amort(A.8)
-        // We use Math.abs for expense accounts because they might be stored as positive or negative in DB.
         const sales = estimatedAccounts['A.1'] || 0;
         const cogs = Math.abs(estimatedAccounts['A.4'] || 0);
         const labor = Math.abs(estimatedAccounts['A.6'] || 0);
@@ -205,12 +232,9 @@ export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = f
 
         estimatedAccounts['A.1.TOT'] = sales - cogs - labor - opex - amort;
 
-        // Formula: Net Result (A.5.TOT) = EBIT(A.1.TOT) + Financial Result (A.12 - A.13) - Taxes (estimated)
         const finInc = estimatedAccounts['A.12'] || 0;
         const finExp = Math.abs(estimatedAccounts['A.13'] || 0);
         const ebt = estimatedAccounts['A.1.TOT'] + finInc - finExp;
-        
-        // Estimated Taxes (roughly 25% if positive)
         const taxes = ebt > 0 ? ebt * 0.25 : 0;
         estimatedAccounts['A.5.TOT'] = ebt - taxes;
       }
@@ -221,6 +245,6 @@ export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = f
         ...estimatedAccounts,
       };
     })
-    .sort((a, b) => b.year - a.year) // Sort years descending
-    .slice(0, 4); // Keep only the 4 most recent years
+    .sort((a, b) => b.year - a.year)
+    .slice(0, 4);
 };

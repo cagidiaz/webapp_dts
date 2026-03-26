@@ -23,6 +23,7 @@ import {
   Info, 
   Layers
 } from 'lucide-react';
+import { InfoPopover } from '../../components/ui/InfoPopover';
 
 interface FinancialData {
   year: number;
@@ -79,7 +80,6 @@ export const SimulationsPage: React.FC = () => {
   const totals = useMemo(() => {
     const dataSource: any = baselineMode === 'historical' ? baseData : budgetData;
     
-    // Debug log to confirm if data arrives at the simulation engine
     if (dataSource) {
       console.log(`Simulating with ${baselineMode}:`, { 
         A1: dataSource['A.1'], 
@@ -98,32 +98,32 @@ export const SimulationsPage: React.FC = () => {
       ? (baseData?.['A.1'] || 0)
       : (dataSource['A.1'] || 0);
 
-    const annualBaseCosts = 
-      Math.abs(dataSource['A.4'] || 0) + 
-      Math.abs(dataSource['A.7'] || 0) + 
-      Math.abs(dataSource['A.8'] || 0) + 
-      Math.abs(dataSource['A.13'] || 0);
-      
-    const annualBasePersonnel = Math.abs(dataSource['A.6'] || 0);
+    // BREAKDOWN: Variable vs Fixed
+    const baseVariableCosts = Math.abs(dataSource['A.4'] || 0);
+    const baseFixedOperating = Math.abs(dataSource['A.6'] || 0) + Math.abs(dataSource['A.7'] || 0);
+    const baseNonOperating = Math.abs(dataSource['A.8'] || 0) + Math.abs(dataSource['A.13'] || 0);
     
-    // Use manual calculation for historical EBITDA too, to match the budget methodology
-    const baseEbitda = annualBaseSales - annualBaseCosts - annualBasePersonnel;
+    // Correct EBITDA = Sales - Variable Purchases - Fixed Operating Expenses (A.6 + A.7)
+    // EBITDA excludes Amortizations (A.8) and Interests (A.13)
+    const baseEbitda = annualBaseSales - baseVariableCosts - baseFixedOperating;
 
     const projectedSales = annualBaseSales * salesMod;
-    const projectedCosts = annualBaseCosts * costMod;
-    const projectedEbitda = projectedSales - projectedCosts - annualBasePersonnel;
+    const projectedPurchases = baseVariableCosts * costMod; // ONLY PURCHASES SCALE
+    
+    // Projected EBITDA uses projected sales and projected purchases but KEEP OPERATING FIXED COSTS STATIC
+    const projectedEbitda = projectedSales - projectedPurchases - baseFixedOperating;
     
     return {
       baseName: baselineMode === 'historical' ? `Real ${selectedYear}` : `Presupuesto ${currentYear}`,
       sales: projectedSales,
       baseSales: annualBaseSales,
-      costs: projectedCosts,
-      baseCosts: annualBaseCosts,
-      basePersonnel: annualBasePersonnel,
+      costs: projectedPurchases + baseFixedOperating + baseNonOperating, // Total costs for tracking
+      baseCosts: baseVariableCosts + baseFixedOperating + baseNonOperating,
+      basePersonnel: Math.abs(dataSource['A.6'] || 0),
       ebitda: projectedEbitda,
       realEbitda: baseEbitda,
       margin: (projectedEbitda / (projectedSales || 1)) * 100,
-      improvement: ((projectedEbitda / (baseEbitda || 1)) - 1) * 100
+      improvement: baseEbitda !== 0 ? ((projectedEbitda / baseEbitda) - 1) * 100 : 0
     };
   }, [baseData, budgetData, baselineMode, salesGrowth, costVariation, currentYear, selectedYear]);
 
@@ -137,6 +137,12 @@ export const SimulationsPage: React.FC = () => {
         <div className="flex items-center gap-2 mb-1">
           <Calculator className="text-dts-secondary" size={24} />
           <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Motor de Simulación</h1>
+          <InfoPopover 
+            title="Motor de Simulación"
+            description="Herramienta avanzada para modelar el impacto de variaciones en ventas y costes sobre los resultados (EBITDA y márgenes)."
+            objective="Permitir a dirección anticipar escenarios (ej. caída de ventas o inflación de costes) sin alterar los presupuestos oficiales, facilitando planes de contingencia."
+            iconSize={22}
+          />
         </div>
         <p className="text-sm text-gray-500 font-medium">Modelado dinámico de escenarios financieros para {currentYear}</p>
       </div>
@@ -145,10 +151,17 @@ export const SimulationsPage: React.FC = () => {
         {/* Controls */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800">
-            <h3 className="text-lg font-medium mb-8 flex items-center gap-2 text-dts-primary dark:text-white">
-              <Layers className="text-dts-secondary" size={20} />
-              Ajustes
-            </h3>
+            <div className="flex items-center gap-2 mb-8">
+              <h3 className="text-lg font-medium flex items-center gap-2 text-dts-primary dark:text-white">
+                <Layers className="text-dts-secondary" size={20} />
+                Ajustes
+              </h3>
+              <InfoPopover 
+                title="Panel de Ajustes"
+                description="Modifica los deslizadores para aplicar desviaciones porcentuales. En modo 'Presupuesto', la variación de costes se auto-calcula basada en el peso de las compras."
+                formulas="Ventas Sim = Ventas Base * (1 + Crec%) | Costes Sim = Costes Base * (1 + Var%)"
+              />
+            </div>
             <div className="space-y-10">
               <div>
                 <div className="flex justify-between mb-3 text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -163,14 +176,16 @@ export const SimulationsPage: React.FC = () => {
               </div>
               <div>
                 <div className="flex justify-between mb-3 text-sm font-medium text-gray-600 dark:text-gray-400">
-                  <label>Variación de Costes</label>
-                  <span className={costVariation > 0 ? 'text-red-500' : 'text-green-600'}>
-                    {costVariation > 0 ? '+' : ''}{costVariation}%
+                  <div className="flex flex-col gap-1">
+                    <label>Variación de Costes</label>
                     {baselineMode === 'budget' && (
-                      <span className="ml-2 text-[10px] bg-dts-secondary/10 px-1.5 py-0.5 rounded text-dts-secondary border border-dts-secondary/20">
+                      <span className="text-[9px] bg-dts-secondary/10 px-1.5 py-0.5 rounded text-dts-secondary border border-dts-secondary/20 w-fit">
                         LINKED (67.4%)
                       </span>
                     )}
+                  </div>
+                  <span className={costVariation > 0 ? 'text-red-500' : 'text-green-600'}>
+                    {costVariation > 0 ? '+' : ''}{costVariation}%
                   </span>
                 </div>
                 <input 
@@ -210,7 +225,13 @@ export const SimulationsPage: React.FC = () => {
         {/* Results */}
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800">
-             <h3 className="text-lg font-medium mb-8 text-dts-primary dark:text-white">Comparativa Anual Proyectada</h3>
+             <div className="flex items-center gap-2 mb-8">
+               <h3 className="text-lg font-medium text-dts-primary dark:text-white">Comparativa Anual Proyectada</h3>
+               <InfoPopover 
+                 title="Comparativa Base vs Simulado"
+                 description="Contrasta visualmente las cifras del escenario base seleccionado (Real vs Presupuesto) frente a las cifras resultantes de aplicar tus variaciones de crecimiento o reducción en el simulador."
+               />
+             </div>
              <div style={{ height: 400, width: '100%' }}>
                 <ResponsiveContainer width="100%" height={400}>
                   <BarChart data={[
@@ -253,7 +274,7 @@ export const SimulationsPage: React.FC = () => {
             </div>
             <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-lg font-medium text-green-600">
                <span className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Tesorería (Est.)</span>
-               <div className="text-3xl font-light mt-2">+{formatCurrency((totals?.ebitda||0) * 0.85)}</div>
+               <div className="text-3xl font-light mt-2">{formatCurrency((totals?.ebitda||0) * 0.85)}</div>
             </div>
           </div>
         </div>

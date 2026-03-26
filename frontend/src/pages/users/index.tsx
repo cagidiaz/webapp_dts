@@ -20,6 +20,7 @@ import {
   Transition
 } from '@headlessui/react';
 import apiClient from '../../api/apiClient';
+import { InfoPopover } from '../../components/ui/InfoPopover';
 
 interface Role {
   id: string;
@@ -209,12 +210,20 @@ export const UsersPage: React.FC = () => {
         {/* Header & Stats */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-1">
-            <h1 className="text-3xl font-extrabold flex items-center gap-3 tracking-tight text-dts-primary dark:text-white">
-              <span className="p-2 bg-dts-secondary/10 dark:bg-dts-secondary/20 rounded-xl text-dts-secondary">
-                <UsersIcon size={28} />
-              </span>
-              ADMINISTRACIÓN DE USUARIOS
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-extrabold flex items-center gap-3 tracking-tight text-dts-primary dark:text-white">
+                <span className="p-2 bg-dts-secondary/10 dark:bg-dts-secondary/20 rounded-xl text-dts-secondary">
+                  <UsersIcon size={28} />
+                </span>
+                ADMINISTRACIÓN DE USUARIOS
+              </h1>
+              <InfoPopover 
+                title="Administración de Usuarios"
+                description="Vista para gestionar el acceso a la aplicación, asignar roles y controlar la actividad de los miembros del equipo."
+                objective="Garantizar un control de acceso centralizado para todos los módulos."
+                iconSize={22}
+              />
+            </div>
             <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Panel centralizado de control y perfiles de sistema</p>
           </div>
 
