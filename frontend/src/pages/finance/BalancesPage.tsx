@@ -235,9 +235,17 @@ export const BalancesPage: React.FC = () => {
 
       {/* NEW: Variation Table */}
       <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-bottom-2 duration-700">
-         <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2 bg-gray-50/30 dark:bg-transparent">
-            <span className="text-lg">📉</span>
-            <h3 className="text-sm font-bold text-dts-primary dark:text-dts-secondary uppercase tracking-tight">Variación Anual (%)</h3>
+         <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/30 dark:bg-transparent">
+            <div className="flex items-center gap-2">
+               <span className="text-lg">📉</span>
+               <h3 className="text-sm font-bold text-dts-primary dark:text-dts-secondary uppercase tracking-tight">Variación Anual (%)</h3>
+            </div>
+            <InfoPopover 
+               title="Variación Interanual"
+               description="Estudio de la tasa de crecimiento o decremento porcentual de cada masa patrimonial respecto al ejercicio anterior."
+               objective="Identificar tendencias de crecimiento, desinversiones o incrementos significativos de deuda de un año a otro de forma rápida."
+               iconSize={18}
+            />
          </div>
          <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -300,7 +308,17 @@ export const BalancesPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Chart 1: ACTIVO */}
         <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl shadow-card border border-gray-100 dark:border-gray-800">
-          <h3 className="text-lg font-medium mb-6 text-center text-gray-700 dark:text-white uppercase tracking-wider">ACTIVO</h3>
+          <div className="flex items-center justify-center gap-2 mb-6 uppercase tracking-wider relative">
+            <h3 className="text-lg font-medium text-gray-700 dark:text-white">ACTIVO</h3>
+            <div className="absolute right-0">
+              <InfoPopover 
+                title="Distribución del Activo"
+                description="Representación visual de la composición de la inversión (donde está el dinero). Clasifica los activos según su liquidez."
+                objective="Visualizar rápidamente qué parte de la empresa está inmovilizada (Activo Fijo) frente a la que tiene capacidad de convertirse en dinero (Existencias, Clientes y Caja)."
+                iconSize={18}
+              />
+            </div>
+          </div>
           <div style={{ height: 320, width: '100%' }}>
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={[...data].reverse()} margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>
@@ -330,7 +348,17 @@ export const BalancesPage: React.FC = () => {
 
         {/* Chart 2: PN y PASIVO */}
         <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl shadow-card border border-gray-100 dark:border-gray-800">
-          <h3 className="text-lg font-medium mb-6 text-center text-gray-700 dark:text-white uppercase tracking-wider">PATRIMONIO NETO y PASIVO</h3>
+          <div className="flex items-center justify-center gap-2 mb-6 uppercase tracking-wider relative">
+            <h3 className="text-lg font-medium text-gray-700 dark:text-white">PATRIMONIO NETO y PASIVO</h3>
+            <div className="absolute right-0">
+              <InfoPopover 
+                title="Estructura de Financiación"
+                description="Muestra la proporción entre fondos propios (Patrimonio Neto) y deudas (Pasivo), clasificadas por su exigibilidad (corto o largo plazo)."
+                objective="Analizar la dependencia de financiación externa y la solvencia a largo plazo de la estructura financiera global."
+                iconSize={18}
+              />
+            </div>
+          </div>
           <div style={{ height: 320, width: '100%' }}>
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={[...data].reverse()} margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>

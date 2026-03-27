@@ -118,6 +118,7 @@ export const SimulationsPage: React.FC = () => {
       costs: projectedPurchases + baseFixedOperating + baseNonOperating, // Total costs for tracking
       baseCosts: baseVariableCosts + baseFixedOperating + baseNonOperating,
       basePersonnel: Math.abs(dataSource['A.6'] || 0),
+      purchases: projectedPurchases,
       ebitda: projectedEbitda,
       realEbitda: baseEbitda,
       margin: (projectedEbitda / (projectedSales || 1)) * 100,
@@ -145,9 +146,9 @@ export const SimulationsPage: React.FC = () => {
         <p className="text-sm text-gray-500 font-medium">Modelado dinámico de escenarios financieros para {currentYear}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Controls */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-4 space-y-6">
           <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800">
             <div className="flex items-center gap-2 mb-8">
               <h3 className="text-lg font-medium flex items-center gap-2 text-dts-primary dark:text-white">
@@ -176,11 +177,6 @@ export const SimulationsPage: React.FC = () => {
                 <div className="flex justify-between mb-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                   <div className="flex flex-col gap-1">
                     <label>Variación de Costes</label>
-                    {baselineMode === 'budget' && (
-                      <span className="text-[9px] bg-dts-secondary/10 px-1.5 py-0.5 rounded text-dts-secondary border border-dts-secondary/20 w-fit">
-                        LINKED (100%)
-                      </span>
-                    )}
                   </div>
                   <span className={costVariation > 0 ? 'text-red-500' : 'text-green-600'}>
                     {costVariation > 0 ? '+' : ''}{costVariation}%
@@ -199,6 +195,12 @@ export const SimulationsPage: React.FC = () => {
                    <span className="font-medium">Gastos Sim.:</span>
                    <span className={`${costVariation > 0 ? 'text-red-400' : 'text-green-500'} text-sm`}>
                      {formatCurrency(totals?.costs || 0)}
+                   </span>
+                </div>
+                <div className="flex justify-between mt-1 px-1 text-xs font-mono text-gray-500">
+                   <span className="font-medium">Compras Sim.:</span>
+                   <span className={`${costVariation > 0 ? 'text-red-400' : 'text-green-500'} text-sm mb-1`}>
+                     {formatCurrency(totals?.purchases || 0)}
                    </span>
                 </div>
               </div>
@@ -221,7 +223,7 @@ export const SimulationsPage: React.FC = () => {
         </div>
 
         {/* Results */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-8 space-y-6">
           <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800">
              <div className="flex items-center gap-2 mb-8">
                <h3 className="text-lg font-medium text-dts-primary dark:text-white">Comparativa Anual Proyectada</h3>
@@ -262,16 +264,37 @@ export const SimulationsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-dts-primary-dark p-6 rounded-2xl text-white shadow-xl relative overflow-hidden">
-               <span className="text-xs uppercase tracking-widest text-dts-secondary-light font-medium">EBITDA Proyectado</span>
+               <div className="flex justify-between items-start">
+                  <span className="text-xs uppercase tracking-widest text-dts-secondary-light font-medium">EBITDA Proyectado</span>
+                  <InfoPopover 
+                    title="EBITDA Proyectado"
+                    description="Estimación del resultado operativo bruto basado en tu escenario simulado. Representa el beneficio antes de intereses, amortizaciones e impuestos."
+                    className="text-white/40 hover:text-white"
+                  />
+               </div>
                <div className="text-3xl font-light mt-2">{formatCurrency(totals?.ebitda)}</div>
                <div className="text-sm mt-2 text-green-400 font-medium">+{formatPercent((totals?.improvement || 0) / 100)} vs Real</div>
             </div>
-            <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-lg">
-               <span className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Margen Bruto</span>
+            <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-lg relative">
+               <div className="flex justify-between items-start">
+                  <span className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Margen Bruto (Sim.)</span>
+                  <InfoPopover 
+                    title="Margen s/Ventas Simulado"
+                    description="Indica qué porcentaje de las ventas proyectadas se transforma en EBITDA tras cubrir los costes variables de compras."
+                    className="text-gray-300 hover:text-dts-secondary"
+                  />
+               </div>
                <div className="text-3xl font-light text-dts-primary dark:text-white">{formatPercent((totals?.margin || 0) / 100)}</div>
             </div>
-            <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-lg font-medium text-green-600">
-               <span className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Tesorería (Est.)</span>
+            <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-lg font-medium text-green-600 relative">
+               <div className="flex justify-between items-start">
+                  <span className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Tesorería (Est. 85%)</span>
+                  <InfoPopover 
+                    title="Estimación de Caja Operativa"
+                    description="Modelado rápido basado en el 85% del EBITDA para prever el potencial neto de generación de caja eliminando amortizaciones y estimando el cobro/pago promedio."
+                    className="text-gray-300 hover:text-green-500"
+                  />
+               </div>
                <div className="text-3xl font-light mt-2">{formatCurrency((totals?.ebitda||0) * 0.85)}</div>
             </div>
           </div>
