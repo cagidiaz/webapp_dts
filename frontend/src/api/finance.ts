@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './supabase.js';
 
 export interface FinancialDataRow {
   account_id: string;
@@ -64,7 +64,7 @@ export const getBudgetsData = async () => {
 
   // Inject the new sales budgets
   if (salesData && salesData.length > 0) {
-    const salesRows: BudgetDataRow[] = salesData.map(row => ({
+    const salesRows: BudgetDataRow[] = salesData.map((row: any) => ({
       id: `sales_${row.id}`,
       account_code: 700000, // This maps to 'A.1' in mapBudgetToAccountId
       account_name: 'Ventas (Presupuesto 2026)',
@@ -129,8 +129,8 @@ export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = f
       grouped[row.year] = { accounts: {}, maxMonth: 0 };
     }
     
-    const rowMonth = row.month;
-    if (rowMonth && rowMonth > 0 && rowMonth <= 12) {
+    const rowMonth = row.month ?? 0;
+    if (rowMonth > 0 && rowMonth <= 12) {
       if (rowMonth > (grouped[row.year].maxMonth || 0)) {
         grouped[row.year].maxMonth = rowMonth;
       }
@@ -204,8 +204,8 @@ export const groupDataByYear = (rows: FinancialDataRow[], isBalance: boolean = f
           const salesRunRate = (salesReal26 * (12 / maxMonthInc)) || 1;
           const purchRunRate = (Math.abs(purchReal26) * (12 / maxMonthInc)) || 1;
 
-          const salesFactor = (b26['A.1'] || 0) / salesRunRate;
-          const purchFactor = (Math.abs(b26['A.4'] || 0)) / purchRunRate;
+          const salesFactor = ((b26 as any)['A.1'] || 0) / salesRunRate;
+          const purchFactor = (Math.abs((b26 as any)['A.4'] || 0)) / purchRunRate;
 
           // Scale Operative Accounts
           if (estimatedAccounts['1.B.III']) estimatedAccounts['1.B.III'] *= salesFactor; // Clients

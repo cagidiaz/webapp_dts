@@ -41,16 +41,14 @@ export const SimulationsPage: React.FC = () => {
   }, []);
 
   // Simulation State
-  const [salesGrowth, setSalesGrowth] = useState(10); // +10%
-  const [costVariation, setCostVariation] = useState(-5);  // Default: reduction of 5%
+  const [salesGrowth, setSalesGrowth] = useState(0); // 0% by default
+  const [costVariation, setCostVariation] = useState(0);  // 0% by default
   const [baselineMode, setBaselineMode] = useState<'historical' | 'budget'>('budget');
-  const PURCHASE_RATIO_2026 = 0.6744;
-
   // Link costs to sales for Budget 2026
   React.useEffect(() => {
     if (baselineMode === 'budget') {
-      const autoCost = Math.round(salesGrowth * PURCHASE_RATIO_2026);
-      setCostVariation(autoCost);
+      // 1:1 linkage as requested: if sales growth is 10%, cost variation is 10%
+      setCostVariation(salesGrowth);
     }
   }, [salesGrowth, baselineMode]);
 
@@ -158,8 +156,8 @@ export const SimulationsPage: React.FC = () => {
               </h3>
               <InfoPopover 
                 title="Panel de Ajustes"
-                description="Modifica los deslizadores para aplicar desviaciones porcentuales. En modo 'Presupuesto', la variación de costes se auto-calcula basada en el peso de las compras."
-                formulas="Ventas Sim = Ventas Base * (1 + Crec%) | Costes Sim = Costes Base * (1 + Var%)"
+                description="Modifica los deslizadores para aplicar desviaciones porcentuales. En modo 'Presupuesto', la variación de costes se auto-calcula basada en las compras variables."
+                formulas="Ventas Sim = Ventas Base * (1 + Crec%) | Compras Sim = Compras Base * (1 + Var%)"
               />
             </div>
             <div className="space-y-10">
@@ -180,7 +178,7 @@ export const SimulationsPage: React.FC = () => {
                     <label>Variación de Costes</label>
                     {baselineMode === 'budget' && (
                       <span className="text-[9px] bg-dts-secondary/10 px-1.5 py-0.5 rounded text-dts-secondary border border-dts-secondary/20 w-fit">
-                        LINKED (67.4%)
+                        LINKED (100%)
                       </span>
                     )}
                   </div>
@@ -200,7 +198,7 @@ export const SimulationsPage: React.FC = () => {
                 <div className="flex justify-between mt-2 px-1 text-xs font-mono text-gray-500">
                    <span className="font-medium">Gastos Sim.:</span>
                    <span className={`${costVariation > 0 ? 'text-red-400' : 'text-green-500'} text-sm`}>
-                     {formatCurrency((totals?.costs || 0) + (totals?.basePersonnel || 0))}
+                     {formatCurrency(totals?.costs || 0)}
                    </span>
                 </div>
               </div>
