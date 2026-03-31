@@ -65,11 +65,12 @@ export const CustomersPage: React.FC = () => {
         if (valA === null || valA === undefined) return 1;
         if (valB === null || valB === undefined) return -1;
 
-        // Numeric sort for decimals/numbers
-        if (typeof valA === 'number' || !isNaN(Number(valA)) && typeof valA !== 'string') {
-          return sortConfig.direction === 'asc' 
-            ? Number(valA) - Number(valB)
-            : Number(valB) - Number(valA);
+        // Check if values can be treated as numbers (for Decimals/Floats)
+        const numA = valA !== null ? Number(valA) : NaN;
+        const numB = valB !== null ? Number(valB) : NaN;
+
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
         }
 
         // String sort
