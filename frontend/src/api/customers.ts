@@ -13,7 +13,7 @@ export interface CustomerDataRow {
   market_segment: string | null;
   business_model: string | null;
   total_sales: number;
-  cost_profit_variance: number;
+  cost_profit_variance_lcy: number;
   adjusted_profit: number;
   adjusted_profit_pct: number;
   order_margin: number;

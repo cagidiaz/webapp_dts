@@ -551,7 +551,7 @@ model customers {
   market_segment         String?   @db.VarChar(50)
   business_model         String?   @db.VarChar(50)
   total_sales            Decimal?  @default(0) @db.Decimal
-  cost_profit_variance   Decimal?  @default(0) @db.Decimal
+  cost_profit_variance_lcy   Decimal?  @default(0) @db.Decimal
   adjusted_profit        Decimal?  @default(0) @db.Decimal
   adjusted_profit_pct    Decimal?  @default(0) @db.Decimal
   order_margin           Decimal?  @default(0) @db.Decimal

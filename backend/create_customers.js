@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.customers (
     market_segment VARCHAR(50),
     business_model VARCHAR(50),
     total_sales DECIMAL DEFAULT 0,
-    cost_profit_variance DECIMAL DEFAULT 0,
+    cost_profit_variance_lcy DECIMAL DEFAULT 0,
     adjusted_profit DECIMAL DEFAULT 0,
     adjusted_profit_pct DECIMAL DEFAULT 0,
     order_margin DECIMAL DEFAULT 0,
