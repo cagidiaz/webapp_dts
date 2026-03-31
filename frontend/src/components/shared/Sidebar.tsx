@@ -38,7 +38,13 @@ const navItems: NavItem[] = [
       { name: 'Simulaciones', path: '/finance/simulations' },
     ]
   },
-  { name: 'Ventas', icon: PieChart, path: '/sales' },
+  { 
+    name: 'Ventas', 
+    icon: PieChart, 
+    children: [
+      { name: 'Clientes', path: '/sales/customers' },
+    ]
+  },
   { 
     name: 'Configuración', 
     icon: Settings,

@@ -36,7 +36,7 @@ async function bootstrap() {
     .setDescription(
       'REST API for the dTS Instruments BI Dashboard. ' +
       'Business Central data is READ-ONLY. ' +
-      'Only auth, profiles, roles, and forecast tables allow writes.',
+      'Only auth, profiles, roles, and business tables allow reads.',
     )
     .setVersion('1.0')
     .addBearerAuth()
@@ -44,9 +44,8 @@ async function bootstrap() {
     .addTag('Users', 'User profile & role management')
     .addTag('Accounting', 'KPIs: EBITDA, Liquidez, Margen Bruto (read-only)')
     .addTag('Sales', 'Billing analysis & rankings (read-only)')
-    .addTag('Scenarios', 'Forecast scenarios CRUD')
-    .addTag('Forecast', 'AI predictive engine')
     .build();
+
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api-docs', app, document);

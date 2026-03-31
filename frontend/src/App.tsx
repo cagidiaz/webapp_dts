@@ -12,6 +12,7 @@ import {
   RatiosChartsPage,
   SimulationsPage
 } from './pages/finance';
+import { CustomersPage } from './pages/sales';
 import { supabase } from './api/supabase';
 import { useAuthStore } from './store/authStore';
 
@@ -31,7 +32,6 @@ const ScrollToTop = () => {
 };
 
 // Placeholder pages for routes
-const SalesPage = () => <div className="p-8"><h1 className="text-2xl font-medium">Sales & Purchases</h1></div>;
 const SettingsPage = () => <div className="p-8"><h1 className="text-2xl font-medium">Settings</h1></div>;
 
 const ProtectedRoute = () => {
@@ -89,7 +89,11 @@ const App: React.FC = () => {
                 <Route path="simulations" element={<SimulationsPage />} />
               </Route>
 
-              <Route path="sales" element={<SalesPage />} />
+              {/* Modulo Ventas */}
+              <Route path="sales">
+                <Route index element={<Navigate to="customers" replace />} />
+                <Route path="customers" element={<CustomersPage />} />
+              </Route>
               <Route path="users" element={<UsersPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
