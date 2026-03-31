@@ -213,7 +213,7 @@ export const CustomersPage: React.FC = () => {
                 ].map((col) => (
                   <th 
                     key={col.key}
-                    className={`px-6 py-4 font-medium uppercase tracking-wider border-b border-dts-primary-light/10 cursor-pointer hover:bg-dts-primary-dark/50 transition-colors select-none whitespace-nowrap ${col.align === 'right' ? 'text-right' : ''}`}
+                    className={`px-6 py-3 font-medium uppercase tracking-wider border-b border-dts-primary-light/10 cursor-pointer hover:bg-dts-primary-dark/50 transition-colors select-none whitespace-nowrap text-[11px] ${col.align === 'right' ? 'text-right' : ''}`}
                     onClick={() => requestSort(col.key as SortKey)}
                   >
                     <div className={`flex items-center gap-2 ${col.align === 'right' ? 'justify-end' : 'justify-start'}`}>
