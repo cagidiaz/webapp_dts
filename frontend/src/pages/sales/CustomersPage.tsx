@@ -118,9 +118,9 @@ export const CustomersPage: React.FC = () => {
             <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Catálogo de Clientes</h1>
             <InfoPopover 
               title="Catálogo de Clientes"
-              description="Listado completo de clientes sincronizado directamente desde el ERP Business Central."
-              objective="Consultar información comercial, estados de bloqueo y saldos pendientes de cobro de forma rápida y centralizada."
-              source="Tabla: 'customers' sincronizada vía API."
+              description="Listado completo de clientes sincronizado desde el ERP, incluyendo ventas acumuladas del ejercicio actual."
+              objective="Consultar información comercial, estados de bloqueo y ventas del año en curso (2026) de forma rápida."
+              source="Tabla: 'customers' (Datos BC)."
               iconSize={20}
             />
           </div>
@@ -167,7 +167,7 @@ export const CustomersPage: React.FC = () => {
               <TrendingUp className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Ventas Totales Histórico</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Ventas Año 2026 (YTD)</p>
               <h3 className="text-2xl font-bold text-dts-primary dark:text-white">
                 {formatCurrency(totalSales)}
               </h3>
@@ -207,7 +207,7 @@ export const CustomersPage: React.FC = () => {
                   { label: 'Cód. Cliente', key: 'client_id', align: 'left' },
                   { label: 'Nombre Razón Social', key: 'name', align: 'left' },
                   { label: 'Saldo Deuda', key: 'balance_due_lcy', align: 'right' },
-                  { label: 'Ventas Acumuladas', key: 'total_sales', align: 'right' },
+                  { label: 'Ventas 2026 (Actual)', key: 'total_sales', align: 'right' },
                   { label: 'Gestor (Comercial)', key: 'salesperson_code', align: 'left' },
                   { label: 'Ciudad/País', key: 'city', align: 'left' },
                 ].map((col) => (
