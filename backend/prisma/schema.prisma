@@ -336,6 +336,8 @@ model budgets {
   date         DateTime @db.Date
   amount       Float    @default(0)
 
+  calendar calendar? @relation(fields: [date], references: [date], onDelete: NoAction, onUpdate: Cascade)
+
   @@schema("public")
 }
 
@@ -401,22 +403,26 @@ model roles {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model sales_budgets {
-  id             Int       @id @unique @default(autoincrement())
+  id               Int       @id @unique @default(autoincrement())
   salesperson_code String    @db.VarChar(10)
-  customer_code  String    @db.VarChar(20)
-  customer_name  String?
-  pm_code        String    @db.VarChar(10)
-  item_no        String    @db.VarChar(50)
-  subfamily_code String    @db.VarChar(50)
-  product_name   String?
-  target_units   Float?    @default(0) @db.Real
-  unit_price_ly  Decimal?  @default(0.00) @db.Decimal(15, 2)
-  unit_price_ytd Decimal?  @default(0.00) @db.Decimal(15, 2)
-  target_revenue Decimal?  @default(0.00) @db.Decimal(15, 2)
-  working_days   Int?      @db.SmallInt
-  budget_date    DateTime  @db.Date
-  monthly_budget Decimal?  @default(0.00) @db.Decimal(15, 2)
-  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  customer_code    String    @db.VarChar(20)
+  customer_name    String?
+  pm_code          String    @db.VarChar(10)
+  item_no          String    @db.VarChar(50)
+  subfamily_code   String    @db.VarChar(50)
+  product_name     String?
+  target_units     Float?    @default(0) @db.Real
+  unit_price_ly    Decimal?  @default(0.00) @db.Decimal(15, 2)
+  unit_price_ytd   Decimal?  @default(0.00) @db.Decimal(15, 2)
+  target_revenue   Decimal?  @default(0.00) @db.Decimal(15, 2)
+  working_days     Int?      @db.SmallInt
+  budget_date      DateTime  @db.Date
+  monthly_budget   Decimal?  @default(0.00) @db.Decimal(15, 2)
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+
+  product  products?  @relation(fields: [item_no], references: [item_no], onDelete: NoAction, onUpdate: Cascade)
+  customer customers? @relation(fields: [customer_code], references: [client_id], onDelete: NoAction, onUpdate: Cascade)
+  calendar calendar?  @relation(fields: [budget_date], references: [date], onDelete: NoAction, onUpdate: Cascade)
 
   @@index([budget_date], map: "idx_budget_date")
   @@index([customer_code], map: "idx_customer")
@@ -450,14 +456,17 @@ model value_entries {
   source_description String?
   source_order_no    String?  @db.VarChar
 
+  product  products?  @relation(fields: [item_no], references: [item_no], onDelete: NoAction, onUpdate: Cascade)
+  customer customers? @relation(fields: [source_no], references: [client_id], onDelete: NoAction, onUpdate: Cascade)
+  calendar calendar?  @relation(fields: [reg_date], references: [date], onDelete: NoAction, onUpdate: Cascade)
+
   @@index([reg_date], map: "idx_value_reg_date")
   @@index([item_no], map: "idx_value_item")
   @@index([salesperson_code], map: "idx_value_salesperson")
   @@index([document_type], map: "idx_value_document_type")
+  @@unique([entry_no], map: "unique_entry_no_value_entries")
   @@schema("public")
 }
-
-
 
 model modules {
   id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -493,6 +502,10 @@ model calendar {
   is_holiday     Boolean? @default(false)
   fiscal_year    Int?     @db.SmallInt
   fiscal_quarter Int?     @db.SmallInt
+
+  value_entries value_entries[]
+  sales_budgets sales_budgets[]
+  budgets       budgets[]
 
   @@schema("public")
 }
@@ -539,45 +552,81 @@ enum one_time_token_type {
 }
 
 model customers {
-  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  client_id              String    @unique @db.VarChar(50)
-  name                   String    @db.VarChar(255)
-  balance_lcy            Decimal?  @default(0) @db.Decimal
-  balance_due_lcy        Decimal?  @default(0) @db.Decimal
-  credit_limit_lcy       Decimal?  @default(0) @db.Decimal
-  blocked                String?   @db.VarChar(20)
-  privacy_blocked        Boolean?  @default(false)
-  salesperson_code       String?   @db.VarChar(20)
-  market_segment         String?   @db.VarChar(50)
-  business_model         String?   @db.VarChar(50)
-  total_sales            Decimal?  @default(0) @db.Decimal
-  cost_profit_variance_lcy   Decimal?  @default(0) @db.Decimal
-  adjusted_profit        Decimal?  @default(0) @db.Decimal
-  adjusted_profit_pct    Decimal?  @default(0) @db.Decimal
-  order_margin           Decimal?  @default(0) @db.Decimal
-  invoice_margin         Decimal?  @default(0) @db.Decimal
-  last_date_modified     DateTime? @db.Date
-  address                String?   @db.Text
-  address_2              String?   @db.Text
-  country_reg_code       String?   @db.VarChar(20)
-  city                   String?   @db.VarChar(100)
-  country                String?   @db.VarChar(100)
-  post_code              String?   @db.VarChar(20)
-  phone_no               String?   @db.VarChar(50)
-  mobile_no              String?   @db.VarChar(50)
-  email                  String?   @db.VarChar(255)
-  home_page              String?   @db.VarChar(255)
-  language_code          String?   @db.VarChar(10)
-  vat_no                 String?   @db.VarChar(50)
-  customer_posting_group String?   @db.VarChar(50)
-  payment_terms_code     String?   @db.VarChar(50)
-  payment_method_code    String?   @db.VarChar(50)
-  shipment_method_code   String?   @db.VarChar(50)
-  shipping_agent_code    String?   @db.VarChar(50)
-  customer_since         DateTime? @db.Date
-  payments_lcy           Decimal?  @default(0) @db.Decimal
-  created_at             DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime? @default(now()) @db.Timestamptz(6)
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  client_id                String    @unique @db.VarChar(50)
+  name                     String    @db.VarChar(255)
+  balance_lcy              Decimal?  @default(0) @db.Decimal
+  balance_due_lcy          Decimal?  @default(0) @db.Decimal
+  credit_limit_lcy         Decimal?  @default(0) @db.Decimal
+  blocked                  String?   @db.VarChar(20)
+  privacy_blocked          Boolean?  @default(false)
+  salesperson_code         String?   @db.VarChar(20)
+  market_segment           String?   @db.VarChar(50)
+  business_model           String?   @db.VarChar(50)
+  total_sales              Decimal?  @default(0) @db.Decimal
+  cost_profit_variance_lcy Decimal?  @default(0) @db.Decimal
+  adjusted_profit          Decimal?  @default(0) @db.Decimal
+  adjusted_profit_pct      Decimal?  @default(0) @db.Decimal
+  order_margin             Decimal?  @default(0) @db.Decimal
+  invoice_margin           Decimal?  @default(0) @db.Decimal
+  last_date_modified       DateTime? @db.Date
+  address                  String?   @db.Text
+  address_2                String?   @db.Text
+  country_reg_code         String?   @db.VarChar(20)
+  city                     String?   @db.VarChar(100)
+  country                  String?   @db.VarChar(100)
+  post_code                String?   @db.VarChar(20)
+  phone_no                 String?   @db.VarChar(50)
+  mobile_no                String?   @db.VarChar(50)
+  email                    String?   @db.VarChar(255)
+  home_page                String?   @db.VarChar(255)
+  language_code            String?   @db.VarChar(10)
+  vat_no                   String?   @db.VarChar(50)
+  customer_posting_group   String?   @db.VarChar(50)
+  payment_terms_code       String?   @db.VarChar(50)
+  payment_method_code      String?   @db.VarChar(50)
+  shipment_method_code     String?   @db.VarChar(50)
+  shipping_agent_code      String?   @db.VarChar(50)
+  customer_since           DateTime? @db.Date
+  payments_lcy             Decimal?  @default(0) @db.Decimal
+  created_at               DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime? @default(now()) @db.Timestamptz(6)
 
+  value_entries value_entries[]
+  sales_budgets sales_budgets[]
+
+  @@schema("public")
+}
+
+model products {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  item_no             String    @unique @db.VarChar(50)
+  description         String?   @db.VarChar(255)
+  type                String?   @db.VarChar(50)
+  inventory_qty       Float?    @default(0) @db.Real
+  is_assembly         Boolean?  @default(false)
+  base_uom            String?   @db.VarChar(20)
+  standard_cost       Decimal?  @default(0) @db.Decimal(15, 2)
+  unit_cost           Decimal?  @default(0) @db.Decimal(15, 2)
+  last_purchase_price Decimal?  @default(0) @db.Decimal(15, 2)
+  profit_margin_pct   Decimal?  @default(0) @db.Decimal(15, 2)
+  unit_price          Decimal?  @default(0) @db.Decimal(15, 2)
+  gen_bus_group       String?   @db.VarChar(50)
+  vat_group           String?   @db.VarChar(20)
+  vendor_no           String?   @db.VarChar(50)
+  subfamily_code      String?   @db.VarChar(50)
+  is_blocked          Boolean?  @default(false)
+  last_date_modified  DateTime? @db.Date
+  replenish_type      String?   @db.VarChar(50)
+
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+
+  value_entries value_entries[]
+  sales_budgets sales_budgets[]
+
+  @@index([vendor_no], map: "idx_product_vendor")
+  @@index([subfamily_code], map: "idx_product_subfamily")
+  @@index([gen_bus_group], map: "idx_product_bus_group")
   @@schema("public")
 }

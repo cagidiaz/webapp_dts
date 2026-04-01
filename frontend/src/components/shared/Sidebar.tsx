@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { 
@@ -43,6 +43,7 @@ const navItems: NavItem[] = [
     icon: PieChart, 
     children: [
       { name: 'Clientes', path: '/sales/customers' },
+      { name: 'Productos', path: '/sales/products' },
     ]
   },
   { 
@@ -59,8 +60,19 @@ const navItems: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const { isSidebarCollapsed, toggleSidebar } = useUIStore();
   const { profile, session } = useAuthStore();
-  const [openSubmenu, setOpenSubmenu] = useState<string | null>('Finanzas');
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const location = useLocation();
+
+  // Autodetect open submenu on mount and when path changes
+  useEffect(() => {
+    const currentPath = location.pathname;
+    const parent = navItems.find(item => 
+      item.children?.some(child => currentPath.startsWith(child.path))
+    );
+    if (parent) {
+      setOpenSubmenu(parent.name);
+    }
+  }, [location.pathname]);
 
   const userRole = profile?.roles?.name?.toUpperCase() || '';
 

@@ -1,2 +1,2 @@
-// UI components — base primitives: Buttons, Inputs, Badges, Cards
-export {};
+export * from './InfoPopover';
+export * from './Skeleton';

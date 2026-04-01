@@ -11,10 +11,14 @@
     - 2.3 [Cuadro de Mando (20 Ratios)](#23-cuadro-de-mando-20-ratios)
     - 2.4 [Evolución de Ratios (Gráficos)](#24-evolución-de-ratios-gráficos)
     - 2.5 [Simulador de Escenarios](#25-simulador-de-escenarios)
-3. [Lógica de Cálculo y Datos (Backend)](#3-lógica-de-cálculo-y-datos-backend)
-    - 3.1 [Fuentes de Información](#31-fuentes-de-información)
-    - 3.2 [Proyección de Cierre 2026 (Est.)](#32-proyección-de-cierre-2026-est)
-4. [Gestión de Usuarios (Admin)](#4-gestión-de-usuarios-admin)
+3. [Módulo de Ventas (Clientes y Productos)](#3-módulo-de-ventas-clientes-y-productos)
+    - 3.1 [Scroll Infinito y Rendimiento](#31-scroll-infinito-y-rendimiento)
+    - 3.2 [Filtros y Búsqueda Avanzada](#32-filtros-y-búsqueda-avanzada)
+    - 3.3 [KPIs Dinámicos y Ordenación](#33-kpis-dinámicos-y-ordenación)
+4. [Lógica de Cálculo y Datos (Backend)](#4-lógica-de-cálculo-y-datos-backend)
+    - 4.1 [Fuentes de Información](#41-fuentes-de-información)
+    - 4.2 [Proyección de Cierre 2026 (Est.)](#42-proyección-de-cierre-2026-est)
+5. [Gestión de Usuarios (Admin)](#5-gestión-de-usuarios-admin)
 
 ---
 
@@ -68,16 +72,35 @@ Ubicado en **Finanzas > Simulador**.
 
 ---
 
-## 3. Lógica de Cálculo y Datos (Backend)
+## 3. Módulo de Ventas (Clientes y Productos)
+Este módulo permite una gestión ágil de la cartera de clientes y el catálogo de productos, sincronizados directamente con las tablas de Navision/BC.
+
+### 3.1 Scroll Infinito y Rendimiento
+- **Carga bajo demanda**: Las tablas ya no usan paginación tradicional. Los datos se cargan automáticamente a medida que el usuario se desplaza hacia abajo (**Scroll Infinito**), permitiendo manejar miles de registros sin ralentizar el navegador.
+- **Eficiencia**: Solo se solicitan al servidor los datos visibles en pantalla, reduciendo el consumo de ancho de banda.
+
+### 3.2 Filtros y Búsqueda Avanzada
+- **Búsqueda Global**: Permite buscar por Nombre, Código, Ciudad o Vendedor en tiempo real.
+- **Filtro de Estado (Bloqueo)**: Identifica rápidamente clientes o productos bloqueados. Los elementos bloqueados se resaltan con un distintivo rojo junto a su nombre/descripción.
+- **Filtro por Vendedor (Novedad Abril 2026)**: Permite filtrar el catálogo de clientes para ver solo aquellos asignados a un comercial específico. La lista de vendedores se genera dinámicamente según los datos reales del ERP.
+
+### 3.3 KPIs Dinámicos y Ordenación
+- **Indicadores Globales**: En la parte superior se muestran totales de Deuda, Ventas Año Actual (en Clientes) o Stock y Valoración (en Productos).
+- **KPIs Filtrados**: Al aplicar cualquier filtro o búsqueda, los indicadores se recalculan automáticamente para reflejar solo el subconjunto de datos seleccionado.
+- **Ordenación por Columnas**: Al hacer clic en el nombre de cualquier columna, la base de datos reordena los miles de registros de forma instantánea (descendente/ascendente), manteniendo la posición del scroll.
+
+---
+
+## 4. Lógica de Cálculo y Datos (Backend)
 
 La plataforma dTS Instruments utiliza un motor de procesamiento que unifica datos reales de contabilidad con objetivos de negocio estratégicos.
 
-### 3.1 Fuentes de Información
+### 4.1 Fuentes de Información
 1.  **Datos Reales (Actuals)**: Registros contables mensuales subidos desde el ERP a las tablas `income_statements` y `financial_balances`.
 2.  **Presupuesto de Ventas 2026 (Sales Budgets)**: Una tabla detallada que contiene los objetivos de venta por comercial y cliente para el año 2026. Es la fuente para la partida **A.1** dEL 2026.
 3.  **Presupuesto de Gastos 2026**: Datos cargados para las partidas de Personal, Compras y Otros Gastos de explotación.
 
-### 3.2 Proyección de Cierre 2026 (Est.)
+### 4.2 Proyección de Cierre 2026 (Est.)
 Para el año actual (2026), la WebApp aplica la siguiente jerarquía de cálculo:
 
 - **Si NO existe presupuesto**: El sistema toma lo facturado hasta el último mes y lo **extrapola linealmente** hasta los 12 meses (Ej: si en marzo llevas 300k, estima 1.2M al final de año).
@@ -86,7 +109,7 @@ Para el año actual (2026), la WebApp aplica la siguiente jerarquía de cálculo
 
 ---
 
-## 4. Gestión de Usuarios (Admin)
+## 5. Gestión de Usuarios (Admin)
 Módulo restringido para el control de la seguridad.
 - **Roles**: 
   - `ADMIN`: Gestión total y de usuarios.
@@ -98,8 +121,12 @@ Módulo restringido para el control de la seguridad.
 
 ---
 
-## 5. Registro de Modificaciones Técnicas
-Para un seguimiento detallado de los cambios arquitectónicos y análisis de datos, consulte la carpeta `/docs/modificaciones`. 
+## 6. Registro de Modificaciones Técnicas
+- **Actualización Abril 2026**: 
+  - Implementación de **Scroll Infinito** en Clientes y Productos (Carga Server-side).
+  - Integración de **Ordenación Dinámica** por columnas en base de datos.
+  - Nuevo **Filtro por Vendedor** en el módulo de clientes.
+  - Refuerzo de la lógica de **Bloqueo** para detectar estados complejos de Navision/BC.
 - **Análisis de Ratio 2026**: Determinado mediante el estudio de la relación Compras/Gastos Totales (A.4 / Suma(A.4, A.6, A.7, A.13)) sobre el presupuesto base cargado en Supabase.
 
-*Manual de dTS Instruments v2.4 — Actualizado a 26 de marzo 2026.*
+*Manual de dTS Instruments v2.5 — Actualizado a 1 de abril 2026.*

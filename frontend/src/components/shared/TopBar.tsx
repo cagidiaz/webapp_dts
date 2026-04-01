@@ -1,16 +1,12 @@
 import React from 'react';
-import { Search, Bell, Moon, Sun } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { Bell, Moon, Sun } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 
 export const TopBar: React.FC = () => {
   const { isSidebarCollapsed, theme, toggleTheme } = useUIStore();
   const { profile } = useAuthStore();
-  const location = useLocation();
   const isDark = theme === 'dark';
-  const isFinanceModule = location.pathname.startsWith('/finance');
-  const isUsersModule = location.pathname.startsWith('/users');
 
   const userFullName = profile ? `${profile.firstName} ${profile.lastName}` : 'Usuario';
 
@@ -22,24 +18,8 @@ export const TopBar: React.FC = () => {
       `}
       style={{ left: isSidebarCollapsed ? 'var(--spacing-sidebar-collapsed)' : 'var(--spacing-sidebar)' }}
     >
-      {/* Search Bar - Hidden in Finance/Users Module */}
-      <div className="flex-1 max-w-2xl">
-        {!isFinanceModule && !isUsersModule && (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Buscar datos, clientes, informes..." 
-              className={`w-full pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-dts-secondary transition-colors
-                ${isDark 
-                  ? 'bg-surface-card-dark border-surface-hover-dark text-white placeholder-gray-500' 
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                }
-              `}
-            />
-          </div>
-        )}
-      </div>
+      {/* Container - Left Empty (previously global search bar) */}
+      <div className="flex-1"></div>
 
       {/* Right Actions */}
       <div className="flex items-center space-x-4 ml-4">

@@ -42,8 +42,30 @@ export interface CustomerDataRow {
   updated_at: string;
 }
 
-export const getAllCustomers = async (): Promise<CustomerDataRow[]> => {
-  const { data } = await apiClient.get('/customers');
+export interface CustomersResponse {
+  data: CustomerDataRow[];
+  total: number;
+  summary: {
+    totalDebt: number;
+    totalSales: number;
+  };
+}
+
+export const getAllCustomers = async (params: { 
+  take?: number; 
+  skip?: number; 
+  search?: string;
+  blocked?: boolean;
+  salesperson?: string;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+}): Promise<CustomersResponse> => {
+  const { data } = await apiClient.get('/customers', { params });
+  return data;
+};
+
+export const getCustomerSalespersons = async (): Promise<string[]> => {
+  const { data } = await apiClient.get('/customers/salespersons');
   return data;
 };
 
