@@ -80,14 +80,13 @@ Este módulo permite una gestión ágil de la cartera de clientes y el catálogo
 - **Eficiencia**: Solo se solicitan al servidor los datos visibles en pantalla, reduciendo el consumo de ancho de banda.
 
 ### 3.2 Filtros y Búsqueda Avanzada
-- **Búsqueda Global**: Permite buscar por Nombre, Código, Ciudad o Vendedor en tiempo real.
-- **Filtro de Estado (Bloqueo)**: Identifica rápidamente clientes o productos bloqueados. Los elementos bloqueados se resaltan con un distintivo rojo junto a su nombre/descripción.
-- **Filtro por Vendedor (Novedad Abril 2026)**: Permite filtrar el catálogo de clientes para ver solo aquellos asignados a un comercial específico. La lista de vendedores se genera dinámicamente según los datos reales del ERP.
+- **Filtro por Vendedor**: Permite filtrar el catálogo de clientes y productos para ver solo aquellos asignados a un comercial o proveedor específico.
+- **Buscadores Inteligentes (Combobox - Novedad)**: Los selectores de **Familia** y **Proveedor** ahora permiten escribir para filtrar las opciones. Esto facilita encontrar rápidamente cualquiera de las +160 subfamilias sin necesidad de desplazarse por una lista larga.
+- **Jerarquía de Categorías (Novedad Abril 2026)**: Integración de un maestro de categorías que vincula cada producto a su **Familia**, **Subfamilia** y **Product Manager (PM)**. La búsqueda global ahora también permite encontrar productos escribiendo el nombre de su familia (ej: "Automatización").
 
 ### 3.3 KPIs Dinámicos y Ordenación
-- **Indicadores Globales**: En la parte superior se muestran totales de Deuda, Ventas Año Actual (en Clientes) o Stock y Valoración (en Productos).
-- **KPIs Filtrados**: Al aplicar cualquier filtro o búsqueda, los indicadores se recalculan automáticamente para reflejar solo el subconjunto de datos seleccionado.
 - **Ordenación por Columnas**: Al hacer clic en el nombre de cualquier columna, la base de datos reordena los miles de registros de forma instantánea (descendente/ascendente), manteniendo la posición del scroll.
+- **Lógica de Stock Físico (Novedad Abril 2026)**: El KPI de **Stock Total** ha sido optimizado para ignorar valores negativos procedentes del ERP. Esto asegura que la cifra mostrada represente el **Stock Real Disponible** para venta, evitando que productos con stock negativo (pendientes de regularizar) disminuyan el valor total del inventario físico.
 
 ---
 
@@ -122,7 +121,12 @@ Módulo restringido para el control de la seguridad.
 ---
 
 ## 6. Registro de Modificaciones Técnicas
-- **Actualización Abril 2026**: 
+- **Actualización 1 Abril 2026 (v2.6)**:
+  - Integración del maestro de **Categorías y Subfamilias** (166 registros).
+  - Implementación de **Buscadores Inteligentes (Combobox)** con autocompletado en filtros.
+  - Ajuste de la lógica de agregación de **Stock Total** (ignorar negativos para stock físico).
+  - Ampliación de columnas en tablas para mayor legibilidad de descripciones largas.
+- **Actualización Abril 2026 (v2.5)**: 
   - Implementación de **Scroll Infinito** en Clientes y Productos (Carga Server-side).
   - Integración de **Ordenación Dinámica** por columnas en base de datos.
   - Nuevo **Filtro por Vendedor** en el módulo de clientes.
