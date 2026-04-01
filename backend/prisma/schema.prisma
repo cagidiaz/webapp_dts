@@ -423,6 +423,7 @@ model sales_budgets {
   product  products?  @relation(fields: [item_no], references: [item_no], onDelete: NoAction, onUpdate: Cascade)
   customer customers? @relation(fields: [customer_code], references: [client_id], onDelete: NoAction, onUpdate: Cascade)
   calendar calendar?  @relation(fields: [budget_date], references: [date], onDelete: NoAction, onUpdate: Cascade)
+  category product_categories? @relation(fields: [subfamily_code], references: [subfamily_code], onDelete: NoAction, onUpdate: Cascade)
 
   @@index([budget_date], map: "idx_budget_date")
   @@index([customer_code], map: "idx_customer")
@@ -624,9 +625,25 @@ model products {
 
   value_entries value_entries[]
   sales_budgets sales_budgets[]
+  category      product_categories? @relation(fields: [subfamily_code], references: [subfamily_code], onDelete: NoAction, onUpdate: Cascade)
 
   @@index([vendor_no], map: "idx_product_vendor")
   @@index([subfamily_code], map: "idx_product_subfamily")
   @@index([gen_bus_group], map: "idx_product_bus_group")
+  @@schema("public")
+}
+
+model product_categories {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  family_code    String?   @db.VarChar(50)
+  subfamily_code String?   @unique @db.VarChar(50)
+  family_name    String?   @db.VarChar(255)
+  subfamily_name String?   @db.VarChar(255)
+  pm_code        String?   @db.VarChar(50)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+
+  products       products[]
+  sales_budgets  sales_budgets[]
+
   @@schema("public")
 }

@@ -43,6 +43,8 @@ export class ProductsService {
           { description: { contains: search, mode: 'insensitive' as any } },
           { vendor_no: { contains: search, mode: 'insensitive' as any } },
           { subfamily_code: { contains: search, mode: 'insensitive' as any } },
+          { category: { subfamily_name: { contains: search, mode: 'insensitive' as any } } },
+          { category: { family_name: { contains: search, mode: 'insensitive' as any } } },
         ],
       });
     }
@@ -81,6 +83,7 @@ export class ProductsService {
           skip: skip ? Number(skip) : undefined,
           take: take ? Number(take) : undefined,
           orderBy,
+          include: { category: true }
         }),
         this.prisma.products.count({ where }),
         this.prisma.products.aggregate({
@@ -103,14 +106,14 @@ export class ProductsService {
     }
   }
 
-  async getFamilies() {
-    const result = await this.prisma.products.findMany({
-      select: { subfamily_code: true },
-      distinct: ['subfamily_code'],
-      where: { subfamily_code: { not: null } },
-      orderBy: { subfamily_code: 'asc' }
+   async getFamilies() {
+    // Retornamos todas las categorías de la tabla maestra
+    return this.prisma.product_categories.findMany({
+      orderBy: [
+        { family_name: 'asc' },
+        { subfamily_name: 'asc' }
+      ]
     });
-    return result.map(r => r.subfamily_code);
   }
 
   async getVendors() {

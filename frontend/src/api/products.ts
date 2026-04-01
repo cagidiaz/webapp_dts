@@ -1,5 +1,14 @@
 import apiClient from './apiClient';
 
+export interface ProductCategory {
+  id: string;
+  family_code: string | null;
+  subfamily_code: string | null;
+  family_name: string | null;
+  subfamily_name: string | null;
+  pm_code: string | null;
+}
+
 export interface ProductDataRow {
   id: string;
   item_no: string;
@@ -22,6 +31,7 @@ export interface ProductDataRow {
   replenish_type: string | null;
   created_at: string;
   updated_at: string;
+  category?: ProductCategory | null;
 }
 
 export interface ProductsResponse {
@@ -48,7 +58,7 @@ export const getAllProducts = async (params: {
   return data;
 };
 
-export const getProductFamilies = async (): Promise<string[]> => {
+export const getProductFamilies = async (): Promise<ProductCategory[]> => {
   const { data } = await apiClient.get('/products/families');
   return data;
 };

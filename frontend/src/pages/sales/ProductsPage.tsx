@@ -19,7 +19,7 @@ import {
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
-import { InfoPopover, KPISkeleton, TableSkeleton } from '../../components/ui';
+import { InfoPopover, KPISkeleton, TableSkeleton, SearchableSelect } from '../../components/ui';
 
 export const ProductsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -109,6 +109,18 @@ export const ProductsPage: React.FC = () => {
       globalAvgPrice: summary.avgPrice
     };
   }, [data]);
+
+  // Transform data for searchable selects
+  const familyOptions = useMemo(() => 
+    families.map(f => ({ 
+      value: f.subfamily_code || '', 
+      label: f.subfamily_name || f.subfamily_code || '' 
+    })), 
+  [families]);
+
+  const vendorOptions = useMemo(() => 
+    vendors.map(v => ({ value: v, label: v })), 
+  [vendors]);
 
   const isFiltered = debouncedSearch !== '' || familyFilter !== '' || vendorFilter !== '' || showOnlyWithStock || hideBlocked || sortBy !== 'item_no' || sortDir !== 'asc';
 
@@ -289,27 +301,19 @@ export const ProductsPage: React.FC = () => {
               <span className="text-xs font-bold text-gray-500 uppercase tracking-tight">Filtros:</span>
             </div>
             
-            <select
+            <SearchableSelect
+              options={familyOptions}
               value={familyFilter}
-              onChange={(e) => setFamilyFilter(e.target.value)}
-              className="text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark dark:text-gray-200 rounded-md py-1 border focus:ring-dts-secondary focus:border-dts-secondary outline-none pr-8"
-            >
-              <option value="">Todas las Familias</option>
-              {families.map(sf => (
-                <option key={sf} value={sf}>{sf}</option>
-              ))}
-            </select>
+              onChange={setFamilyFilter}
+              placeholder="Todas las Familias"
+            />
 
-            <select
+            <SearchableSelect
+              options={vendorOptions}
               value={vendorFilter}
-              onChange={(e) => setVendorFilter(e.target.value)}
-              className="text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark dark:text-gray-200 rounded-md py-1 border focus:ring-dts-secondary focus:border-dts-secondary outline-none pr-8"
-            >
-              <option value="">Todos los Proveedores</option>
-              {vendors.map(v => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
+              onChange={setVendorFilter}
+              placeholder="Todos los Proveedores"
+            />
 
             <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1 hidden sm:block"></div>
 
@@ -335,9 +339,9 @@ export const ProductsPage: React.FC = () => {
             <thead className="bg-dts-primary text-white sticky top-0 z-10 shadow-sm">
               <tr>
                 {[
-                  { label: 'Código', key: 'item_no', align: 'left', width: '150px' },
+                  { label: 'Código', key: 'item_no', align: 'left', width: '110px' },
                   { label: 'Descripción', key: 'description', align: 'left' },
-                  { label: 'Familia', key: 'subfamily_code', align: 'left', width: '100px' },
+                  { label: 'Familia', key: 'subfamily_code', align: 'left', width: '280px' },
                   { label: 'Stock', key: 'inventory_qty', align: 'right', width: '100px' },
                   { label: 'Coste Unit.', key: 'unit_cost', align: 'right', width: '120px' },
                   { label: 'P.V.P.', key: 'unit_price', align: 'right', width: '120px' },
@@ -377,9 +381,14 @@ export const ProductsPage: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-3 text-xs">
-                    <span className="bg-gray-50 dark:bg-white/5 px-2 py-0.5 rounded text-gray-500">
-                      {product.subfamily_code || '---'}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-gray-900 dark:text-gray-100 font-medium line-clamp-1" title={product.category?.family_name || ''}>
+                        {product.category?.subfamily_name || product.subfamily_code || '---'}
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        {product.subfamily_code}
+                      </span>
+                    </div>
                   </td>
                   <td className={`px-6 py-3 text-right font-mono font-bold ${Number(product.inventory_qty) > 0 ? 'text-gray-700 dark:text-gray-200' : 'text-rose-500'}`}>
                     {Number(product.inventory_qty).toLocaleString('de-DE')}
