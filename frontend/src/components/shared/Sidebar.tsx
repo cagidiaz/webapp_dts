@@ -44,6 +44,7 @@ const navItems: NavItem[] = [
     children: [
       { name: 'Clientes', path: '/sales/customers' },
       { name: 'Productos', path: '/sales/products' },
+      { name: 'Presupuestos', path: '/sales/budgets' },
     ]
   },
   { 

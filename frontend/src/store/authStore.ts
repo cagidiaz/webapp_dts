@@ -8,6 +8,7 @@ interface Profile {
   lastName: string;
   email: string;
   roleId: string;
+  code?: string;
   roles?: {
     name: string;
   };
@@ -61,6 +62,7 @@ export const useAuthStore = create<AuthState>((set) => ({
               lastName: profileData.last_name || '',
               email: profileData.email,
               roleId: profileData.role_id,
+              code: profileData.code,
               roles: { name: (profileData.roles as any)?.name || 'Usuario' }
             }
           });

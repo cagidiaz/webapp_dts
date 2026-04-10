@@ -64,7 +64,12 @@ export const getAllCustomers = async (params: {
   return data;
 };
 
-export const getCustomerSalespersons = async (): Promise<string[]> => {
+export interface Salesperson {
+  code: string;
+  name: string;
+}
+
+export const getCustomerSalespersons = async (): Promise<Salesperson[]> => {
   const { data } = await apiClient.get('/customers/salespersons');
   return data;
 };

@@ -87,7 +87,7 @@ export class ProductsService {
         }),
         this.prisma.products.count({ where }),
         this.prisma.products.aggregate({
-          where,
+          where: { ...where, inventory_qty: { gt: 0 } },
           _sum: { inventory_qty: true },
           _avg: { unit_price: true },
         }),

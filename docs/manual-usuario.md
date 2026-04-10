@@ -15,6 +15,7 @@
     - 3.1 [Scroll Infinito y Rendimiento](#31-scroll-infinito-y-rendimiento)
     - 3.2 [Filtros y Búsqueda Avanzada](#32-filtros-y-búsqueda-avanzada)
     - 3.3 [KPIs Dinámicos y Ordenación](#33-kpis-dinámicos-y-ordenación)
+    - 3.4 [Presupuestos de Ventas (Novedad)](#34-presupuestos-de-ventas-novedad)
 4. [Lógica de Cálculo y Datos (Backend)](#4-lógica-de-cálculo-y-datos-backend)
     - 4.1 [Fuentes de Información](#41-fuentes-de-información)
     - 4.2 [Proyección de Cierre 2026 (Est.)](#42-proyección-de-cierre-2026-est)
@@ -88,6 +89,20 @@ Este módulo permite una gestión ágil de la cartera de clientes y el catálogo
 - **Ordenación por Columnas**: Al hacer clic en el nombre de cualquier columna, la base de datos reordena los miles de registros de forma instantánea (descendente/ascendente), manteniendo la posición del scroll.
 - **Lógica de Stock Físico (Novedad Abril 2026)**: El KPI de **Stock Total** ha sido optimizado para ignorar valores negativos procedentes del ERP. Esto asegura que la cifra mostrada represente el **Stock Real Disponible** para venta, evitando que productos con stock negativo (pendientes de regularizar) disminuyan el valor total del inventario físico.
 
+#### 3.4 Presupuestos de Ventas (Novedad)
+Ubicado en **Ventas > Presupuestos**.
+- **Propósito**: Comparativa en tiempo real de la facturación (Albaranes + Facturas de Abono y Cargo) frente a los presupuestos (Objetivos) cargados en la base de datos.
+- **Visualización Detallada**:
+  - **KPIs (6 Indicadores)**: Resumen de Ventas Totales, Objetivo Anual, Desviación Monetaria (€), Desviación Porcentual (%), Cartera de Ventas y **Enviados por Facturar**.
+  - **Tabla de Clientes**: Desglose de cumplimiento de objetivos nivel cliente, destacando en positivo o negativo su % de desviación.
+  - **Gráfico de Evolución**: Comparativa mensual de ventas reales (Facturación neta) frente a la meta (Budget).
+- **Lógica de Datos y Exclusiones**:
+  - **Solo Productos**: Los importes mostrados proceden de la tabla `value_entries` filtrada por movimientos de inventario. **No se incluyen conceptos de transporte, embalajes ni otros servicios** facturados que no estén tipificados como productos en el ERP, garantizando que el análisis se centra en el rendimiento de ventas del catálogo físico.
+  - **Abonos incluidos**: El cálculo de ventas es neto; los Abonos de Venta restan automáticamente del total facturado.
+- **Seguridad y Filtros por Vendedor**:
+  - **Administradores y Dirección**: Pueden visualizar los datos de toda la empresa y filtrar por cualquier vendedor, familia o mes de forma interactiva.
+  - **Vendedores**: Cuando un usuario está vinculado a un perfil de `vendedor` en el ERP, el filtro de comerciales desaparece y **el sistema fuerza automáticamente el filtrado a nivel de base de datos**. Un vendedor *solo* puede ver su propia cartera de ventas y sus propios objetivos, asegurando la total privacidad de los datos ajenos.
+
 ---
 
 ## 4. Lógica de Cálculo y Datos (Backend)
@@ -121,16 +136,15 @@ Módulo restringido para el control de la seguridad.
 ---
 
 ## 6. Registro de Modificaciones Técnicas
+- **Actualización 9 Abril 2026 (v2.8)**:
+  - Integración del módulo **Ventas vs Presupuestos** con análisis de desviaciones.
+  - Sincronización de perfiles de usuario con **Vendedores del ERP** para filtrado automático y seguro.
+  - Implementación de 6 KPIs estratégicos (Ventas, Objetivo, Desviación, Cartera y Enviados por Facturar).
+  - Ajuste de lógica de datos: Los movimientos de venta (`value_entries`) se centran exclusivamente en **líneas de producto**, excluyendo cargos por embalaje o transporte para un análisis comercial puro.
 - **Actualización 1 Abril 2026 (v2.6)**:
   - Integración del maestro de **Categorías y Subfamilias** (166 registros).
   - Implementación de **Buscadores Inteligentes (Combobox)** con autocompletado en filtros.
   - Ajuste de la lógica de agregación de **Stock Total** (ignorar negativos para stock físico).
   - Ampliación de columnas en tablas para mayor legibilidad de descripciones largas.
-- **Actualización Abril 2026 (v2.5)**: 
-  - Implementación de **Scroll Infinito** en Clientes y Productos (Carga Server-side).
-  - Integración de **Ordenación Dinámica** por columnas en base de datos.
-  - Nuevo **Filtro por Vendedor** en el módulo de clientes.
-  - Refuerzo de la lógica de **Bloqueo** para detectar estados complejos de Navision/BC.
-- **Análisis de Ratio 2026**: Determinado mediante el estudio de la relación Compras/Gastos Totales (A.4 / Suma(A.4, A.6, A.7, A.13)) sobre el presupuesto base cargado en Supabase.
 
-*Manual de dTS Instruments v2.5 — Actualizado a 1 de abril 2026.*
+*Manual de dTS Instruments v2.8 — Actualizado a 9 de abril 2026.*

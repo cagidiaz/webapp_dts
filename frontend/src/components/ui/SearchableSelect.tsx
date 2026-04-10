@@ -6,7 +6,7 @@ import {
   ComboboxOptions, 
   Transition 
 } from '@headlessui/react';
-import { Check, ChevronDown, Search, Loader2 } from 'lucide-react';
+import { Check, ChevronDown, Search, Loader2, X } from 'lucide-react';
 
 export interface SelectOption {
   value: string;
@@ -56,7 +56,19 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             placeholder={placeholder}
           />
           
-          <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
+          <div className="absolute inset-y-0 right-0 pr-2 flex items-center gap-1">
+            {value && (
+              <button
+                type="button"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange('');
+                }}
+              >
+                <X className="h-3 w-3 text-gray-400 hover:text-dts-secondary" />
+              </button>
+            )}
             <ChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
           </div>
         </div>

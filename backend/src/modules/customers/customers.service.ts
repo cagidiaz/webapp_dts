@@ -109,19 +109,9 @@ export class CustomersService {
    */
   async getSalespersons() {
     try {
-      const result = await this.prisma.customers.findMany({
-        select: { salesperson_code: true },
-        distinct: ['salesperson_code'],
-        where: { 
-          AND: [
-            { salesperson_code: { not: null } },
-            { salesperson_code: { not: '' } },
-            { salesperson_code: { not: ' ' } },
-          ]
-        },
-        orderBy: { salesperson_code: 'asc' }
+      return await this.prisma.sales_reps.findMany({
+        orderBy: { code: 'asc' }
       });
-      return result.map(r => r.salesperson_code);
     } catch (error) {
       throw new InternalServerErrorException(error.message);
     }
