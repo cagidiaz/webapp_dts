@@ -46,6 +46,8 @@ export class SalesController {
     @Query('salespersonCode') salespersonCode?: string,
     @Query('familyCode') familyCode?: string,
     @Query('subfamilyCode') subfamilyCode?: string,
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
   ) {
     const targetYear = year ? Number(year) : new Date().getFullYear();
     let targetMonths;
@@ -59,7 +61,9 @@ export class SalesController {
       months: targetMonths,
       salespersonCode: code,
       familyCode,
-      subfamilyCode
+      subfamilyCode,
+      take: take ? Number(take) : undefined,
+      skip: skip ? Number(skip) : undefined
     });
   }
 
@@ -75,11 +79,29 @@ export class SalesController {
     const targetYear = year ? Number(year) : new Date().getFullYear();
     const code = await this.getSalespersonCode(req, salespersonCode);
 
+
     return this.salesService.getSalesBudgetEvolution({
       year: targetYear,
       salespersonCode: code,
       familyCode,
       subfamilyCode
+    });
+  }
+
+  @Get('top-products')
+  @ApiOperation({ summary: 'Get best selling products ranking' })
+  async getTopProducts(
+    @Req() req: any,
+    @Query('year') year: string,
+    @Query('take') take?: string,
+    @Query('salespersonCode') salespersonCode?: string,
+  ) {
+    const targetYear = year ? Number(year) : new Date().getFullYear();
+    const code = await this.getSalespersonCode(req, salespersonCode);
+    return this.salesService.getTopProducts({
+      year: targetYear,
+      salespersonCode: code,
+      take: take ? Number(take) : undefined
     });
   }
 }

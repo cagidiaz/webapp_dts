@@ -21,15 +21,20 @@ interface NavItem {
   name: string;
   icon: any;
   path?: string;
-  children?: { name: string; path: string; role?: string }[];
-  role?: string;
+  children?: { name: string; path: string; roles?: string[] }[];
+  roles?: string[]; // Multiple roles supported
 }
 
 const navItems: NavItem[] = [
-  { name: 'Panel de Control', icon: BarChart3, path: '/dashboard' },
+  { 
+    name: 'Panel de Control', 
+    icon: BarChart3, 
+    path: '/dashboard' 
+  },
   { 
     name: 'Finanzas', 
     icon: Wallet, 
+    roles: ['ADMIN', 'DIRECCION'],
     children: [
       { name: 'Análisis de Balances', path: '/finance/balances' },
       { name: '4 Puntos Clave', path: '/finance/key-points' },
@@ -41,6 +46,7 @@ const navItems: NavItem[] = [
   { 
     name: 'Ventas', 
     icon: PieChart, 
+    roles: ['ADMIN', 'DIRECCION', 'VENTAS'],
     children: [
       { name: 'Clientes', path: '/sales/customers' },
       { name: 'Productos', path: '/sales/products' },
@@ -50,7 +56,7 @@ const navItems: NavItem[] = [
   { 
     name: 'Configuración', 
     icon: Settings,
-    role: 'ADMIN',
+    roles: ['ADMIN'],
     children: [
       { name: 'Gestión de Usuarios', path: '/users' },
       { name: 'Ajustes Generales', path: '/settings' },
@@ -79,8 +85,10 @@ export const Sidebar: React.FC = () => {
 
   // Filter nav items based on user role
   const filteredNavItems = navItems.filter(item => {
-    if (item.role && item.role !== userRole) return false;
-    return true;
+    // If no roles defined, it's public for authenticated users
+    if (!item.roles) return true;
+    // Check if user's role is in the allowed list
+    return item.roles.includes(userRole);
   });
 
   const handleLogout = async () => {

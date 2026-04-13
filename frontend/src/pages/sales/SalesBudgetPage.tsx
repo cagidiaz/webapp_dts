@@ -112,7 +112,7 @@ export const SalesBudgetPage: React.FC = () => {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const { tableData, performanceKPIs } = useMemo(() => {
-    const allRows = infiniteData?.pages.flatMap(page => (page as any)?.rows || []) || [];
+    const allRows = infiniteData?.pages.flatMap(page => page.rows || []) || [];
     const kpis = infiniteData?.pages[0]?.kpis || { ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0 };
     return { tableData: allRows, performanceKPIs: kpis };
   }, [infiniteData]);

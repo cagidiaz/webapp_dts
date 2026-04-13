@@ -312,7 +312,54 @@ export class SalesService {
       }
     });
 
+
     return monthsData;
+  }
+
+  /**
+   * Obtiene el ranking de productos más vendidos
+   */
+  async getTopProducts(filters: {
+    year: number;
+    salespersonCode?: string;
+    take?: number;
+  }) {
+    const { year, salespersonCode, take = 5 } = filters;
+
+    const where: any = {
+      document_type: { in: SALES_DOC_TYPES },
+      calendar: { year },
+    };
+    if (salespersonCode) where.salesperson_code = salespersonCode;
+
+    const salesByProduct = await this.prisma.value_entries.groupBy({
+      by: ['item_no'],
+      _sum: { sales_amount: true },
+      where,
+      orderBy: {
+        _sum: {
+          sales_amount: 'desc'
+        }
+      },
+      take: Number(take),
+    });
+
+    const itemNos = salesByProduct.map(s => s.item_no);
+    const products = await this.prisma.products.findMany({
+      where: { item_no: { in: itemNos } },
+      select: { item_no: true, description: true }
+    });
+
+    const productsDict = products.reduce((acc, p) => {
+      acc[p.item_no] = p.description || p.item_no;
+      return acc;
+    }, {} as Record<string, string>);
+
+    return salesByProduct.map(s => ({
+      itemNo: s.item_no,
+      description: productsDict[s.item_no] || s.item_no,
+      totalSales: s._sum.sales_amount ? Number(s._sum.sales_amount) : 0
+    }));
   }
 }
 

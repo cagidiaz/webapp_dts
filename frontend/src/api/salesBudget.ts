@@ -34,7 +34,7 @@ export interface SalesBudgetPerformanceDataRow {
 
 export interface SalesBudgetPerformanceResponse {
   kpis: SalesBudgetPerformanceKPIs;
-  data: SalesBudgetPerformanceDataRow[];
+  rows: SalesBudgetPerformanceDataRow[];
   total: number;
 }
 
@@ -88,7 +88,17 @@ export const getSalesBudgetEvolution = async (
 /**
  * Fetches sales reps
  */
+
 export const getSalesReps = async () => {
   const response = await apiClient.get<{code: string; name: string}[]>('/customers/salespersons');
   return response.data;
+};
+
+export const getTopProducts = async (params: {
+  year: number;
+  take?: number;
+  salespersonCode?: string;
+}): Promise<any[]> => {
+  const { data } = await apiClient.get('/sales/top-products', { params });
+  return data;
 };

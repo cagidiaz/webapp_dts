@@ -7,6 +7,8 @@ import {
   ArrowUpDown, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { InfoPopover, KPISkeleton, TableSkeleton } from '../../components/ui';
+import { CustomerDetailDrawer } from './components/CustomerDetailDrawer';
+import { type CustomerDataRow } from '../../api/customers';
 
 export const CustomersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +19,10 @@ export const CustomersPage: React.FC = () => {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const observerTarget = useRef<HTMLTableRowElement>(null);
   const pageSize = 50;
+
+  // Drawer states
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerDataRow | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => { setDebouncedSearch(searchTerm); }, 400);
@@ -64,6 +70,11 @@ export const CustomersPage: React.FC = () => {
     return sortDir === 'asc' ? <ChevronUp size={12} className="ml-1 text-dts-secondary" /> : <ChevronDown size={12} className="ml-1 text-dts-secondary" />;
   };
 
+  const handleRowClick = (customer: CustomerDataRow) => {
+    setSelectedCustomer(customer);
+    setIsDrawerOpen(true);
+  };
+
   if (isLoading) return (
     <div className="space-y-8 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
@@ -74,6 +85,11 @@ export const CustomersPage: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+      <CustomerDetailDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)} 
+        customer={selectedCustomer} 
+      />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -158,7 +174,11 @@ export const CustomersPage: React.FC = () => {
               {customers.map(customer => {
                 const isNew = customer.customer_since && new Date(customer.customer_since).getFullYear() === new Date().getFullYear();
                 return (
-                  <tr key={customer.id} className={`transition-colors ${isNew ? 'bg-emerald-50/50 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50 dark:hover:bg-white/5'}`}>
+                  <tr 
+                    key={customer.id} 
+                    onClick={() => handleRowClick(customer)}
+                    className={`cursor-pointer transition-colors ${isNew ? 'bg-emerald-50/50 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                  >
                     <td className={`px-6 py-3 font-bold font-mono text-xs ${isNew ? 'text-emerald-600 dark:text-emerald-400' : 'text-dts-primary'}`}>{customer.client_id}</td>
                     <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200"><div className="flex items-center gap-2">{customer.name}{isNew && <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 animate-pulse uppercase">Nuevo</span>}</div></td>
                     <td className={`px-6 py-3 text-right font-mono font-bold ${Number(customer.balance_due_lcy) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>{formatCurrency(Number(customer.balance_due_lcy), 0)}</td>

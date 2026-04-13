@@ -42,6 +42,19 @@ const ProtectedRoute = () => {
   return <Outlet />;
 };
 
+const RoleGuard = ({ allowedRoles, children }: { allowedRoles: string[], children: React.ReactNode }) => {
+  const { profile } = useAuthStore();
+  const userRole = profile?.roles?.name?.toUpperCase() || '';
+  
+  if (!profile) return null; // Wait for profile to load
+  
+  if (!allowedRoles.includes(userRole)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   const { setSession } = useAuthStore();
   const [loading, setLoading] = useState(true);
@@ -79,8 +92,8 @@ const App: React.FC = () => {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
 
-              {/* Modulo Finanzas */}
-              <Route path="finance">
+              {/* Modulo Finanzas: ADMIN y DIRECCION */}
+              <Route path="finance" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION']}><Outlet /></RoleGuard>}>
                 <Route index element={<Navigate to="balances" replace />} />
                 <Route path="balances" element={<BalancesPage />} />
                 <Route path="key-points" element={<KeyPointsPage />} />
@@ -89,15 +102,16 @@ const App: React.FC = () => {
                 <Route path="simulations" element={<SimulationsPage />} />
               </Route>
 
-              {/* Modulo Ventas */}
-              <Route path="sales">
+              {/* Modulo Ventas: Todos los roles (ADMIN, DIRECCION, VENTAS) */}
+              <Route path="sales" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS']}><Outlet /></RoleGuard>}>
                 <Route index element={<Navigate to="customers" replace />} />
                 <Route path="customers" element={<CustomersPage />} />
                 <Route path="products" element={<ProductsPage />} />
                 <Route path="budgets" element={<SalesBudgetPage />} />
               </Route>
-              <Route path="users" element={<UsersPage />} />
-              <Route path="settings" element={<SettingsPage />} />
+              
+              <Route path="users" element={<RoleGuard allowedRoles={['ADMIN']}><UsersPage /></RoleGuard>} />
+              <Route path="settings" element={<RoleGuard allowedRoles={['ADMIN']}><SettingsPage /></RoleGuard>} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
