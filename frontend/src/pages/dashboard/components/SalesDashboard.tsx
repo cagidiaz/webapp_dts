@@ -206,11 +206,11 @@ export const SalesDashboard: React.FC = () => {
             iconSize={16}
           />
         </div>
-        <div className="w-full min-w-0 h-auto">
+        <div className="w-full min-w-0 h-[300px]">
           {isLoadingEvol ? (
-             <div className="h-80 w-full animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
+             <div className="h-full w-full animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
           ) : (
-            <ResponsiveContainer width="100%" aspect={3}>
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={evolutionData || []}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
                 <XAxis 

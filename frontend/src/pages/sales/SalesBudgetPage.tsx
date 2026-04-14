@@ -317,44 +317,50 @@ export const SalesBudgetPage: React.FC = () => {
                   )}
                   <tr ref={observerTarget}><td colSpan={5} className="py-8 text-center text-gray-400 text-xs">{isFetchingNextPage ? 'Cargando más...' : hasNextPage ? 'Desplázate para cargar más' : ''}</td></tr>
                 </tbody>
-                {tableData.length > 0 && (
-                  <tfoot className="sticky bottom-0 z-20 bg-dts-primary text-white shadow-[0_-10px_20px_rgba(0,0,0,0.1)] border-t border-white/10">
-                    <tr className="font-bold text-xs">
-                      <td className="px-6 py-4 text-[10px] tracking-widest uppercase">TOTALES SELECCIÓN</td>
-                      <td className="px-6 py-4 text-right font-mono">{formatCurrency(selectionTotals.facturacion, 0)}</td>
-                      <td className="px-6 py-4 text-right font-mono">{formatCurrency(selectionTotals.objetivo, 0)}</td>
-                      <td className={`px-6 py-4 text-right font-mono ${selectionDesv < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{selectionDesv > 0 ? '+' : ''}{formatCurrency(selectionDesv, 0)}</td>
-                      <td className={`px-6 py-4 text-center font-mono text-[11px] ${selectionPct < 0 ? 'text-red-400 bg-red-400/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{selectionPct > 0 ? '+' : ''}{formatNumber(selectionPct, 1)}%</td>
-                    </tr>
-                  </tfoot>
-                )}
               </table>
             </div>
+
+            {/* Fixed Totals Footer - Decoupled from scroll for perfect clipping */}
+            {tableData.length > 0 && (
+              <div className="bg-dts-primary text-white shadow-[0_-10px_20px_rgba(0,0,0,0.15)] border-t border-white/10 z-30">
+                <table className="w-full text-left text-sm border-separate border-spacing-0">
+                  <tbody>
+                    <tr className="font-bold text-xs uppercase">
+                      <td className="px-6 py-4 text-[10px] tracking-widest w-[25%] lg:w-auto">TOTALES SELECCIÓN</td>
+                      <td className="px-6 py-4 text-right font-mono w-[18%] lg:w-auto">{formatCurrency(selectionTotals.facturacion, 0)}</td>
+                      <td className="px-6 py-4 text-right font-mono w-[18%] lg:w-auto">{formatCurrency(selectionTotals.objetivo, 0)}</td>
+                      <td className={`px-6 py-4 text-right font-mono w-[18%] lg:w-auto ${selectionDesv < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{selectionDesv > 0 ? '+' : ''}{formatCurrency(selectionDesv, 0)}</td>
+                      <td className={`px-6 py-4 text-center font-mono text-[11px] w-[21%] lg:w-auto ${selectionPct < 0 ? 'text-red-400 bg-red-400/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{selectionPct > 0 ? '+' : ''}{formatNumber(selectionPct, 1)}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 h-[400px] flex flex-col">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold uppercase tracking-wider">Evolución Comercial {year}</h3>
-                <InfoPopover 
-                  title="Evolución Mensual" 
-                  description="Comparativa temporal de la facturación frente al presupuesto mes a mes." 
-                  objective="Detectar meses de estacionalidad o desviaciones recurrentes en el cumplimiento del presupuesto anual."
-                  iconSize={16}
-                />
-              </div>
-              <div className="flex-1 w-full min-h-[300px]">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={(evolutionData || []).filter(d => selectedMonths.length === 0 || selectedMonths.includes(d.month))}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                    <XAxis dataKey="month" tickFormatter={(m) => MONTHS.find(x => x.val === m)?.label || m} tick={{fontSize: 10}} />
-                    <YAxis tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} tick={{fontSize: 10}} />
-                    <Tooltip content={<CustomTooltip />} cursor={false}/>
-                    <Legend verticalAlign="top" content={renderCustomLegend} />
-                    <Bar dataKey="ventas" name="Ventas Reales" fill="#00B0B9" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="objetivo" name="Objetivo (Presupuesto)" fill="#64748B" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-               </ResponsiveContainer>
-             </div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider">Evolución Comercial {year}</h3>
+              <InfoPopover 
+                title="Evolución Mensual" 
+                description="Comparativa temporal de la facturación frente al presupuesto mes a mes." 
+                objective="Detectar meses de estacionalidad o desviaciones recurrentes en el cumplimiento del presupuesto anual."
+                iconSize={16}
+              />
+            </div>
+            <div className="flex-1 w-full min-h-[300px]">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={(evolutionData || []).filter(d => selectedMonths.length === 0 || selectedMonths.includes(d.month))}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                  <XAxis dataKey="month" tickFormatter={(m) => MONTHS.find(x => x.val === m)?.label || m} tick={{fontSize: 10}} />
+                  <YAxis tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} tick={{fontSize: 10}} />
+                  <Tooltip content={<CustomTooltip />} cursor={false}/>
+                  <Legend verticalAlign="top" content={renderCustomLegend} />
+                  <Bar dataKey="ventas" name="Ventas Reales" fill="#00B0B9" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="objetivo" name="Objetivo (Presupuesto)" fill="#64748B" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>

@@ -9,12 +9,16 @@ import {
 import { InfoPopover, KPISkeleton, TableSkeleton } from '../../components/ui';
 import { CustomerDetailDrawer } from './components/CustomerDetailDrawer';
 import { type CustomerDataRow } from '../../api/customers';
+import { useAuthStore } from '../../store/authStore';
 
 export const CustomersPage: React.FC = () => {
+  const { profile } = useAuthStore();
+  const isSalesRole = profile?.roles?.name?.toUpperCase() === 'VENTAS';
+
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [blockedFilter, setBlockedFilter] = useState<boolean | undefined>(undefined);
-  const [salespersonFilter, setSalespersonFilter] = useState<string>('');
+  const [salespersonFilter, setSalespersonFilter] = useState<string>(isSalesRole ? profile?.code || '' : '');
   const [sortBy, setSortBy] = useState<string>('client_id');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const observerTarget = useRef<HTMLTableRowElement>(null);
@@ -23,6 +27,13 @@ export const CustomersPage: React.FC = () => {
   // Drawer states
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDataRow | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Sync salesperson filter if profile loads late or changes
+  useEffect(() => {
+    if (isSalesRole && profile?.code) {
+      setSalespersonFilter(profile.code);
+    }
+  }, [isSalesRole, profile?.code]);
 
   useEffect(() => {
     const timer = setTimeout(() => { setDebouncedSearch(searchTerm); }, 400);
@@ -153,8 +164,10 @@ export const CustomersPage: React.FC = () => {
               <input type="text" className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-sm" placeholder="Buscar cliente..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             <div className="flex flex-wrap gap-3">
-              <select value={blockedFilter?.toString() || ''} onChange={(e) => setBlockedFilter(e.target.value === '' ? undefined : e.target.value === 'true')} className="text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark rounded-md px-3 py-1 outline-none font-bold uppercase">{/* options... */}<option value="">Estado</option><option value="false">Activos</option><option value="true">Bloqueados</option></select>
-              <select value={salespersonFilter} onChange={(e) => setSalespersonFilter(e.target.value)} className="text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark rounded-md px-3 py-1 outline-none font-bold uppercase"><option value="">Vendedor</option>{salespersons.map(sp => (<option key={sp.code} value={sp.code}>{sp.code} - {sp.name}</option>))}</select>
+              <select value={blockedFilter?.toString() || ''} onChange={(e) => setBlockedFilter(e.target.value === '' ? undefined : e.target.value === 'true')} className="text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark rounded-md px-3 py-1 outline-none font-bold uppercase"><option value="">Estado</option><option value="false">Activos</option><option value="true">Bloqueados</option></select>
+              {!isSalesRole && (
+                <select value={salespersonFilter} onChange={(e) => setSalespersonFilter(e.target.value)} className="text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark rounded-md px-3 py-1 outline-none font-bold uppercase"><option value="">Vendedor</option>{salespersons.map(sp => (<option key={sp.code} value={sp.code}>{sp.code} - {sp.name}</option>))}</select>
+              )}
             </div>
           </div>
         </div>
@@ -179,12 +192,19 @@ export const CustomersPage: React.FC = () => {
                     onClick={() => handleRowClick(customer)}
                     className={`cursor-pointer transition-colors ${isNew ? 'bg-emerald-50/50 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50 dark:hover:bg-white/5'}`}
                   >
-                    <td className={`px-6 py-3 font-bold font-mono text-xs ${isNew ? 'text-emerald-600 dark:text-emerald-400' : 'text-dts-primary'}`}>{customer.client_id}</td>
+                    <td className={`px-6 py-3 font-bold font-mono text-xs ${isNew ? 'text-emerald-600 dark:text-emerald-400' : 'text-dts-primary dark:text-dts-secondary'}`}>{customer.client_id}</td>
                     <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200"><div className="flex items-center gap-2">{customer.name}{isNew && <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 animate-pulse uppercase">Nuevo</span>}</div></td>
                     <td className={`px-6 py-3 text-right font-mono font-bold ${Number(customer.balance_due_lcy) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>{formatCurrency(Number(customer.balance_due_lcy), 0)}</td>
                     <td className="px-6 py-3 text-right font-mono font-bold">{formatCurrency(Number(customer.total_sales), 0)}</td>
                     <td className="px-6 py-3"><span className="bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded text-[10px] font-bold">{customer.salesperson_code || '---'}</span></td>
-                    <td className="px-6 py-3 text-gray-500 text-xs">{customer.city || '---'}</td>
+                    <td className="px-6 py-3">
+                      <div className="flex flex-col">
+                        <span className="text-gray-700 dark:text-gray-300 font-medium">{customer.city || '---'}</span>
+                        {customer.country_reg_code && (
+                          <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">{customer.country_reg_code}</span>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}

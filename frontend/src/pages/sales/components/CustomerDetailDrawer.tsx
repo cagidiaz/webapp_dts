@@ -53,7 +53,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
               <User size={32} />
             </div>
             <h2 className="text-xl font-bold text-dts-primary dark:text-white">{customer.name}</h2>
-            <span className="text-xs font-mono text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded mt-1">
+            <span className="text-xs font-mono text-dts-primary dark:text-dts-secondary font-bold bg-dts-secondary/5 px-2 py-0.5 rounded mt-1">
               {customer.client_id}
             </span>
           </div>
@@ -98,9 +98,9 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                 <MapPin className="text-dts-secondary shrink-0" size={18} />
                 <div className="text-sm">
                   <p className="font-medium text-dts-primary dark:text-gray-200">{customer.address}</p>
-                  {customer.address_2 && <p className="text-gray-500">{customer.address_2}</p>}
-                  <p className="text-gray-500">{customer.post_code} {customer.city}</p>
-                  <p className="text-gray-500 uppercase text-xs mt-1">{customer.country}</p>
+                  {customer.address_2 && <p className="text-gray-600 dark:text-gray-400">{customer.address_2}</p>}
+                  <p className="text-gray-700 dark:text-gray-300">{customer.post_code} {customer.city}</p>
+                  <p className="text-gray-500 dark:text-gray-400 font-bold uppercase text-[10px] mt-1 tracking-wider">{customer.country}</p>
                 </div>
               </div>
               <button 
