@@ -14,7 +14,7 @@ import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
 import { useUIStore } from '../../../store/uiStore';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
 import { useAuthStore } from '../../../store/authStore';
 
@@ -24,6 +24,49 @@ const MONTHS = [
   { val: 7, label: 'Jul' }, { val: 8, label: 'Ago' }, { val: 9, label: 'Sep' },
   { val: 10, label: 'Oct' }, { val: 11, label: 'Nov' }, { val: 12, label: 'Dic' }
 ];
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const monthLabel = MONTHS.find(m => m.val === label)?.label || label;
+    return (
+      <div className="bg-white dark:bg-[#002A38] p-3 rounded-lg border border-gray-100 dark:border-white/10 shadow-xl">
+        <p className="text-xs font-bold text-dts-primary dark:text-white mb-2 uppercase border-b border-gray-100 dark:border-white/10 pb-1">
+          {monthLabel} {new Date().getFullYear()}
+        </p>
+        {payload.map((entry: any, index: number) => (
+          <div key={index} className="flex justify-between items-center gap-4 text-[11px] mb-1">
+            <span className="flex items-center gap-1.5 font-medium text-gray-500 dark:text-gray-400">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.fill || entry.color }}></div>
+              {entry.name}:
+            </span>
+            <span className="font-mono font-bold text-dts-primary dark:text-white">
+              {formatCurrency(entry.value, 0)}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+const renderCustomLegend = (props: any) => {
+  const { payload } = props;
+  if (!payload) return null;
+  const sortedPayload = [...payload].sort((a) => a.value === 'Ventas Reales' ? -1 : 1);
+  return (
+    <div className="flex justify-center gap-6 mb-4">
+      {sortedPayload.map((entry, index) => (
+        <div key={`item-${index}`} className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm shadow-sm" style={{ backgroundColor: entry.color }}></div>
+          <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            {entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export const SalesDashboard: React.FC = () => {
   const { setPageInfo } = useUIStore();
@@ -224,14 +267,10 @@ export const SalesDashboard: React.FC = () => {
                   tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} 
                   tick={{fontSize: 10}} 
                 />
-                <RechartsTooltip 
-                  cursor={{fill: 'transparent'}}
-                  contentStyle={{ backgroundColor: '#003E51', border: 'none', borderRadius: '8px', color: '#fff' }}
-                  itemStyle={{ color: '#00B0B9' }}
-                />
-                <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: '20px', fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold' }} />
+                <Tooltip content={<CustomTooltip />} cursor={false}/>
+                <Legend verticalAlign="top" content={renderCustomLegend} />
                 <Bar dataKey="ventas" name="Ventas Reales" fill="#00B0B9" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="objetivo" name="Ppto" fill="#003E51" radius={[4, 4, 0, 0]} opacity={0.3} />
+                <Bar dataKey="objetivo" name="Objetivo (Presupuesto)" fill="#64748B" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
