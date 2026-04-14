@@ -8,7 +8,6 @@ import {
   UserCheck, 
   UserX,
   Shield,
-  Users as UsersIcon,
   ChevronDown,
   Check
 } from 'lucide-react';
@@ -20,7 +19,6 @@ import {
   Transition
 } from '@headlessui/react';
 import apiClient from '../../api/apiClient';
-import { InfoPopover } from '../../components/ui/InfoPopover';
 import { useUIStore } from '../../store/uiStore';
 
 interface Role {
@@ -60,9 +58,20 @@ export const UsersPage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    setPageInfo({
+      title: 'Administración de Usuarios',
+      subtitle: 'Panel centralizado de control y perfiles de sistema',
+      icon: <Shield size={20} />,
+      infoProps: {
+        title: 'Administración de Usuarios',
+        description: 'Vista para gestionar el acceso a la aplicación, asignar roles y controlar la actividad de los miembros del equipo.',
+        objective: 'Garantizar un control de acceso centralizado para todos los módulos.'
+      }
+    });
     fetchUsers();
     fetchRoles();
-  }, []);
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo]);
 
   const fetchUsers = async () => {
     try {

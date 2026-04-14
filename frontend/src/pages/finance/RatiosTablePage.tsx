@@ -2,7 +2,6 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getBalanceData, getIncomeStatementData, getBudgetsData, groupDataByYear } from '../../api/finance';
 import { formatCurrency, formatNumber, formatPercent } from '../../api/formatters';
-import { InfoPopover } from '../../components/ui/InfoPopover';
 import { useUIStore } from '../../store/uiStore';
 import { LayoutGrid } from 'lucide-react';
 
