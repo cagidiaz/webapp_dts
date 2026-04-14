@@ -20,6 +20,28 @@ interface UIState {
     to: string;
   };
   setDateRange: (from: string, to: string) => void;
+
+  /** Current Page Header Info */
+  pageTitle: string;
+  pageSubtitle?: string;
+  pageIcon: React.ReactNode | null;
+  pageInfoProps?: {
+    title: string;
+    description: string;
+    objective?: string;
+    source?: string;
+  };
+  setPageInfo: (info: {
+    title: string;
+    subtitle?: string;
+    icon?: React.ReactNode;
+    infoProps?: {
+      title: string;
+      description: string;
+      objective?: string;
+      source?: string;
+    }
+  }) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -44,4 +66,17 @@ export const useUIStore = create<UIState>((set) => ({
     to: new Date().toISOString().split('T')[0],
   },
   setDateRange: (from, to) => set({ dateRange: { from, to } }),
+
+  // Page Info
+  pageTitle: '',
+  pageSubtitle: '',
+  pageIcon: null,
+  pageInfoProps: undefined,
+  setPageInfo: ({ title, subtitle, icon, infoProps }) => 
+    set({ 
+      pageTitle: title, 
+      pageSubtitle: subtitle || '', 
+      pageIcon: icon || null,
+      pageInfoProps: infoProps
+    }),
 }));

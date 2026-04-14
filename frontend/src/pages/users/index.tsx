@@ -21,6 +21,7 @@ import {
 } from '@headlessui/react';
 import apiClient from '../../api/apiClient';
 import { InfoPopover } from '../../components/ui/InfoPopover';
+import { useUIStore } from '../../store/uiStore';
 
 interface Role {
   id: string;
@@ -37,6 +38,7 @@ interface UserProfile {
 }
 
 export const UsersPage: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,40 +207,22 @@ export const UsersPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-transparent p-4 md:p-8 animate-in fade-in duration-500">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* Header & Stats */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-extrabold flex items-center gap-3 tracking-tight text-dts-primary dark:text-white">
-                <span className="p-2 bg-dts-secondary/10 dark:bg-dts-secondary/20 rounded-xl text-dts-secondary">
-                  <UsersIcon size={28} />
-                </span>
-                ADMINISTRACIÓN DE USUARIOS
-              </h1>
-              <InfoPopover 
-                title="Administración de Usuarios"
-                description="Vista para gestionar el acceso a la aplicación, asignar roles y controlar la actividad de los miembros del equipo."
-                objective="Garantizar un control de acceso centralizado para todos los módulos."
-                iconSize={22}
-              />
-            </div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Panel centralizado de control y perfiles de sistema</p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-6">
-             <div className="text-center px-6 py-2 border-r border-gray-100 dark:border-white/5 last:border-0">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total</p>
-                <p className="text-2xl font-black text-dts-primary dark:text-white">{stats.total}</p>
+        {/* Compact Stats Banner */}
+        <div className="flex justify-end bg-white dark:bg-white/5 p-2 rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+          <div className="flex items-center gap-6 px-4">
+             <div className="text-center border-r border-gray-100 dark:border-white/5 pr-6 py-1">
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
+                <p className="text-lg font-black text-dts-primary dark:text-white">{stats.total}</p>
              </div>
-             <div className="text-center px-6 py-2 border-r border-gray-100 dark:border-white/5 last:border-0">
-                <p className="text-[10px] font-bold text-status-success uppercase tracking-widest">Activos</p>
-                <p className="text-2xl font-black text-dts-primary dark:text-white">{stats.active}</p>
+             <div className="text-center border-r border-gray-100 dark:border-white/5 pr-6 py-1">
+                <p className="text-[9px] font-bold text-status-success uppercase tracking-widest">Activos</p>
+                <p className="text-lg font-black text-dts-primary dark:text-white">{stats.active}</p>
              </div>
-             <div className="text-center px-6 py-2">
-                <p className="text-[10px] font-bold text-dts-secondary uppercase tracking-widest">Admins</p>
-                <p className="text-2xl font-black text-dts-primary dark:text-white">{stats.admins}</p>
+             <div className="text-center py-1">
+                <p className="text-[9px] font-bold text-dts-secondary uppercase tracking-widest">Admins</p>
+                <p className="text-lg font-black text-dts-primary dark:text-white">{stats.admins}</p>
              </div>
           </div>
         </div>

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
+import { useUIStore } from '../../../store/uiStore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend 
 } from 'recharts';
@@ -25,9 +26,24 @@ const MONTHS = [
 ];
 
 export const SalesDashboard: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const { profile } = useAuthStore();
   const year = new Date().getFullYear();
   const salespersonCode = profile?.code;
+
+  React.useEffect(() => {
+    setPageInfo({
+      title: 'Panel de Control Comercial',
+      subtitle: `Resumen comercial ejercicio ${year} (YTD)`,
+      icon: <Activity size={20} />,
+      infoProps: {
+        title: 'Panel de Control Comercial',
+        description: 'Dashboard operativo para el seguimiento individual o global de ventas en tiempo real.',
+        objective: 'Monitorizar el cumplimiento de objetivos de venta y detectar los principales motores del negocio.'
+      }
+    });
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo, year]);
 
   // Drawer state
   const [selectedCustCode, setSelectedCustCode] = React.useState<string | null>(null);
@@ -63,27 +79,13 @@ export const SalesDashboard: React.FC = () => {
   const topCustomers = perfData?.rows || [];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
       <CustomerDetailDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
         customerCode={selectedCustCode} 
       />
-      {/* Header */}
-      <div className="flex justify-between items-center bg-white dark:bg-surface-card-dark p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Panel de Control de Ventas</h1>
-            <InfoPopover 
-              title="Panel Comercial" 
-              description="Vista consolidada del rendimiento comercial, comparativa de objetivos y rankings de actividad."
-              objective="Monitorizar el cumplimiento de objetivos de venta y detectar los principales motores del negocio (clientes y productos)."
-              iconSize={20}
-            />
-          </div>
-          <p className="text-sm text-gray-500">Resumen comercial ejercicio {year} (YTD)</p>
-        </div>
-      </div>
+      {/* Redundant local header removed */}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

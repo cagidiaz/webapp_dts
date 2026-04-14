@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { BarChart3, TrendingUp, ShieldCheck, Zap } from 'lucide-react';
 import { InfoPopover } from '../../components/ui/InfoPopover';
+import { useUIStore } from '../../store/uiStore';
 
 interface FinancialData {
   year: number;
@@ -25,11 +26,26 @@ interface FinancialData {
 const isSystemDark = () => document.documentElement.classList.contains('dark');
 
 export const RatiosChartsPage: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const { data: balanceRows, isLoading: bLoading } = useQuery({ queryKey: ['balanceData'], queryFn: getBalanceData });
   const { data: incomeRows, isLoading: iLoading } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
   const { data: budgetRows, isLoading: budLoading } = useQuery({ queryKey: ['budgetData'], queryFn: getBudgetsData });
   
   const isDark = isSystemDark();
+
+  React.useEffect(() => {
+    setPageInfo({
+      title: 'Evolución de Ratios Clave',
+      subtitle: 'Tendencias históricas de Rentabilidad, Solvencia y Márgenes Operativos',
+      icon: <BarChart3 size={20} />,
+      infoProps: {
+        title: 'Evolución de Ratios',
+        description: 'Gráficas históricas de los ratios más críticos para analizar tendencias a medio/largo plazo en rentabilidad, eficiencia operativa y solvencia patrimonial.',
+        objective: 'Visualizar la trayectoria financiera de la empresa para la toma de decisiones estratégicas basadas en tendencias.'
+      }
+    });
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo]);
 
   const data = useMemo(() => {
     if (!balanceRows || !incomeRows) return [];
@@ -98,17 +114,9 @@ export const RatiosChartsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-700">
-      {/* Header */}
-      <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
-        <div className="flex items-center gap-2 mb-1">
-          <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">EVOLUCIÓN DE RATIOS CLAVE ({data.length > 0 ? `${Math.min(...data.map(d => d.year))}-${Math.max(...data.map(d => d.year))}` : ''})</h1>
-          <InfoPopover 
-            title="Evolución de Ratios"
-            description="Gráficas históricas de los ratios más críticos para analizar tendencias a medio/largo plazo en rentabilidad, eficiencia operativa y solvencia patrimonial."
-            iconSize={20}
-          />
-        </div>
-        <p className="text-sm text-gray-500 italic">Tendencias históricas de Rentabilidad, Solvencia y Márgenes Operativos</p>
+      {/* Header Info Banner */}
+      <div className="bg-dts-primary/5 dark:bg-white/5 px-4 py-2 rounded-lg border border-dts-primary/10 dark:border-white/10 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">
+        Periodo: {data.length > 0 ? `${Math.min(...data.map(d => d.year))} — ${Math.max(...data.map(d => d.year))}` : '---'}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

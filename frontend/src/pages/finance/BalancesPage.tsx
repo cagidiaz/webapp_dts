@@ -12,10 +12,12 @@ import {
   Legend, 
   ResponsiveContainer
 } from 'recharts';
-import { Scale } from 'lucide-react';
+import { Scale, Calendar } from 'lucide-react';
 import { InfoPopover } from '../../components/ui/InfoPopover';
+import { useUIStore } from '../../store/uiStore';
 
 export const BalancesPage: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const [isMounted, setIsMounted] = React.useState(false);
   const { data: rawRows, isLoading, error } = useQuery({
     queryKey: ['balanceData'],
@@ -24,7 +26,18 @@ export const BalancesPage: React.FC = () => {
 
   React.useEffect(() => {
     setIsMounted(true);
-  }, []);
+    setPageInfo({
+      title: 'Análisis de Balances',
+      subtitle: 'Desglose estructural y comparativa multianual de situación patrimonial',
+      icon: <Scale size={20} />,
+      infoProps: {
+        title: 'Análisis de Balances',
+        description: 'Representación estructurada del Balance de Situación de la empresa (Activo, Pasivo y Patrimonio Neto).',
+        objective: 'Evaluar la solidez patrimonial y estudiar el peso vertical estadístico de cada masa patrimonial sobre el total de inversiones (Activo) y su método de financiación.',
+        source: "Tabla: 'financial_balances' extraída contablemente mensualmente."
+      }
+    });
+  }, [setPageInfo]);
 
   if (isLoading || !isMounted) return <div className="p-8">Cargando datos...</div>;
   if (error) return <div className="p-8 text-red-500">Error al cargar datos.</div>;
@@ -40,25 +53,12 @@ export const BalancesPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
-      {/* Standardized Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Scale className="text-dts-secondary" size={24} />
-            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Análisis de Balances</h1>
-            <InfoPopover 
-              title="Análisis de Balances"
-              description="Representación estructurada del Balance de Situación de la empresa (Activo, Pasivo y Patrimonio Neto)."
-              objective="Evaluar la solidez patrimonial y estudiar el peso vertical estadístico de cada masa patrimonial sobre el total de inversiones (Activo) y su método de financiación."
-              source="Tabla: 'financial_balances' extraída contablemente mensualmente."
-              iconSize={20}
-            />
-          </div>
-          <p className="text-sm text-gray-500 font-medium">Desglose estructural y comparativa multianual de situación patrimonial</p>
-        </div>
-        <div className="text-xs text-gray-400 bg-gray-100 dark:bg-dts-primary-dark/30 px-3 py-1.5 rounded-full font-medium">
-           Período: {minYear} - {maxYear}
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+      {/* Metrics Bar */}
+      <div className="flex items-center justify-end">
+        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/5 uppercase tracking-wider">
+           <Calendar size={12} className="text-dts-secondary" />
+           Período: {minYear} — {maxYear}
         </div>
       </div>
 

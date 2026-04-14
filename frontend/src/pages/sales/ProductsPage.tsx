@@ -11,8 +11,10 @@ import {
   Loader2, ArrowUpDown, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { InfoPopover, KPISkeleton, TableSkeleton, SearchableSelect } from '../../components/ui';
+import { useUIStore } from '../../store/uiStore';
 
 export const ProductsPage: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [familyFilter, setFamilyFilter] = useState('');
@@ -23,6 +25,21 @@ export const ProductsPage: React.FC = () => {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const observerTarget = useRef<HTMLTableRowElement>(null);
   const pageSize = 50;
+
+  useEffect(() => {
+    setPageInfo({
+      title: 'Catálogo de Productos',
+      subtitle: 'Gestión integral de referencias, stocks y precios',
+      icon: <Package size={20} />,
+      infoProps: {
+        title: 'Productos y Stock',
+        description: 'Visión general del inventario, precios y márgenes de los productos.',
+        objective: 'Controlar la disponibilidad de referencias y analizar la rentabilidad por producto.',
+        source: 'Maestro de productos de Business Central.'
+      }
+    });
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo]);
 
   useEffect(() => {
     const timer = setTimeout(() => { setDebouncedSearch(searchTerm); }, 400);
@@ -84,26 +101,7 @@ export const ProductsPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Package className="text-dts-secondary" size={24} />
-            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Catálogo de Productos</h1>
-            <InfoPopover 
-              title="Productos y Stock" 
-              description="Visión general del inventario, precios y márgenes de los productos." 
-              objective="Controlar la disponibilidad de referencias y analizar la rentabilidad por producto."
-              source="Maestro de productos de Business Central."
-              iconSize={20} 
-            />
-          </div>
-          <p className="text-sm text-gray-500 font-medium">Gestión integral de referencias y stocks</p>
-        </div>
-        <div className="text-xs text-gray-400 bg-gray-100 dark:bg-dts-primary-dark/30 px-3 py-1.5 rounded-full font-bold border border-gray-200/50 dark:border-white/5 font-mono">
-          REFERENCIAS: {formatNumber(totalProducts, 0)}
-        </div>
-      </div>
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <KPICard 

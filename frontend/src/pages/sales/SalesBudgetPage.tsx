@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { InfoPopover } from '../../components/ui';
 import { SearchableSelect } from '../../components/ui/SearchableSelect';
+import { useUIStore } from '../../store/uiStore';
 
 const MONTHS = [
   { val: 1, label: 'Ene' }, { val: 2, label: 'Feb' }, { val: 3, label: 'Mar' },
@@ -70,8 +71,8 @@ const renderCustomLegend = (props: any) => {
     </div>
   );
 };
-
 export const SalesBudgetPage: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const { profile } = useAuthStore();
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
@@ -83,6 +84,21 @@ export const SalesBudgetPage: React.FC = () => {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const observerTarget = useRef<HTMLTableRowElement>(null);
   const pageSize = 50;
+
+  useEffect(() => {
+    setPageInfo({
+      title: 'Ventas vs Presupuestos',
+      subtitle: 'Análisis y cumplimiento comercial (Seguimiento de Objetivos)',
+      icon: <PieChartIcon size={20} />,
+      infoProps: {
+        title: 'Ventas vs Presupuestos',
+        description: 'Comparativa en tiempo real de la facturación real frente a los objetivos presupuestados.',
+        objective: 'Analizar el grado de cumplimiento de los objetivos comerciales y detectar desviaciones por familias o vendedores de forma proactiva.',
+        source: 'Basado en facturas de venta, abonos y presupuestos cargados en el sistema.'
+      }
+    });
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo]);
 
   const { 
     data: infiniteData, fetchNextPage, hasNextPage, isFetchingNextPage,
@@ -179,25 +195,19 @@ export const SalesBudgetPage: React.FC = () => {
   const selectionPct = selectionTotals.objetivo > 0 ? (selectionDesv / selectionTotals.objetivo) * 100 : 0;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <PieChartIcon className="text-dts-secondary" size={24} />
-            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">PRESUPUESTOS</h1>
-            <InfoPopover 
-              title="Ventas vs Presupuestos" 
-              description="Comparativa en tiempo real de la facturación real frente a los objetivos presupuestados." 
-              objective="Analizar el grado de cumplimiento de los objetivos comerciales y detectar desviaciones por familias o vendedores de forma proactiva."
-              source="Basado en facturas de venta, abonos y presupuestos cargados en el sistema."
-              iconSize={22} 
-            />
-          </div>
-          <p className="text-sm text-gray-500 font-medium">Análisis y cumplimiento comercial (Seguimiento de Objetivos)</p>
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+      {/* Compact Secondary Header */}
+      <div className="flex justify-end bg-gray-50/50 dark:bg-white/5 p-4 rounded-xl border border-gray-100 dark:border-white/5">
+        <div className="flex items-center gap-3">
+          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ejercicio:</label>
+          <select 
+            value={year} 
+            onChange={(e) => setYear(Number(e.target.value))} 
+            className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark text-dts-primary dark:text-white font-bold rounded-md px-3 py-1 text-sm outline-none font-mono shadow-sm"
+          >
+            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
         </div>
-        <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark text-dts-primary dark:text-white font-bold rounded-md px-3 py-1 outline-none font-mono">
-          {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

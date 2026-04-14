@@ -10,11 +10,13 @@ import { InfoPopover, KPISkeleton, TableSkeleton } from '../../components/ui';
 import { CustomerDetailDrawer } from './components/CustomerDetailDrawer';
 import { type CustomerDataRow } from '../../api/customers';
 import { useAuthStore } from '../../store/authStore';
+import { useUIStore } from '../../store/uiStore';
 
 export const CustomersPage: React.FC = () => {
   const { profile } = useAuthStore();
   const isSalesRole = profile?.roles?.name?.toUpperCase() === 'VENTAS';
 
+  const { setPageInfo } = useUIStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [blockedFilter, setBlockedFilter] = useState<boolean | undefined>(undefined);
@@ -23,6 +25,21 @@ export const CustomersPage: React.FC = () => {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const observerTarget = useRef<HTMLTableRowElement>(null);
   const pageSize = 50;
+
+  useEffect(() => {
+    setPageInfo({
+      title: 'Cartera de Clientes',
+      subtitle: 'Gestión comercial y contable (Ficha de Cliente)',
+      icon: <Users size={20} />,
+      infoProps: {
+        title: 'Cartera de Clientes',
+        description: 'Listado exhaustivo de clientes con su situación financiera y comercial actualizada.',
+        objective: 'Gestionar el riesgo de crédito y analizar el rendimiento por cliente en tiempo real.',
+        source: 'Sincronizado con Navision / Business Central.'
+      }
+    });
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo]);
 
   // Drawer states
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDataRow | null>(null);
@@ -95,31 +112,12 @@ export const CustomersPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <CustomerDetailDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
         customer={selectedCustomer} 
       />
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Users className="text-dts-secondary" size={24} />
-            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">CLIENTES</h1>
-            <InfoPopover 
-              title="Cartera de Clientes" 
-              description="Listado exhaustivo de clientes con su situación financiera y comercial actualizada." 
-              objective="Gestionar el riesgo de crédito y analizar el rendimiento por cliente en tiempo real."
-              source="Sincronizado con Navision / Business Central."
-              iconSize={20} 
-            />
-          </div>
-          <p className="text-sm text-gray-500 font-medium">Gestión comercial y contable (Ficha de Cliente)</p>
-        </div>
-        <div className="text-xs text-gray-400 bg-gray-100 dark:bg-dts-primary-dark/30 px-3 py-1.5 rounded-full font-bold border border-gray-200/50 dark:border-white/5 font-mono">
-          REGISTROS: {formatNumber(totalCustomers || 0, 0)}
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <KPICard 

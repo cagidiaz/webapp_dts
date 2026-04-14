@@ -3,11 +3,29 @@ import { useQuery } from '@tanstack/react-query';
 import { getBalanceData, getIncomeStatementData, getBudgetsData, groupDataByYear } from '../../api/finance';
 import { formatCurrency, formatNumber, formatPercent } from '../../api/formatters';
 import { InfoPopover } from '../../components/ui/InfoPopover';
+import { useUIStore } from '../../store/uiStore';
+import { LayoutGrid } from 'lucide-react';
 
 export const RatiosTablePage: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const { data: balanceRows, isLoading: bLoading } = useQuery({ queryKey: ['balanceData'], queryFn: getBalanceData });
   const { data: incomeRows, isLoading: iLoading } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
   const { data: budgetRows, isLoading: budLoading } = useQuery({ queryKey: ['budgetData'], queryFn: getBudgetsData });
+
+  React.useEffect(() => {
+    setPageInfo({
+      title: 'Cuadro de Mando: 20 Ratios',
+      subtitle: 'Análisis comparativo multianual de indicadores financieros',
+      icon: <LayoutGrid size={20} />,
+      infoProps: {
+        title: 'Cuadro de 20 Ratios',
+        description: "Análisis detallado de la salud financiera mediante ratios agrupados por actividad, rentabilidad y solvencia. En la columna de estimación (año actual), los ratios de actividad (DSO/DPO) se calculan usando ventas reales anualizadas para mantener la coherencia con el balance.",
+        objective: "Evaluar la eficiencia, rentabilidad y capacidad de pago a lo largo del tiempo.",
+        source: "Cálculos derivados de 'income_statements' y 'financial_balances'."
+      }
+    });
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo]);
 
   if (bLoading || iLoading || budLoading) return <div className="p-8">Calculando ratios...</div>;
 
@@ -81,24 +99,9 @@ export const RatiosTablePage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">CUADRO DE MANDO: 20 RATIOS</h1>
-            <InfoPopover 
-              title="Cuadro de 20 Ratios" 
-              description="Análisis detallado de la salud financiera mediante ratios agrupados por actividad, rentabilidad y solvencia. En la columna de estimación (año actual), los ratios de actividad (DSO/DPO) se calculan usando ventas reales anualizadas para mantener la coherencia con el balance."
-              objective="Evaluar la eficiencia, rentabilidad y capacidad de pago de dTS Instruments a lo largo del tiempo."
-              source="Cálculos derivados de 'income_statements' y 'financial_balances'."
-              iconSize={20}
-            />
-          </div>
-          <p className="text-sm text-gray-500">Análisis comparativo multianual de indicadores financieros</p>
-        </div>
-        <div className="flex gap-2">
-           <div className="px-3 py-1 bg-green-50 text-green-700 rounded text-xs font-medium border border-green-100">Dato Real</div>
-           <div className="px-3 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium border border-blue-100">Auditoría OK</div>
-        </div>
+      <div className="flex justify-end gap-2">
+         <div className="px-3 py-1 bg-green-50 text-green-700 rounded text-[10px] uppercase font-bold border border-green-100">Dato Real</div>
+         <div className="px-3 py-1 bg-blue-50 text-blue-700 rounded text-[10px] uppercase font-bold border border-blue-100">Auditoría OK</div>
       </div>
 
       <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800">

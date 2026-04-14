@@ -11,6 +11,7 @@ import {
 import { TrendingUp, Info } from 'lucide-react';
 import { formatCurrency } from '../../api/formatters';
 import { InfoPopover } from '../../components/ui/InfoPopover';
+import { useUIStore } from '../../store/uiStore';
 
 interface YearData {
   year: number;
@@ -18,6 +19,7 @@ interface YearData {
 }
 
 export const KeyPointsPage: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const [isMounted, setIsMounted] = useState(false);
   const { data: rawRows, isLoading, error } = useQuery({
     queryKey: ['balanceData'],
@@ -26,7 +28,19 @@ export const KeyPointsPage: React.FC = () => {
 
   React.useEffect(() => {
     setIsMounted(true);
-  }, []);
+    setPageInfo({
+      title: 'Análisis de 4 Puntos Clave',
+      subtitle: 'Resumen ejecutivo de solvencia, liquidez y endeudamiento estructural',
+      icon: <TrendingUp size={20} />,
+      infoProps: {
+        title: '4 Puntos Clave del Balance',
+        description: 'Visión ejecutiva de la salud del balance a través de las 4 métricas más vitales: Liquidez, Capitalización, Endeudamiento y Garantía patrimonial.',
+        objective: 'Ofrecer un resumen rápido y visual del estado del balance para la alta dirección sin requerir análisis profundo de las partidas contables.'
+      }
+    });
+
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo]);
 
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear() - 1);
 
@@ -84,26 +98,14 @@ export const KeyPointsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
-      {/* Header & Year Selector */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-surface-card-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Análisis de 4 Puntos Clave</h1>
-            <InfoPopover 
-              title="4 Puntos Clave del Balance"
-              description="Visión ejecutiva de la salud del balance a través de las 4 métricas más vitales: Liquidez, Capitalización, Endeudamiento y Garantía patrimonial."
-              objective="Ofrecer un resumen rápido y visual del estado del balance para la alta dirección sin requerir análisis profundo de las partidas contables."
-              iconSize={20}
-            />
-          </div>
-          <p className="text-sm text-gray-500">Referidos al Balance del año <span className="font-medium text-dts-secondary">{selectedYear} {yearData?.isEstimate ? '(ESTIMADO)' : ''}</span></p>
-        </div>
+      {/* Compact Secondary Controls */}
+      <div className="flex justify-end items-center gap-4 bg-gray-50/50 dark:bg-white/5 p-4 rounded-xl border border-gray-100 dark:border-white/5">
         <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Balance a analizar:</label>
+          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Análisis año:</label>
           <select 
             value={selectedYear}
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="bg-gray-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-dts-secondary focus:border-dts-secondary block w-40 p-2.5 outline-none transition-all shadow-sm"
+            className="bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 text-dts-primary dark:text-white text-xs font-bold rounded-lg focus:ring-dts-secondary focus:border-dts-secondary block w-32 px-3 py-1.5 outline-none transition-all shadow-sm font-mono"
           >
             {data.map(d => (
               <option key={d.year} value={d.year}>

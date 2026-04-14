@@ -4,12 +4,28 @@ import { getIncomeStatementData, getBudgetsData, groupDataByYear, groupBudgetsBy
 import { formatCurrency, formatPercent } from '../../../api/formatters';
 import { TrendingUp, TrendingDown, Target, BarChart2 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui/InfoPopover';
+import { useUIStore } from '../../../store/uiStore';
 
 export const FinancialDashboard: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const { data: incomeRows, isLoading: iLoading } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
   const { data: budgetRows, isLoading: bLoading } = useQuery({ queryKey: ['budgetData'], queryFn: getBudgetsData });
 
   const currentYear = new Date().getFullYear();
+
+  React.useEffect(() => {
+    setPageInfo({
+      title: 'Dashboard Contable',
+      subtitle: `Monitorización de cumplimiento presupuestario ${currentYear} (YTD Est.)`,
+      icon: <BarChart2 size={20} />,
+      infoProps: {
+        title: 'Dashboard Contable',
+        description: 'Vista global que resume el estado financiero y comercial actual de la empresa frente a los objetivos marcados para el año en curso.',
+        objective: 'Monitorizar si la empresa está cumpliendo con sus previsiones de facturación y rentabilidad.'
+      }
+    });
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo, currentYear]);
 
   const metrics = useMemo(() => {
     if (!incomeRows || !budgetRows) return null;
@@ -47,21 +63,7 @@ export const FinancialDashboard: React.FC = () => {
   if (iLoading || bLoading) return <div className="p-8">Cargando métricas...</div>;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center bg-white dark:bg-surface-card-dark p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Dashboard Contable</h1>
-            <InfoPopover 
-              title="Dashboard Contable" 
-              description="Vista global que resume el estado financiero y comercial actual de la empresa frente a los objetivos marcados para el año en curso."
-              objective="Monitorizar de un vistazo rápido si la empresa está cumpliendo con sus previsiones de facturación y rentabilidad."
-              iconSize={20}
-            />
-          </div>
-          <p className="text-sm text-gray-500">Monitorización de cumplimiento presupuestario {currentYear} (YTD Est.)</p>
-        </div>
-      </div>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Sales Card */}

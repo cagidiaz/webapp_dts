@@ -24,6 +24,7 @@ import {
   Layers
 } from 'lucide-react';
 import { InfoPopover } from '../../components/ui/InfoPopover';
+import { useUIStore } from '../../store/uiStore';
 
 interface FinancialData {
   year: number;
@@ -31,6 +32,7 @@ interface FinancialData {
 }
 
 export const SimulationsPage: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const [isMounted, setIsMounted] = useState(false);
   const { data: balanceRows, isLoading: isBLoading } = useQuery({ queryKey: ['balanceData'], queryFn: getBalanceData });
   const { data: incomeRows, isLoading: isILoading } = useQuery({ queryKey: ['incomeData'], queryFn: getIncomeStatementData });
@@ -38,7 +40,18 @@ export const SimulationsPage: React.FC = () => {
 
   React.useEffect(() => {
     setIsMounted(true);
-  }, []);
+    setPageInfo({
+      title: 'Motor de Simulación',
+      subtitle: `Modelado dinámico de escenarios financieros para ${new Date().getFullYear()}`,
+      icon: <Calculator size={20} />,
+      infoProps: {
+        title: 'Motor de Simulación',
+        description: 'Herramienta avanzada para modelar el impacto de variaciones en ventas y costes sobre los resultados (EBITDA y márgenes).',
+        objective: 'Permitir a dirección anticipar escenarios (ej. caída de ventas o inflación de costes) sin alterar los presupuestos oficiales, facilitando planes de contingencia.'
+      }
+    });
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo]);
 
   // Simulation State
   const [salesGrowth, setSalesGrowth] = useState(0); // 0% by default
@@ -115,6 +128,7 @@ export const SimulationsPage: React.FC = () => {
       baseName: baselineMode === 'historical' ? `Real ${selectedYear}` : `Presupuesto ${currentYear}`,
       sales: projectedSales,
       baseSales: annualBaseSales,
+      fixedCosts: baseFixedOperating + baseNonOperating,
       costs: projectedPurchases + baseFixedOperating + baseNonOperating, // Total costs for tracking
       baseCosts: baseVariableCosts + baseFixedOperating + baseNonOperating,
       basePersonnel: Math.abs(dataSource['A.6'] || 0),
@@ -131,19 +145,9 @@ export const SimulationsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header */}
-      <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-        <div className="flex items-center gap-2 mb-1">
-          <Calculator className="text-dts-secondary" size={24} />
-          <h1 className="text-2xl font-medium text-dts-primary dark:text-white uppercase tracking-tight">Motor de Simulación</h1>
-          <InfoPopover 
-            title="Motor de Simulación"
-            description="Herramienta avanzada para modelar el impacto de variaciones en ventas y costes sobre los resultados (EBITDA y márgenes)."
-            objective="Permitir a dirección anticipar escenarios (ej. caída de ventas o inflación de costes) sin alterar los presupuestos oficiales, facilitando planes de contingencia."
-            iconSize={22}
-          />
-        </div>
-        <p className="text-sm text-gray-500 font-medium">Modelado dinámico de escenarios financieros para {currentYear}</p>
+      {/* Simulation context banner */}
+      <div className="bg-dts-primary/5 dark:bg-white/5 px-4 py-2 rounded-lg border border-dts-primary/10 dark:border-white/10 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">
+        Simulación sobre: {totals?.baseName || '---'}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -191,17 +195,25 @@ export const SimulationsPage: React.FC = () => {
                   disabled={baselineMode === 'budget'}
                   className={`w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-not-allowed accent-dts-primary-light ${baselineMode === 'budget' ? 'opacity-50' : 'cursor-pointer'}`} 
                 />
-                <div className="flex justify-between mt-2 px-1 text-xs font-mono text-gray-500">
-                   <span className="font-medium">Gastos Sim.:</span>
-                   <span className={`${costVariation > 0 ? 'text-red-400' : 'text-green-500'} text-sm`}>
-                     {formatCurrency(totals?.costs || 0)}
-                   </span>
-                </div>
-                <div className="flex justify-between mt-1 px-1 text-xs font-mono text-gray-500">
-                   <span className="font-medium">Compras Sim.:</span>
-                   <span className={`${costVariation > 0 ? 'text-red-400' : 'text-green-500'} text-sm mb-1`}>
-                     {formatCurrency(totals?.purchases || 0)}
-                   </span>
+                <div className="space-y-2 mt-4 pt-4 border-t border-gray-50 dark:border-white/5">
+                  <div className="flex justify-between px-1 text-[11px] font-mono text-gray-500">
+                    <span className="font-medium">Gastos Fijos:</span>
+                    <span className="text-gray-900 dark:text-gray-300">
+                      {formatCurrency(totals?.fixedCosts || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between px-1 text-[11px] font-mono text-gray-500">
+                    <span className="font-medium">Compras Sim.:</span>
+                    <span className={`${costVariation > 0 ? 'text-red-400' : 'text-green-500'}`}>
+                      {formatCurrency(totals?.purchases || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between px-1 text-xs font-mono bg-gray-50 dark:bg-white/5 p-2 rounded-lg mt-2">
+                    <span className="font-bold text-gray-600 dark:text-gray-400">GASTOS TOTALES:</span>
+                    <span className={`${costVariation > 0 ? 'text-red-500' : 'text-green-600'} font-black`}>
+                      {formatCurrency(totals?.costs || 0)}
+                    </span>
+                  </div>
                 </div>
               </div>
               <div className="pt-6 border-t border-gray-50 dark:border-gray-800 space-y-4">

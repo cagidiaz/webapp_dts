@@ -2,9 +2,10 @@ import React from 'react';
 import { Bell, Moon, Sun } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
+import { InfoPopover } from '../ui/InfoPopover';
 
 export const TopBar: React.FC = () => {
-  const { isSidebarCollapsed, theme, toggleTheme } = useUIStore();
+  const { isSidebarCollapsed, theme, toggleTheme, pageTitle, pageSubtitle, pageIcon, pageInfoProps } = useUIStore();
   const { profile } = useAuthStore();
   const isDark = theme === 'dark';
 
@@ -18,8 +19,36 @@ export const TopBar: React.FC = () => {
       `}
       style={{ left: isSidebarCollapsed ? 'var(--spacing-sidebar-collapsed)' : 'var(--spacing-sidebar)' }}
     >
-      {/* Container - Left Empty (previously global search bar) */}
-      <div className="flex-1"></div>
+      {/* Page Title Section */}
+      <div className="flex-1 flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-500">
+        {pageIcon && (
+          <div className="flex-shrink-0 text-dts-secondary drop-shadow-sm p-2 bg-gray-100 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-white/10">
+            {pageIcon}
+          </div>
+        )}
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className={`font-black uppercase tracking-widest text-sm lg:text-[15px] truncate ${isDark ? 'text-white' : 'text-dts-primary'}`}>
+              {pageTitle}
+            </h2>
+            {pageInfoProps && (
+              <InfoPopover 
+                title={pageInfoProps.title}
+                description={pageInfoProps.description}
+                objective={pageInfoProps.objective}
+                source={pageInfoProps.source}
+                iconSize={14}
+                className="opacity-40 hover:opacity-100 transition-opacity"
+              />
+            )}
+          </div>
+          {pageSubtitle && (
+            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tight truncate leading-tight">
+              {pageSubtitle}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Right Actions */}
       <div className="flex items-center space-x-4 ml-4">
