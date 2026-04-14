@@ -18,12 +18,11 @@ export interface CustomerDataRow {
   adjusted_profit_pct: number;
   order_margin: number;
   invoice_margin: number;
-  last_date_modified: string | null;
   address: string | null;
   address_2: string | null;
   country_reg_code: string | null;
   city: string | null;
-  country: string | null;
+  county: string | null;
   post_code: string | null;
   phone_no: string | null;
   mobile_no: string | null;
@@ -36,7 +35,6 @@ export interface CustomerDataRow {
   payment_method_code: string | null;
   shipment_method_code: string | null;
   shipping_agent_code: string | null;
-  customer_since: string | null;
   payments_lcy: number;
   created_at: string;
   updated_at: string;

@@ -100,7 +100,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                   <p className="font-medium text-dts-primary dark:text-gray-200">{customer.address}</p>
                   {customer.address_2 && <p className="text-gray-600 dark:text-gray-400">{customer.address_2}</p>}
                   <p className="text-gray-700 dark:text-gray-300">{customer.post_code} {customer.city}</p>
-                  <p className="text-gray-500 dark:text-gray-400 font-bold uppercase text-[10px] mt-1 tracking-wider">{customer.country}</p>
+                  <p className="text-gray-500 dark:text-gray-400 font-bold uppercase text-[10px] mt-1 tracking-wider">{customer.county}</p>
                 </div>
               </div>
               <button 
@@ -129,7 +129,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
               />
             </div>
             <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
-               <Calendar size={12}/> Cliente desde: {customer.customer_since ? new Date(customer.customer_since).toLocaleDateString() : 'N/A'}
+               <Calendar size={12}/> Cliente desde: {customer.created_at ? new Date(customer.created_at).toLocaleDateString() : 'N/A'}
             </div>
           </section>
         </div>

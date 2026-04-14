@@ -523,12 +523,11 @@ model customers {
   adjusted_profit_pct      Decimal?        @default(0) @db.Decimal
   order_margin             Decimal?        @default(0) @db.Decimal
   invoice_margin           Decimal?        @default(0) @db.Decimal
-  last_date_modified       DateTime?       @db.Date
   address                  String?
   address_2                String?
   country_reg_code         String?         @db.VarChar(20)
   city                     String?         @db.VarChar(100)
-  country                  String?         @db.VarChar(100)
+  county                   String?         @db.VarChar(100)
   post_code                String?         @db.VarChar(20)
   phone_no                 String?         @db.VarChar(50)
   mobile_no                String?         @db.VarChar(50)
@@ -541,7 +540,6 @@ model customers {
   payment_method_code      String?         @db.VarChar(50)
   shipment_method_code     String?         @db.VarChar(50)
   shipping_agent_code      String?         @db.VarChar(50)
-  customer_since           DateTime?       @db.Date
   payments_lcy             Decimal?        @default(0) @db.Decimal
   created_at               DateTime?       @default(now()) @db.Timestamptz(6)
   updated_at               DateTime?       @default(now()) @db.Timestamptz(6)

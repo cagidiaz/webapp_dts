@@ -183,7 +183,7 @@ export const CustomersPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {customers.map(customer => {
-                const isNew = customer.customer_since && new Date(customer.customer_since).getFullYear() === new Date().getFullYear();
+                const isNew = customer.created_at && new Date(customer.created_at).getFullYear() === new Date().getFullYear();
                 return (
                   <tr 
                     key={customer.id} 
