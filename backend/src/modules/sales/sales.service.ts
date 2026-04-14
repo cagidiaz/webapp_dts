@@ -153,10 +153,10 @@ export class SalesService {
     if (customerIds.size > 0) {
       const customers = await this.prisma.customers.findMany({
         where: { client_id: { in: Array.from(customerIds) } },
-        select: { client_id: true, name: true, customer_since: true }
+        select: { client_id: true, name: true, created_at: true }
       });
       customersDict = customers.reduce((acc, c) => {
-        acc[c.client_id] = { name: c.name, since: c.customer_since };
+        acc[c.client_id] = { name: c.name, since: c.created_at };
         return acc;
       }, {} as Record<string, { name: string; since: Date | null }>);
     }
