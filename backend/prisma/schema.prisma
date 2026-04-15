@@ -545,6 +545,7 @@ model customers {
   updated_at               DateTime?       @default(now()) @db.Timestamptz(6)
   sales_rep                sales_reps?     @relation(fields: [salesperson_code], references: [code])
   sales_budgets            sales_budgets[]
+  sales_orders             sales_orders[]
 
   @@schema("public")
 }
@@ -572,6 +573,7 @@ model products {
   created_at          DateTime?          @default(now()) @db.Timestamptz(6)
   updated_at          DateTime?          @default(now()) @db.Timestamptz(6)
   category            product_categories? @relation(fields: [subfamily_code], references: [subfamily_code], onDelete: SetNull)
+  sales_orders        sales_orders[]
 
   @@index([vendor_no], map: "idx_product_vendor")
   @@index([subfamily_code], map: "idx_product_subfamily")
@@ -645,4 +647,33 @@ enum one_time_token_type {
   phone_change_token
 
   @@schema("auth")
+}
+
+model sales_orders {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  posting_date             DateTime? @db.Date
+  document_type            String?   @db.VarChar(50)
+  type                     String?   @db.VarChar(50)
+  document_number          String    @db.VarChar(50)
+  item_code                String    @db.VarChar(50)
+  description              String?   @db.Text
+  unit_of_measure          String?   @db.VarChar(20)
+  quantity                 Decimal?  @default(0) @db.Decimal(18, 4)
+  outstanding_quantity     Decimal?  @default(0) @db.Decimal(18, 4)
+  quantity_invoice         Decimal?  @default(0) @db.Decimal(18, 4)
+  qty_shipped_not_invoiced Decimal?  @default(0) @db.Decimal(18, 4)
+  unit_price               Decimal?  @default(0) @db.Decimal(18, 4)
+  line_amount              Decimal?  @default(0) @db.Decimal(18, 4)
+  customer_code            String    @db.VarChar(50)
+  shipment_date            DateTime? @db.Date
+  created_at               DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime? @default(now()) @db.Timestamptz(6)
+
+  customer                 customers @relation(fields: [customer_code], references: [client_id], onDelete: Cascade)
+  product                  products  @relation(fields: [item_code], references: [item_no], onDelete: Cascade)
+
+  @@index([customer_code], map: "idx_sales_orders_customer")
+  @@index([item_code], map: "idx_sales_orders_item")
+  @@index([document_number], map: "idx_sales_orders_doc_no")
+  @@schema("public")
 }

@@ -11,6 +11,7 @@ import { SalesModule } from './modules/sales/sales.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { ProductsModule } from './modules/products/products.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
     CustomersModule,
     ProductsModule,
     CategoriesModule,
+    SalesOrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
