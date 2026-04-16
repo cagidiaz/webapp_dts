@@ -217,16 +217,7 @@ export const SalesBudgetPage: React.FC = () => {
     return { tableData: allRows, performanceKPIs: kpis };
   }, [infiniteData]);
 
-  const selectionTotals = useMemo(() => {
-    return tableData.reduce((acc, curr: any) => ({
-      // Excluimos la facturación de la fila de Cliente Nuevo para evitar doble conteo (ya que los clientes reales ya están en la lista)
-      facturacion: acc.facturacion + (curr.excludeFacturacionFromTotal ? 0 : (curr.facturacion || 0)),
-      objetivo: acc.objetivo + (curr.objetivo || 0),
-    }), { facturacion: 0, objetivo: 0 });
-  }, [tableData]);
-
-  const selectionDesv = selectionTotals.facturacion - selectionTotals.objetivo;
-  const selectionPct = selectionTotals.objetivo > 0 ? (selectionDesv / selectionTotals.objetivo) * 100 : 0;
+  // selectionTotals removed to use stable absolute totals from performanceKPIs
 
   // Options for selects
   const familyOptions = useMemo(() => {
@@ -407,11 +398,11 @@ export const SalesBudgetPage: React.FC = () => {
                 <table className="w-full text-left text-sm border-separate border-spacing-0 table-fixed">
                   <tbody>
                     <tr className="font-bold">
-                      <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES SELECCIÓN</td>
-                      <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(selectionTotals.facturacion, 0)}</td>
-                      <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(selectionTotals.objetivo, 0)}</td>
-                      <td className={`w-[15%] px-6 py-4 text-right font-mono ${selectionDesv < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{selectionDesv > 0 ? '+' : ''}{formatCurrency(selectionDesv, 0)}</td>
-                      <td className={`w-[15%] px-6 py-4 text-center font-mono text-[11px] ${selectionPct < 0 ? 'text-red-400 bg-red-400/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{selectionPct > 0 ? '+' : ''}{formatNumber(selectionPct, 1)}%</td>
+                      <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES FILTRADOS</td>
+                      <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.ventas, 0)}</td>
+                      <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
+                      <td className={`w-[15%] px-6 py-4 text-right font-mono ${performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}</td>
+                      <td className={`w-[15%] px-6 py-4 text-center font-mono text-[11px] ${performanceKPIs.desviacionPct < 0 ? 'text-red-400 bg-red-400/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{performanceKPIs.desviacionPct > 0 ? '+' : ''}{formatNumber(performanceKPIs.desviacionPct, 1)}%</td>
                     </tr>
                   </tbody>
                 </table>
