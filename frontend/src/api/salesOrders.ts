@@ -28,6 +28,12 @@ export interface SalesOrderData {
 export interface SalesOrdersResponse {
   data: SalesOrderData[];
   total: number;
+  summary: {
+    totalOrders: number;
+    totalAmount: number;
+    totalOutstandingUnits: number;
+    totalEnviadoNoFacturado: number;
+  };
 }
 
 export const getAllSalesOrders = async (params: {
@@ -35,6 +41,8 @@ export const getAllSalesOrders = async (params: {
   skip?: number;
   search?: string;
   customerCode?: string;
+  sortBy?: string;
+  sortDir?: string;
 }): Promise<SalesOrdersResponse> => {
   const { data } = await apiClient.get('/sales-orders', { params });
   return data;

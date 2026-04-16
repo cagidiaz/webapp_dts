@@ -46,10 +46,15 @@ export class SalesController {
     @Query('salespersonCode') salespersonCode?: string,
     @Query('familyCode') familyCode?: string,
     @Query('subfamilyCode') subfamilyCode?: string,
+    @Query('customerCode') customerCode?: string,
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: 'asc' | 'desc',
     @Query('take') take?: string,
     @Query('skip') skip?: string,
   ) {
     const targetYear = year ? Number(year) : new Date().getFullYear();
+
     let targetMonths;
     if (months) {
       targetMonths = months.split(',').map(m => Number(m.trim())).filter(m => !isNaN(m));
@@ -60,12 +65,17 @@ export class SalesController {
       year: targetYear,
       months: targetMonths,
       salespersonCode: code,
+      customerCode,
       familyCode,
       subfamilyCode,
+      search,
+      sortBy,
+      sortDir,
       take: take ? Number(take) : undefined,
       skip: skip ? Number(skip) : undefined
     });
   }
+
 
   @Get('budget-evolution')
   @ApiOperation({ summary: 'Get monthly evolution data of sales vs budget' })
@@ -75,18 +85,24 @@ export class SalesController {
     @Query('salespersonCode') salespersonCode?: string,
     @Query('familyCode') familyCode?: string,
     @Query('subfamilyCode') subfamilyCode?: string,
+    @Query('customerCode') customerCode?: string,
+    @Query('search') search?: string,
   ) {
     const targetYear = year ? Number(year) : new Date().getFullYear();
+
     const code = await this.getSalespersonCode(req, salespersonCode);
 
 
     return this.salesService.getSalesBudgetEvolution({
       year: targetYear,
       salespersonCode: code,
+      customerCode,
+      search,
       familyCode,
       subfamilyCode
     });
   }
+
 
   @Get('top-products')
   @ApiOperation({ summary: 'Get best selling products ranking' })

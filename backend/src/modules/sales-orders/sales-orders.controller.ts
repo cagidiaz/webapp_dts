@@ -21,8 +21,10 @@ export class SalesOrdersController {
     @Query('skip') skip?: number,
     @Query('search') search?: string,
     @Query('customerCode') customerCode?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: 'asc' | 'desc',
   ) {
-    return this.salesOrdersService.getAll({ take, skip, search, customerCode });
+    return this.salesOrdersService.getAll({ take, skip, search, customerCode, sortBy, sortDir });
   }
 
   @Get(':id')

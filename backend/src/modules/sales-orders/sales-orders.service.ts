@@ -14,8 +14,10 @@ export class SalesOrdersService {
     search?: string;
     customerCode?: string;
     itemCode?: string;
+    sortBy?: string;
+    sortDir?: 'asc' | 'desc';
   } = {}) {
-    const { skip, take, search, customerCode, itemCode } = params;
+    const { skip, take, search, customerCode, itemCode, sortBy = 'document_number', sortDir = 'desc' } = params;
 
     const where: any = {};
     const and: any[] = [];
@@ -42,12 +44,15 @@ export class SalesOrdersService {
     }
 
     try {
-      const [data, total] = await Promise.all([
+      const [data, total, allRelevantOrders] = await Promise.all([
         this.prisma.sales_orders.findMany({
           where,
           skip: skip ? Number(skip) : undefined,
           take: take ? Number(take) : undefined,
-          orderBy: { posting_date: 'desc' },
+          orderBy: [
+            { [sortBy]: sortDir },
+            { id: 'asc' }
+          ],
           include: {
             customer: {
               select: {
@@ -58,9 +63,45 @@ export class SalesOrdersService {
           },
         }),
         this.prisma.sales_orders.count({ where }),
+        // Obtenemos solo los campos necesarios para el sumatorio global de la selección
+        this.prisma.sales_orders.findMany({
+          where,
+          select: {
+            document_number: true,
+            outstanding_quantity: true,
+            qty_shipped_not_invoiced: true,
+            unit_price: true,
+          },
+        }),
       ]);
 
-      return { data, total };
+      // Calcular sumatorios globales
+      let totalCartera = 0;
+      let totalEnviadoNoFacturado = 0;
+      const uniqueOrderNumbers = new Set<string>();
+
+      allRelevantOrders.forEach(order => {
+        const price = Number(order.unit_price || 0);
+        const outstanding = Number(order.outstanding_quantity || 0);
+        const shippedNotInv = Number(order.qty_shipped_not_invoiced || 0);
+
+        totalCartera += (outstanding * price);
+        totalEnviadoNoFacturado += (shippedNotInv * price);
+        if (order.document_number) uniqueOrderNumbers.add(order.document_number);
+      });
+
+      return { 
+        data, 
+        total,
+        summary: {
+          totalOrders: uniqueOrderNumbers.size,
+          totalAmount: totalCartera,
+          totalOutstandingUnits: allRelevantOrders.reduce((acc, curr) => acc + Number(curr.outstanding_quantity || 0), 0),
+          totalEnviadoNoFacturado: totalEnviadoNoFacturado,
+        }
+      };
+
+
     } catch (error) {
       throw new InternalServerErrorException(error.message);
     }

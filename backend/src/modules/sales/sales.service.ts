@@ -88,21 +88,47 @@ export class SalesService {
     salespersonCode?: string;
     familyCode?: string;
     subfamilyCode?: string;
+    customerCode?: string;
+    search?: string;
+    sortBy?: string;
+    sortDir?: 'asc' | 'desc';
     take?: number;
     skip?: number;
   }) {
-    const { year, months, salespersonCode, familyCode, subfamilyCode, take, skip } = filters;
+    const { 
+      year, months, salespersonCode, familyCode, subfamilyCode, 
+      customerCode, search, sortBy, sortDir, take, skip 
+    } = filters;
+
+
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
 
     // 1. Where clause para value_entries
     const salesWhere: any = {
       document_type: { in: SALES_DOC_TYPES },
-      calendar: { year },
+      reg_date: {
+        gte: startDate,
+        lte: endDate,
+      },
     };
+
     if (months && months.length > 0) {
-      salesWhere.calendar.month = { in: months };
+      // Si hay meses específicos, usamos una condición OR para las fechas o filtramos después.
+      // Pero Prisma no permite extraer el mes en el where fácilmente sin raw query.
+      // Sin embargo, podemos aproximar o filtrar por los rangos de esos meses.
+      // Para simplificar y mantener compatibilidad con groupBy,
+      // usaremos el campo reg_date con una lista de rangos si es necesario, 
+      // o mejor, aprovechamos que la tabla calendar existe pero la filtramos por fechas.
+      salesWhere.reg_date = {
+        in: await this.getDatesForMonths(year, months)
+      };
     }
     if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
+    if (customerCode) salesWhere.source_no = customerCode;
+
     let itemNos: string[] = [];
+
     if (familyCode || subfamilyCode) {
       // 1.1 Búsqueda en dos pasos: Primero obtenemos los IDs de productos que coinciden con la familia/subfamilia
       const matchingProducts = await this.prisma.products.findMany({
@@ -119,13 +145,21 @@ export class SalesService {
 
     // 2. Where clause para sales_budgets
     const budgetWhere: any = {
-      calendar: { year },
+      budget_date: {
+        gte: startDate,
+        lte: endDate,
+      },
     };
     if (months && months.length > 0) {
-      budgetWhere.calendar.month = { in: months };
+      budgetWhere.budget_date = {
+        in: await this.getDatesForMonths(year, months)
+      };
     }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
+    if (customerCode) budgetWhere.customer_code = customerCode;
+
     if (familyCode || subfamilyCode) {
+
       // Reutilizamos los itemNos obtenidos anteriormente para filtrar el presupuesto
       budgetWhere.item_no = { in: itemNos };
     }
@@ -192,7 +226,7 @@ export class SalesService {
       }
     });
 
-    // 5. Array final y totales
+    // 5. Array final
     const results = Array.from(mergedData.values()).map(row => ({
       customerCode: row.customerCode,
       customerName: row.customerName,
@@ -203,59 +237,163 @@ export class SalesService {
       desviacionPorcentaje: row.budgetSum > 0 ? ((row.salesSum - row.budgetSum) / row.budgetSum) * 100 : 0
     }));
 
+    // 5.1. Filtrado por búsqueda
+    let filteredResults = results;
+    if (search && search.trim() !== '') {
+      const s = search.toLowerCase();
+      filteredResults = results.filter(r => 
+        (r.customerCode && r.customerCode.toLowerCase().includes(s)) || 
+        (r.customerName && r.customerName.toLowerCase().includes(s))
+      );
+    }
+
     let totalSales = 0;
     let totalBudget = 0;
 
-    mergedData.forEach((val) => {
-      totalSales += val.salesSum;
-      totalBudget += val.budgetSum;
+    filteredResults.forEach((val) => {
+      totalSales += val.facturacion;
+      totalBudget += val.objetivo;
     });
 
-    // Ordenar por facturación descendente. Si empatan (ej: ambos a cero), por objetivo descendente.
-    results.sort((a, b) => {
-      if (b.facturacion !== a.facturacion) return b.facturacion - a.facturacion;
-      return b.objetivo - a.objetivo;
-    });
+    // 6. Ordenación dinámica según parámetros
+    if (sortBy) {
+      filteredResults.sort((a, b) => {
+        let valA = (a as any)[sortBy];
+        let valB = (b as any)[sortBy];
+
+        // Manejo de nulos/undefined
+        if (valA === undefined || valA === null) return 1;
+        if (valB === undefined || valB === null) return -1;
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return sortDir === 'asc' 
+            ? valA.localeCompare(valB) 
+            : valB.localeCompare(valA);
+        }
+        return sortDir === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+      });
+    } else {
+      // Orden por defecto: Facturación descendente
+      filteredResults.sort((a, b) => b.facturacion - a.facturacion);
+    }
+
 
     const devEuros = totalSales - totalBudget;
     const devPct = totalBudget > 0 ? (devEuros / totalBudget) * 100 : 0;
 
+    // 7. KPIs adicionales (Pedidos y Pendiente de facturar)
+    // Estos KPIs muestran el total anual según petición del usuario, ignorando el filtro de meses
+    const ordersWhere: any = {
+      shipment_date: {
+        gte: startDate,
+        lte: endDate,
+      }
+    };
+    
+    // Filtro por Cliente
+    if (customerCode && String(customerCode).trim() !== "") {
+      ordersWhere.customer_code = String(customerCode).trim();
+    } else if (salespersonCode && String(salespersonCode).trim() !== "") {
+      // Filtro por Vendedor (via relación)
+      ordersWhere.customer = { salesperson_code: String(salespersonCode).trim() };
+    }
+
+    // Filtro por Familia / Subfamilia
+    if ((familyCode && String(familyCode).trim() !== "") || (subfamilyCode && String(subfamilyCode).trim() !== "")) {
+      if (itemNos && itemNos.length > 0) {
+        ordersWhere.item_code = { in: itemNos };
+      } else {
+        // Si se pide filtro pero no hay productos, forzamos vacío
+        ordersWhere.item_code = "NO_PRODUCTS_FOUND";
+      }
+    }
+
+    // Ejecutamos la consulta de pedidos
+    const ordersRaw = await this.prisma.sales_orders.findMany({
+      where: ordersWhere,
+      select: { 
+        outstanding_quantity: true, 
+        qty_shipped_not_invoiced: true, 
+        unit_price: true 
+      },
+    });
+
+    let totalCartera = 0;
+    let totalEnviadoNoFacturado = 0;
+
+    if (ordersRaw && ordersRaw.length > 0) {
+      for (const order of ordersRaw) {
+        const price = Number(order.unit_price) || 0;
+        const outstanding = Number(order.outstanding_quantity) || 0;
+        const shippedNotInv = Number(order.qty_shipped_not_invoiced) || 0;
+
+        totalCartera += (outstanding * price);
+        totalEnviadoNoFacturado += (shippedNotInv * price);
+      }
+    }
+
+
+
+
+
     return {
+
       kpis: {
         ventas: totalSales,
         objetivo: totalBudget,
         desviacionEur: devEuros,
         desviacionPct: devPct,
-        carteraVentas: 0, // Placeholder
-        enviadosFacturar: 0, // Placeholder
+        carteraVentas: totalCartera,
+        enviadosFacturar: totalEnviadoNoFacturado,
       },
-      rows: results.slice(skip ? Number(skip) : 0, take ? (Number(skip) || 0) + Number(take) : undefined),
-      total: results.length
+
+      rows: filteredResults.slice(skip ? Number(skip) : 0, take ? (Number(skip) || 0) + Number(take) : undefined),
+      total: filteredResults.length
     };
   }
 
-  /**
-   * Evolución mensual (1 a 12) del año para ventas vs presupuestos
-   */
   async getSalesBudgetEvolution(filters: {
     year: number;
     salespersonCode?: string;
     familyCode?: string;
     subfamilyCode?: string;
+    customerCode?: string;
+    search?: string;
   }) {
-    const { year, salespersonCode, familyCode, subfamilyCode } = filters;
+    const { year, salespersonCode, familyCode, subfamilyCode, customerCode, search } = filters;
+
+
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
 
     // 1. Where clauses
     const salesWhere: any = {
       document_type: { in: SALES_DOC_TYPES },
-      calendar: { year },
+      reg_date: { gte: startDate, lte: endDate }
     };
     if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
+    if (customerCode) salesWhere.source_no = customerCode;
 
     const budgetWhere: any = {
-      calendar: { year },
+      budget_date: { gte: startDate, lte: endDate }
     };
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
+    if (customerCode) budgetWhere.customer_code = customerCode;
+
+    if (search && search.trim() !== '') {
+      const matchingCustomers = await this.prisma.customers.findMany({
+        where: {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { client_id: { contains: search, mode: 'insensitive' } }
+          ]
+        },
+        select: { client_id: true }
+      });
+      const customerIds = matchingCustomers.map(c => c.client_id);
+      salesWhere.source_no = { in: customerIds };
+      budgetWhere.customer_code = { in: customerIds };
+    }
 
     if (familyCode || subfamilyCode) {
       const matchingProducts = await this.prisma.products.findMany({
@@ -270,13 +408,6 @@ export class SalesService {
       budgetWhere.item_no = { in: itemNos };
     }
 
-    // Ya hemos aplicado los filtros de item_no arriba si era necesario
-
-    // Agrupamos por reg_date (calendar) o extraemos el mes
-    // Nota: Como groupBy no soporta relaciones en by, o agrupamos por reg_date y parseamos,
-    // o hacemos 12 consultas concurrentes. Mejor traer raw_data o count/group by reg_date.
-    
-    // Al ser un año (365 días max), podemos traer la agregación por fecha y sumar en Javascript
     const [salesByDay, budgetsByDay] = await Promise.all([
       this.prisma.value_entries.groupBy({
         by: ['reg_date'],
@@ -298,18 +429,16 @@ export class SalesService {
 
     salesByDay.forEach(sale => {
       if (!sale.reg_date) return;
-      const m = new Date(sale.reg_date).getMonth(); // 0 al 11
-      if (salesWhere.calendar.year === new Date(sale.reg_date).getFullYear()) {
-         monthsData[m].ventas += sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
-      }
+      const d = new Date(sale.reg_date);
+      const m = d.getMonth();
+      monthsData[m].ventas += sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
     });
 
     budgetsByDay.forEach(budget => {
       if (!budget.budget_date) return;
-      const m = new Date(budget.budget_date).getMonth();
-      if (budgetWhere.calendar.year === new Date(budget.budget_date).getFullYear()) {
-        monthsData[m].objetivo += budget._sum.monthly_budget ? Number(budget._sum.monthly_budget) : 0;
-      }
+      const d = new Date(budget.budget_date);
+      const m = d.getMonth();
+      monthsData[m].objetivo += budget._sum.monthly_budget ? Number(budget._sum.monthly_budget) : 0;
     });
 
 
@@ -326,9 +455,12 @@ export class SalesService {
   }) {
     const { year, salespersonCode, take = 5 } = filters;
 
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
+
     const where: any = {
       document_type: { in: SALES_DOC_TYPES },
-      calendar: { year },
+      reg_date: { gte: startDate, lte: endDate },
     };
     if (salespersonCode) where.salesperson_code = salespersonCode;
 
@@ -349,7 +481,6 @@ export class SalesService {
       where: { item_no: { in: itemNos } },
       select: { item_no: true, description: true }
     });
-
     const productsDict = products.reduce((acc, p) => {
       acc[p.item_no] = p.description || p.item_no;
       return acc;
@@ -360,6 +491,21 @@ export class SalesService {
       description: productsDict[s.item_no] || s.item_no,
       totalSales: s._sum.sales_amount ? Number(s._sum.sales_amount) : 0
     }));
+  }
+
+  /**
+   * Obtiene las fechas correspondientes a los meses seleccionados de un año
+   */
+  private async getDatesForMonths(year: number, months?: number[]) {
+    const where: any = { year };
+    if (months && months.length > 0) {
+      where.month = { in: months };
+    }
+    const dates = await this.prisma.calendar.findMany({
+      where,
+      select: { date: true }
+    });
+    return dates.map(d => d.date);
   }
 }
 
