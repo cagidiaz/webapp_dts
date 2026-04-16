@@ -135,7 +135,8 @@ export const SalesOrdersPage: React.FC = () => {
           icon={Package} 
           isLoading={isLoading} 
           infoProps={{
-            description: "Número total de líneas de pedido de venta abiertas y activas.",
+            description: "Número total de pedidos de venta únicos (cabeceras de documento) con líneas de mercancía abierta.",
+            formulas: "Count(Distinct Document_No)",
             source: "Sincronizado desde Navision / Business Central."
           }}
         />
