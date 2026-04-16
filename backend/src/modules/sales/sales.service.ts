@@ -313,12 +313,7 @@ export class SalesService {
 
     // 7. KPIs adicionales (Pedidos y Pendiente de facturar)
     // Estos KPIs muestran el total anual según petición del usuario, ignorando el filtro de meses
-    const ordersWhere: any = {
-      shipment_date: {
-        gte: startDate,
-        lte: endDate,
-      }
-    };
+    const ordersWhere: any = {};
     
     // Filtro por Cliente
     if (customerCode && String(customerCode).trim() !== "") {
