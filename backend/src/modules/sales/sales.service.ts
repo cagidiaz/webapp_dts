@@ -237,7 +237,37 @@ export class SalesService {
       desviacionPorcentaje: row.budgetSum > 0 ? ((row.salesSum - row.budgetSum) / row.budgetSum) * 100 : 0
     }));
 
-    // 5.1. Filtrado por búsqueda
+    // 5.1. Lógica especial para Cliente Nuevo (99999999)
+    // Calculamos el total de facturación de todos los clientes creados en el año actual
+    const totalNewClientsSales = results
+      .filter(r => r.isNew)
+      .reduce((acc, curr) => acc + curr.facturacion, 0);
+
+    // Buscamos o inyectamos la fila 99999999
+    let placeholderIndex = results.findIndex(r => r.customerCode === '99999999');
+    
+    if (placeholderIndex !== -1) {
+      results[placeholderIndex].facturacion = totalNewClientsSales;
+      results[placeholderIndex].desviacion = results[placeholderIndex].facturacion - results[placeholderIndex].objetivo;
+      results[placeholderIndex].desviacionPorcentaje = results[placeholderIndex].objetivo > 0 
+        ? (results[placeholderIndex].desviacion / results[placeholderIndex].objetivo) * 100 
+        : 0;
+      (results[placeholderIndex] as any).excludeFacturacionFromTotal = true;
+    } else {
+      // Si no existe, la añadimos (aunque suele estar en presupuestos)
+      results.push({
+        customerCode: '99999999',
+        customerName: 'CLIENTE NUEVO',
+        isNew: false,
+        facturacion: totalNewClientsSales,
+        objetivo: 0,
+        desviacion: totalNewClientsSales,
+        desviacionPorcentaje: 0,
+        excludeFacturacionFromTotal: true
+      } as any);
+    }
+
+    // 5.2. Filtrado por búsqueda
     let filteredResults = results;
     if (search && search.trim() !== '') {
       const s = search.toLowerCase();
@@ -250,8 +280,8 @@ export class SalesService {
     let totalSales = 0;
     let totalBudget = 0;
 
-    filteredResults.forEach((val) => {
-      totalSales += val.facturacion;
+    filteredResults.forEach((val: any) => {
+      totalSales += val.excludeFacturacionFromTotal ? 0 : val.facturacion;
       totalBudget += val.objetivo;
     });
 
@@ -345,6 +375,7 @@ export class SalesService {
         desviacionPct: devPct,
         carteraVentas: totalCartera,
         enviadosFacturar: totalEnviadoNoFacturado,
+        facturacionNuevos: totalNewClientsSales,
       },
 
       rows: filteredResults.slice(skip ? Number(skip) : 0, take ? (Number(skip) || 0) + Number(take) : undefined),
