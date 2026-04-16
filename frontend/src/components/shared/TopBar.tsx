@@ -13,7 +13,7 @@ export const TopBar: React.FC = () => {
 
   return (
     <header 
-      className={`fixed top-0 right-0 h-topbar z-10 transition-all duration-300
+      className={`fixed top-0 right-0 h-topbar z-40 transition-all duration-300
       flex items-center justify-between px-6 border-b
       ${isDark ? 'bg-surface-dark border-surface-hover-dark' : 'bg-surface-light border-gray-200'}
       `}

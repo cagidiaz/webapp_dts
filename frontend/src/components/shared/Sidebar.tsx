@@ -113,7 +113,7 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside 
-      className={`fixed top-0 left-0 h-screen bg-dts-primary text-white transition-all duration-300 z-20 flex flex-col ${
+      className={`fixed top-0 left-0 h-screen bg-dts-primary text-white transition-all duration-300 z-50 flex flex-col ${
         isSidebarCollapsed ? 'w-sidebar-collapsed' : 'w-sidebar'
       }`}
     >

@@ -282,27 +282,13 @@ export const SalesBudgetPage: React.FC = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6">
         <KPICard title="Facturación" value={performanceKPIs.ventas} type="currency" icon={TrendingUp} isLoading={isLoadingPerf} infoProps={{ description: "Total de ventas reales acumuladas (Facturas - Abonos) para el periodo y filtros actuales.", formulas: "Sumatorio(Value Entries) donde Document Type = Invoice | Credit Memo" }} />
         <KPICard title="Objetivo" value={performanceKPIs.objetivo} type="currency" icon={Target} isLoading={isLoadingPerf} infoProps={{ description: "Cifra de ventas presupuestada como objetivo para el periodo y filtros seleccionados.", objective: "Indica la meta comercial a alcanzar." }} />
         <KPICard title="Desviación" value={performanceKPIs.desviacionEur} type="currency" icon={DollarSign} status={performanceKPIs.desviacionEur >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ description: "Diferencia absoluta entre la facturación real y el objetivo.", formulas: "Ventas Reales - Objetivo Presupuestado" }} />
         <KPICard title="Cumplimiento" value={performanceKPIs.desviacionPct} type="percentage" icon={Activity} status={performanceKPIs.desviacionPct >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ description: "Tasa de cumplimiento del objetivo en porcentaje.", formulas: "(Ventas Reales / Objetivo) * 100" }} />
         <KPICard title="Cartera Pedidos" value={performanceKPIs.carteraVentas} type="currency" icon={Package} isLoading={isLoadingPerf} infoProps={{ description: "Importe total de los pedidos de venta abiertos y pendientes de completar.", source: "Tabla de Sales Orders." }} />
         <KPICard title="Pend. Facturar" value={performanceKPIs.enviadosFacturar} type="currency" icon={DollarSign} status="warning" isLoading={isLoadingPerf} infoProps={{ description: "Importe de la mercancía ya enviada al cliente pero que aún no ha sido facturada.", formulas: "Sumatorio(Qty. Shipped Not Invoiced * Unit Price)" }} />
-        <KPICard 
-          title="Fact. Clientes Nuevos" 
-          value={performanceKPIs.facturacionNuevos} 
-          type="currency" 
-          icon={TrendingUp} 
-          isLoading={isLoadingPerf}
-          status="success"
-          infoProps={{
-            description: "Total facturado a empresas creadas durante el año natural en curso.",
-            formulas: "Sumatorio(Facturación) donde Fecha Creación >= 1 Ene 2026",
-            objective: "Seguimiento de captación real frente al presupuesto de 'Cliente Nuevo'.",
-            source: "CRM (Fecha Creación) + ERP (Ventas)"
-          }}
-        />
       </div>
 
       {/* Main Analysis Section */}
