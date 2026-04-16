@@ -19,6 +19,24 @@
 
 ---
 
+## KPIs de Ventas y Operaciones
+
+### Cartera Total (Order Backlog)
+- **Definición:** Valor total de la mercancía comprometida en pedidos abiertos que aún no se ha enviado.
+- **Fórmula:** Sumatorio(Cantidad Pendiente * Precio Unitario)
+- **Importancia:** Indicador clave de demanda futura y carga de trabajo.
+
+### Pendiente de Facturar (Shipped Not Invoiced)
+- **Definición:** Valor de la mercancía que ya ha salido del almacén pero cuya factura aún no se ha emitido legalmente.
+- **Fórmula:** Sumatorio(Cant. Enviada No Facturada * Precio Unitario)
+- **Alerta:** Un valor alto indica retrasos administrativos en el ciclo de facturación.
+
+### Total Pedidos (Unique Orders)
+- **Definición:** Conteo de documentos de venta abiertos ignorando la cantidad de líneas internas.
+- **Fórmula:** Count(Distinct document_number)
+
+---
+
 ## Convenciones Visuales
 
 | Tipo de dato | Color | Estilo |

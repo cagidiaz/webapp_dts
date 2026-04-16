@@ -16,6 +16,7 @@
     - 3.2 [Filtros y Búsqueda Avanzada](#32-filtros-y-búsqueda-avanzada)
     - 3.3 [KPIs Dinámicos y Ordenación](#33-kpis-dinámicos-y-ordenación)
     - 3.4 [Presupuestos de Ventas (Novedad)](#34-presupuestos-de-ventas-novedad)
+    - 3.5 [Seguimiento de Pedidos (Novedad)](#35-seguimiento-de-pedidos-novedad)
 4. [Lógica de Cálculo y Datos (Backend)](#4-lógica-de-cálculo-y-datos-backend)
     - 4.1 [Fuentes de Información](#41-fuentes-de-información)
     - 4.2 [Proyección de Cierre 2026 (Est.)](#42-proyección-de-cierre-2026-est)
@@ -103,6 +104,15 @@ Ubicado en **Ventas > Presupuestos**.
   - **Administradores y Dirección**: Pueden visualizar los datos de toda la empresa y filtrar por cualquier vendedor, familia o mes de forma interactiva.
   - **Vendedores**: Cuando un usuario está vinculado a un perfil de `vendedor` en el ERP, el filtro de comerciales desaparece y **el sistema fuerza automáticamente el filtrado a nivel de base de datos**. Un vendedor *solo* puede ver su propia cartera de ventas y sus propios objetivos, asegurando la total privacidad de los datos ajenos.
 
+#### 3.5 Seguimiento de Pedidos (Novedad)
+Ubicado en **Ventas > Pedidos**.
+- **Propósito**: Monitorización de la cartera de pedidos abierta (backlog) y el estado de los envíos pendientes de facturar.
+- **Diferencia entre Líneas y Pedidos**: La tabla muestra líneas individuales de producto para un control detallado, pero el KPI **Total Pedidos** cuenta únicamente documentos únicos (cabeceras), ofreciendo una visión real del volumen de operaciones comerciales activas.
+- **Ordenación por Columnas**: Permite reorganizar la lista por cualquier campo (Fecha, Cliente, Importe, etc.) manteniendo la carga fluida de datos. Por defecto, el sistema muestra primero los números de pedido más recientes.
+- **KPIs de Cartera**:
+  - **Cartera Total**: Valor económico de lo que el cliente ha pedido pero aún no se ha enviado.
+  - **Pendiente de Facturar**: Valor de lo que ya se ha enviado pero el departamento administrativo aún no ha facturado.
+
 ---
 
 ## 4. Lógica de Cálculo y Datos (Backend)
@@ -136,6 +146,11 @@ Módulo restringido para el control de la seguridad.
 ---
 
 ## 6. Registro de Modificaciones Técnicas
+- **Actualización 16 Abril 2026 (v2.9)**:
+  - Implementación del módulo **Pedidos de Venta** con seguimiento de backlog.
+  - Estandarización estética integral: Unificación de diseño entre las pantallas de Clientes y Presupuestos (eliminación de espacios, integración de buscadores en contenedores y pies de totales fijos).
+  - Mejora en KPIs comerciales: El conteo de pedidos ahora distingue entre líneas totales y documentos únicos.
+  - Sistema de **Ordenación Dinámica** habilitado para todas las columnas en la vista de pedidos.
 - **Actualización 9 Abril 2026 (v2.8)**:
   - Integración del módulo **Ventas vs Presupuestos** con análisis de desviaciones.
   - Sincronización de perfiles de usuario con **Vendedores del ERP** para filtrado automático y seguro.
@@ -147,4 +162,4 @@ Módulo restringido para el control de la seguridad.
   - Ajuste de la lógica de agregación de **Stock Total** (ignorar negativos para stock físico).
   - Ampliación de columnas en tablas para mayor legibilidad de descripciones largas.
 
-*Manual de dTS Instruments v2.8 — Actualizado a 9 de abril 2026.*
+*Manual de dTS Instruments v2.9 — Actualizado a 16 de abril 2026.*

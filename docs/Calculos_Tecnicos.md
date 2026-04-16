@@ -99,7 +99,25 @@ Lógica predictiva reactiva a inputs del usuario.
 
 ---
 
+---
+
+## 7. Análisis Comercial (Rendimiento y Pedidos)
+Lógica aplicada en los paneles de ventas y presupuestos comerciales.
+
+*   **Rendimiento vs Presupuesto**:
+    - *Ventas Reales*: Sumatorio de `sales_performance` (Facturas - Abonos).
+    - *Desviación (€)*: `Ventas Reales - Objetivo Presupuestado`.
+    - *Desviación (%)*: `(Desviación € / Objetivo) * 100`.
+*   **KPIs de Cartera (Pedidos)**:
+    - **Total Pedidos (Unique)**: `Count(Distinct Document_No)` sobre la tabla `sales_orders`. Identifica cuántos pedidos "de negocio" están abiertos.
+    - **Cartera Total (€)**: `Sum(Outstanding_Quantity * Unit_Price)`. Valor de la mercancía pendiente de gestionar.
+    - **Pendiente de Facturar (€)**: `Sum(Qty_Shipped_Not_Invoiced * Unit_Price)`. Mercancía entregada pero no procesada administrativamente.
+
+---
+
 ## Origen de Datos (Supabase)
 *   **Tablas de Balance**: `financial_balances` (Códigos 1... para Activo, 2... para Pasivo).
 *   **Tablas de PyG**: `income_statements` (Códigos A1, A4, A6, etc.).
 *   **Tablas de Presupuestos**: `sales_budgets` (Datos mensuales por centro de coste).
+*   **Tabla de Pedidos**: `sales_orders` (Líneas de pedido de venta sincronizadas).
+*   **Tabla de Transacciones**: `sales_performance` (Sumario de facturación histórica).
