@@ -98,7 +98,7 @@ export const SalesOrdersPage: React.FC = () => {
       return true;
     });
 
-    const totalCount = data?.pages[0]?.total || 0;
+
     const summary = data?.pages[0]?.summary || { 
       totalOrders: 0,
       totalAmount: 0, 
