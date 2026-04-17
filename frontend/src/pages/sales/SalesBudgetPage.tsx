@@ -33,6 +33,15 @@ const MONTHS = [
   { val: 10, label: 'Oct' }, { val: 11, label: 'Nov' }, { val: 12, label: 'Dic' }
 ];
 
+const formatKpiValue = (value: number, type: 'currency' | 'number' | 'percentage', decimalPlaces: number = 0) => {
+  if (type === 'currency' && Math.abs(value) >= 1000) {
+    return `${formatNumber(Math.round(value / 1000), 0)} mil €`;
+  }
+  if (type === 'currency') return formatCurrency(value, decimalPlaces);
+  if (type === 'percentage') return `${formatNumber(value, 1)}%`;
+  return formatNumber(value, decimalPlaces);
+};
+
 interface KPICardProps {
   title: string;
   value: number;
@@ -98,11 +107,7 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: 
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
   
   const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : 'text-dts-primary dark:text-white';
-  const formattedValue = type === 'currency' 
-    ? formatCurrency(value, decimalPlaces) 
-    : type === 'percentage' 
-      ? `${formatNumber(value, 1)}%` 
-      : formatNumber(value, decimalPlaces);
+  const formattedValue = formatKpiValue(value, type, decimalPlaces);
 
   return (
     <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
