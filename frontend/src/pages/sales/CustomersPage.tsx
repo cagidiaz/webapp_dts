@@ -6,11 +6,12 @@ import {
   Search, Users, Euro, TrendingUp,
   ArrowUpDown, ChevronUp, ChevronDown
 } from 'lucide-react';
-import { InfoPopover, KPISkeleton, TableSkeleton } from '../../components/ui';
+import { InfoPopover, KPISkeleton, TableSkeleton, ExportButton } from '../../components/ui';
 import { CustomerDetailDrawer } from './components/CustomerDetailDrawer';
 import { type CustomerDataRow } from '../../api/customers';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
+import { exportToXlsx } from '../../utils/exportToXlsx';
 
 export const CustomersPage: React.FC = () => {
   const { profile } = useAuthStore();
@@ -103,6 +104,30 @@ export const CustomersPage: React.FC = () => {
     setIsDrawerOpen(true);
   };
 
+  const handleExport = async () => {
+    const result = await getAllCustomers({
+      take: 99999,
+      skip: 0,
+      search: debouncedSearch,
+      blocked: blockedFilter,
+      salesperson: salespersonFilter,
+      sortBy,
+      sortDir,
+    });
+
+    const columns = [
+      { key: 'client_id', label: 'Código' },
+      { key: 'name', label: 'Cliente' },
+      { key: 'balance_due_lcy', label: 'Saldo Deuda (€)', format: (v: any) => Number(Number(v).toFixed(2)) },
+      { key: 'total_sales', label: 'Ventas Anual (€)', format: (v: any) => Number(Number(v).toFixed(2)) },
+      { key: 'salesperson_code', label: 'Vendedor' },
+      { key: 'city', label: 'Ciudad' },
+      { key: 'country_reg_code', label: 'País' },
+    ];
+
+    exportToXlsx(result.data, columns, 'cartera_clientes');
+  };
+
   if (isLoading) return (
     <div className="space-y-8 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
@@ -166,6 +191,7 @@ export const CustomersPage: React.FC = () => {
               {!isSalesRole && (
                 <select value={salespersonFilter} onChange={(e) => setSalespersonFilter(e.target.value)} className="text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark rounded-md px-3 py-1 outline-none font-bold uppercase"><option value="">Vendedor</option>{salespersons.map(sp => (<option key={sp.code} value={sp.code}>{sp.code} - {sp.name}</option>))}</select>
               )}
+              <ExportButton onExport={handleExport} />
             </div>
           </div>
         </div>

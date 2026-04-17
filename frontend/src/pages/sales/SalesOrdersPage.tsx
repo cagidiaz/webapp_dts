@@ -6,12 +6,9 @@ import {
   Search, Package, Euro, TrendingUp, Calendar, DollarSign,
   ArrowUpDown, ChevronUp, ChevronDown
 } from 'lucide-react';
-
-
-import { KPISkeleton, TableSkeleton, InfoPopover } from '../../components/ui';
-
-
+import { KPISkeleton, TableSkeleton, InfoPopover, ExportButton } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
+import { exportToXlsx } from '../../utils/exportToXlsx';
 
 
 export const SalesOrdersPage: React.FC = () => {
@@ -85,6 +82,33 @@ export const SalesOrdersPage: React.FC = () => {
     if (observerTarget.current) observer.observe(observerTarget.current);
     return () => { if (observerTarget.current) observer.unobserve(observerTarget.current); };
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  const handleExport = async () => {
+    const result = await getAllSalesOrders({
+      take: 99999,
+      skip: 0,
+      search: debouncedSearch,
+      customerCode: customerFilter,
+      sortBy,
+      sortDir,
+    });
+
+    const columns = [
+      { key: 'document_number', label: 'Documento' },
+      { key: 'posting_date', label: 'Fecha', format: (v: any) => v ? new Date(v).toLocaleDateString('es-ES') : '' },
+      { key: 'customer_code', label: 'Cód. Cliente' },
+      { key: 'customerName', label: 'Cliente', format: (_v: any, row: any) => row.customer?.name || '' },
+      { key: 'item_code', label: 'Producto' },
+      { key: 'description', label: 'Descripción' },
+      { key: 'unit_of_measure', label: 'UM' },
+      { key: 'quantity', label: 'Cantidad', format: (v: any) => Number(Number(v).toFixed(0)) },
+      { key: 'outstanding_quantity', label: 'Pendiente', format: (v: any) => Number(Number(v).toFixed(0)) },
+      { key: 'line_amount', label: 'Importe (€)', format: (v: any) => Number(Number(v).toFixed(2)) },
+      { key: 'shipment_date', label: 'F. Envío', format: (v: any) => v ? new Date(v).toLocaleDateString('es-ES') : '' },
+    ];
+
+    exportToXlsx(result.data, columns, 'pedidos_venta');
+  };
 
   const { orders, totalOrders, totalAmount, totalOutstanding, totalEnviadoNoFacturado } = useMemo(() => {
 
@@ -191,6 +215,7 @@ export const SalesOrdersPage: React.FC = () => {
                 onChange={(e) => setSearchTerm(e.target.value)} 
               />
             </div>
+            <ExportButton onExport={handleExport} />
           </div>
         </div>
 

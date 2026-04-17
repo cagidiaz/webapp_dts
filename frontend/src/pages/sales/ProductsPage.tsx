@@ -10,8 +10,9 @@ import {
   Search, Package, Boxes, TrendingUp, Filter,
   Loader2, ArrowUpDown, ChevronUp, ChevronDown
 } from 'lucide-react';
-import { InfoPopover, KPISkeleton, TableSkeleton, SearchableSelect } from '../../components/ui';
+import { InfoPopover, KPISkeleton, TableSkeleton, SearchableSelect, ExportButton } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
+import { exportToXlsx } from '../../utils/exportToXlsx';
 
 export const ProductsPage: React.FC = () => {
   const { setPageInfo } = useUIStore();
@@ -92,6 +93,35 @@ export const ProductsPage: React.FC = () => {
     return sortDir === 'asc' ? <ChevronUp size={12} className="ml-1 text-dts-secondary" /> : <ChevronDown size={12} className="ml-1 text-dts-secondary" />;
   };
 
+  const handleExport = async () => {
+    const result = await getAllProducts({
+      take: 99999,
+      skip: 0,
+      search: debouncedSearch,
+      family: familyFilter,
+      vendor: vendorFilter,
+      withStock: showOnlyWithStock,
+      isBlocked: hideBlocked ? false : undefined,
+      sortBy,
+      sortDir,
+    });
+
+    const columns = [
+      { key: 'item_no', label: 'Código' },
+      { key: 'description', label: 'Descripción' },
+      { key: 'subfamily_code', label: 'Subfamilia' },
+      { key: 'subfamilyName', label: 'Nombre Subfamilia', format: (_v: any, row: any) => row.category?.subfamily_name || '' },
+      { key: 'inventory_qty', label: 'Stock', format: (v: any) => Number(Number(v).toFixed(0)) },
+      { key: 'unit_price', label: 'P.V.P. (€)', format: (v: any) => Number(Number(v).toFixed(2)) },
+      { key: 'unit_cost', label: 'Coste (€)', format: (v: any) => Number(Number(v).toFixed(2)) },
+      { key: 'profit_margin_pct', label: 'Margen (%)', format: (v: any) => Number(Number(v).toFixed(2)) },
+      { key: 'vendor_no', label: 'Proveedor' },
+      { key: 'is_blocked', label: 'Bloqueado', format: (v: any) => v ? 'Sí' : 'No' },
+    ];
+
+    exportToXlsx(result.data, columns, 'catalogo_productos');
+  };
+
   if (isLoading) return (
     <div className="space-y-8 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
@@ -161,6 +191,7 @@ export const ProductsPage: React.FC = () => {
                 <span className="text-[10px] font-bold text-gray-500 uppercase group-hover:text-dts-primary transition-colors">Ocultar Bloq.</span>
               </label>
             </div>
+            <ExportButton onExport={handleExport} />
           </div>
         </div>
 

@@ -114,3 +114,13 @@ export const getTopProducts = async (params: {
   const { data } = await apiClient.get('/sales/top-products', { params });
   return data;
 };
+
+/**
+ * Fetches ALL rows (no pagination) for XLSX export.
+ * Passes the same filters as the table but with a very high take value.
+ */
+export const getSalesBudgetPerformanceExport = async (
+  filters: Omit<SalesBudgetPerformanceFilters, 'take' | 'skip'>
+): Promise<SalesBudgetPerformanceResponse> => {
+  return getSalesBudgetPerformance({ ...filters, take: 99999, skip: 0 });
+};

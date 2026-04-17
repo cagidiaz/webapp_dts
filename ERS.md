@@ -90,6 +90,11 @@ El sistema consta de tres capas principales:
 * **RF-10.3:** Análisis de Tendencias: Detección automática de anomalías en ingresos o gastos comparando el mes actual con la predicción estadística.  
 * **RF-10.4:** El usuario podrá ajustar el "Nivel de Confianza" de la predicción (ej. 80%, 95%) para visualizar rangos de probabilidad en los gráficos de líneas.
 
+### RF-11: Exportación y Portabilidad de Datos
+* **RF-11.1:** El sistema debe permitir la exportación de cualquier listado de datos (Ventas, Clientes, Productos, Pedidos) a formato XLSX.
+* **RF-11.2:** La exportación debe ser representativa del estado actual de los filtros aplicados en la interfaz de usuario.
+* **RF-11.3:** El proceso de exportación debe recuperar el conjunto completo de datos del servidor, superando las limitaciones del scroll infinito de la vista.
+
 ---
 
 ## 4. REQUISITOS NO FUNCIONALES (RNF)

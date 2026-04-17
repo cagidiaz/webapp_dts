@@ -20,7 +20,8 @@
 4. [Lógica de Cálculo y Datos (Backend)](#4-lógica-de-cálculo-y-datos-backend)
     - 4.1 [Fuentes de Información](#41-fuentes-de-información)
     - 4.2 [Proyección de Cierre 2026 (Est.)](#42-proyección-de-cierre-2026-est)
-5. [Gestión de Usuarios (Admin)](#5-gestión-de-usuarios-admin)
+5. [Exportación de Datos (XLSX)](#5-exportación-de-datos-xlsx)
+6. [Gestión de Usuarios (Admin)](#6-gestión-de-usuarios-admin)
 
 ---
 
@@ -113,6 +114,14 @@ Ubicado en **Ventas > Pedidos**.
   - **Cartera Total**: Valor económico de lo que el cliente ha pedido pero aún no se ha enviado.
   - **Pendiente de Facturar**: Valor de lo que ya se ha enviado pero el departamento administrativo aún no ha facturado.
 
+### 3.6 Exportación de Datos (XLSX) — Novedad Abril 2026
+- **Propósito**: Facilitar el análisis off-line de los datos comerciales permitiendo la descarga de cualquier listado en formato Excel (.xlsx).
+- **Funcionamiento**: El botón **"Exportar XLSX"** (color verde) se encuentra integrado en la barra de herramientas de todas las tablas de la sección de Ventas.
+- **Exportación Inteligente**: 
+  - Al pulsar el botón, el sistema genera dinámicamente el archivo respetando todos los **filtros activos** (búsqueda por nombre, vendedor, familia, etc.).
+  - A diferencia de la tabla visual (que usa scroll infinito), el archivo exportado contiene el **conjunto completo de registros** que cumplen los criterios del filtro, no solo los cargados en pantalla.
+  - El formato incluye cabeceras estilizadas y, en el caso de la vista de Presupuestos, una **fila de totales automáticos** al final del documento.
+
 ---
 
 ## 4. Lógica de Cálculo y Datos (Backend)
@@ -133,7 +142,7 @@ Para el año actual (2026), la WebApp aplica la siguiente jerarquía de cálculo
 
 ---
 
-## 5. Gestión de Usuarios (Admin)
+## 6. Gestión de Usuarios (Admin)
 Módulo restringido para el control de la seguridad.
 - **Roles**: 
   - `ADMIN`: Gestión total y de usuarios.
@@ -146,6 +155,11 @@ Módulo restringido para el control de la seguridad.
 ---
 
 ## 6. Registro de Modificaciones Técnicas
+- **Actualización 17 Abril 2026 (v3.0)**:
+  - Implementación de **Exportación a Excel (XLSX)** en todos los módulos de Ventas (Presupuestos, Clientes, Pedidos y Productos).
+  - Desarrollo de utilidad `exportToXlsx` con soporte para formateo dinámico y auto-ajuste de columnas.
+  - Integración de la descarga del **dataset completo** mediante llamadas optimizadas al backend filtradas por el estado actual de la UI.
+  - Estilización de documentos exportados con colores corporativos y filas de totales.
 - **Actualización 16 Abril 2026 (v2.9)**:
   - Implementación del módulo **Pedidos de Venta** con seguimiento de backlog.
   - Estandarización estética integral: Unificación de diseño entre las pantallas de Clientes y Presupuestos (eliminación de espacios, integración de buscadores en contenedores y pies de totales fijos).

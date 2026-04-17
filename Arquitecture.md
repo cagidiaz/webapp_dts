@@ -23,6 +23,7 @@
 \* \*\*Framework:\*\* React.js empaquetado con Vite (para máximo rendimiento).  
 \* \*\*Gestión de Estado:\*\* Zustand (estado de sesión y UI) y React Query (caché y fetching de API).  
 \* \*\*Enrutamiento:\*\* React Router DOM v6.  
+\* \*\*Exportación de Datos:\*\* SheetJS (\`xlsx\`) para generación de reportes en cliente.
 \* \*\*Visor de Documentación:\*\* Integración de visor Markdown (\`react-markdown\`) para el Manual de Usuario.
 
 \#\#\# 2.2 Backend (Capa Lógica y API)  
@@ -200,6 +201,7 @@ Esta jerarquía define la organización del código siguiendo principios de Clea
 │   │   │   ├── /simulations        \# Editor de escenarios y comparativas IA  
 │   │   │   └── /inventory          \# Módulo de stock y fabricación  
 │   │   ├── /store                  \# Estado global con Zustand (UI/Filtros)  
+│   │   ├── /utils                  \# Utilidades compartidas (exportToXlsx, etc.)
 │   │   └── App.tsx                 \# Definición de rutas protegidas  
 │   ├── tailwind.config.js          \# Configuración de colores corporativos dTS  
 │   └── Dockerfile                  \# Build multistage para Nginx  

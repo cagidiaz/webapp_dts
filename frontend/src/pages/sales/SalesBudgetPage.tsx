@@ -15,6 +15,9 @@ import {
   getSalesReps,
   getProductFamilies
 } from '../../api';
+import { getSalesBudgetPerformanceExport } from '../../api/salesBudget';
+import { ExportButton } from '../../components/ui';
+import { exportToXlsx } from '../../utils/exportToXlsx';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { formatCurrency, formatNumber } from '../../api/formatters';
@@ -256,6 +259,41 @@ export const SalesBudgetPage: React.FC = () => {
     return sortDir === 'asc' ? <ChevronUp size={12} className="ml-1 text-dts-secondary" /> : <ChevronDown size={12} className="ml-1 text-dts-secondary" />;
   };
 
+  const handleExport = async () => {
+    const result = await getSalesBudgetPerformanceExport({
+      year,
+      months: selectedMonths,
+      salespersonCode: isSalesperson ? profile?.code : (salespersonFilter || undefined),
+      search: debouncedSearch || undefined,
+      familyCode: familyFilter || undefined,
+      subfamilyCode: subfamilyFilter || undefined,
+      sortBy,
+      sortDir,
+    });
+
+    const columns = [
+      { key: 'customerCode', label: 'Código Cliente' },
+      { key: 'customerName', label: 'Cliente' },
+      { key: 'facturacion', label: 'Facturación (€)', format: (v: number) => Number(v.toFixed(2)) },
+      { key: 'objetivo', label: 'Objetivo (€)', format: (v: number) => Number(v.toFixed(2)) },
+      { key: 'desviacion', label: 'Desviación (€)', format: (v: number) => Number(v.toFixed(2)) },
+      { key: 'desviacionPorcentaje', label: 'Desv. (%)', format: (v: number) => Number(v.toFixed(2)) },
+      { key: 'isNew', label: 'Cliente Nuevo', format: (v: boolean) => v ? 'Sí' : 'No' },
+    ];
+
+    const totalsRow = {
+      customerCode: '',
+      customerName: 'TOTALES',
+      facturacion: performanceKPIs.ventas,
+      objetivo: performanceKPIs.objetivo,
+      desviacion: performanceKPIs.desviacionEur,
+      desviacionPorcentaje: performanceKPIs.desviacionPct,
+      isNew: false,
+    };
+
+    exportToXlsx(result.rows, columns, `ventas_presupuesto_${year}`, totalsRow);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       {/* Exercise Selector */}
@@ -337,6 +375,7 @@ export const SalesBudgetPage: React.FC = () => {
                     LIMPIAR BÚSQUEDA
                   </button>
                 )}
+                <ExportButton onExport={handleExport} />
               </div>
             </div>
           </div>
