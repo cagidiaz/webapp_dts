@@ -296,19 +296,6 @@ export const SalesBudgetPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-      {/* Exercise Selector */}
-      <div className="flex justify-end bg-gray-50/50 dark:bg-white/5 p-4 rounded-xl border border-gray-100 dark:border-white/5">
-        <div className="flex items-center gap-3">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ejercicio:</label>
-          <select 
-            value={year} 
-            onChange={(e) => setYear(Number(e.target.value))} 
-            className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark text-dts-primary dark:text-white font-bold rounded-md px-3 py-1 text-sm outline-none font-mono shadow-sm"
-          >
-            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-      </div>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6">
@@ -331,6 +318,17 @@ export const SalesBudgetPage: React.FC = () => {
                <InfoPopover title="Filtros de Análisis" description="Permite segmentar los resultados por periodo temporal, estructura de productos o asignación comercial." iconSize={14} />
              </div>
              {(selectedMonths.length > 0 || familyFilter || subfamilyFilter || salespersonFilter || searchTerm) && <button onClick={clearFilters} className="text-dts-secondary hover:bg-dts-secondary/10 p-1 rounded transition-colors"><X size={16} /></button>}
+          </div>
+
+          <div className="space-y-3">
+            <span className="text-[10px] font-bold text-gray-400 uppercase">Ejercicio</span>
+            <select 
+              value={year} 
+              onChange={(e) => setYear(Number(e.target.value))} 
+              className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark text-dts-primary dark:text-white font-bold rounded-md px-3 py-2 text-xs outline-none font-mono shadow-sm"
+            >
+              {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
           </div>
           <div className="space-y-3">
             <span className="text-[10px] font-bold text-gray-400 uppercase">Meses</span>
