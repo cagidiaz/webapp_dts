@@ -34,10 +34,12 @@ const MONTHS = [
 ];
 
 const formatKpiValue = (value: number, type: 'currency' | 'number' | 'percentage', decimalPlaces: number = 0) => {
-  if (type === 'currency' && Math.abs(value) >= 1000) {
-    return `${formatNumber(Math.round(value / 1000), 0)} mil €`;
+  if (type === 'currency') {
+    if (Math.abs(value) >= 1000000) {
+      return `${formatNumber(Math.round(value / 1000), 0)} K €`; 
+    }
+    return formatCurrency(value, decimalPlaces); 
   }
-  if (type === 'currency') return formatCurrency(value, decimalPlaces);
   if (type === 'percentage') return `${formatNumber(value, 1)}%`;
   return formatNumber(value, decimalPlaces);
 };
@@ -128,7 +130,7 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: 
         </div>
         <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
       </div>
-      <div className={`text-2xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
+      <div className={`text-xl font-medium font-mono ${colorClass}`}>{formattedValue}</div>
     </div>
   );
 };
