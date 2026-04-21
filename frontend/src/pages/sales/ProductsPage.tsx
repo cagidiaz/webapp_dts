@@ -161,8 +161,9 @@ export const ProductsPage: React.FC = () => {
           type="currency" 
           icon={TrendingUp} 
           isLoading={isLoading} 
+          decimals={2}
           infoProps={{
-            description: "Precio de Venta al Público promedio ponderado de las referencias mostradas.",
+            description: "Precio de Venta al Público promedio promedio de las referencias mostradas.",
             formulas: "Sum(Precio) / Total Referencias"
           }}
         />
@@ -226,10 +227,10 @@ export const ProductsPage: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps }: any) => {
+const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, decimals = 0 }: any) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse"></div>;
   const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : 'text-dts-primary dark:text-white';
-  const formattedValue = type === 'currency' ? formatCurrency(value, 0) : formatNumber(value, 0);
+  const formattedValue = type === 'currency' ? formatCurrency(value, decimals) : formatNumber(value, decimals);
   return (
     <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
       <div className="flex justify-between items-start mb-2">
