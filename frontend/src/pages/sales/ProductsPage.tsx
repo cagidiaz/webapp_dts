@@ -214,8 +214,8 @@ export const ProductsPage: React.FC = () => {
                   <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200">{product.description || '---'}{product.is_blocked && <span className="ml-2 px-1 rounded text-[8px] bg-red-100 text-red-700 uppercase font-bold">Bloq.</span>}</td>
                   <td className="px-6 py-3 text-gray-500"><div className="flex flex-col"><span className="text-gray-700 dark:text-gray-300 font-medium">{product.category?.subfamily_name || '---'}</span><span className="text-[10px] font-mono">{product.subfamily_code}</span></div></td>
                   <td className={`px-6 py-3 text-right font-mono font-bold ${Number(product.inventory_qty) > 0 ? 'text-gray-700 dark:text-gray-200' : 'text-red-500'}`}>{Number(product.inventory_qty).toLocaleString('de-DE')}</td>
-                  <td className="px-6 py-3 text-right font-mono font-bold">{formatCurrency(Number(product.unit_price), 0)}</td>
-                  <td className={`px-6 py-3 text-center font-mono font-bold ${Number(product.profit_margin_pct) >= 30 ? 'text-emerald-500' : 'text-amber-500'}`}>{Number(product.profit_margin_pct).toFixed(1)}%</td>
+                  <td className="px-6 py-3 text-right font-mono font-bold">{formatCurrency(Number(product.unit_price), 2)}</td>
+                  <td className={`px-6 py-3 text-center font-mono font-bold ${Number(product.profit_margin_pct) >= 30 ? 'text-emerald-500' : 'text-amber-500'}`}>{Number(product.profit_margin_pct).toFixed(2)}%</td>
                 </tr>
               ))}
               <tr ref={observerTarget}><td colSpan={6} className="py-8 text-center text-gray-400 text-xs font-bold uppercase tracking-widest">{isFetchingNextPage ? <div className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /><span>Cargando más...</span></div> : hasNextPage ? 'Baja para cargar más' : 'Fin del catálogo'}</td></tr>
@@ -227,10 +227,14 @@ export const ProductsPage: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, decimals = 0 }: any) => {
+const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, decimals }: any) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse"></div>;
   const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : 'text-dts-primary dark:text-white';
-  const formattedValue = type === 'currency' ? formatCurrency(value, decimals) : formatNumber(value, decimals);
+  
+  // Si es moneda, por defecto usamos 2 decimales si no se especifica lo contrario
+  const effectiveDecimals = decimals !== undefined ? decimals : (type === 'currency' ? 2 : 0);
+  const numericValue = Number(value);
+  const formattedValue = type === 'currency' ? formatCurrency(numericValue, effectiveDecimals) : formatNumber(numericValue, effectiveDecimals);
   return (
     <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
       <div className="flex justify-between items-start mb-2">
