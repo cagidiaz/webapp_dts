@@ -72,8 +72,11 @@ export class CustomersService {
     orderBy[orderByField] = sortDir || 'desc';
 
     try {
+      // Obtener el inicio del año actual para el KPI de clientes nuevos
+      const currentYearStart = new Date(new Date().getFullYear(), 0, 1);
+
       // Ejecutar consultas en paralelo para máxima eficiencia
-      const [data, total, aggregation] = await Promise.all([
+      const [data, total, aggregation, newCustomersCount] = await Promise.all([
         this.prisma.customers.findMany({
           where,
           skip: skip ? Number(skip) : undefined,
@@ -88,6 +91,14 @@ export class CustomersService {
             total_sales: true,
           }
         }),
+        this.prisma.customers.count({
+          where: {
+            ...where,
+            created_at: {
+              gte: currentYearStart
+            }
+          }
+        })
       ]);
 
       return { 
@@ -96,6 +107,7 @@ export class CustomersService {
         summary: {
           totalDebt: Number(aggregation._sum.balance_due_lcy) || 0,
           totalSales: Number(aggregation._sum.total_sales) || 0,
+          newCustomersCount: newCustomersCount || 0,
         }
       };
     } catch (error) {

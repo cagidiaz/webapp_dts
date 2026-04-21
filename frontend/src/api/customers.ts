@@ -46,6 +46,7 @@ export interface CustomersResponse {
   summary: {
     totalDebt: number;
     totalSales: number;
+    newCustomersCount: number;
   };
 }
 

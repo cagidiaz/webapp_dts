@@ -3,7 +3,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { getAllCustomers, getCustomerSalespersons } from '../../api';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
-  Search, Users, Euro, TrendingUp,
+  Search, Users, Euro, TrendingUp, UserPlus,
   ArrowUpDown, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { InfoPopover, KPISkeleton, TableSkeleton, ExportButton } from '../../components/ui';
@@ -82,11 +82,17 @@ export const CustomersPage: React.FC = () => {
     return () => { if (observerTarget.current) observer.unobserve(observerTarget.current); };
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-  const { customers, totalCustomers, globalDebt, globalSales } = useMemo(() => {
+  const { customers, totalCustomers, globalDebt, globalSales, newCustomersCount } = useMemo(() => {
     const allItems = data?.pages.flatMap(page => page.data) || [];
     const totalCount = data?.pages[0]?.total || 0;
-    const summary = data?.pages[0]?.summary || { totalDebt: 0, totalSales: 0 };
-    return { customers: allItems, totalCustomers: totalCount, globalDebt: summary.totalDebt, globalSales: summary.totalSales };
+    const summary = data?.pages[0]?.summary || { totalDebt: 0, totalSales: 0, newCustomersCount: 0 };
+    return { 
+      customers: allItems, 
+      totalCustomers: totalCount, 
+      globalDebt: summary.totalDebt, 
+      globalSales: summary.totalSales,
+      newCustomersCount: summary.newCustomersCount
+    };
   }, [data]);
 
   const handleSort = (field: string) => {
@@ -144,7 +150,7 @@ export const CustomersPage: React.FC = () => {
         customer={selectedCustomer} 
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <KPICard 
           title="Total Clientes" 
           value={totalCustomers} 
@@ -153,6 +159,17 @@ export const CustomersPage: React.FC = () => {
           isLoading={isLoading} 
           infoProps={{
             description: "Número total de registros en la base de datos de clientes bajo los filtros aplicados."
+          }}
+        />
+        <KPICard 
+          title="Clientes Nuevos" 
+          value={newCustomersCount} 
+          type="number" 
+          icon={UserPlus} 
+          isLoading={isLoading} 
+          status="success"
+          infoProps={{
+            description: "Número de clientes creados durante el año en curso bajo los filtros aplicados."
           }}
         />
         <KPICard 
