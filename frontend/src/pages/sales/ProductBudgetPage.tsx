@@ -5,17 +5,17 @@ import {
 } from 'recharts';
 import { 
   TrendingUp, Target, DollarSign, Activity, Loader2, Filter, X, Package, Search,
-  PieChart as PieChartIcon, ArrowUpDown, ChevronUp, ChevronDown, type LucideIcon
+  PieChart as PieChartIcon, ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, type LucideIcon
 } from 'lucide-react';
 
-
 import { 
-  getSalesBudgetPerformance, 
-  getSalesBudgetEvolution, 
+  getProductBudgetPerformance, 
+  getProductBudgetEvolution, 
+  getProductBudgetExport,
+  getPmCodes,
   getSalesReps,
   getProductFamilies
 } from '../../api';
-import { getSalesBudgetPerformanceExport } from '../../api/salesBudget';
 import { ExportButton } from '../../components/ui';
 import { exportToXlsx } from '../../utils/exportToXlsx';
 import { useAuthStore } from '../../store/authStore';
@@ -137,7 +137,7 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: 
 
 // --- Main Page Component ---
 
-export const SalesBudgetPage: React.FC = () => {
+export const ProductBudgetPage: React.FC = () => {
   const { setPageInfo } = useUIStore();
   const { profile } = useAuthStore();
   const observerTarget = useRef<HTMLTableRowElement>(null);
@@ -149,10 +149,12 @@ export const SalesBudgetPage: React.FC = () => {
   const [familyFilter, setFamilyFilter] = useState<string>('');
   const [subfamilyFilter, setSubfamilyFilter] = useState<string>('');
   const [salespersonFilter, setSalespersonFilter] = useState<string>('');
+  const [pmFilter, setPmFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('facturacion');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const isSalesperson = Boolean(profile?.code);
 
@@ -163,27 +165,48 @@ export const SalesBudgetPage: React.FC = () => {
 
   useEffect(() => {
     setPageInfo({
-      title: 'Ventas vs Presupuestos',
-      subtitle: 'Análisis y cumplimiento comercial (Seguimiento de Objetivos)',
+      title: 'Presupuesto x Product Manager',
+      subtitle: 'Análisis presupuestario por producto y cliente (Product Manager)',
       icon: <PieChartIcon size={20} />,
       infoProps: {
-        title: 'Ventas vs Presupuestos',
-        description: 'Comparativa en tiempo real de la facturación real frente a los objetivos presupuestados.',
-        objective: 'Analizar el grado de cumplimiento de los objetivos comerciales y detectar desviaciones por familias o vendedores de forma proactiva.',
+        title: 'Presupuesto Ventas x Producto',
+        description: 'Comparativa de facturación real vs objetivo presupuestado, desglosada por producto dentro de cada cliente.',
+        objective: 'Permite al Product Manager analizar el cumplimiento de objetivos comerciales a nivel de referencia de producto.',
         source: 'Basado en facturas de venta, abonos y presupuestos cargados en el sistema.'
       }
     });
     return () => setPageInfo({ title: '', subtitle: '', icon: null });
   }, [setPageInfo]);
 
-  // Queries
-  const { 
-    data: infiniteData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading: isLoadingPerf 
+  // Data queries
+  const { data: pmCodes = [] } = useQuery({ queryKey: ['pmCodes'], queryFn: getPmCodes });
+  const { data: categories = [] } = useQuery({ queryKey: ['prodCats'], queryFn: getProductFamilies });
+  const { data: salespersons = [] } = useQuery({ queryKey: ['salesReps'], queryFn: getSalesReps });
+
+  // Auto-detect if the logged-in user is a PM
+  const isProductManager = useMemo(() => {
+    if (!profile?.code) return false;
+    return pmCodes.some(pm => pm.code === profile.code);
+  }, [profile?.code, pmCodes]);
+
+  // Auto-set PM filter for PM users
+  useEffect(() => {
+    if (isProductManager && profile?.code) {
+      setPmFilter(profile.code);
+    }
+  }, [isProductManager, profile?.code]);
+
+  // Determine the effective PM code for API calls
+  const effectivePmCode = isProductManager ? profile?.code : (pmFilter || undefined);
+
+  const {
+    data: infiniteData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading: isLoadingPerf
   } = useInfiniteQuery({
-    queryKey: ['salesBudgetPerf', year, selectedMonths, salespersonFilter, debouncedSearch, familyFilter, subfamilyFilter, sortBy, sortDir],
-    queryFn: ({ pageParam = 0 }) => getSalesBudgetPerformance({ 
+    queryKey: ['productBudgetPerf', year, selectedMonths, salespersonFilter, effectivePmCode, debouncedSearch, familyFilter, subfamilyFilter, sortBy, sortDir],
+    queryFn: ({ pageParam = 0 }) => getProductBudgetPerformance({
       year, months: selectedMonths,
-      salespersonCode: isSalesperson ? profile?.code : (salespersonFilter || undefined),
+      salespersonCode: salespersonFilter || undefined,
+      pmCode: effectivePmCode,
       search: debouncedSearch || undefined,
       familyCode: familyFilter || undefined, subfamilyCode: subfamilyFilter || undefined,
       sortBy, sortDir, take: pageSize, skip: pageParam as number
@@ -196,18 +219,17 @@ export const SalesBudgetPage: React.FC = () => {
   });
 
   const { data: evolutionData } = useQuery({
-    queryKey: ['salesEvol', year, familyFilter, subfamilyFilter, salespersonFilter, debouncedSearch],
-    queryFn: () => getSalesBudgetEvolution({
-      year, familyCode: familyFilter || undefined, subfamilyCode: subfamilyFilter || undefined,
-      salespersonCode: isSalesperson ? profile?.code : (salespersonFilter || undefined),
+    queryKey: ['productBudgetEvol', year, familyFilter, subfamilyFilter, salespersonFilter, effectivePmCode, debouncedSearch],
+    queryFn: () => getProductBudgetEvolution({
+      year, 
+      familyCode: familyFilter || undefined, subfamilyCode: subfamilyFilter || undefined,
+      salespersonCode: salespersonFilter || undefined,
+      pmCode: effectivePmCode,
       search: debouncedSearch || undefined
     }),
   });
 
-  const { data: categories = [] } = useQuery({ queryKey: ['prodCats'], queryFn: getProductFamilies });
-  const { data: salespersons = [] } = useQuery({ queryKey: ['salesReps'], queryFn: getSalesReps, enabled: !isSalesperson });
-
-  // Intersection Observer for Infinite Scroll
+  // Intersection Observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => { if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage(); },
@@ -220,14 +242,12 @@ export const SalesBudgetPage: React.FC = () => {
   // Derived Data
   const { tableData, performanceKPIs } = useMemo(() => {
     const allRows = infiniteData?.pages.flatMap(page => page.rows || []) || [];
-    const kpis = infiniteData?.pages[0]?.kpis || { 
+    const kpis = infiniteData?.pages[0]?.kpis || {
       ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
-      carteraVentas: 0, enviadosFacturar: 0, facturacionNuevos: 0
+      carteraVentas: 0, enviadosFacturar: 0
     };
     return { tableData: allRows, performanceKPIs: kpis };
   }, [infiniteData]);
-
-  // selectionTotals removed to use stable absolute totals from performanceKPIs
 
   // Options for selects
   const familyOptions = useMemo(() => {
@@ -253,6 +273,7 @@ export const SalesBudgetPage: React.FC = () => {
 
   const clearFilters = () => {
     setSelectedMonths([]); setFamilyFilter(''); setSubfamilyFilter(''); setSalespersonFilter('');
+    if (!isProductManager) setPmFilter('');
     setSearchTerm(''); setYear(new Date().getFullYear());
   };
 
@@ -266,40 +287,70 @@ export const SalesBudgetPage: React.FC = () => {
     return sortDir === 'asc' ? <ChevronUp size={12} className="ml-1 text-dts-secondary" /> : <ChevronDown size={12} className="ml-1 text-dts-secondary" />;
   };
 
+  const toggleExpand = (code: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
+
   const handleExport = async () => {
-    const result = await getSalesBudgetPerformanceExport({
+    const result = await getProductBudgetExport({
       year,
       months: selectedMonths,
-      salespersonCode: isSalesperson ? profile?.code : (salespersonFilter || undefined),
+      salespersonCode: salespersonFilter || undefined,
+      pmCode: effectivePmCode,
       search: debouncedSearch || undefined,
       familyCode: familyFilter || undefined,
       subfamilyCode: subfamilyFilter || undefined,
-      sortBy,
-      sortDir,
+      sortBy, sortDir,
+    });
+
+    // Flatten hierarchy for export
+    const flatRows: any[] = [];
+    result.rows.forEach(row => {
+      row.products.forEach(prod => {
+        flatRows.push({
+          customerCode: row.customerCode,
+          customerName: row.customerName,
+          itemNo: prod.itemNo,
+          productName: prod.productName,
+          facturacion: prod.facturacion,
+          objetivo: prod.objetivo,
+          desviacion: prod.desviacion,
+          desviacionPorcentaje: prod.desviacionPorcentaje,
+        });
+      });
     });
 
     const columns = [
       { key: 'customerCode', label: 'Código Cliente' },
       { key: 'customerName', label: 'Cliente' },
+      { key: 'itemNo', label: 'Código Producto' },
+      { key: 'productName', label: 'Producto' },
       { key: 'facturacion', label: 'Facturación (€)', format: (v: number) => Number(v.toFixed(2)) },
       { key: 'objetivo', label: 'Objetivo (€)', format: (v: number) => Number(v.toFixed(2)) },
       { key: 'desviacion', label: 'Desviación (€)', format: (v: number) => Number(v.toFixed(2)) },
       { key: 'desviacionPorcentaje', label: 'Desv. (%)', format: (v: number) => Number(v.toFixed(2)) },
-      { key: 'isNew', label: 'Cliente Nuevo', format: (v: boolean) => v ? 'Sí' : 'No' },
     ];
 
     const totalsRow = {
       customerCode: '',
       customerName: 'TOTALES',
+      itemNo: '',
+      productName: '',
       facturacion: performanceKPIs.ventas,
       objetivo: performanceKPIs.objetivo,
       desviacion: performanceKPIs.desviacionEur,
       desviacionPorcentaje: performanceKPIs.desviacionPct,
-      isNew: false,
     };
 
-    exportToXlsx(result.rows, columns, `ventas_presupuesto_${year}`, totalsRow);
+    exportToXlsx(flatRows, columns, `ppto_producto_${year}`, totalsRow);
   };
+
+  const hasActiveFilters = selectedMonths.length > 0 || familyFilter || subfamilyFilter || salespersonFilter || (!isProductManager && pmFilter) || searchTerm;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -322,21 +373,45 @@ export const SalesBudgetPage: React.FC = () => {
              <div className="flex items-center gap-2">
                <Filter size={16} className="text-gray-400" />
                <span className="font-bold uppercase text-xs">FILTROS</span>
-               <InfoPopover title="Filtros de Análisis" description="Permite segmentar los resultados por periodo temporal, estructura de productos o asignación comercial." iconSize={14} />
+               <InfoPopover title="Filtros de Análisis" description="Permite segmentar los resultados por periodo temporal, estructura de productos, Product Manager o asignación comercial." iconSize={14} />
              </div>
-             {(selectedMonths.length > 0 || familyFilter || subfamilyFilter || salespersonFilter || searchTerm) && <button onClick={clearFilters} className="text-dts-secondary hover:bg-dts-secondary/10 p-1 rounded transition-colors"><X size={16} /></button>}
+             {hasActiveFilters && <button onClick={clearFilters} className="text-dts-secondary hover:bg-dts-secondary/10 p-1 rounded transition-colors"><X size={16} /></button>}
           </div>
 
           <div className="space-y-3">
             <span className="text-[10px] font-bold text-gray-400 uppercase">Ejercicio</span>
-            <select 
-              value={year} 
-              onChange={(e) => setYear(Number(e.target.value))} 
+            <select
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
               className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark text-dts-primary dark:text-white font-bold rounded-md px-3 py-2 text-xs outline-none font-mono shadow-sm"
             >
               {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
+
+          {/* PM Filter (only for non-PM users) */}
+          {!isProductManager && pmCodes.length > 0 && (
+            <div className="space-y-3">
+              <span className="text-[10px] font-bold text-gray-400 uppercase">Product Manager</span>
+              <div className="grid grid-cols-3 gap-2">
+                {pmCodes.map(pm => (
+                  <button
+                    key={pm.code}
+                    onClick={() => setPmFilter(pmFilter === pm.code ? '' : pm.code)}
+                    title={pm.name}
+                    className={`h-8 font-bold rounded text-[10px] transition-all ${
+                      pmFilter === pm.code
+                        ? 'bg-dts-secondary text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {pm.code}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3">
             <span className="text-[10px] font-bold text-gray-400 uppercase">Meses</span>
             <div className="grid grid-cols-4 gap-2">
@@ -345,35 +420,34 @@ export const SalesBudgetPage: React.FC = () => {
               ))}
             </div>
           </div>
+
           <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <div><span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Vendedor</span><SearchableSelect options={salespersonOptions} value={salespersonFilter} onChange={setSalespersonFilter} placeholder="Todos..." /></div>
             <div><span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Familia</span><SearchableSelect options={familyOptions} value={familyFilter} onChange={setFamilyFilter} placeholder="Todas..." /></div>
             <div><span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Subfamilia</span><SearchableSelect options={subfamilyOptions} value={subfamilyFilter} onChange={setSubfamilyFilter} placeholder="Todas..." /></div>
-            {!isSalesperson && <div><span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Vendedor</span><SearchableSelect options={salespersonOptions} value={salespersonFilter} onChange={setSalespersonFilter} placeholder="Todos..." /></div>}
           </div>
-
         </div>
 
         {/* Performance Table */}
         <div className="lg:col-span-4 bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-320px)] min-h-[500px]">
-          {/* Table Toolbar - Joined */}
+          {/* Toolbar */}
           <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="w-full max-w-md relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                   <Search size={16} />
                 </div>
-                <input 
-                  type="text" 
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-sm" 
-                  placeholder="Buscar cliente por nombre o código..." 
-                  value={searchTerm} 
-                  onChange={(e) => setSearchTerm(e.target.value)} 
+                <input
+                  type="text"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-sm"
+                  placeholder="Buscar cliente por nombre o código..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              
               <div className="flex items-center gap-2">
                 {searchTerm && (
-                  <button 
+                  <button
                     onClick={() => setSearchTerm('')}
                     className="px-3 py-1.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-lg transition-colors border border-dts-secondary/20"
                   >
@@ -387,78 +461,103 @@ export const SalesBudgetPage: React.FC = () => {
 
           <div className="flex-1 overflow-auto custom-scrollbar relative">
             <table className="w-full text-left text-sm border-separate border-spacing-0 table-fixed">
-
-                <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
-                  <tr>
-                    <th className="w-[40%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('customerName')}>
-                      <div className="flex items-center">Cliente {getSortIcon('customerName')}</div>
-                    </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
-                      <div className="flex items-center justify-end">Facturación {getSortIcon('facturacion')}</div>
-                    </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
-                      <div className="flex items-center justify-end">Objetivo {getSortIcon('objetivo')}</div>
-                    </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
-                      <div className="flex items-center justify-end">Desv. {getSortIcon('desviacion')}</div>
-                    </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-center cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacionPorcentaje')}>
-                      <div className="flex items-center justify-center">% DESV. {getSortIcon('desviacionPorcentaje')}</div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-xs text-dts-primary dark:text-gray-300">
-                  {isLoadingPerf ? 
-                    <tr><td colSpan={5} className="py-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-dts-secondary" /></td></tr>
-                   : tableData.length === 0 ? 
-                    <tr><td colSpan={5} className="py-20 text-center text-gray-400 opacity-60">Sin datos de rendimiento para los filtros aplicados</td></tr>
-                   : 
-                    tableData.map((row, idx) => (
-                      <tr key={`${row.customerCode}-${idx}`} className={`transition-colors ${row.isNew ? 'bg-emerald-50/30 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50/80 dark:hover:bg-white/5'}`}>
-                        <td className="px-6 py-3 font-medium">
-                          <div className="flex flex-col truncate">
-                            <div className="flex items-center gap-2 truncate">
-                              <span className="truncate" title={row.customerName}>{row.customerName}</span>
-                              {row.isNew && <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 animate-pulse uppercase">Nuevo</span>}
+              <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
+                <tr>
+                  <th className="w-[40%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('customerName')}>
+                    <div className="flex items-center">Nombre cliente {getSortIcon('customerName')}</div>
+                  </th>
+                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
+                    <div className="flex items-center justify-end">Facturación {getSortIcon('facturacion')}</div>
+                  </th>
+                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
+                    <div className="flex items-center justify-end">Objetivo {getSortIcon('objetivo')}</div>
+                  </th>
+                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
+                    <div className="flex items-center justify-end">Desviación {getSortIcon('desviacion')}</div>
+                  </th>
+                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-center cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacionPorcentaje')}>
+                    <div className="flex items-center justify-center">Desviación % {getSortIcon('desviacionPorcentaje')}</div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-xs text-dts-primary dark:text-gray-300">
+                {isLoadingPerf ?
+                  <tr><td colSpan={5} className="py-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-dts-secondary" /></td></tr>
+                 : tableData.length === 0 ?
+                  <tr><td colSpan={5} className="py-20 text-center text-gray-400 opacity-60">Sin datos de rendimiento para los filtros aplicados</td></tr>
+                 :
+                  tableData.map((row, idx) => {
+                    const isExpanded = expandedRows.has(row.customerCode);
+                    return (
+                      <React.Fragment key={`${row.customerCode}-${idx}`}>
+                        {/* Customer Row */}
+                        <tr
+                          onClick={() => toggleExpand(row.customerCode)}
+                          className={`cursor-pointer transition-colors font-semibold ${row.isNew ? 'bg-emerald-50/30 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50/80 dark:hover:bg-white/5'}`}
+                        >
+                          <td className="px-6 py-3 font-medium">
+                            <div className="flex items-center gap-2">
+                              <ChevronRight size={14} className={`shrink-0 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                              <div className="flex flex-col truncate">
+                                <div className="flex items-center gap-2 truncate">
+                                  <span className="truncate font-bold" title={row.customerName}>{row.customerName}</span>
+                                  {row.isNew && <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 animate-pulse uppercase">Nuevo</span>}
+                                </div>
+                              </div>
                             </div>
-                            <span className="text-[10px] font-mono text-gray-400">{row.customerCode}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-3 text-right font-mono">{formatCurrency(row.facturacion, 0)}</td>
-                        <td className="px-6 py-3 text-right font-mono">{formatCurrency(row.objetivo, 0)}</td>
-                        <td className={`px-6 py-3 text-right font-mono ${row.desviacion < 0 ? 'text-red-500 font-bold' : 'text-emerald-500'}`}>{row.desviacion > 0 ? '+' : ''}{formatCurrency(row.desviacion, 0)}</td>
-                        <td className={`px-6 py-3 text-center font-mono font-bold ${row.desviacionPorcentaje < 0 ? 'text-red-500 bg-red-50 dark:bg-red-500/10' : 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'}`}>{row.desviacionPorcentaje > 0 ? '+' : ''}{formatNumber(row.desviacionPorcentaje, 1)}%</td>
-                      </tr>
-                    ))
-                  }
-                  <tr ref={observerTarget}><td colSpan={5} className="py-8 text-center text-gray-400 text-[10px] opacity-60 uppercase tracking-widest">{isFetchingNextPage ? 'Cargando más clientes...' : hasNextPage ? 'Desplázate para cargar más' : 'Fin del listado'}</td></tr>
+                          </td>
+                          <td className="px-6 py-3 text-right font-mono font-bold">{formatCurrency(row.facturacion, 0)}</td>
+                          <td className="px-6 py-3 text-right font-mono">{formatCurrency(row.objetivo, 0)}</td>
+                          <td className={`px-6 py-3 text-right font-mono ${row.desviacion < 0 ? 'text-red-500 font-bold' : 'text-emerald-500'}`}>{row.desviacion > 0 ? '+' : ''}{formatCurrency(row.desviacion, 0)}</td>
+                          <td className={`px-6 py-3 text-center font-mono font-bold ${row.desviacionPorcentaje < 0 ? 'text-red-500 bg-red-50 dark:bg-red-500/10' : 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'}`}>{row.desviacionPorcentaje > 0 ? '+' : ''}{formatNumber(row.desviacionPorcentaje, 1)}%</td>
+                        </tr>
+                        {/* Product Rows (Expanded) */}
+                        {isExpanded && row.products.map((prod, pIdx) => (
+                          <tr key={`${row.customerCode}-${prod.itemNo}-${pIdx}`} className="bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100/50 dark:hover:bg-white/5 transition-colors">
+                            <td className="pl-14 pr-6 py-2.5">
+                              <div className="flex flex-col">
+                                <span className="text-gray-600 dark:text-gray-400 font-medium truncate" title={prod.productName}>{prod.productName}</span>
+                                <span className="text-[10px] font-mono text-gray-400">{prod.itemNo}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-2.5 text-right font-mono text-gray-500">{formatCurrency(prod.facturacion, 0)}</td>
+                            <td className="px-6 py-2.5 text-right font-mono text-gray-400">{formatCurrency(prod.objetivo, 0)}</td>
+                            <td className={`px-6 py-2.5 text-right font-mono ${prod.desviacion < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{prod.desviacion > 0 ? '+' : ''}{formatCurrency(prod.desviacion, 0)}</td>
+                            <td className={`px-6 py-2.5 text-center font-mono ${prod.desviacionPorcentaje < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{prod.desviacionPorcentaje > 0 ? '+' : ''}{formatNumber(prod.desviacionPorcentaje, 1)}%</td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })
+                }
+                <tr ref={observerTarget}><td colSpan={5} className="py-8 text-center text-gray-400 text-[10px] opacity-60 uppercase tracking-widest">{isFetchingNextPage ? 'Cargando más clientes...' : hasNextPage ? 'Desplázate para cargar más' : 'Fin del listado'}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Fixed Footer Table */}
+          {tableData.length > 0 && (
+            <div className="bg-dts-primary text-white font-bold text-xs uppercase shadow-[0_-5px_15px_rgba(0,0,0,0.2)] border-t border-white/10 z-30">
+              <table className="w-full text-left text-[10px] border-separate border-spacing-0 table-fixed">
+                <tbody>
+                  <tr className="font-bold">
+                    <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES FILTRADOS</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.ventas, 0)}</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
+                    <td className={`w-[15%] px-6 py-4 text-right font-mono ${performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}</td>
+                    <td className={`w-[15%] px-6 py-4 text-center font-mono text-[10px] ${performanceKPIs.desviacionPct < 0 ? 'text-red-400 bg-red-400/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{performanceKPIs.desviacionPct > 0 ? '+' : ''}{formatNumber(performanceKPIs.desviacionPct, 1)}%</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
-
-            {/* Fixed Footer Table */}
-            {tableData.length > 0 && (
-              <div className="bg-dts-primary text-white font-bold text-xs uppercase shadow-[0_-5px_15px_rgba(0,0,0,0.2)] border-t border-white/10 z-30">
-                <table className="w-full text-left text-[10px] border-separate border-spacing-0 table-fixed">
-                  <tbody>
-                    <tr className="font-bold">
-                      <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES FILTRADOS</td>
-                      <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.ventas, 0)}</td>
-                      <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
-                      <td className={`w-[15%] px-6 py-4 text-right font-mono ${performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}</td>
-                      <td className={`w-[15%] px-6 py-4 text-center font-mono text-[10px] ${performanceKPIs.desviacionPct < 0 ? 'text-red-400 bg-red-400/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{performanceKPIs.desviacionPct > 0 ? '+' : ''}{formatNumber(performanceKPIs.desviacionPct, 1)}%</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          )}
         </div>
+      </div>
 
       {/* Evolution Chart */}
       <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 h-[400px] flex flex-col">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider">Evolución Comercial {year}</h3>
+          <h3 className="text-sm font-bold uppercase tracking-wider">Evolución VENTAS vs. OBJETIVOS {year}</h3>
           <InfoPopover title="Evolución Mensual" description="Comparativa temporal de la facturación frente al presupuesto mes a mes." objective="Detectar meses de estacionalidad o desviaciones recurrentes en el cumplimiento del presupuesto anual." iconSize={16} />
         </div>
         <div className="flex-1 w-full min-h-[300px]">

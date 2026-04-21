@@ -52,6 +52,7 @@ const navItems: NavItem[] = [
       { name: 'Productos', path: '/sales/products' },
       { name: 'Pedidos de Venta', path: '/sales/orders' },
       { name: 'Presupuestos', path: '/sales/budgets' },
+      { name: 'Ppto. x Product Mgr.', path: '/sales/product-budgets' },
 
     ]
   },

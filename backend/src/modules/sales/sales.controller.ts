@@ -120,4 +120,70 @@ export class SalesController {
       take: take ? Number(take) : undefined
     });
   }
+
+  @Get('pm-codes')
+  @ApiOperation({ summary: 'Get unique Product Manager codes' })
+  async getPmCodes() {
+    return this.salesService.getPmCodes();
+  }
+
+  @Get('product-budget-performance')
+  @ApiOperation({ summary: 'Get product-level budget performance data (hierarchical)' })
+  async getProductBudgetPerformance(
+    @Req() req: any,
+    @Query('year') year: string,
+    @Query('months') months?: string,
+    @Query('salespersonCode') salespersonCode?: string,
+    @Query('pmCode') pmCode?: string,
+    @Query('familyCode') familyCode?: string,
+    @Query('subfamilyCode') subfamilyCode?: string,
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: 'asc' | 'desc',
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    const targetYear = year ? Number(year) : new Date().getFullYear();
+    let targetMonths;
+    if (months) {
+      targetMonths = months.split(',').map(m => Number(m.trim())).filter(m => !isNaN(m));
+    }
+
+    return this.salesService.getProductBudgetPerformance({
+      year: targetYear,
+      months: targetMonths,
+      salespersonCode: salespersonCode || undefined,
+      pmCode,
+      familyCode,
+      subfamilyCode,
+      search,
+      sortBy,
+      sortDir,
+      take: take ? Number(take) : undefined,
+      skip: skip ? Number(skip) : undefined,
+    });
+  }
+
+  @Get('product-budget-evolution')
+  @ApiOperation({ summary: 'Get monthly evolution for product budget view' })
+  async getProductBudgetEvolution(
+    @Req() req: any,
+    @Query('year') year: string,
+    @Query('salespersonCode') salespersonCode?: string,
+    @Query('pmCode') pmCode?: string,
+    @Query('familyCode') familyCode?: string,
+    @Query('subfamilyCode') subfamilyCode?: string,
+    @Query('search') search?: string,
+  ) {
+    const targetYear = year ? Number(year) : new Date().getFullYear();
+
+    return this.salesService.getProductBudgetEvolution({
+      year: targetYear,
+      salespersonCode: salespersonCode || undefined,
+      pmCode,
+      familyCode,
+      subfamilyCode,
+      search,
+    });
+  }
 }
