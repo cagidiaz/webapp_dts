@@ -5,7 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { InfoPopover } from '../ui/InfoPopover';
 
 export const TopBar: React.FC = () => {
-  const { isSidebarCollapsed, theme, toggleTheme, pageTitle, pageSubtitle, pageIcon, pageInfoProps } = useUIStore();
+  const { theme, toggleTheme, pageTitle, pageSubtitle, pageIcon, pageInfoProps } = useUIStore();
   const { profile } = useAuthStore();
   const isDark = theme === 'dark';
 

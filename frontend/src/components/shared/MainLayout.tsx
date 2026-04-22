@@ -5,15 +5,11 @@ import { TopBar } from './TopBar';
 import { useUIStore } from '../../store/uiStore';
 
 export const MainLayout: React.FC = () => {
-  const { isSidebarCollapsed, theme } = useUIStore();
+  const { theme } = useUIStore();
 
-  // Apply theme class to html element
   useEffect(() => {
     document.documentElement.className = theme;
   }, [theme]);
-
-  // Adjust margin based on sidebar state
-  const mainMarginLeft = isSidebarCollapsed ? 'var(--spacing-sidebar-collapsed)' : 'var(--spacing-sidebar)';
 
   return (
     <div className="min-h-screen flex transition-colors duration-300">
