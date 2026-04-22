@@ -71,6 +71,7 @@ export const Sidebar: React.FC = () => {
   const { isSidebarCollapsed, toggleSidebar } = useUIStore();
   const { profile, session } = useAuthStore();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const location = useLocation();
   const firstRender = useRef(true);
 
   // Autodetect open submenu on mount and when path changes
@@ -93,6 +94,7 @@ export const Sidebar: React.FC = () => {
     if (!isSidebarCollapsed) {
       toggleSidebar();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   const userRole = profile?.roles?.name?.toUpperCase() || '';
