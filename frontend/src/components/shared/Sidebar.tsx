@@ -2,15 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { 
-  BarChart3, 
-  PieChart, 
-  Settings, 
+  LayoutDashboard, 
+  TrendingUp, 
+  Sliders, 
   LogOut,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Wallet
+  Landmark
 } from 'lucide-react';
 import logo from '../../assets/Logodts_white.svg';
 import { supabase } from '../../api/supabase';
@@ -28,12 +28,12 @@ interface NavItem {
 const navItems: NavItem[] = [
   { 
     name: 'Panel de Control', 
-    icon: BarChart3, 
+    icon: LayoutDashboard, 
     path: '/dashboard' 
   },
   { 
     name: 'Finanzas', 
-    icon: Wallet, 
+    icon: Landmark, 
     roles: ['ADMIN', 'DIRECCION'],
     children: [
       { name: 'Análisis de Balances', path: '/finance/balances' },
@@ -45,7 +45,7 @@ const navItems: NavItem[] = [
   },
   { 
     name: 'Ventas', 
-    icon: PieChart, 
+    icon: TrendingUp, 
     roles: ['ADMIN', 'DIRECCION', 'VENTAS'],
     children: [
       { name: 'Clientes', path: '/sales/customers' },
@@ -53,12 +53,11 @@ const navItems: NavItem[] = [
       { name: 'Pedidos de Venta', path: '/sales/orders' },
       { name: 'Presupuestos', path: '/sales/budgets' },
       { name: 'Ppto. x Product Mgr.', path: '/sales/product-budgets' },
-
     ]
   },
   { 
     name: 'Configuración', 
-    icon: Settings,
+    icon: Sliders,
     roles: ['ADMIN'],
     children: [
       { name: 'Gestión de Usuarios', path: '/users' },
@@ -159,35 +158,43 @@ export const Sidebar: React.FC = () => {
                 <button
                   onClick={() => handleSubmenuToggle(item.name)}
                   className={`
-                    w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors whitespace-nowrap
+                    w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 whitespace-nowrap relative group
                     ${(openSubmenu === item.name || item.children.some(child => location.pathname === child.path)) 
-                      ? 'bg-dts-primary-dark text-white' 
-                      : 'text-gray-300 hover:bg-dts-primary-dark/50 hover:text-white'
+                      ? 'text-dts-secondary' 
+                      : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
                     }
                   `}
                 >
-                  <item.icon className={`shrink-0 ${isSidebarCollapsed ? 'w-6 h-6 mx-auto' : 'w-5 h-5'}`} />
+                  {/* Active Indicator Line */}
+                  {(openSubmenu === item.name || item.children.some(child => location.pathname === child.path)) && (
+                    <div className="absolute left-0 w-0.5 h-6 bg-dts-secondary rounded-r-full" />
+                  )}
+                  
+                  <item.icon 
+                    strokeWidth={1.5} 
+                    className={`shrink-0 transition-transform duration-300 ${isSidebarCollapsed ? 'w-6 h-6 mx-auto' : 'w-5 h-5'} ${openSubmenu === item.name ? 'scale-110' : 'group-hover:scale-110'}`} 
+                  />
                   {!isSidebarCollapsed && (
                     <>
-                      <span className="flex-1 text-left">{item.name}</span>
-                      {openSubmenu === item.name ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      <span className={`flex-1 text-left text-xs font-medium tracking-wide ${openSubmenu === item.name ? 'font-bold' : ''}`}>{item.name}</span>
+                      {openSubmenu === item.name ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                     </>
                   )}
                 </button>
                 
                 {/* Submenu Items */}
                 {!isSidebarCollapsed && openSubmenu === item.name && (
-                  <div className="mt-1 ml-4 pl-4 border-l border-dts-primary-light flex flex-col gap-1">
+                  <div className="mt-0.5 ml-3 pl-6 border-l border-white/5 flex flex-col gap-0.5">
                     {item.children.map((child) => (
                       <NavLink
                         key={child.path}
                         to={child.path}
                         onClick={handleLinkClick}
                         className={({ isActive }) => `
-                          block px-3 py-2 text-sm rounded-md transition-colors
+                          block px-3 py-1.5 text-[11px] rounded-md transition-all duration-200
                           ${isActive 
-                            ? 'text-dts-secondary font-medium bg-dts-primary-dark/30' 
-                            : 'text-gray-400 hover:text-white hover:bg-dts-primary-dark/20'
+                            ? 'text-dts-secondary font-bold' 
+                            : 'text-gray-500 hover:text-white hover:translate-x-1'
                           }
                         `}
                       >
@@ -202,16 +209,24 @@ export const Sidebar: React.FC = () => {
                 to={item.path!}
                 onClick={handleLinkClick}
                 className={({ isActive }) => `
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors whitespace-nowrap
+                  flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 whitespace-nowrap relative group
                   ${isActive 
-                    ? 'bg-dts-secondary text-white font-medium' 
-                    : 'text-gray-300 hover:bg-dts-primary-dark hover:text-white'
+                    ? 'text-dts-secondary bg-white/[0.03]' 
+                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
                   }
                 `}
                 title={isSidebarCollapsed ? item.name : undefined}
               >
-                <item.icon className={`shrink-0 ${isSidebarCollapsed ? 'w-6 h-6 mx-auto' : 'w-5 h-5'}`} />
-                {!isSidebarCollapsed && <span>{item.name}</span>}
+                {/* Active Indicator Line */}
+                {location.pathname === item.path && (
+                  <div className="absolute left-0 w-0.5 h-6 bg-dts-secondary rounded-r-full" />
+                )}
+
+                <item.icon 
+                  strokeWidth={1.5} 
+                  className={`shrink-0 transition-transform duration-300 ${isSidebarCollapsed ? 'w-6 h-6 mx-auto' : 'w-5 h-5'} ${location.pathname === item.path ? 'scale-110' : 'group-hover:scale-110'}`} 
+                />
+                {!isSidebarCollapsed && <span className={`text-xs font-medium tracking-wide ${location.pathname === item.path ? 'font-bold' : ''}`}>{item.name}</span>}
               </NavLink>
             )}
           </div>
