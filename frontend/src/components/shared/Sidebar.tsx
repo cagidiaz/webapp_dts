@@ -82,6 +82,12 @@ export const Sidebar: React.FC = () => {
     if (parent) {
       setOpenSubmenu(parent.name);
     }
+
+    // Auto-close sidebar on route change if it's open (for the floating experience)
+    // We remove isSidebarCollapsed and toggleSidebar from dependencies to avoid immediate closing when opening
+    if (!isSidebarCollapsed) {
+      toggleSidebar();
+    }
   }, [location.pathname]);
 
   const userRole = profile?.roles?.name?.toUpperCase() || '';
@@ -112,14 +118,20 @@ export const Sidebar: React.FC = () => {
     }
   };
 
+  const handleLinkClick = () => {
+    if (!isSidebarCollapsed) {
+      toggleSidebar();
+    }
+  };
+
   return (
     <aside 
       className={`fixed top-0 left-0 h-screen bg-dts-primary text-white transition-all duration-300 z-50 flex flex-col ${
-        isSidebarCollapsed ? 'w-sidebar-collapsed' : 'w-sidebar'
+        isSidebarCollapsed ? 'w-sidebar-collapsed' : 'w-sidebar shadow-2xl'
       }`}
     >
       {/* Logo Area */}
-      <div className="flex items-center space-x-4 h-18 px-4 border-b border-dts-primary-light">
+      <div className="flex items-center space-x-4 h-16 px-4 border-b border-dts-primary-light">
         <div className={`shrink-0 transition-all duration-300 ${isSidebarCollapsed ? 'w-10' : 'w-18'}`}>
           <img src={logo} alt="dTS Logo" className="w-full h-auto" />
         </div>
@@ -163,6 +175,7 @@ export const Sidebar: React.FC = () => {
                       <NavLink
                         key={child.path}
                         to={child.path}
+                        onClick={handleLinkClick}
                         className={({ isActive }) => `
                           block px-3 py-2 text-sm rounded-md transition-colors
                           ${isActive 
@@ -180,6 +193,7 @@ export const Sidebar: React.FC = () => {
             ) : (
               <NavLink
                 to={item.path!}
+                onClick={handleLinkClick}
                 className={({ isActive }) => `
                   flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors whitespace-nowrap
                   ${isActive 

@@ -103,6 +103,7 @@ export const SalesOrdersPage: React.FC = () => {
       { key: 'unit_of_measure', label: 'UM' },
       { key: 'quantity', label: 'Cantidad', format: (v: any) => Number(Number(v).toFixed(0)) },
       { key: 'outstanding_quantity', label: 'Pendiente', format: (v: any) => Number(Number(v).toFixed(0)) },
+      { key: 'qty_shipped_not_invoiced', label: 'Env. Fact.', format: (v: any) => Number(Number(v).toFixed(0)) },
       { key: 'line_amount', label: 'Importe (€)', format: (v: any) => Number(Number(v).toFixed(2)) },
       { key: 'shipment_date', label: 'F. Envío', format: (v: any) => v ? new Date(v).toLocaleDateString('es-ES') : '' },
     ];
@@ -219,22 +220,23 @@ export const SalesOrdersPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto custom-scrollbar">
+        <div className="flex-1 overflow-auto custom-scrollbar" style={{ scrollbarGutter: 'stable' }}>
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
               <tr>
                 {[
-                  { label: 'Documento', key: 'document_number' },
-                  { label: 'Fecha', key: 'posting_date' },
+                  { label: 'Documento', key: 'document_number', className: 'hidden sm:table-cell text-[10px]' },
+                  { label: 'Fecha', key: 'posting_date', className: 'hidden md:table-cell text-[10px]' },
                   { label: 'Cliente', key: 'customer_code' },
-                  { label: 'Producto', key: 'item_code' },
-                  { label: 'Cant.', key: 'quantity', align: 'right' },
-                  { label: 'Pendiente', key: 'outstanding_quantity', align: 'right' },
-                  { label: 'Importe', key: 'line_amount', align: 'right' }
+                  { label: 'Producto', key: 'item_code', className: 'hidden xl:table-cell' },
+                  { label: 'Cant.', key: 'quantity', align: 'right', className: 'hidden lg:table-cell text-[10px]' },
+                  { label: 'Pend.', key: 'outstanding_quantity', align: 'right', className: 'text-[10px]' },
+                  { label: 'Env. F.', key: 'qty_shipped_not_invoiced', align: 'right', className: 'text-[10px]' },
+                  { label: 'Importe', key: 'line_amount', align: 'right', className: 'hidden xs:table-cell text-[10px]' }
                 ].map(col => (
                   <th 
                     key={col.key} 
-                    className={`px-6 py-4 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10 ${col.align === 'right' ? 'text-right' : ''}`}
+                    className={`px-2 sm:px-4 lg:px-6 py-4 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10 ${col.align === 'right' ? 'text-right' : ''} ${col.className || ''}`}
                     onClick={() => handleSort(col.key)}
                   >
                     <div className={`flex items-center ${col.align === 'right' ? 'justify-end' : 'justify-start'}`}>
@@ -248,35 +250,46 @@ export const SalesOrdersPage: React.FC = () => {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {orders.map(order => (
                 <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-3 font-bold font-mono text-xs text-dts-primary dark:text-dts-secondary">{order.document_number}</td>
-                  <td className="px-6 py-3 flex items-center gap-1.5 whitespace-nowrap">
-                    <Calendar size={12} className="text-gray-400" />
-                    <span className="text-gray-700 dark:text-gray-300">
-                      {order.posting_date ? new Date(order.posting_date).toLocaleDateString() : '---'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-gray-900 dark:text-white uppercase text-xs">{order.customer?.name || '---'}</span>
-                      <span className="text-[10px] text-gray-500 font-mono tracking-wider">{order.customer_code}</span>
+                  <td className="px-2 sm:px-4 lg:px-6 py-3 font-bold font-mono text-[10px] text-dts-primary dark:text-dts-secondary hidden sm:table-cell whitespace-nowrap">{order.document_number}</td>
+                  <td className="px-2 sm:px-4 lg:px-6 py-3 items-center gap-1.5 whitespace-nowrap hidden md:table-cell">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={12} className="text-gray-400 hidden lg:inline" />
+                      <span className="text-gray-700 dark:text-gray-300 text-[10px]">
+                        {order.posting_date ? new Date(order.posting_date).toLocaleDateString() : '---'}
+                      </span>
                     </div>
                   </td>
-                  <td className="px-6 py-3">
+                  <td className="px-2 sm:px-4 lg:px-6 py-3">
+                    <div className="flex flex-col">
+                      <span className="sm:hidden font-mono text-[10px] font-bold text-dts-primary dark:text-dts-secondary mb-0.5">{order.document_number}</span>
+                      <span className="font-medium text-gray-900 dark:text-white uppercase text-[10px] sm:text-xs truncate max-w-[80px] sm:max-w-none">{order.customer?.name || '---'}</span>
+                      <span className="text-[9px] text-gray-500 font-mono tracking-wider hidden sm:inline">{order.customer_code}</span>
+                    </div>
+                  </td>
+                  <td className="px-2 sm:px-4 lg:px-6 py-3 hidden xl:table-cell">
                     <div className="flex flex-col">
                       <span className="font-medium text-gray-700 dark:text-gray-300 text-xs">{order.item_code}</span>
                       <span className="text-[10px] text-gray-400 truncate max-w-[200px]">{order.description || '---'}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-3 text-right font-mono font-bold">{formatNumber(Number(order.quantity), 0)}</td>
-                  <td className={`px-6 py-3 text-right font-mono font-bold ${Number(order.outstanding_quantity) > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                  <td className="px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] hidden lg:table-cell whitespace-nowrap">{formatNumber(Number(order.quantity), 0)}</td>
+                  <td className={`px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] whitespace-nowrap ${Number(order.outstanding_quantity) > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
                     {formatNumber(Number(order.outstanding_quantity), 0)}
                   </td>
-                  <td className="px-6 py-3 text-right font-mono font-bold text-dts-primary dark:text-white">{formatCurrency(Number(order.line_amount), 0)}</td>
+                  <td className={`px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] whitespace-nowrap ${Number(order.qty_shipped_not_invoiced) > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                    {formatNumber(Number(order.qty_shipped_not_invoiced), 0)}
+                  </td>
+                  <td className="px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] text-dts-primary dark:text-white hidden xs:table-cell whitespace-nowrap">{formatCurrency(Number(order.line_amount), 0)}</td>
                 </tr>
               ))}
               <tr ref={observerTarget}>
-                <td colSpan={7} className="py-8 text-center text-gray-400 text-xs">
-                  {isFetchingNextPage ? 'Cargando más pedidos...' : hasNextPage ? 'Baja para cargar más' : 'No hay más registros'}
+                <td colSpan={100} className="py-8 text-center text-gray-400 text-xs w-full">
+                  {isFetchingNextPage ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-dts-secondary border-t-transparent rounded-full animate-spin"></div>
+                      <span>Cargando más pedidos...</span>
+                    </div>
+                  ) : hasNextPage ? 'Baja para cargar más' : 'No hay más registros'}
                 </td>
               </tr>
             </tbody>

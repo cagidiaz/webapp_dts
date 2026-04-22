@@ -14,7 +14,7 @@ export class SalesController {
     private readonly prisma: PrismaService
   ) {}
 
-  private async getSalespersonCode(req: any, queryCode?: string) {
+  private async getSalespersonCode(req: any, queryCode?: string, force: boolean = true) {
     const userId = req.user?.userId;
     if (!userId) throw new UnauthorizedException('User not authenticated');
     
@@ -23,11 +23,11 @@ export class SalesController {
       where: { id: userId }
     });
 
-    if (profile?.code) {
-      // Si el perfil tiene código, forzar ese código de vendedor (ignorar query)
+    if (force && profile?.code) {
+      // Si forzamos y el perfil tiene código, forzar ese código de vendedor
       return profile.code;
     }
-    // Si no tiene código, usar el filtro de la query si se proporciona
+    // Si no forzamos, usamos la query, o el perfil como backup, o nada
     return queryCode || undefined;
   }
 
@@ -149,7 +149,7 @@ export class SalesController {
       targetMonths = months.split(',').map(m => Number(m.trim())).filter(m => !isNaN(m));
     }
 
-    const code = await this.getSalespersonCode(req, salespersonCode);
+    const code = await this.getSalespersonCode(req, salespersonCode, false);
     return this.salesService.getProductBudgetPerformance({
       year: targetYear,
       months: targetMonths,
@@ -177,7 +177,7 @@ export class SalesController {
     @Query('search') search?: string,
   ) {
     const targetYear = year ? Number(year) : new Date().getFullYear();
-    const code = await this.getSalespersonCode(req, salespersonCode);
+    const code = await this.getSalespersonCode(req, salespersonCode, false);
 
     return this.salesService.getProductBudgetEvolution({
       year: targetYear,

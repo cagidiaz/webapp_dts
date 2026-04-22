@@ -17,7 +17,7 @@ export const TopBar: React.FC = () => {
       flex items-center justify-between px-6 border-b
       ${isDark ? 'bg-surface-dark border-surface-hover-dark' : 'bg-surface-light border-gray-200'}
       `}
-      style={{ left: isSidebarCollapsed ? 'var(--spacing-sidebar-collapsed)' : 'var(--spacing-sidebar)' }}
+      style={{ left: 'var(--spacing-sidebar-collapsed)' }}
     >
       {/* Page Title Section */}
       <div className="flex-1 flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-500">

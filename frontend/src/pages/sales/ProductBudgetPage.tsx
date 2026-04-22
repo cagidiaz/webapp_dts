@@ -188,10 +188,11 @@ export const ProductBudgetPage: React.FC = () => {
     return pmCodes.some(pm => pm.code === profile.code);
   }, [profile?.code, pmCodes]);
 
-  // Auto-set PM filter for PM users
+  // Auto-set PM filter for PM users and ensure salesperson filter is empty
   useEffect(() => {
     if (isProductManager && profile?.code) {
       setPmFilter(profile.code);
+      setSalespersonFilter(''); // Ensure we don't filter by salesperson for PMs by default
     }
   }, [isProductManager, profile?.code]);
 

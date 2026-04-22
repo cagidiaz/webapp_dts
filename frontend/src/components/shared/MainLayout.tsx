@@ -21,7 +21,7 @@ export const MainLayout: React.FC = () => {
       <TopBar />
       <main 
         className="flex-1 transition-all duration-300 pt-topbar"
-        style={{ marginLeft: mainMarginLeft }}
+        style={{ marginLeft: 'var(--spacing-sidebar-collapsed)' }}
       >
         <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
           <Outlet />
