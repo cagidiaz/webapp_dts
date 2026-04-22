@@ -156,7 +156,6 @@ export const ProductBudgetPage: React.FC = () => {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  const isSalesperson = Boolean(profile?.code);
 
   useEffect(() => {
     const timer = setTimeout(() => { setDebouncedSearch(searchTerm); }, 400);

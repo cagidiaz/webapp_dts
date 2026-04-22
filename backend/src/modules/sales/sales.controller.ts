@@ -149,10 +149,11 @@ export class SalesController {
       targetMonths = months.split(',').map(m => Number(m.trim())).filter(m => !isNaN(m));
     }
 
+    const code = await this.getSalespersonCode(req, salespersonCode);
     return this.salesService.getProductBudgetPerformance({
       year: targetYear,
       months: targetMonths,
-      salespersonCode: salespersonCode || undefined,
+      salespersonCode: code,
       pmCode,
       familyCode,
       subfamilyCode,
@@ -176,10 +177,11 @@ export class SalesController {
     @Query('search') search?: string,
   ) {
     const targetYear = year ? Number(year) : new Date().getFullYear();
+    const code = await this.getSalespersonCode(req, salespersonCode);
 
     return this.salesService.getProductBudgetEvolution({
       year: targetYear,
-      salespersonCode: salespersonCode || undefined,
+      salespersonCode: code,
       pmCode,
       familyCode,
       subfamilyCode,

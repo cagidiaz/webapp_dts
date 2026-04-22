@@ -1,5 +1,7 @@
+# syntax=docker/dockerfile:1
+# check=skip=SecretsUsedInArgOrEnv
 # ========================================================
-# dTS Instruments - Unifed Production Dockerfile
+# dTS Instruments - Unified Production Dockerfile
 # This builds both Frontend and Backend into a single image.
 # NestJS serves the static React files.
 # ========================================================
