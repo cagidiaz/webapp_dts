@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { 
@@ -71,7 +71,7 @@ export const Sidebar: React.FC = () => {
   const { isSidebarCollapsed, toggleSidebar } = useUIStore();
   const { profile, session } = useAuthStore();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
-  const location = useLocation();
+  const firstRender = useRef(true);
 
   // Autodetect open submenu on mount and when path changes
   useEffect(() => {
@@ -83,8 +83,13 @@ export const Sidebar: React.FC = () => {
       setOpenSubmenu(parent.name);
     }
 
+    // Skip auto-close on first render (mount/refresh)
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+
     // Auto-close sidebar on route change if it's open (for the floating experience)
-    // We remove isSidebarCollapsed and toggleSidebar from dependencies to avoid immediate closing when opening
     if (!isSidebarCollapsed) {
       toggleSidebar();
     }

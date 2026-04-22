@@ -46,7 +46,7 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   // Sidebar
-  isSidebarCollapsed: false,
+  isSidebarCollapsed: true,
   toggleSidebar: () =>
     set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
 

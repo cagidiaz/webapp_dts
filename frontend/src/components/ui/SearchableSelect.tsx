@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Combobox, 
+  ComboboxButton,
   ComboboxInput, 
   ComboboxOption, 
   ComboboxOptions, 
@@ -60,7 +61,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             {value && (
               <button
                 type="button"
-                className="p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors z-10"
                 onClick={(e) => {
                   e.stopPropagation();
                   onChange('');
@@ -69,7 +70,9 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 <X className="h-3 w-3 text-gray-400 hover:text-dts-secondary" />
               </button>
             )}
-            <ChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+            <ComboboxButton className="flex items-center h-full px-1">
+              <ChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+            </ComboboxButton>
           </div>
         </div>
 
