@@ -137,8 +137,8 @@ export const Sidebar: React.FC = () => {
       }`}
     >
       {/* Logo Area */}
-      <div className="flex items-center space-x-4 h-16 px-4 border-b border-dts-primary-light">
-        <div className={`shrink-0 transition-all duration-300 ${isSidebarCollapsed ? 'w-10' : 'w-18'}`}>
+      <div className={`flex items-center h-16 border-b border-dts-primary-light transition-all duration-300 ${isSidebarCollapsed ? 'px-2 justify-center' : 'px-4 space-x-4'}`}>
+        <div className={`shrink-0 transition-all duration-300 ${isSidebarCollapsed ? 'w-12' : 'w-18'}`}>
           <img src={logo} alt="dTS Logo" className="w-full h-auto" />
         </div>
         {!isSidebarCollapsed && (
