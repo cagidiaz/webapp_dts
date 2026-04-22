@@ -81,6 +81,8 @@ export const Sidebar: React.FC = () => {
     );
     if (parent) {
       setOpenSubmenu(parent.name);
+    } else {
+      setOpenSubmenu(null);
     }
 
     // Skip auto-close on first render (mount/refresh)
