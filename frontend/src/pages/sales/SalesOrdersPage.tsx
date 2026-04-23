@@ -4,7 +4,7 @@ import { getAllSalesOrders } from '../../api/salesOrders';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
   Search, Package, Euro, TrendingUp, Calendar, DollarSign,
-  ArrowUpDown, ChevronUp, ChevronDown
+  ArrowUpDown, ChevronUp, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { KPISkeleton, TableSkeleton, InfoPopover, ExportButton } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
@@ -20,6 +20,7 @@ export const SalesOrdersPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [sortBy, setSortBy] = useState('document_number');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
 
   const observerTarget = useRef<HTMLTableRowElement>(null);
   const pageSize = 50;
@@ -115,18 +116,33 @@ export const SalesOrdersPage: React.FC = () => {
     exportToXlsx(result.data, columns, 'pedidos_venta');
   };
 
-  const { orders, totalOrders, totalAmount, totalOutstanding, totalEnviadoNoFacturado } = useMemo(() => {
-
+  const { groupedOrders, totalOrders, totalAmount, totalOutstanding, totalEnviadoNoFacturado } = useMemo(() => {
     const allItems = data?.pages.flatMap(page => page.data) || [];
     
-    // Deduplicate items by ID to avoid duplicate key errors in infinite scroll
-    const seen = new Set();
-    const uniqueOrders = allItems.filter(item => {
-      if (seen.has(item.id)) return false;
-      seen.add(item.id);
-      return true;
+    // Grouping by document_number
+    const groups = new Map();
+    allItems.forEach(line => {
+      if (!groups.has(line.document_number)) {
+        groups.set(line.document_number, {
+          id: `order-${line.document_number}`,
+          document_number: line.document_number,
+          posting_date: line.posting_date,
+          customer: line.customer,
+          customer_code: line.customer_code,
+          quantity: 0,
+          outstanding_quantity: 0,
+          qty_shipped_not_invoiced: 0,
+          line_amount: 0,
+          lines: []
+        });
+      }
+      const group = groups.get(line.document_number);
+      group.quantity += Number(line.quantity);
+      group.outstanding_quantity += Number(line.outstanding_quantity);
+      group.qty_shipped_not_invoiced += Number(line.qty_shipped_not_invoiced);
+      group.line_amount += Number(line.line_amount);
+      group.lines.push(line);
     });
-
 
     const summary = data?.pages[0]?.summary || { 
       totalOrders: 0,
@@ -136,14 +152,23 @@ export const SalesOrdersPage: React.FC = () => {
     };
     
     return { 
-      orders: uniqueOrders, 
-      totalOrders: summary.totalOrders, // Ahora usamos el conteo de pedidos únicos
+      groupedOrders: Array.from(groups.values()), 
+      totalOrders: summary.totalOrders,
       totalAmount: summary.totalAmount, 
       totalOutstanding: summary.totalOutstandingUnits, 
       totalEnviadoNoFacturado: summary.totalEnviadoNoFacturado
     };
 
   }, [data]);
+
+  const toggleExpand = (docNum: string) => {
+    setExpandedOrders(prev => {
+      const next = new Set(prev);
+      if (next.has(docNum)) next.delete(docNum);
+      else next.add(docNum);
+      return next;
+    });
+  };
 
 
   if (isLoading) return (
@@ -170,17 +195,6 @@ export const SalesOrdersPage: React.FC = () => {
           }}
         />
         <KPICard 
-          title="Cartera Total" 
-          value={totalAmount} 
-          type="currency" 
-          icon={Euro} 
-          isLoading={isLoading} 
-          infoProps={{
-            description: "Valor económico total de la mercancía pendiente de procesar en la cartera de pedidos.",
-            formulas: "Sumatorio(Outstanding Quantity * Unit Price)"
-          }}
-        />
-        <KPICard 
           title="Cant. Pendiente" 
           value={totalOutstanding} 
           type="number" 
@@ -189,6 +203,17 @@ export const SalesOrdersPage: React.FC = () => {
           infoProps={{
             description: "Total de unidades físicas que aún no han sido ni enviadas ni facturadas.",
             formulas: "Sumatorio(Outstanding Quantity)"
+          }}
+        />
+        <KPICard 
+          title="Cartera Total" 
+          value={totalAmount} 
+          type="currency" 
+          icon={Euro} 
+          isLoading={isLoading} 
+          infoProps={{
+            description: "Valor económico total de la mercancía pendiente de procesar en la cartera de pedidos.",
+            formulas: "Sumatorio(Outstanding Quantity * Unit Price)"
           }}
         />
         <KPICard 
@@ -246,7 +271,7 @@ export const SalesOrdersPage: React.FC = () => {
                   { label: 'Producto / Cuenta', key: 'item_code', className: 'hidden xl:table-cell' },
                   { label: 'Cant.', key: 'quantity', align: 'right', className: 'hidden lg:table-cell text-[10px]' },
                   { label: 'Pend.', key: 'outstanding_quantity', align: 'right', className: 'text-[10px]' },
-                  { label: 'Env. F.', key: 'qty_shipped_not_invoiced', align: 'right', className: 'text-[10px]' },
+                  { label: 'Env x Fact.', key: 'qty_shipped_not_invoiced', align: 'right', className: 'text-[10px]' },
                   { label: 'Importe', key: 'line_amount', align: 'right', className: 'hidden xs:table-cell text-[10px]' }
                 ].map(col => (
                   <th 
@@ -263,47 +288,82 @@ export const SalesOrdersPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {orders.map(order => (
-                <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                  <td className="px-2 sm:px-4 lg:px-6 py-3 font-bold font-mono text-[10px] text-dts-primary dark:text-dts-secondary hidden sm:table-cell whitespace-nowrap">{order.document_number}</td>
-                  <td className="px-2 sm:px-4 lg:px-6 py-3 items-center gap-1.5 whitespace-nowrap hidden md:table-cell">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={12} className="text-gray-400 hidden lg:inline" />
-                      <span className="text-gray-700 dark:text-gray-300 text-[10px]">
-                        {order.posting_date ? new Date(order.posting_date).toLocaleDateString() : '---'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-4 lg:px-6 py-3">
-                    <div className="flex flex-col">
-                      <span className="sm:hidden font-mono text-[10px] font-bold text-dts-primary dark:text-dts-secondary mb-0.5">{order.document_number}</span>
-                      <span className="font-medium text-gray-900 dark:text-white uppercase text-[10px] sm:text-xs truncate max-w-[80px] sm:max-w-none">{order.customer?.name || '---'}</span>
-                      <span className="text-[9px] text-gray-500 font-mono tracking-wider hidden sm:inline">{order.customer_code}</span>
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-4 lg:px-6 py-3 hidden xl:table-cell">
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-700 dark:text-gray-300 text-xs">{order.item_code}</span>
-                        {order.type === 'G/L Account' ? (
-                          <span className="px-1.5 py-0.25 rounded-[4px] text-[8px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">Cta</span>
-                        ) : (
-                          <span className="px-1.5 py-0.25 rounded-[4px] text-[8px] font-bold uppercase bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50">Item</span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-gray-400 truncate max-w-[200px] leading-tight">{order.description || '---'}</span>
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] hidden lg:table-cell whitespace-nowrap">{formatNumber(Number(order.quantity), 0)}</td>
-                  <td className={`px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] whitespace-nowrap ${Number(order.outstanding_quantity) > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
-                    {formatNumber(Number(order.outstanding_quantity), 0)}
-                  </td>
-                  <td className={`px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] whitespace-nowrap ${Number(order.qty_shipped_not_invoiced) > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
-                    {formatNumber(Number(order.qty_shipped_not_invoiced), 0)}
-                  </td>
-                  <td className="px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] text-dts-primary dark:text-white hidden xs:table-cell whitespace-nowrap">{formatCurrency(Number(order.line_amount), 0)}</td>
-                </tr>
-              ))}
+              {groupedOrders.map(order => {
+                const isExpanded = expandedOrders.has(order.document_number);
+                return (
+                  <React.Fragment key={order.document_number}>
+                    {/* Header Row (Order) */}
+                    <tr 
+                      onClick={() => toggleExpand(order.document_number)}
+                      className={`cursor-pointer transition-colors ${isExpanded ? 'bg-blue-50/30 dark:bg-blue-500/5' : 'hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                    >
+                      <td className="px-2 sm:px-4 lg:px-6 py-3 font-bold font-mono text-[10px] text-dts-primary dark:text-dts-secondary hidden sm:table-cell whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight size={14} className={`shrink-0 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                          {order.document_number}
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-4 lg:px-6 py-3 items-center gap-1.5 whitespace-nowrap hidden md:table-cell">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar size={12} className="text-gray-400 hidden lg:inline" />
+                          <span className="text-gray-700 dark:text-gray-300 text-[10px]">
+                            {order.posting_date ? new Date(order.posting_date).toLocaleDateString() : '---'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-4 lg:px-6 py-3">
+                        <div className="flex flex-col">
+                          <div className="sm:hidden flex items-center gap-2 mb-0.5">
+                             <ChevronRight size={12} className={`shrink-0 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                             <span className="font-mono text-[10px] font-bold text-dts-primary dark:text-dts-secondary">{order.document_number}</span>
+                          </div>
+                          <span className="font-medium text-gray-900 dark:text-white uppercase text-[10px] sm:text-xs truncate max-w-[120px] sm:max-w-none">{order.customer?.name || '---'}</span>
+                          <span className="text-[9px] text-gray-500 font-mono tracking-wider hidden sm:inline">{order.customer_code}</span>
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-4 lg:px-6 py-3 hidden xl:table-cell">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                          {order.lines.length} {order.lines.length === 1 ? 'Línea' : 'Líneas'}
+                        </span>
+                      </td>
+                      <td className="px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] hidden lg:table-cell whitespace-nowrap">{formatNumber(Number(order.quantity), 0)}</td>
+                      <td className={`px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] whitespace-nowrap ${Number(order.outstanding_quantity) > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                        {formatNumber(Number(order.outstanding_quantity), 0)}
+                      </td>
+                      <td className={`px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] whitespace-nowrap ${Number(order.qty_shipped_not_invoiced) > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                        {formatNumber(Number(order.qty_shipped_not_invoiced), 0)}
+                      </td>
+                      <td className="px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] text-dts-primary dark:text-white hidden xs:table-cell whitespace-nowrap">{formatCurrency(Number(order.line_amount), 0)}</td>
+                    </tr>
+
+                    {/* Detailed Lines (Expanded) */}
+                    {isExpanded && order.lines.map((line, lIdx) => (
+                      <tr key={line.id} className="bg-gray-50/50 dark:bg-white/[0.02] border-l-2 border-dts-secondary/30">
+                        <td className="hidden sm:table-cell"></td>
+                        <td className="hidden md:table-cell"></td>
+                        <td className="px-2 sm:px-4 lg:px-6 py-2" colSpan={1}></td>
+                        <td className="px-2 sm:px-4 lg:px-6 py-2 hidden xl:table-cell">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-600 dark:text-gray-400 text-[11px]">{line.item_code}</span>
+                              {line.type === 'G/L Account' ? (
+                                <span className="px-1 py-0 rounded-[3px] text-[7px] font-bold uppercase bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-500 border border-amber-100 dark:border-amber-800/30">Cta</span>
+                              ) : (
+                                <span className="px-1 py-0 rounded-[3px] text-[7px] font-bold uppercase bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-500 border border-blue-100 dark:border-blue-800/30">Item</span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-gray-400 truncate max-w-[200px] leading-tight italic">{line.description || '---'}</span>
+                          </div>
+                        </td>
+                        <td className="px-2 sm:px-4 lg:px-6 py-2 text-right font-mono text-[10px] hidden lg:table-cell text-gray-500">{formatNumber(Number(line.quantity), 0)}</td>
+                        <td className="px-2 sm:px-4 lg:px-6 py-2 text-right font-mono text-[10px] text-gray-500">{formatNumber(Number(line.outstanding_quantity), 0)}</td>
+                        <td className="px-2 sm:px-4 lg:px-6 py-2 text-right font-mono text-[10px] text-gray-500">{formatNumber(Number(line.qty_shipped_not_invoiced), 0)}</td>
+                        <td className="px-2 sm:px-4 lg:px-6 py-2 text-right font-mono text-[10px] text-gray-500 hidden xs:table-cell">{formatCurrency(Number(line.line_amount), 0)}</td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
               <tr ref={observerTarget}>
                 <td colSpan={100} className="py-8 text-center text-gray-400 text-xs w-full">
                   {isFetchingNextPage ? (

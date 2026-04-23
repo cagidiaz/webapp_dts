@@ -22,7 +22,7 @@ export const TopBar: React.FC = () => {
       {/* Page Title Section */}
       <div className="flex-1 flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-500">
         {pageIcon && (
-          <div className="flex-shrink-0 text-dts-secondary drop-shadow-sm p-2 bg-gray-100 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-white/10">
+          <div className="shrink-0 text-dts-secondary drop-shadow-sm p-2 bg-gray-100 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-white/10">
             {pageIcon}
           </div>
         )}

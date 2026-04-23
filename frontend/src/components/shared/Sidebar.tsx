@@ -163,7 +163,7 @@ export const Sidebar: React.FC = () => {
                     w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 whitespace-nowrap relative group
                     ${(openSubmenu === item.name || item.children.some(child => location.pathname === child.path)) 
                       ? 'text-dts-secondary' 
-                      : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                      : 'text-gray-400 hover:text-white hover:bg-white/4'
                     }
                   `}
                 >
@@ -213,8 +213,8 @@ export const Sidebar: React.FC = () => {
                 className={({ isActive }) => `
                   flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 whitespace-nowrap relative group
                   ${isActive 
-                    ? 'text-dts-secondary bg-white/[0.03]' 
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                    ? 'text-dts-secondary bg-white/3' 
+                    : 'text-gray-400 hover:text-white hover:bg-white/4'
                   }
                 `}
                 title={isSidebarCollapsed ? item.name : undefined}

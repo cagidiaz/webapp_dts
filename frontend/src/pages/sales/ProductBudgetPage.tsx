@@ -513,7 +513,7 @@ export const ProductBudgetPage: React.FC = () => {
                         </tr>
                         {/* Product Rows (Expanded) */}
                         {isExpanded && row.products.map((prod, pIdx) => (
-                          <tr key={`${row.customerCode}-${prod.itemNo}-${pIdx}`} className="bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100/50 dark:hover:bg-white/5 transition-colors">
+                          <tr key={`${row.customerCode}-${prod.itemNo}-${pIdx}`} className="bg-gray-50/50 dark:bg-white/2 hover:bg-gray-100/50 dark:hover:bg-white/5 transition-colors">
                             <td className="pl-14 pr-6 py-2.5">
                               <div className="flex flex-col">
                                 <span className="text-gray-600 dark:text-gray-400 font-medium truncate" title={prod.productName}>{prod.productName}</span>
