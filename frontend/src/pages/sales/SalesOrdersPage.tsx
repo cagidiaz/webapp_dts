@@ -4,7 +4,7 @@ import { getAllSalesOrders } from '../../api/salesOrders';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
   Search, Package, Euro, TrendingUp, Calendar, DollarSign,
-  ArrowUpDown, ChevronUp, ChevronDown, ChevronRight
+  ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, type LucideIcon
 } from 'lucide-react';
 import { KPISkeleton, TableSkeleton, InfoPopover, ExportButton } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
@@ -343,7 +343,7 @@ export const SalesOrdersPage: React.FC = () => {
                     </tr>
 
                     {/* Detailed Lines (Expanded) */}
-                    {isExpanded && order.lines.map((line, lIdx) => (
+                    {isExpanded && order.lines.map((line: any) => (
                       <tr key={line.id} className="bg-gray-50/50 dark:bg-white/[0.02] border-l-2 border-dts-secondary/30">
                         <td className="hidden sm:table-cell"></td>
                         <td className="hidden md:table-cell"></td>
@@ -387,6 +387,22 @@ export const SalesOrdersPage: React.FC = () => {
     </div>
   );
 };
+interface KPICardProps {
+  title: string;
+  value: number;
+  type?: 'number' | 'currency' | 'percentage';
+  icon: LucideIcon;
+  isLoading?: boolean;
+  status?: 'success' | 'danger' | 'warning' | 'normal' | null;
+  decimalPlaces?: number;
+  infoProps?: {
+    description: string;
+    formulas?: string;
+    objective?: string;
+    source?: string;
+  };
+  accountValue?: number;
+}
 
 const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: Icon, isLoading, status, decimalPlaces = 0, infoProps, accountValue }) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;

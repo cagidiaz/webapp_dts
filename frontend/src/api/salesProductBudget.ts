@@ -22,7 +22,9 @@ export interface ProductBudgetKPIs {
   desviacionEur: number;
   desviacionPct: number;
   carteraVentas: number;
+  carteraVentasAccounts: number;
   enviadosFacturar: number;
+  enviadosFacturarAccounts: number;
 }
 
 export interface ProductBudgetProductRow {
