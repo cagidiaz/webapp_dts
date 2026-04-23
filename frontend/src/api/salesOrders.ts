@@ -41,6 +41,7 @@ export const getAllSalesOrders = async (params: {
   skip?: number;
   search?: string;
   customerCode?: string;
+  type?: string;
   sortBy?: string;
   sortDir?: string;
 }): Promise<SalesOrdersResponse> => {

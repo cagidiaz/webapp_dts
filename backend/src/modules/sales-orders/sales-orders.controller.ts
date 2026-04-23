@@ -16,15 +16,17 @@ export class SalesOrdersController {
   @ApiQuery({ name: 'skip', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'customerCode', required: false, type: String })
+  @ApiQuery({ name: 'type', required: false, type: String })
   async getAll(
     @Query('take') take?: number,
     @Query('skip') skip?: number,
     @Query('search') search?: string,
     @Query('customerCode') customerCode?: string,
+    @Query('type') type?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortDir') sortDir?: 'asc' | 'desc',
   ) {
-    return this.salesOrdersService.getAll({ take, skip, search, customerCode, sortBy, sortDir });
+    return this.salesOrdersService.getAll({ take, skip, search, customerCode, type, sortBy, sortDir });
   }
 
   @Get(':id')

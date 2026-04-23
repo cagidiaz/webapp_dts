@@ -670,7 +670,7 @@ model sales_orders {
   updated_at               DateTime? @default(now()) @db.Timestamptz(6)
 
   customer                 customers @relation(fields: [customer_code], references: [client_id], onDelete: Cascade)
-  product                  products  @relation(fields: [item_code], references: [item_no], onDelete: Cascade)
+  product                  products? @relation(fields: [item_code], references: [item_no], onDelete: Cascade)
 
   @@index([customer_code], map: "idx_sales_orders_customer")
   @@index([item_code], map: "idx_sales_orders_item")

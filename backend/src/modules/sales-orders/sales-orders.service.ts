@@ -14,10 +14,11 @@ export class SalesOrdersService {
     search?: string;
     customerCode?: string;
     itemCode?: string;
+    type?: string;
     sortBy?: string;
     sortDir?: 'asc' | 'desc';
   } = {}) {
-    const { skip, take, search, customerCode, itemCode, sortBy = 'document_number', sortDir = 'desc' } = params;
+    const { skip, take, search, customerCode, itemCode, type, sortBy = 'document_number', sortDir = 'desc' } = params;
 
     const where: any = {};
     const and: any[] = [];
@@ -37,6 +38,10 @@ export class SalesOrdersService {
 
     if (itemCode) {
       and.push({ item_code: itemCode });
+    }
+    
+    if (type) {
+      and.push({ type: type });
     }
 
     if (and.length > 0) {

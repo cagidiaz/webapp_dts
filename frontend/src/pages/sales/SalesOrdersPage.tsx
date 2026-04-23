@@ -17,6 +17,7 @@ export const SalesOrdersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [customerFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [sortBy, setSortBy] = useState('document_number');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -44,12 +45,13 @@ export const SalesOrdersPage: React.FC = () => {
   }, [searchTerm]);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ['sales-orders', debouncedSearch, customerFilter, sortBy, sortDir],
+    queryKey: ['sales-orders', debouncedSearch, customerFilter, typeFilter, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getAllSalesOrders({ 
       take: pageSize, 
       skip: pageParam as number, 
       search: debouncedSearch,
       customerCode: customerFilter,
+      type: typeFilter || undefined,
       sortBy,
       sortDir
     }),
@@ -89,6 +91,7 @@ export const SalesOrdersPage: React.FC = () => {
       skip: 0,
       search: debouncedSearch,
       customerCode: customerFilter,
+      type: typeFilter || undefined,
       sortBy,
       sortDir,
     });
@@ -96,9 +99,10 @@ export const SalesOrdersPage: React.FC = () => {
     const columns = [
       { key: 'document_number', label: 'Documento' },
       { key: 'posting_date', label: 'Fecha', format: (v: any) => v ? new Date(v).toLocaleDateString('es-ES') : '' },
+      { key: 'type', label: 'Tipo' },
       { key: 'customer_code', label: 'Cód. Cliente' },
       { key: 'customerName', label: 'Cliente', format: (_v: any, row: any) => row.customer?.name || '' },
-      { key: 'item_code', label: 'Producto' },
+      { key: 'item_code', label: 'Producto/Cuenta' },
       { key: 'description', label: 'Descripción' },
       { key: 'unit_of_measure', label: 'UM' },
       { key: 'quantity', label: 'Cantidad', format: (v: any) => Number(Number(v).toFixed(0)) },
@@ -216,7 +220,18 @@ export const SalesOrdersPage: React.FC = () => {
                 onChange={(e) => setSearchTerm(e.target.value)} 
               />
             </div>
-            <ExportButton onExport={handleExport} />
+            <div className="flex flex-wrap items-center gap-2">
+              <select 
+                className="block w-full sm:w-auto pl-3 pr-10 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
+                <option value="">Todos los tipos</option>
+                <option value="Item">Productos (Item)</option>
+                <option value="G/L Account">Cuentas (G/L Account)</option>
+              </select>
+              <ExportButton onExport={handleExport} />
+            </div>
           </div>
         </div>
 
@@ -228,7 +243,7 @@ export const SalesOrdersPage: React.FC = () => {
                   { label: 'Documento', key: 'document_number', className: 'hidden sm:table-cell text-[10px]' },
                   { label: 'Fecha', key: 'posting_date', className: 'hidden md:table-cell text-[10px]' },
                   { label: 'Cliente', key: 'customer_code' },
-                  { label: 'Producto', key: 'item_code', className: 'hidden xl:table-cell' },
+                  { label: 'Producto / Cuenta', key: 'item_code', className: 'hidden xl:table-cell' },
                   { label: 'Cant.', key: 'quantity', align: 'right', className: 'hidden lg:table-cell text-[10px]' },
                   { label: 'Pend.', key: 'outstanding_quantity', align: 'right', className: 'text-[10px]' },
                   { label: 'Env. F.', key: 'qty_shipped_not_invoiced', align: 'right', className: 'text-[10px]' },
@@ -267,9 +282,16 @@ export const SalesOrdersPage: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-2 sm:px-4 lg:px-6 py-3 hidden xl:table-cell">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-gray-700 dark:text-gray-300 text-xs">{order.item_code}</span>
-                      <span className="text-[10px] text-gray-400 truncate max-w-[200px]">{order.description || '---'}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-700 dark:text-gray-300 text-xs">{order.item_code}</span>
+                        {order.type === 'G/L Account' ? (
+                          <span className="px-1.5 py-0.25 rounded-[4px] text-[8px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">Cta</span>
+                        ) : (
+                          <span className="px-1.5 py-0.25 rounded-[4px] text-[8px] font-bold uppercase bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50">Item</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-gray-400 truncate max-w-[200px] leading-tight">{order.description || '---'}</span>
                     </div>
                   </td>
                   <td className="px-2 sm:px-4 lg:px-6 py-3 text-right font-mono font-bold text-[10px] hidden lg:table-cell whitespace-nowrap">{formatNumber(Number(order.quantity), 0)}</td>
