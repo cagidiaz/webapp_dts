@@ -126,22 +126,24 @@ export const FinancialDashboard: React.FC = () => {
         <KPICard 
           title="Cartera de Pedidos" 
           value={kpis?.carteraVentas || 0} 
+          accountValue={kpis?.carteraVentasAccounts || 0}
           type="currency" 
           icon={Package} 
           color="emerald"
           infoProps={{
-            description: "Valor total de los pedidos abiertos pendientes de procesar.",
+            description: "Valor total de los pedidos abiertos pendientes de procesar. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
             formulas: "Suma(Cantidad Pendiente * Precio Unitario)"
           }}
         />
         <KPICard 
           title="Pend. de Facturar" 
           value={kpis?.enviadosFacturar || 0} 
+          accountValue={kpis?.enviadosFacturarAccounts || 0}
           type="currency" 
           icon={Clock} 
           color="amber"
           infoProps={{
-            description: "Mercancía que ya ha sido enviada al cliente pero que aún no ha sido facturada oficialmente.",
+            description: "Mercancía que ya ha sido enviada al cliente pero que aún no ha sido facturada oficialmente. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
             formulas: "Suma(Cant. Enviada No Facturada * Precio Unitario)"
           }}
         />
@@ -276,7 +278,7 @@ export const FinancialDashboard: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, subValue, deviation, type = 'number', icon: Icon, color, infoProps }: any) => {
+const KPICard = ({ title, value, subValue, accountValue, deviation, type = 'number', icon: Icon, color, infoProps }: any) => {
   const colorMap: any = {
     blue: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
     emerald: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20',
@@ -284,7 +286,7 @@ const KPICard = ({ title, value, subValue, deviation, type = 'number', icon: Ico
     indigo: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
   };
 
-  const formattedValue = type === 'currency' ? formatCurrency(value) : value;
+  const formattedValue = type === 'currency' ? formatCurrency(value, 0) : value;
 
   return (
     <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
@@ -298,6 +300,13 @@ const KPICard = ({ title, value, subValue, deviation, type = 'number', icon: Ico
         </div>
       </div>
       <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+      
+      {accountValue !== undefined && accountValue > 0 && (
+        <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
+          ({formatCurrency(accountValue, 0)})
+        </div>
+      )}
+
       {deviation !== undefined && (
         <div className="mt-4 flex items-center justify-between border-t border-gray-50 dark:border-gray-800 pt-3">
           <span className="text-[10px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>

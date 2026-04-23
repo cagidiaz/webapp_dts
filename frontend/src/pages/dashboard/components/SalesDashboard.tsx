@@ -118,7 +118,11 @@ export const SalesDashboard: React.FC = () => {
     })
   });
 
-  const kpis = perfData?.kpis || { ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0 };
+  const kpis = perfData?.kpis || { 
+    ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
+    carteraVentas: 0, carteraVentasAccounts: 0,
+    enviadosFacturar: 0, enviadosFacturarAccounts: 0
+  };
   const topCustomers = perfData?.rows || [];
 
   return (
@@ -131,7 +135,7 @@ export const SalesDashboard: React.FC = () => {
       {/* Redundant local header removed */}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
         <KPICard 
           title="Facturación Real" 
           value={kpis.ventas} 
@@ -165,6 +169,25 @@ export const SalesDashboard: React.FC = () => {
           status={kpis.desviacionEur >= 0 ? 'success' : 'danger'}
           isLoading={isLoadingPerf}
           infoProps={{ description: "Diferencia nominal entre ventas reales y presupuesto." }}
+        />
+        <KPICard 
+          title="Cartera de Pedidos" 
+          value={kpis.carteraVentas} 
+          accountValue={kpis.carteraVentasAccounts}
+          type="currency" 
+          icon={Package} 
+          isLoading={isLoadingPerf}
+          infoProps={{ description: "Valor de los pedidos abiertos pendientes de procesar. El valor entre paréntesis indica la porción de líneas de tipo cuenta." }}
+        />
+        <KPICard 
+          title="Pend. de Facturar" 
+          value={kpis.enviadosFacturar} 
+          accountValue={kpis.enviadosFacturarAccounts}
+          type="currency" 
+          icon={Activity} 
+          status="warning"
+          isLoading={isLoadingPerf}
+          infoProps={{ description: "Mercancía enviada pendiente de factura. El valor entre paréntesis indica la porción de líneas de tipo cuenta." }}
         />
       </div>
 
@@ -280,11 +303,11 @@ export const SalesDashboard: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps }: any) => {
+const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, accountValue }: any) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
   
   const isPositive = value >= 0;
-  const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : 'text-dts-primary dark:text-white';
+  const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : status === 'warning' ? 'text-amber-500' : 'text-dts-primary dark:text-white';
   const formattedValue = type === 'currency' ? formatCurrency(value, 0) : type === 'percentage' ? `${formatNumber(value, 1)}%` : formatNumber(value, 0);
 
   return (
@@ -303,11 +326,18 @@ const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status,
         </div>
         <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
       </div>
-      <div className="flex items-baseline gap-2">
-        <div className={`text-2xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
-        {type === 'percentage' && (
-          <div className={`text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-            {isPositive ? <TrendingUp size={10} className="inline mr-0.5"/> : <TrendingDown size={10} className="inline mr-0.5"/>}
+      <div className="flex flex-col">
+        <div className="flex items-baseline gap-2">
+          <div className={`text-xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
+          {type === 'percentage' && (
+            <div className={`text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+              {isPositive ? <TrendingUp size={10} className="inline mr-0.5"/> : <TrendingDown size={10} className="inline mr-0.5"/>}
+            </div>
+          )}
+        </div>
+        {accountValue !== undefined && accountValue > 0 && (
+          <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
+            ({formatCurrency(accountValue, 0)})
           </div>
         )}
       </div>

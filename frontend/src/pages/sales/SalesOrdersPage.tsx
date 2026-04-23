@@ -116,7 +116,7 @@ export const SalesOrdersPage: React.FC = () => {
     exportToXlsx(result.data, columns, 'pedidos_venta');
   };
 
-  const { groupedOrders, totalOrders, totalAmount, totalOutstanding, totalEnviadoNoFacturado } = useMemo(() => {
+  const { groupedOrders, totalOrders, totalAmount, totalAmountAccounts, totalOutstanding, totalEnviadoNoFacturado, totalEnviadoNoFacturadoAccounts } = useMemo(() => {
     const allItems = data?.pages.flatMap(page => page.data) || [];
     
     // Grouping by document_number
@@ -147,16 +147,20 @@ export const SalesOrdersPage: React.FC = () => {
     const summary = data?.pages[0]?.summary || { 
       totalOrders: 0,
       totalAmount: 0, 
+      totalAmountAccounts: 0,
       totalOutstandingUnits: 0, 
-      totalEnviadoNoFacturado: 0 
+      totalEnviadoNoFacturado: 0,
+      totalEnviadoNoFacturadoAccounts: 0
     };
     
     return { 
       groupedOrders: Array.from(groups.values()), 
       totalOrders: summary.totalOrders,
       totalAmount: summary.totalAmount, 
+      totalAmountAccounts: summary.totalAmountAccounts,
       totalOutstanding: summary.totalOutstandingUnits, 
-      totalEnviadoNoFacturado: summary.totalEnviadoNoFacturado
+      totalEnviadoNoFacturado: summary.totalEnviadoNoFacturado,
+      totalEnviadoNoFacturadoAccounts: summary.totalEnviadoNoFacturadoAccounts
     };
 
   }, [data]);
@@ -208,23 +212,25 @@ export const SalesOrdersPage: React.FC = () => {
         <KPICard 
           title="Cartera Total" 
           value={totalAmount} 
+          accountValue={totalAmountAccounts}
           type="currency" 
           icon={Euro} 
           isLoading={isLoading} 
           infoProps={{
-            description: "Valor económico total de la mercancía pendiente de procesar en la cartera de pedidos.",
+            description: "Valor económico total de la mercancía pendiente de procesar en la cartera de pedidos. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
             formulas: "Sumatorio(Outstanding Quantity * Unit Price)"
           }}
         />
         <KPICard 
           title="Pend. Facturar" 
           value={totalEnviadoNoFacturado} 
+          accountValue={totalEnviadoNoFacturadoAccounts}
           type="currency" 
           icon={DollarSign} 
           status="warning"
           isLoading={isLoading} 
           infoProps={{
-            description: "Importe de la mercancía que ya ha sido entregada al cliente pero que está pendiente de emisión de factura.",
+            description: "Importe de la mercancía que ya ha sido entregada al cliente pero que está pendiente de emisión de factura. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
             formulas: "Sumatorio(Qty. Shipped Not Invoiced * Unit Price)"
           }}
         />
@@ -382,29 +388,27 @@ export const SalesOrdersPage: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps }: any) => {
-  if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse"></div>;
+const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: Icon, isLoading, status, decimalPlaces = 0, infoProps, accountValue }) => {
+  if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
+  
   const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : 'text-dts-primary dark:text-white';
-  const formattedValue = type === 'currency' ? formatCurrency(value, 0) : formatNumber(value, 0);
+  const formattedValue = type === 'currency' ? formatCurrency(value, decimalPlaces) : formatNumber(value, decimalPlaces);
+
   return (
     <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
       <div className="flex justify-between items-start mb-2">
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{title}</span>
-          {infoProps && (
-            <InfoPopover 
-              title={title} 
-              description={infoProps.description} 
-              formulas={infoProps.formulas} 
-              iconSize={12}
-              className="text-gray-300 group-hover:text-dts-secondary transition-colors"
-            />
-          )}
+          {infoProps && <InfoPopover title={title} {...infoProps} iconSize={12} />}
         </div>
         <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
       </div>
       <div className={`text-2xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
+      {accountValue !== undefined && accountValue > 0 && (
+        <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
+          ({formatCurrency(accountValue, decimalPlaces)})
+        </div>
+      )}
     </div>
   );
 };
-

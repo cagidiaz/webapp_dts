@@ -31,8 +31,10 @@ export interface SalesOrdersResponse {
   summary: {
     totalOrders: number;
     totalAmount: number;
+    totalAmountAccounts: number;
     totalOutstandingUnits: number;
     totalEnviadoNoFacturado: number;
+    totalEnviadoNoFacturadoAccounts: number;
   };
 }
 

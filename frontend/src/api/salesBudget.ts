@@ -21,7 +21,9 @@ export interface SalesBudgetPerformanceKPIs {
   desviacionEur: number;
   desviacionPct: number;
   carteraVentas: number;
+  carteraVentasAccounts: number;
   enviadosFacturar: number;
+  enviadosFacturarAccounts: number;
 }
 
 export interface SalesBudgetPerformanceDataRow {

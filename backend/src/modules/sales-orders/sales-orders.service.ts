@@ -76,22 +76,33 @@ export class SalesOrdersService {
             outstanding_quantity: true,
             qty_shipped_not_invoiced: true,
             unit_price: true,
+            type: true,
           },
         }),
       ]);
 
       // Calcular sumatorios globales
       let totalCartera = 0;
+      let totalCarteraAccounts = 0;
       let totalEnviadoNoFacturado = 0;
+      let totalEnviadoNoFacturadoAccounts = 0;
       const uniqueOrderNumbers = new Set<string>();
 
       allRelevantOrders.forEach(order => {
         const price = Number(order.unit_price || 0);
         const outstanding = Number(order.outstanding_quantity || 0);
         const shippedNotInv = Number(order.qty_shipped_not_invoiced || 0);
+        const isAccount = (order as any).type === 'G/L Account';
 
-        totalCartera += (outstanding * price);
-        totalEnviadoNoFacturado += (shippedNotInv * price);
+        const lineCartera = (outstanding * price);
+        const lineShippedNotInv = (shippedNotInv * price);
+
+        totalCartera += lineCartera;
+        if (isAccount) totalCarteraAccounts += lineCartera;
+
+        totalEnviadoNoFacturado += lineShippedNotInv;
+        if (isAccount) totalEnviadoNoFacturadoAccounts += lineShippedNotInv;
+
         if (order.document_number) uniqueOrderNumbers.add(order.document_number);
       });
 
@@ -101,8 +112,10 @@ export class SalesOrdersService {
         summary: {
           totalOrders: uniqueOrderNumbers.size,
           totalAmount: totalCartera,
+          totalAmountAccounts: totalCarteraAccounts,
           totalOutstandingUnits: allRelevantOrders.reduce((acc, curr) => acc + Number(curr.outstanding_quantity || 0), 0),
           totalEnviadoNoFacturado: totalEnviadoNoFacturado,
+          totalEnviadoNoFacturadoAccounts: totalEnviadoNoFacturadoAccounts,
         }
       };
 

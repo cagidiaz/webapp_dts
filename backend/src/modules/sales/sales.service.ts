@@ -339,21 +339,31 @@ export class SalesService {
       select: { 
         outstanding_quantity: true, 
         qty_shipped_not_invoiced: true, 
-        unit_price: true 
+        unit_price: true,
+        type: true
       },
     });
 
     let totalCartera = 0;
+    let totalCarteraAccounts = 0;
     let totalEnviadoNoFacturado = 0;
+    let totalEnviadoNoFacturadoAccounts = 0;
 
     if (ordersRaw && ordersRaw.length > 0) {
       for (const order of ordersRaw) {
         const price = Number(order.unit_price) || 0;
         const outstanding = Number(order.outstanding_quantity) || 0;
         const shippedNotInv = Number(order.qty_shipped_not_invoiced) || 0;
+        const isAccount = order.type === 'G/L Account';
 
-        totalCartera += (outstanding * price);
-        totalEnviadoNoFacturado += (shippedNotInv * price);
+        const lineCartera = (outstanding * price);
+        const lineShippedNotInv = (shippedNotInv * price);
+
+        totalCartera += lineCartera;
+        if (isAccount) totalCarteraAccounts += lineCartera;
+
+        totalEnviadoNoFacturado += lineShippedNotInv;
+        if (isAccount) totalEnviadoNoFacturadoAccounts += lineShippedNotInv;
       }
     }
 
@@ -369,7 +379,9 @@ export class SalesService {
         desviacionEur: devEuros,
         desviacionPct: devPct,
         carteraVentas: totalCartera,
+        carteraVentasAccounts: totalCarteraAccounts,
         enviadosFacturar: totalEnviadoNoFacturado,
+        enviadosFacturarAccounts: totalEnviadoNoFacturadoAccounts,
         facturacionNuevos: totalNewClientsSales,
       },
 
@@ -768,15 +780,25 @@ export class SalesService {
 
     const ordersRaw = await this.prisma.sales_orders.findMany({
       where: ordersWhere,
-      select: { outstanding_quantity: true, qty_shipped_not_invoiced: true, unit_price: true },
+      select: { outstanding_quantity: true, qty_shipped_not_invoiced: true, unit_price: true, type: true },
     });
 
     let totalCartera = 0;
+    let totalCarteraAccounts = 0;
     let totalEnviadoNoFacturado = 0;
+    let totalEnviadoNoFacturadoAccounts = 0;
+
     for (const order of ordersRaw) {
       const price = Number(order.unit_price) || 0;
-      totalCartera += (Number(order.outstanding_quantity) || 0) * price;
-      totalEnviadoNoFacturado += (Number(order.qty_shipped_not_invoiced) || 0) * price;
+      const isAccount = order.type === 'G/L Account';
+      const lineCartera = (Number(order.outstanding_quantity) || 0) * price;
+      const lineShippedNotInv = (Number(order.qty_shipped_not_invoiced) || 0) * price;
+
+      totalCartera += lineCartera;
+      if (isAccount) totalCarteraAccounts += lineCartera;
+
+      totalEnviadoNoFacturado += lineShippedNotInv;
+      if (isAccount) totalEnviadoNoFacturadoAccounts += lineShippedNotInv;
     }
 
     // 12. Ordenación
@@ -802,7 +824,9 @@ export class SalesService {
         desviacionEur: devEuros,
         desviacionPct: devPct,
         carteraVentas: totalCartera,
+        carteraVentasAccounts: totalCarteraAccounts,
         enviadosFacturar: totalEnviadoNoFacturado,
+        enviadosFacturarAccounts: totalEnviadoNoFacturadoAccounts,
       },
       rows: results.slice(skip ? Number(skip) : 0, take ? (Number(skip) || 0) + Number(take) : undefined),
       total: results.length

@@ -58,6 +58,7 @@ interface KPICardProps {
     objective?: string;
     source?: string;
   };
+  accountValue?: number;
 }
 
 // --- Helper Components ---
@@ -105,7 +106,7 @@ const RenderCustomLegend = (props: any) => {
   );
 };
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: Icon, isLoading, status, decimalPlaces = 0, infoProps }) => {
+const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: Icon, isLoading, status, decimalPlaces = 0, infoProps, accountValue }) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
   
   const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : 'text-dts-primary dark:text-white';
@@ -131,6 +132,11 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: 
         <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
       </div>
       <div className={`text-xl font-medium font-mono ${colorClass}`}>{formattedValue}</div>
+      {accountValue !== undefined && accountValue > 0 && (
+        <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
+          ({formatCurrency(accountValue, 0)})
+        </div>
+      )}
     </div>
   );
 };
@@ -222,7 +228,9 @@ export const SalesBudgetPage: React.FC = () => {
     const allRows = infiniteData?.pages.flatMap(page => page.rows || []) || [];
     const kpis = infiniteData?.pages[0]?.kpis || { 
       ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
-      carteraVentas: 0, enviadosFacturar: 0, facturacionNuevos: 0
+      carteraVentas: 0, carteraVentasAccounts: 0,
+      enviadosFacturar: 0, enviadosFacturarAccounts: 0,
+      facturacionNuevos: 0
     };
     return { tableData: allRows, performanceKPIs: kpis };
   }, [infiniteData]);
@@ -310,8 +318,8 @@ export const SalesBudgetPage: React.FC = () => {
         <KPICard title="Objetivo" value={performanceKPIs.objetivo} type="currency" icon={Target} isLoading={isLoadingPerf} infoProps={{ description: "Cifra de ventas presupuestada como objetivo para el periodo y filtros seleccionados.", objective: "Indica la meta comercial a alcanzar." }} />
         <KPICard title="Desviación" value={performanceKPIs.desviacionEur} type="currency" icon={DollarSign} status={performanceKPIs.desviacionEur >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ description: "Diferencia absoluta entre la facturación real y el objetivo.", formulas: "Ventas Reales - Objetivo Presupuestado" }} />
         <KPICard title="Cumplimiento" value={performanceKPIs.desviacionPct} type="percentage" icon={Activity} status={performanceKPIs.desviacionPct >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ description: "Tasa de cumplimiento del objetivo en porcentaje.", formulas: "(Ventas Reales / Objetivo) * 100" }} />
-        <KPICard title="Cartera Pedidos" value={performanceKPIs.carteraVentas} type="currency" icon={Package} isLoading={isLoadingPerf} infoProps={{ description: "Importe total de los pedidos de venta abiertos y pendientes de completar.", source: "Tabla de Sales Orders." }} />
-        <KPICard title="Pend. Facturar" value={performanceKPIs.enviadosFacturar} type="currency" icon={DollarSign} status="warning" isLoading={isLoadingPerf} infoProps={{ description: "Importe de la mercancía ya enviada al cliente pero que aún no ha sido facturada.", formulas: "Sumatorio(Qty. Shipped Not Invoiced * Unit Price)" }} />
+        <KPICard title="Cartera Pedidos" value={performanceKPIs.carteraVentas} accountValue={performanceKPIs.carteraVentasAccounts} type="currency" icon={Package} isLoading={isLoadingPerf} infoProps={{ description: "Importe total de los pedidos de venta abiertos y pendientes de completar. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", source: "Tabla de Sales Orders." }} />
+        <KPICard title="Pend. Facturar" value={performanceKPIs.enviadosFacturar} accountValue={performanceKPIs.enviadosFacturarAccounts} type="currency" icon={DollarSign} status="warning" isLoading={isLoadingPerf} infoProps={{ description: "Importe de la mercancía ya enviada al cliente pero que aún no ha sido facturada. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", formulas: "Sumatorio(Qty. Shipped Not Invoiced * Unit Price)" }} />
       </div>
 
       {/* Main Analysis Section */}
