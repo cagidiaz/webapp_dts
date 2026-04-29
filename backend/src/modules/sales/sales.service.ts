@@ -165,7 +165,10 @@ export class SalesService {
     }
 
     // 3. Obtener sumatorios paralelos
-    const [salesRaw, budgetsRaw] = await Promise.all([
+    const prevYear = year - 1;
+    const prevYearDates = await this.getDatesForMonths(prevYear, months);
+
+    const [salesRaw, budgetsRaw, prevYearSalesRaw] = await Promise.all([
       this.prisma.value_entries.groupBy({
         by: ['source_no'],
         _sum: { sales_amount: true },
@@ -175,7 +178,14 @@ export class SalesService {
         by: ['customer_code'],
         _sum: { monthly_budget: true },
         where: budgetWhere,
-      })
+      }),
+      prevYearDates.length > 0 
+        ? this.prisma.value_entries.groupBy({
+            by: ['source_no'],
+            _sum: { sales_amount: true },
+            where: { ...salesWhere, reg_date: { in: prevYearDates } },
+          })
+        : Promise.resolve([] as any[])
     ]);
 
     // Mejor enfoque para nombres de cliente: extraer IDs
@@ -207,7 +217,25 @@ export class SalesService {
         isNew: cInfo?.since ? new Date(cInfo.since).getFullYear() === new Date().getFullYear() : false,
         salesSum: sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0,
         budgetSum: 0,
+        prevYearSales: 0,
       });
+    });
+
+    prevYearSalesRaw.forEach(sale => {
+      if (!sale.source_no) return;
+      if (mergedData.has(sale.source_no)) {
+        mergedData.get(sale.source_no).prevYearSales = sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
+      } else {
+        const cInfo = customersDict[sale.source_no];
+        mergedData.set(sale.source_no, {
+          customerCode: sale.source_no,
+          customerName: cInfo ? cInfo.name : (sale.source_no === '99999999' ? 'CLIENTE NUEVO' : sale.source_no),
+          isNew: cInfo?.since ? new Date(cInfo.since).getFullYear() === new Date().getFullYear() : false,
+          salesSum: 0,
+          budgetSum: 0,
+          prevYearSales: sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0,
+        });
+      }
     });
 
     budgetsRaw.forEach(budget => {
@@ -232,6 +260,7 @@ export class SalesService {
       customerName: row.customerName,
       isNew: row.isNew,
       facturacion: row.salesSum,
+      facturacionAnioAnterior: row.prevYearSales,
       objetivo: row.budgetSum,
       desviacion: row.salesSum - row.budgetSum,
       desviacionPorcentaje: row.budgetSum > 0 ? ((row.salesSum - row.budgetSum) / row.budgetSum) * 100 : 0
@@ -279,10 +308,12 @@ export class SalesService {
 
     let totalSales = 0;
     let totalBudget = 0;
+    let totalPrevYear = 0;
 
     filteredResults.forEach((val: any) => {
       totalSales += val.excludeFacturacionFromTotal ? 0 : val.facturacion;
       totalBudget += val.objetivo;
+      totalPrevYear += val.facturacionAnioAnterior || 0;
     });
 
     // 6. Ordenación dinámica según parámetros
@@ -383,6 +414,7 @@ export class SalesService {
         enviadosFacturar: totalEnviadoNoFacturado,
         enviadosFacturarAccounts: totalEnviadoNoFacturadoAccounts,
         facturacionNuevos: totalNewClientsSales,
+        facturacionAnioAnterior: totalPrevYear,
       },
 
       rows: filteredResults.slice(skip ? Number(skip) : 0, take ? (Number(skip) || 0) + Number(take) : undefined),
@@ -622,7 +654,10 @@ export class SalesService {
     if (itemNos !== null) budgetWhere.item_no = { in: itemNos };
 
     // 4. Obtener datos agrupados por cliente+producto en paralelo
-    const [salesRaw, budgetsRaw] = await Promise.all([
+    const prevYear = year - 1;
+    const prevYearDates = await this.getDatesForMonths(prevYear, months);
+
+    const [salesRaw, budgetsRaw, prevYearSalesRaw] = await Promise.all([
       this.prisma.value_entries.groupBy({
         by: ['source_no', 'item_no'],
         _sum: { sales_amount: true },
@@ -632,7 +667,14 @@ export class SalesService {
         by: ['customer_code', 'item_no'],
         _sum: { monthly_budget: true },
         where: budgetWhere,
-      })
+      }),
+      prevYearDates.length > 0 
+        ? this.prisma.value_entries.groupBy({
+            by: ['source_no', 'item_no'],
+            _sum: { sales_amount: true },
+            where: { ...salesWhere, reg_date: { in: prevYearDates } },
+          })
+        : Promise.resolve([] as any[])
     ]);
 
     // 5. Recopilar IDs únicos de clientes y productos
@@ -669,14 +711,14 @@ export class SalesService {
     const productsDict: Record<string, string> = {};
     productsData.forEach(p => { productsDict[p.item_no] = p.description || p.item_no; });
 
-    // 7. Merge: cliente → Map<item_no, {sales, budget}>
-    const clientMap = new Map<string, Map<string, { sales: number; budget: number }>>();
+    // 7. Merge: cliente → Map<item_no, {sales, budget, prevSales}>
+    const clientMap = new Map<string, Map<string, { sales: number; budget: number; prevSales: number }>>();
 
     salesRaw.forEach(sale => {
       if (!sale.source_no) return;
       if (!clientMap.has(sale.source_no)) clientMap.set(sale.source_no, new Map());
       const prodMap = clientMap.get(sale.source_no)!;
-      const existing = prodMap.get(sale.item_no) || { sales: 0, budget: 0 };
+      const existing = prodMap.get(sale.item_no) || { sales: 0, budget: 0, prevSales: 0 };
       existing.sales += sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
       prodMap.set(sale.item_no, existing);
     });
@@ -685,9 +727,18 @@ export class SalesService {
       if (!budget.customer_code) return;
       if (!clientMap.has(budget.customer_code)) clientMap.set(budget.customer_code, new Map());
       const prodMap = clientMap.get(budget.customer_code)!;
-      const existing = prodMap.get(budget.item_no) || { sales: 0, budget: 0 };
+      const existing = prodMap.get(budget.item_no) || { sales: 0, budget: 0, prevSales: 0 };
       existing.budget += budget._sum.monthly_budget ? Number(budget._sum.monthly_budget) : 0;
       prodMap.set(budget.item_no, existing);
+    });
+
+    prevYearSalesRaw.forEach(sale => {
+      if (!sale.source_no) return;
+      if (!clientMap.has(sale.source_no)) clientMap.set(sale.source_no, new Map());
+      const prodMap = clientMap.get(sale.source_no)!;
+      const existing = prodMap.get(sale.item_no) || { sales: 0, budget: 0, prevSales: 0 };
+      existing.prevSales += sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
+      prodMap.set(sale.item_no, existing);
     });
 
     // 8. Construir resultado jerárquico
@@ -703,6 +754,7 @@ export class SalesService {
           itemNo,
           productName: productsDict[itemNo] || itemNo,
           facturacion: vals.sales,
+          facturacionAnioAnterior: vals.prevSales,
           objetivo: vals.budget,
           desviacion: vals.sales - vals.budget,
           desviacionPorcentaje: vals.budget > 0 ? ((vals.sales - vals.budget) / vals.budget) * 100 : 0,
@@ -717,6 +769,7 @@ export class SalesService {
         customerName: cInfo ? cInfo.name : customerCode,
         isNew: cInfo?.since ? new Date(cInfo.since).getFullYear() === new Date().getFullYear() : false,
         facturacion: totalSales,
+        facturacionAnioAnterior: Array.from(prodMap.values()).reduce((acc, v) => acc + v.prevSales, 0),
         objetivo: totalBudget,
         desviacion: totalSales - totalBudget,
         desviacionPorcentaje: totalBudget > 0 ? ((totalSales - totalBudget) / totalBudget) * 100 : 0,
@@ -766,9 +819,11 @@ export class SalesService {
     // 10. KPIs globales
     let totalSales = 0;
     let totalBudget = 0;
+    let totalPrevYear = 0;
     results.forEach((r: any) => { 
       totalSales += r.excludeFacturacionFromTotal ? 0 : r.facturacion; 
       totalBudget += r.objetivo; 
+      totalPrevYear += r.facturacionAnioAnterior || 0;
     });
     const devEuros = totalSales - totalBudget;
     const devPct = totalBudget > 0 ? (devEuros / totalBudget) * 100 : 0;
@@ -827,6 +882,7 @@ export class SalesService {
         carteraVentasAccounts: totalCarteraAccounts,
         enviadosFacturar: totalEnviadoNoFacturado,
         enviadosFacturarAccounts: totalEnviadoNoFacturadoAccounts,
+        facturacionAnioAnterior: totalPrevYear,
       },
       rows: results.slice(skip ? Number(skip) : 0, take ? (Number(skip) || 0) + Number(take) : undefined),
       total: results.length

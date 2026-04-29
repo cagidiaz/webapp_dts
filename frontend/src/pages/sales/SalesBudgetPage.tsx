@@ -150,8 +150,13 @@ export const SalesBudgetPage: React.FC = () => {
   const pageSize = 50;
 
   // Filters State
-  const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  const initialMonths = Array.from({ length: currentMonth }, (_, i) => i + 1);
+
+  // Filters State
+  const [year, setYear] = useState<number>(currentYear);
+  const [selectedMonths, setSelectedMonths] = useState<number[]>(initialMonths);
   const [familyFilter, setFamilyFilter] = useState<string>('');
   const [subfamilyFilter, setSubfamilyFilter] = useState<string>('');
   const [salespersonFilter, setSalespersonFilter] = useState<string>('');
@@ -289,7 +294,8 @@ export const SalesBudgetPage: React.FC = () => {
     const columns = [
       { key: 'customerCode', label: 'Código Cliente' },
       { key: 'customerName', label: 'Cliente' },
-      { key: 'facturacion', label: 'Facturación (€)', format: (v: number) => Number(v.toFixed(2)) },
+      { key: 'facturacion', label: 'Fact. YTD (€)', format: (v: number) => Number(v.toFixed(2)) },
+      { key: 'facturacionAnioAnterior', label: 'Fact. LY (€)', format: (v: number) => Number(v.toFixed(2)) },
       { key: 'objetivo', label: 'Objetivo (€)', format: (v: number) => Number(v.toFixed(2)) },
       { key: 'desviacion', label: 'Desviación (€)', format: (v: number) => Number(v.toFixed(2)) },
       { key: 'desviacionPorcentaje', label: 'Desv. (%)', format: (v: number) => Number(v.toFixed(2)) },
@@ -401,16 +407,19 @@ export const SalesBudgetPage: React.FC = () => {
                     <th className="w-[40%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('customerName')}>
                       <div className="flex items-center">Cliente {getSortIcon('customerName')}</div>
                     </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
-                      <div className="flex items-center justify-end">Facturación {getSortIcon('facturacion')}</div>
+                    <th className="w-[12%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
+                      <div className="flex items-center justify-end">Fact. YTD {getSortIcon('facturacion')}</div>
                     </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
+                    <th className="w-[12%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionAnioAnterior')}>
+                      <div className="flex items-center justify-end">Fact. LY {getSortIcon('facturacionAnioAnterior')}</div>
+                    </th>
+                    <th className="w-[12%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
                       <div className="flex items-center justify-end">Objetivo {getSortIcon('objetivo')}</div>
                     </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
+                    <th className="w-[12%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
                       <div className="flex items-center justify-end">Desv. {getSortIcon('desviacion')}</div>
                     </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-center cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacionPorcentaje')}>
+                    <th className="w-[12%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-center cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacionPorcentaje')}>
                       <div className="flex items-center justify-center">% DESV. {getSortIcon('desviacionPorcentaje')}</div>
                     </th>
                   </tr>
@@ -433,6 +442,7 @@ export const SalesBudgetPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-3 text-right font-mono">{formatCurrency(row.facturacion, 0)}</td>
+                        <td className="px-6 py-3 text-right font-mono text-gray-400">{(row as any).facturacionAnioAnterior ? formatCurrency((row as any).facturacionAnioAnterior, 0) : '-'}</td>
                         <td className="px-6 py-3 text-right font-mono">{formatCurrency(row.objetivo, 0)}</td>
                         <td className={`px-6 py-3 text-right font-mono ${row.desviacion < 0 ? 'text-red-500 font-bold' : 'text-emerald-500'}`}>{row.desviacion > 0 ? '+' : ''}{formatCurrency(row.desviacion, 0)}</td>
                         <td className={`px-6 py-3 text-center font-mono font-bold ${row.desviacionPorcentaje < 0 ? 'text-red-500 bg-red-50 dark:bg-red-500/10' : 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'}`}>{row.desviacionPorcentaje > 0 ? '+' : ''}{formatNumber(row.desviacionPorcentaje, 1)}%</td>
@@ -451,10 +461,11 @@ export const SalesBudgetPage: React.FC = () => {
                   <tbody>
                     <tr className="font-bold">
                       <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES FILTRADOS</td>
-                      <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.ventas, 0)}</td>
-                      <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
-                      <td className={`w-[15%] px-6 py-4 text-right font-mono ${performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}</td>
-                      <td className={`w-[15%] px-6 py-4 text-center font-mono text-[10px] ${performanceKPIs.desviacionPct < 0 ? 'text-red-400 bg-red-400/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{performanceKPIs.desviacionPct > 0 ? '+' : ''}{formatNumber(performanceKPIs.desviacionPct, 1)}%</td>
+                      <td className="w-[12%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.ventas, 0)}</td>
+                      <td className="w-[12%] px-6 py-4 text-right font-mono opacity-60">{(performanceKPIs as any).facturacionAnioAnterior ? formatCurrency((performanceKPIs as any).facturacionAnioAnterior, 0) : '-'}</td>
+                      <td className="w-[12%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
+                      <td className={`w-[12%] px-6 py-4 text-right font-mono ${performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}</td>
+                      <td className={`w-[12%] px-6 py-4 text-center font-mono text-[10px] ${performanceKPIs.desviacionPct < 0 ? 'text-red-400 bg-red-400/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{performanceKPIs.desviacionPct > 0 ? '+' : ''}{formatNumber(performanceKPIs.desviacionPct, 1)}%</td>
                     </tr>
                   </tbody>
                 </table>

@@ -92,10 +92,14 @@ export const SalesDashboard: React.FC = () => {
   const [selectedCustCode, setSelectedCustCode] = React.useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
+  const currentMonth = new Date().getMonth() + 1;
+  const initialMonths = React.useMemo(() => Array.from({ length: currentMonth }, (_, i) => i + 1), [currentMonth]);
+
   const { data: perfData, isLoading: isLoadingPerf } = useQuery({
-    queryKey: ['salesDashboardPerf', year, salespersonCode],
+    queryKey: ['salesDashboardPerf', year, salespersonCode, initialMonths],
     queryFn: () => getSalesBudgetPerformance({ 
       year, 
+      months: initialMonths,
       salespersonCode,
       take: 5 
     })
@@ -117,6 +121,10 @@ export const SalesDashboard: React.FC = () => {
       salespersonCode 
     })
   });
+
+  const annualTarget = React.useMemo(() => {
+    return (evolutionData || []).reduce((acc, curr) => acc + (curr.objetivo || 0), 0);
+  }, [evolutionData]);
 
   const kpis = perfData?.kpis || { 
     ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
@@ -149,8 +157,9 @@ export const SalesDashboard: React.FC = () => {
           value={kpis.objetivo} 
           type="currency" 
           icon={Target} 
-          isLoading={isLoadingPerf}
-          infoProps={{ description: "Meta de facturación presupuestada para el periodo actual." }}
+          isLoading={isLoadingPerf || isLoadingEvol}
+          footerText={annualTarget > 0 ? `Total anual: ${formatCurrency(annualTarget, 0)}` : undefined}
+          infoProps={{ description: "Meta de facturación presupuestada para el periodo acumulado (YTD). En pequeño se muestra el total anual." }}
         />
         <KPICard 
           title="Cumplimiento" 
@@ -303,7 +312,7 @@ export const SalesDashboard: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, accountValue }: any) => {
+const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, accountValue, footerText }: any) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
   
   const isPositive = value >= 0;
@@ -338,6 +347,11 @@ const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status,
         {accountValue !== undefined && accountValue > 0 && (
           <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
             ({formatCurrency(accountValue, 0)})
+          </div>
+        )}
+        {footerText && (
+          <div className="text-[10px] text-gray-400 mt-0.5 font-medium">
+            {footerText}
           </div>
         )}
       </div>
