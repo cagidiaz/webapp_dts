@@ -479,20 +479,17 @@ export const ProductBudgetPage: React.FC = () => {
                   <th className="w-[40%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('customerName')}>
                     <div className="flex items-center">Nombre cliente {getSortIcon('customerName')}</div>
                   </th>
-                  <th className="w-[12%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
+                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
                     <div className="flex items-center justify-end">Fact. YTD {getSortIcon('facturacion')}</div>
                   </th>
-                  <th className="w-[12%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionAnioAnterior')}>
+                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionAnioAnterior')}>
                     <div className="flex items-center justify-end">Fact. LY {getSortIcon('facturacionAnioAnterior')}</div>
                   </th>
-                  <th className="w-[12%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
+                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
                     <div className="flex items-center justify-end">Objetivo {getSortIcon('objetivo')}</div>
                   </th>
-                  <th className="w-[12%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
+                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
                     <div className="flex items-center justify-end">Desviación {getSortIcon('desviacion')}</div>
-                  </th>
-                  <th className="w-[12%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-center cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacionPorcentaje')}>
-                    <div className="flex items-center justify-center">Desviación % {getSortIcon('desviacionPorcentaje')}</div>
                   </th>
                 </tr>
               </thead>
@@ -525,8 +522,14 @@ export const ProductBudgetPage: React.FC = () => {
                           <td className="px-6 py-3 text-right font-mono font-bold">{formatCurrency(row.facturacion, 0)}</td>
                           <td className="px-6 py-3 text-right font-mono text-gray-400">{(row as any).facturacionAnioAnterior ? formatCurrency((row as any).facturacionAnioAnterior, 0) : '-'}</td>
                           <td className="px-6 py-3 text-right font-mono">{formatCurrency(row.objetivo, 0)}</td>
-                          <td className={`px-6 py-3 text-right font-mono ${row.desviacion < 0 ? 'text-red-500 font-bold' : 'text-emerald-500'}`}>{row.desviacion > 0 ? '+' : ''}{formatCurrency(row.desviacion, 0)}</td>
-                          <td className={`px-6 py-3 text-center font-mono font-bold ${row.desviacionPorcentaje < 0 ? 'text-red-500 bg-red-50 dark:bg-red-500/10' : 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'}`}>{row.desviacionPorcentaje > 0 ? '+' : ''}{formatNumber(row.desviacionPorcentaje, 1)}%</td>
+                          <td className="px-6 py-3 text-right font-mono">
+                            <div className={row.desviacion < 0 ? 'text-red-500 font-bold' : 'text-emerald-500'}>
+                              {row.desviacion > 0 ? '+' : ''}{formatCurrency(row.desviacion, 0)}
+                            </div>
+                            <div className={`text-[10px] font-bold ${row.desviacionPorcentaje < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                              {row.desviacionPorcentaje > 0 ? '+' : ''}{formatNumber(row.desviacionPorcentaje, 1)}%
+                            </div>
+                          </td>
                         </tr>
                         {/* Product Rows (Expanded) */}
                         {isExpanded && row.products.map((prod, pIdx) => (
@@ -540,8 +543,14 @@ export const ProductBudgetPage: React.FC = () => {
                             <td className="px-6 py-2.5 text-right font-mono text-gray-500">{formatCurrency(prod.facturacion, 0)}</td>
                             <td className="px-6 py-2.5 text-right font-mono text-gray-400">{(prod as any).facturacionAnioAnterior ? formatCurrency((prod as any).facturacionAnioAnterior, 0) : '-'}</td>
                             <td className="px-6 py-2.5 text-right font-mono text-gray-400">{formatCurrency(prod.objetivo, 0)}</td>
-                            <td className={`px-6 py-2.5 text-right font-mono ${prod.desviacion < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{prod.desviacion > 0 ? '+' : ''}{formatCurrency(prod.desviacion, 0)}</td>
-                            <td className={`px-6 py-2.5 text-center font-mono ${prod.desviacionPorcentaje < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{prod.desviacionPorcentaje > 0 ? '+' : ''}{formatNumber(prod.desviacionPorcentaje, 1)}%</td>
+                            <td className="px-6 py-2.5 text-right font-mono">
+                              <div className={prod.desviacion < 0 ? 'text-red-400' : 'text-emerald-400'}>
+                                {prod.desviacion > 0 ? '+' : ''}{formatCurrency(prod.desviacion, 0)}
+                              </div>
+                              <div className={`text-[10px] ${prod.desviacionPorcentaje < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                {prod.desviacionPorcentaje > 0 ? '+' : ''}{formatNumber(prod.desviacionPorcentaje, 1)}%
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </React.Fragment>
@@ -560,11 +569,17 @@ export const ProductBudgetPage: React.FC = () => {
                 <tbody>
                   <tr className="font-bold">
                     <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES FILTRADOS</td>
-                    <td className="w-[12%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.ventas, 0)}</td>
-                    <td className="w-[12%] px-6 py-4 text-right font-mono opacity-60">{(performanceKPIs as any).facturacionAnioAnterior ? formatCurrency((performanceKPIs as any).facturacionAnioAnterior, 0) : '-'}</td>
-                    <td className="w-[12%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
-                    <td className={`w-[12%] px-6 py-4 text-right font-mono ${performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}</td>
-                    <td className={`w-[12%] px-6 py-4 text-center font-mono text-[10px] ${performanceKPIs.desviacionPct < 0 ? 'text-red-400 bg-red-400/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{performanceKPIs.desviacionPct > 0 ? '+' : ''}{formatNumber(performanceKPIs.desviacionPct, 1)}%</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.ventas, 0)}</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono opacity-60">{(performanceKPIs as any).facturacionAnioAnterior ? formatCurrency((performanceKPIs as any).facturacionAnioAnterior, 0) : '-'}</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono">
+                      <div className={performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}>
+                        {performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}
+                      </div>
+                      <div className={`text-[10px] ${performanceKPIs.desviacionPct < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {performanceKPIs.desviacionPct > 0 ? '+' : ''}{formatNumber(performanceKPIs.desviacionPct, 1)}%
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
