@@ -30,6 +30,7 @@ El Dashboard es el centro de monitorización en tiempo real del cumplimiento de 
 - **Ventas Cierre Est.**: Muestra la previsión de ventas a final de año. Si existe un presupuesto cargado para 2026, toma el valor objetivo del presupuesto.
 - **EBITDA Cierre Est.**: Resultado operativo proyectado antes de amortizaciones. Se calcula cruzando el presupuesto de ventas con el de gastos.
 - **Consecución Ventas (Novedad 2026)**: Compara las **Ventas Reales YTD** (lo facturado hasta hoy) contra el **Presupuesto Anual 2026**. Incluye una barra de progreso que indica el % de cumplimiento del objetivo anual.
+- **Evolución Ventas vs Presupuesto (Actualizado)**: Gráfico de área que muestra la comparativa **acumulada (YTD)** mensual. Permite visualizar tres líneas críticas: las ventas del año actual (en verde), las del año anterior (en índigo) y el presupuesto objetivo (línea discontinua). Esto facilita detectar si el crecimiento es orgánico respecto al ejercicio pasado.
 
 ## 2. Módulo de Finanzas
 
@@ -152,9 +153,22 @@ Módulo restringido para el control de la seguridad.
 
 ---
 
+## 7. Sistema de Notificaciones y Actualizaciones (Novedad)
+Para asegurar que todos los usuarios están al tanto de las mejoras y cambios en la plataforma, se ha integrado un sistema de avisos automáticos:
+- **Aviso de Novedades**: Al detectar una actualización importante (subida a la rama principal), el sistema mostrará una ventana emergente la primera vez que el usuario acceda a la aplicación.
+- **Centro de Notificaciones**: El icono de la campana en la barra superior muestra un punto rojo cuando hay actualizaciones sin leer. Al pulsarla, se despliega un resumen de los últimos cambios técnicos.
+- **Filtrado por Relevancia**: Las notificaciones están personalizadas. Un usuario de ventas solo recibirá avisos que afecten a su operativa o sean globales del sistema, mientras que los administradores reciben el flujo completo de cambios técnicos.
+- **Idioma**: Todas las comunicaciones de actualización se realizan en español para facilitar la comprensión del equipo.
+
 ---
 
-## 6. Registro de Modificaciones Técnicas
+---
+
+- **Actualización 4 Mayo 2026 (v3.5)**:
+  - Implementación del **Sistema de Notificaciones de Actualizaciones** vinculado a GitHub.
+  - Desarrollo del componente **UpdatesModal** y **UpdatesStore** para el seguimiento de versiones por usuario.
+  - Mejora visual del **Gráfico de Evolución de Ventas**: Transición a modelo acumulado (YTD) e integración de comparativa con el año anterior.
+  - Unificación de paleta de colores para gráficos: Verde (`#22C55E`) para año actual y Azul/Índigo para año anterior.
 - **Actualización 17 Abril 2026 (v3.0)**:
   - Implementación de **Exportación a Excel (XLSX)** en todos los módulos de Ventas (Presupuestos, Clientes, Pedidos y Productos).
   - Desarrollo de utilidad `exportToXlsx` con soporte para formateo dinámico y auto-ajuste de columnas.
@@ -176,4 +190,4 @@ Módulo restringido para el control de la seguridad.
   - Ajuste de la lógica de agregación de **Stock Total** (ignorar negativos para stock físico).
   - Ampliación de columnas en tablas para mayor legibilidad de descripciones largas.
 
-*Manual de dTS Instruments v2.9 — Actualizado a 16 de abril 2026.*
+*Manual de dTS Instruments v3.5 — Actualizado a 4 de mayo 2026.*
