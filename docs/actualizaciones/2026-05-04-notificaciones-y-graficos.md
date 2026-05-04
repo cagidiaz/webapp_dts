@@ -23,6 +23,10 @@ Actualización del gráfico principal del Panel de Mando Ejecutivo.
 - Actualización de `SalesService` para incluir cálculos de facturación del año anterior en el endpoint de evolución.
 - Sincronización de tipos en el API frontend.
 
+### 4. Ajuste en KPI de Ventas (YTD vs Ppto YTD)
+- Se ha modificado el KPI principal de ventas para que compare el acumulado real (YTD) con el presupuesto acumulado a fecha de hoy (Ppto YTD), en lugar del presupuesto anual total.
+- El diseño se ha equilibrado para mostrar ambos valores con el mismo tamaño de fuente, facilitando la lectura de la desviación real.
+
 ---
 **Mensaje de Commit utilizado:** 
 `[GLOBAL] Implementación del sistema de notificaciones de actualizaciones y mejoras en el gráfico de ventas acumuladas`

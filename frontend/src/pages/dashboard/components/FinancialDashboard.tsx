@@ -36,10 +36,12 @@ export const FinancialDashboard: React.FC = () => {
     queryFn: getBudgetsData 
   });
 
+  const currentMonths = useMemo(() => Array.from({ length: new Date().getMonth() + 1 }, (_, i) => i + 1), []);
+  
   // 2. Fetch Sales Performance (for Sales, Backlog, Shipped not Invoiced)
   const { data: salesPerf, isLoading: pLoading } = useQuery({
-    queryKey: ['salesPerf', currentYear],
-    queryFn: () => getSalesBudgetPerformance({ year: currentYear })
+    queryKey: ['salesPerf', currentYear, currentMonths],
+    queryFn: () => getSalesBudgetPerformance({ year: currentYear, months: currentMonths })
   });
 
   // 3. Fetch Sales Evolution (for the chart)
@@ -128,16 +130,17 @@ export const FinancialDashboard: React.FC = () => {
       {/* Top KPIs Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPICard 
-          title="Ventas YTD vs Ppto" 
+          title="Ventas YTD vs Ppto YTD" 
           value={kpis?.ventas || 0} 
           subValue={kpis?.objetivo || 0}
           deviation={kpis?.desviacionPct || 0}
           type="currency" 
           icon={Euro} 
           color="blue"
+          variant="comparison"
           infoProps={{
-            description: "Facturación real acumulada en el año actual frente al presupuesto total anual.",
-            formulas: "Real YTD vs Presupuesto Total"
+            description: "Comparativa de facturación real acumulada frente al presupuesto acumulado a fecha de hoy.",
+            formulas: "Ventas YTD vs Presupuesto YTD"
           }}
         />
         <KPICard 
@@ -310,7 +313,7 @@ export const FinancialDashboard: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, subValue, accountValue, deviation, type = 'number', icon: Icon, color, infoProps }: any) => {
+const KPICard = ({ title, value, subValue, accountValue, deviation, type = 'number', icon: Icon, color, infoProps, variant }: any) => {
   const colorMap: any = {
     blue: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
     emerald: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20',
@@ -319,6 +322,7 @@ const KPICard = ({ title, value, subValue, accountValue, deviation, type = 'numb
   };
 
   const formattedValue = type === 'currency' ? formatCurrency(value, 0) : value;
+  const formattedSubValue = type === 'currency' ? formatCurrency(subValue, 0) : subValue;
 
   return (
     <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
@@ -331,7 +335,21 @@ const KPICard = ({ title, value, subValue, accountValue, deviation, type = 'numb
           <Icon size={18} />
         </div>
       </div>
-      <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+      
+      {variant === 'comparison' ? (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-gray-400 w-8">REAL:</span>
+            <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-gray-400 w-8">PPTO:</span>
+            <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">{formattedSubValue}</div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+      )}
       
       {accountValue !== undefined && accountValue > 0 && (
         <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
@@ -341,8 +359,10 @@ const KPICard = ({ title, value, subValue, accountValue, deviation, type = 'numb
 
       {deviation !== undefined && (
         <div className="mt-4 flex items-center justify-between border-t border-gray-50 dark:border-gray-800 pt-3">
-          <span className="text-[10px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>
-          <div className={`flex items-center gap-0.5 text-[10px] font-bold ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+          {variant !== 'comparison' && (
+            <span className="text-[10px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>
+          )}
+          <div className={`flex items-center gap-0.5 text-[10px] font-bold ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'} ${variant === 'comparison' ? 'ml-auto' : ''}`}>
             {deviation >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
             {deviation > 0 ? '+' : ''}{deviation.toFixed(1)}%
           </div>
