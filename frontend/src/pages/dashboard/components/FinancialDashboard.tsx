@@ -1,11 +1,6 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  getIncomeStatementData, 
-  getBudgetsData, 
-  groupDataByYear, 
-  groupBudgetsByYear 
-} from '../../../api/finance';
+
 import { 
   getSalesBudgetPerformance, 
   getSalesBudgetEvolution 
@@ -27,14 +22,7 @@ export const FinancialDashboard: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   // 1. Fetch Finance Data (for EBITDA)
-  const { data: incomeRows, isLoading: iLoading } = useQuery({ 
-    queryKey: ['incomeData'], 
-    queryFn: getIncomeStatementData 
-  });
-  const { data: budgetRows, isLoading: bLoading } = useQuery({ 
-    queryKey: ['budgetData'], 
-    queryFn: getBudgetsData 
-  });
+
 
   const currentMonths = useMemo(() => Array.from({ length: new Date().getMonth() + 1 }, (_, i) => i + 1), []);
   
@@ -63,25 +51,6 @@ export const FinancialDashboard: React.FC = () => {
     });
     return () => setPageInfo({ title: '', subtitle: '', icon: null });
   }, [setPageInfo, currentYear]);
-
-  // Financial Metrics calculation (EBITDA)
-  const financialMetrics = useMemo(() => {
-    if (!incomeRows || !budgetRows) return null;
-
-    const incomes = groupDataByYear(incomeRows);
-    const budgets = groupBudgetsByYear(budgetRows);
-
-    const currentIncome = incomes.find(d => d.year === currentYear) as any || {};
-    const currentBudget = budgets.find(d => d.year === currentYear) as any || {};
-
-    const realEbitda = currentIncome['A.1.TOT'] || 0;
-    const budgetEbitda = (currentBudget['A.1'] || 0) 
-                       - Math.abs((currentBudget['A.4'] || 0) + (currentBudget['A.7'] || 0)) 
-                       - Math.abs(currentBudget['A.6'] || 0);
-    const ebitdaDeviation = budgetEbitda !== 0 ? ((realEbitda / budgetEbitda) - 1) * 100 : 0;
-
-    return { realEbitda, budgetEbitda, ebitdaDeviation };
-  }, [incomeRows, budgetRows, currentYear]);
 
   // Chart Data Formatting (Accumulated YTD)
   const chartData = useMemo(() => {
@@ -120,7 +89,7 @@ export const FinancialDashboard: React.FC = () => {
     return { totalAnnualBudget, pctAchievement };
   }, [chartData, salesPerf]);
 
-  const isLoading = iLoading || bLoading || pLoading || eLoading;
+  const isLoading = pLoading || eLoading;
 
   if (isLoading) return (
     <div className="flex flex-col gap-6 p-4 animate-pulse">
