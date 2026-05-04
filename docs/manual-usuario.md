@@ -30,6 +30,7 @@ El Dashboard es el centro de monitorización en tiempo real del cumplimiento de 
 - **Ventas Cierre Est.**: Muestra la previsión de ventas a final de año. Si existe un presupuesto cargado para 2026, toma el valor objetivo del presupuesto.
 - **EBITDA Cierre Est.**: Resultado operativo proyectado antes de amortizaciones. Se calcula cruzando el presupuesto de ventas con el de gastos.
 - **Ventas YTD vs Ppto YTD (Actualizado)**: Compara las **Ventas Reales YTD** (lo facturado hasta hoy) contra el **Presupuesto Acumulado (YTD)**. A diferencia de la versión anterior, este KPI ahora muestra ambos valores con el mismo tamaño de letra para una comparativa directa y equilibrada del cumplimiento de objetivos a fecha actual.
+- **Objetivo Anual (Velocímetro)**: Nuevo gráfico circular que indica el porcentaje de cumplimiento del objetivo total de facturación para el año completo. La aguja en forma de flecha señala la posición actual, facilitando la visión de cuánto falta para completar la meta anual.
 - **Evolución Ventas vs Presupuesto (Actualizado)**: Gráfico de área que muestra la comparativa **acumulada (YTD)** mensual. Permite visualizar tres líneas críticas: las ventas del año actual (en verde), las del año anterior (en índigo) y el presupuesto objetivo (línea discontinua). Esto facilita detectar si el crecimiento es orgánico respecto al ejercicio pasado.
 
 ## 2. Módulo de Finanzas

@@ -19,7 +19,7 @@ import { InfoPopover } from '../../../components/ui/InfoPopover';
 import { useUIStore } from '../../../store/uiStore';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer 
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
 
 export const FinancialDashboard: React.FC = () => {
@@ -111,6 +111,15 @@ export const FinancialDashboard: React.FC = () => {
     });
   }, [evolution]);
 
+  const annualStats = useMemo(() => {
+    if (!chartData || chartData.length === 0) return { totalAnnualBudget: 0, pctAchievement: 0 };
+    const lastItem = chartData[chartData.length - 1];
+    const totalAnnualBudget = lastItem.Objetivo;
+    const currentSales = salesPerf?.kpis?.ventas || 0;
+    const pctAchievement = totalAnnualBudget > 0 ? (currentSales / totalAnnualBudget) * 100 : 0;
+    return { totalAnnualBudget, pctAchievement };
+  }, [chartData, salesPerf]);
+
   const isLoading = iLoading || bLoading || pLoading || eLoading;
 
   if (isLoading) return (
@@ -128,7 +137,7 @@ export const FinancialDashboard: React.FC = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
       
       {/* Top KPIs Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <KPICard 
           title="Ventas YTD vs Ppto YTD" 
           value={kpis?.ventas || 0} 
@@ -143,6 +152,21 @@ export const FinancialDashboard: React.FC = () => {
             formulas: "Ventas YTD vs Presupuesto YTD"
           }}
         />
+        
+        {/* Speedometer KPI */}
+        <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
+          <div className="absolute top-4 left-6 flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Anual</span>
+          </div>
+          <div className="w-full h-32 mt-4">
+            <GaugeChart value={annualStats.pctAchievement} />
+          </div>
+          <div className="text-center mt-2">
+            <span className="text-2xl font-bold text-dts-primary dark:text-white">{annualStats.pctAchievement.toFixed(1)}%</span>
+            <p className="text-[10px] text-gray-400 uppercase font-medium tracking-tighter">de consecución anual</p>
+          </div>
+        </div>
+
         <KPICard 
           title="Cartera de Pedidos" 
           value={kpis?.carteraVentas || 0} 
@@ -368,6 +392,67 @@ const KPICard = ({ title, value, subValue, accountValue, deviation, type = 'numb
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const GaugeChart = ({ value }: { value: number }) => {
+  const normalizedValue = Math.min(Math.max(value, 0), 100);
+  const data = [
+    { value: normalizedValue, color: '#22C55E' },
+    { value: 100 - normalizedValue, color: '#E5E7EB' },
+  ];
+  
+  // En modo oscuro usamos un gris más oscuro para el fondo del gauge
+  const isDark = document.documentElement.classList.contains('dark');
+  if (isDark) data[1].color = '#1F2937';
+
+  // Determinamos el color según el porcentaje
+  if (normalizedValue < 40) data[0].color = '#EF4444'; // Rojo
+  else if (normalizedValue < 75) data[0].color = '#3B82F6'; // Azul
+  else data[0].color = '#22C55E'; // Verde
+
+  return (
+    <div className="relative w-full h-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="100%"
+            startAngle={180}
+            endAngle={0}
+            innerRadius="65%"
+            outerRadius="100%"
+            paddingAngle={0}
+            dataKey="value"
+            stroke="none"
+            animationDuration={1500}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      
+      {/* Needle Indicator (Arrow Shape) */}
+      <div 
+        className="absolute bottom-0 left-1/2 w-4 h-[85%] origin-bottom transition-transform duration-1000 ease-out z-20"
+        style={{ 
+          transform: `translateX(-50%) rotate(${(normalizedValue * 1.8) - 90}deg)`,
+        }}
+      >
+        <div 
+          className="w-full h-full bg-dts-primary dark:bg-dts-secondary shadow-lg"
+          style={{ 
+            clipPath: 'polygon(50% 0%, 35% 100%, 65% 100%)' 
+          }}
+        />
+      </div>
+      
+      {/* Center dot */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-4 h-4 bg-dts-primary dark:bg-white rounded-full border-2 border-white dark:border-surface-dark shadow-lg z-10" />
     </div>
   );
 };
