@@ -158,11 +158,11 @@ export const FinancialDashboard: React.FC = () => {
           <div className="absolute top-4 left-6 flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
             <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Anual</span>
           </div>
-          <div className="w-full h-32 mt-4">
+          <div className="w-full h-24 mt-4">
             <GaugeChart value={annualStats.pctAchievement} />
           </div>
           <div className="text-center mt-2">
-            <span className="text-2xl font-bold text-dts-primary dark:text-white">{annualStats.pctAchievement.toFixed(1)}%</span>
+            <span className="text-2xl font-light text-dts-primary dark:text-white">{annualStats.pctAchievement.toFixed(1)}%</span>
           </div>
         </div>
 
