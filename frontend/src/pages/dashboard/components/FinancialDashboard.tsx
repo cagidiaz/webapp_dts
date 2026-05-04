@@ -106,7 +106,7 @@ export const FinancialDashboard: React.FC = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
       
       {/* Top KPIs Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <KPICard 
           title="Ventas YTD vs Ppto YTD" 
           value={kpis?.ventas || 0} 
@@ -136,27 +136,18 @@ export const FinancialDashboard: React.FC = () => {
         </div>
 
         <KPICard 
-          title="Cartera de Pedidos" 
+          title="CARTERA Y PENDIENTES" 
           value={kpis?.carteraVentas || 0} 
-          accountValue={kpis?.carteraVentasAccounts || 0}
+          subValue={kpis?.enviadosFacturar || 0}
           type="currency" 
           icon={Package} 
           color="emerald"
+          variant="comparison"
+          label1="CARTE:"
+          label2="PEND:"
           infoProps={{
-            description: "Valor total de los pedidos abiertos pendientes de procesar. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
-            formulas: "Suma(Cantidad Pendiente * Precio Unitario)"
-          }}
-        />
-        <KPICard 
-          title="Pend. de Facturar" 
-          value={kpis?.enviadosFacturar || 0} 
-          accountValue={kpis?.enviadosFacturarAccounts || 0}
-          type="currency" 
-          icon={Clock} 
-          color="amber"
-          infoProps={{
-            description: "Mercancía que ya ha sido enviada al cliente pero que aún no ha sido facturada oficialmente. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
-            formulas: "Suma(Cant. Enviada No Facturada * Precio Unitario)"
+            description: "Resumen de cartera (pedidos abiertos) y pendientes de facturar (mercancía ya enviada).",
+            formulas: "Suma(Cartera) | Suma(Pendientes Factura)"
           }}
         />
         <KPICard 
@@ -336,18 +327,18 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, deviation, 
       {variant === 'comparison' ? (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 w-8">{label1}</span>
+            <span className="text-[10px] font-bold text-gray-400 w-12">{label1}</span>
             <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 w-8">{label2}</span>
+            <span className="text-[10px] font-bold text-gray-400 w-12">{label2}</span>
             <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">
               {label2 === 'TOTAL:' || label2 === 'CANT:' ? `${subValue}${suffix}` : formattedSubValue}
             </div>
           </div>
           {extraValue !== undefined && (
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-gray-400 w-8">{label3}</span>
+              <span className="text-[10px] font-bold text-gray-400 w-12">{label3}</span>
               <div className="text-2xl font-light text-red-400 tracking-tight">
                 {extraValue}{suffix}
               </div>
