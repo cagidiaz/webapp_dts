@@ -2,17 +2,32 @@ import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { UpdatesModal } from './UpdatesModal';
 import { useUIStore } from '../../store/uiStore';
+import { useUpdatesStore } from '../../store/updatesStore';
+import { useAuthStore } from '../../store/authStore';
 
 export const MainLayout: React.FC = () => {
   const { theme } = useUIStore();
+  const { fetchUpdates } = useUpdatesStore();
+  const { profile } = useAuthStore();
 
   useEffect(() => {
     document.documentElement.className = theme;
   }, [theme]);
 
+  useEffect(() => {
+    const role = profile?.roles?.name;
+    if (role) {
+      fetchUpdates(role);
+    } else {
+      fetchUpdates();
+    }
+  }, [fetchUpdates, profile]);
+
   return (
     <div className="min-h-screen flex transition-colors duration-300">
+      <UpdatesModal />
       <Sidebar />
       <TopBar />
       <main 

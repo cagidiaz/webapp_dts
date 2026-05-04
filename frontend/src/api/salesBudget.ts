@@ -46,6 +46,7 @@ export interface SalesBudgetPerformanceResponse {
 export interface SalesBudgetEvolutionRow {
   month: number;
   ventas: number;
+  ventasAnterior: number;
   objetivo: number;
 }
 

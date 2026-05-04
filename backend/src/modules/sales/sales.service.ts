@@ -478,7 +478,10 @@ export class SalesService {
       budgetWhere.item_no = { in: itemNos };
     }
 
-    const [salesByDay, budgetsByDay] = await Promise.all([
+    const prevYearStartDate = new Date(year - 1, 0, 1);
+    const prevYearEndDate = new Date(year - 1, 11, 31, 23, 59, 59);
+
+    const [salesByDay, budgetsByDay, prevYearSalesByDay] = await Promise.all([
       this.prisma.value_entries.groupBy({
         by: ['reg_date'],
         _sum: { sales_amount: true },
@@ -488,12 +491,21 @@ export class SalesService {
         by: ['budget_date'],
         _sum: { monthly_budget: true },
         where: budgetWhere,
+      }),
+      this.prisma.value_entries.groupBy({
+        by: ['reg_date'],
+        _sum: { sales_amount: true },
+        where: {
+          ...salesWhere,
+          reg_date: { gte: prevYearStartDate, lte: prevYearEndDate }
+        },
       })
     ]);
 
     const monthsData = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
       ventas: 0,
+      ventasAnterior: 0,
       objetivo: 0
     }));
 
@@ -511,6 +523,12 @@ export class SalesService {
       monthsData[m].objetivo += budget._sum.monthly_budget ? Number(budget._sum.monthly_budget) : 0;
     });
 
+    prevYearSalesByDay.forEach(sale => {
+      if (!sale.reg_date) return;
+      const d = new Date(sale.reg_date);
+      const m = d.getMonth();
+      monthsData[m].ventasAnterior += sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
+    });
 
     return monthsData;
   }

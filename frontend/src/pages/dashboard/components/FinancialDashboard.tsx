@@ -81,15 +81,32 @@ export const FinancialDashboard: React.FC = () => {
     return { realEbitda, budgetEbitda, ebitdaDeviation };
   }, [incomeRows, budgetRows, currentYear]);
 
-  // Chart Data Formatting
+  // Chart Data Formatting (Accumulated YTD)
   const chartData = useMemo(() => {
     if (!evolution) return [];
     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    return evolution.map(item => ({
-      name: monthNames[item.month - 1],
-      Ventas: item.ventas,
-      Objetivo: item.objetivo
-    }));
+    const currentMonth = new Date().getMonth() + 1;
+    
+    let accVentas = 0;
+    let accObjetivo = 0;
+    let accVentasAnterior = 0;
+
+    return evolution.map(item => {
+      accObjetivo += item.objetivo;
+      accVentasAnterior += (item.ventasAnterior || 0);
+      
+      // Solo acumulamos ventas actuales hasta el mes actual
+      if (item.month <= currentMonth) {
+        accVentas += item.ventas;
+      }
+
+      return {
+        name: monthNames[item.month - 1],
+        Ventas: item.month <= currentMonth ? accVentas : null,
+        'Año Anterior': accVentasAnterior,
+        Objetivo: accObjetivo
+      };
+    });
   }, [evolution]);
 
   const isLoading = iLoading || bLoading || pLoading || eLoading;
@@ -171,7 +188,8 @@ export const FinancialDashboard: React.FC = () => {
               <p className="text-xs text-gray-400 mt-1 uppercase tracking-wider font-medium">Comparativa mensual acumulada (€)</p>
             </div>
             <div className="flex items-center gap-4 text-xs font-medium">
-              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500"></span> <span>Real</span></div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500"></span> <span>Actual</span></div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-indigo-300"></span> <span>Anterior</span></div>
               <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700"></span> <span>Ppto</span></div>
             </div>
           </div>
@@ -180,8 +198,12 @@ export const FinancialDashboard: React.FC = () => {
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#22C55E" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#22C55E" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorPrev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#818CF8" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#818CF8" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
@@ -208,13 +230,23 @@ export const FinancialDashboard: React.FC = () => {
                   }}
                   itemStyle={{ fontSize: '12px' }}
                   labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
-                  formatter={(value: any) => [formatCurrency(Number(value || 0)), '']}
+                  formatter={(value: any, name: string) => [formatCurrency(Number(value || 0)), name]}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="Año Anterior" 
+                  stroke="#818CF8" 
+                  strokeWidth={2} 
+                  fillOpacity={1} 
+                  fill="url(#colorPrev)" 
+                  animationDuration={1500}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="Ventas" 
-                  stroke="#3B82F6" 
-                  strokeWidth={3} 
+                  name="Año Actual"
+                  stroke="#22C55E" 
+                  strokeWidth={2} 
                   fillOpacity={1} 
                   fill="url(#colorSales)" 
                   animationDuration={2000}
