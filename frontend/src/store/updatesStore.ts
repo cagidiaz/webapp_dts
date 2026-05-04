@@ -28,7 +28,6 @@ interface UpdatesState {
 }
 
 const GITHUB_REPO = 'cagidiaz/webapp_dts';
-const API_URL = `https://api.github.com/repos/${GITHUB_REPO}/commits?sha=main&per_page=10`;
 
 export const useUpdatesStore = create<UpdatesState>()(
   persist(

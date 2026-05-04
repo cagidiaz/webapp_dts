@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useUpdatesStore } from '../../store/updatesStore';
 import { X, Sparkles, Github, ExternalLink } from 'lucide-react';
 

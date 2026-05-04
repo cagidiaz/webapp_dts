@@ -230,7 +230,7 @@ export const FinancialDashboard: React.FC = () => {
                   }}
                   itemStyle={{ fontSize: '12px' }}
                   labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
-                  formatter={(value: any, name: string) => [formatCurrency(Number(value || 0)), name]}
+                  formatter={(value: any, name?: string) => [formatCurrency(Number(value || 0)), name || '']}
                 />
                 <Area 
                   type="monotone" 
