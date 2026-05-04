@@ -163,7 +163,6 @@ export const FinancialDashboard: React.FC = () => {
           </div>
           <div className="text-center mt-2">
             <span className="text-2xl font-bold text-dts-primary dark:text-white">{annualStats.pctAchievement.toFixed(1)}%</span>
-            <p className="text-[10px] text-gray-400 uppercase font-medium tracking-tighter">de consecución anual</p>
           </div>
         </div>
 
@@ -414,6 +413,32 @@ const GaugeChart = ({ value }: { value: number }) => {
 
   return (
     <div className="relative w-full h-full">
+      {/* Semicircle Track for Ticks */}
+      <div 
+        className="absolute left-1/2 -translate-x-1/2 aspect-square h-[170%] border border-gray-200 dark:border-white/20 rounded-full pointer-events-none z-0"
+        style={{ 
+          bottom: '-85%',
+          clipPath: 'inset(0 0 50% 0)' 
+        }}
+      />
+
+      {/* Ticks and Labels */}
+      {[0, 25, 50, 75, 100].map((tick) => (
+        <div 
+          key={tick}
+          className="absolute bottom-0 left-1/2 w-px h-[85%] origin-bottom pointer-events-none z-10"
+          style={{ transform: `translateX(-50%) rotate(${(tick * 1.8) - 90}deg)` }}
+        >
+          <div className="w-full h-1 bg-gray-400 dark:bg-gray-500 opacity-50" />
+          <div 
+            className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[7px] font-black text-gray-500 dark:text-gray-400"
+            style={{ transform: `translateX(-50%) rotate(${-( (tick * 1.8) - 90 )}deg)` }}
+          >
+            {tick}%
+          </div>
+        </div>
+      ))}
+
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
