@@ -12,8 +12,8 @@ import {
 } from '../../../api/salesBudget';
 import { formatCurrency } from '../../../api/formatters';
 import { 
-  TrendingUp, TrendingDown, BarChart2, 
-  Package, Euro, Clock, AlertCircle, CheckCircle2 
+  TrendingUp, TrendingDown, BarChart2,
+  Package, Euro, Clock, AlertCircle, CheckCircle2, UserPlus 
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui/InfoPopover';
 import { useUIStore } from '../../../store/uiStore';
@@ -191,16 +191,21 @@ export const FinancialDashboard: React.FC = () => {
           }}
         />
         <KPICard 
-          title="EBITDA Est." 
-          value={financialMetrics?.realEbitda || 0} 
-          subValue={financialMetrics?.budgetEbitda || 0}
-          deviation={financialMetrics?.ebitdaDeviation || 0}
+          title="CLIENTES NUEVOS" 
+          value={kpis?.facturacionNuevos || 0} 
+          subValue={kpis?.countNuevos || 0}
+          extraValue={kpis?.countNuevosSinVenta || 0}
+          suffix=" clientes"
           type="currency" 
-          icon={TrendingUp} 
+          icon={UserPlus} 
           color="indigo"
+          variant="comparison"
+          label1="FACT:"
+          label2="TOTAL:"
+          label3="S/VTA:"
           infoProps={{
-            description: "Resultado operativo estimado (extrapolado) antes de intereses, impuestos y amortizaciones.",
-            formulas: "Margen Bruto - Gastos de Personal - Otros Gastos Explotación"
+            description: "Facturación acumulada de clientes creados en el ejercicio actual, número total de dichos clientes y cuántos de ellos aún no han realizado compras.",
+            formulas: "Suma(Ventas Clientes Nuevos) | Contar(Clientes Nuevos) | Clientes sin Venta"
           }}
         />
       </div>
@@ -311,9 +316,9 @@ export const FinancialDashboard: React.FC = () => {
                 message={`Disponemos de ${formatCurrency(kpis?.carteraVentas || 0)} en cartera pendientes de procesar.`}
               />
               <InsightItem 
-                title="Eficiencia Operativa" 
-                status={financialMetrics?.ebitdaDeviation && financialMetrics.ebitdaDeviation >= 0 ? 'success' : 'danger'}
-                message={`El EBITDA proyectado está un ${Math.abs(financialMetrics?.ebitdaDeviation || 0).toFixed(1)}% ${financialMetrics?.ebitdaDeviation && financialMetrics.ebitdaDeviation >= 0 ? 'por encima' : 'por debajo'} de lo esperado.`}
+                title="Nuevos Clientes" 
+                status="info"
+                message={`Se han incorporado ${kpis?.countNuevos || 0} clientes nuevos este año, aportando ${formatCurrency(kpis?.facturacionNuevos || 0)}.`}
               />
             </div>
           </div>
@@ -336,7 +341,7 @@ export const FinancialDashboard: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, subValue, accountValue, deviation, type = 'number', icon: Icon, color, infoProps, variant }: any) => {
+const KPICard = ({ title, value, subValue, extraValue, accountValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "" }: any) => {
   const colorMap: any = {
     blue: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
     emerald: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20',
@@ -362,14 +367,24 @@ const KPICard = ({ title, value, subValue, accountValue, deviation, type = 'numb
       {variant === 'comparison' ? (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 w-8">REAL:</span>
+            <span className="text-[10px] font-bold text-gray-400 w-8">{label1}</span>
             <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 w-8">PPTO:</span>
-            <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">{formattedSubValue}</div>
+            <span className="text-[10px] font-bold text-gray-400 w-8">{label2}</span>
+            <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">
+              {label2 === 'TOTAL:' || label2 === 'CANT:' ? `${subValue}${suffix}` : formattedSubValue}
+            </div>
           </div>
-        </div>
+          {extraValue !== undefined && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-gray-400 w-8">{label3}</span>
+              <div className="text-2xl font-light text-red-400 tracking-tight">
+                {extraValue}{suffix}
+              </div>
+            </div>
+          )}
+          </div>
       ) : (
         <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
       )}

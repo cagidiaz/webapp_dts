@@ -3,27 +3,20 @@
 ## Cambios Realizados
 
 ### 1. Sistema de Notificaciones de Actualizaciones
-Se ha implementado un sistema robusto para informar a los usuarios sobre los cambios en la plataforma directamente desde los commits de GitHub.
-- **Store de Estado (`updatesStore.ts`)**: Gestiona la obtención de datos de la API de GitHub y el seguimiento de actualizaciones vistas.
-- **Filtrado por Roles**: Soporte para etiquetas en los mensajes de commit.
-- **UI Integrada**: Ventana emergente y panel en el icono de la campana.
+- **Notificaciones GitHub**: Sistema que lee los commits de la rama `main` y avisa a los usuarios según su rol.
+- **UI**: Ventana emergente al inicio y panel histórico en la campana.
 
-### 2. Mejora en Gráfico de Evolución de Ventas
-- **Acumulación YTD**: Datos de ventas y presupuesto acumulados mensualmente.
-- **Comparativa Interanual**: Inclusión de la serie "Año Anterior".
-- **Identidad Visual**: Verde vibrante (`#22C55E`) para el año actual.
+### 2. Dashboard Ejecutivo - Evolución y KPIs
+- **Gráfico de Ventas YTD**: Rediseño acumulado con comparativa interanual.
+- **KPI Ventas vs Presupuesto**: Actualizado a modelo YTD (Real vs Ppto Acumulado) con diseño equilibrado.
+- **Velocímetro de Objetivo**: Gráfico de precisión con aguja en flecha y marcas de porcentaje.
 
-### 3. Ajuste en KPI de Ventas (YTD vs Ppto YTD)
-- El KPI ahora compara el real acumulado contra el presupuesto acumulado (YTD).
-- Diseño equilibrado con fuentes del mismo tamaño para ambos valores.
-
-### 4. KPI de Velocímetro (Objetivo Anual)
-- Nuevo componente `GaugeChart` de alta precisión.
-- **Aguja de Flecha**: Indicador dinámico animado por CSS.
-- **Escala Graduada**: Marcas de porcentaje cada 25% y etiquetas numéricas integradas.
-- **Guía de Seguimiento**: Línea semicircular sutil que conecta los porcentajes.
-- **Semáforo Dinámico**: Cambio de color (Rojo/Azul/Verde) según el éxito.
+### 3. Nuevo KPI: CLIENTES NUEVOS (Sustituye a EBITDA)
+Se ha sustituido el indicador de EBITDA por un panel de control de captación que incluye:
+- **FACT**: Facturación total de clientes creados en 2026.
+- **TOTAL**: Número total de clientes nuevos registrados este año.
+- **S/VTA**: Recuento de clientes nuevos que aún no han realizado su primera compra (marcado en rojo).
 
 ---
 **Mensaje de Commit utilizado:** 
-`[GLOBAL] Finalización de velocímetro de precisión y documentación de KPIs ejecutivos`
+`[GLOBAL] Implementación final de KPI Clientes Nuevos y refinamiento del Dashboard Ejecutivo`

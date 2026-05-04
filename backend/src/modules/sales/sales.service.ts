@@ -272,6 +272,20 @@ export class SalesService {
       .filter(r => r.isNew)
       .reduce((acc, curr) => acc + curr.facturacion, 0);
 
+    // Cantidad real de clientes creados en el año actual (independientemente de si tienen ventas)
+    const countNewClients = await this.prisma.customers.count({
+      where: {
+        created_at: {
+          gte: startDate,
+          lte: endDate
+        },
+        ...(salespersonCode ? { salesperson_code: salespersonCode } : {})
+      }
+    });
+
+    const countNewClientsWithSales = results.filter(r => r.isNew && r.facturacion > 0).length;
+    const countNewClientsNoSales = countNewClients - countNewClientsWithSales;
+
     // Buscamos o inyectamos la fila 99999999
     let placeholderIndex = results.findIndex(r => r.customerCode === '99999999');
     
@@ -414,6 +428,8 @@ export class SalesService {
         enviadosFacturar: totalEnviadoNoFacturado,
         enviadosFacturarAccounts: totalEnviadoNoFacturadoAccounts,
         facturacionNuevos: totalNewClientsSales,
+        countNuevos: countNewClients,
+        countNuevosSinVenta: countNewClientsNoSales,
         facturacionAnioAnterior: totalPrevYear,
       },
 

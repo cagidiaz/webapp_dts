@@ -24,6 +24,9 @@ export interface SalesBudgetPerformanceKPIs {
   carteraVentasAccounts: number;
   enviadosFacturar: number;
   enviadosFacturarAccounts: number;
+  facturacionNuevos: number;
+  countNuevos: number;
+  countNuevosSinVenta: number;
 }
 
 export interface SalesBudgetPerformanceDataRow {
