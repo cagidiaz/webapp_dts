@@ -8,7 +8,7 @@ import {
 import { formatCurrency } from '../../../api/formatters';
 import { 
   TrendingUp, TrendingDown, BarChart2,
-  Package, Euro, Clock, AlertCircle, CheckCircle2, UserPlus 
+  Package, Euro, AlertCircle, CheckCircle2, UserPlus 
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui/InfoPopover';
 import { useUIStore } from '../../../store/uiStore';
@@ -106,7 +106,7 @@ export const FinancialDashboard: React.FC = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
       
       {/* Top KPIs Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <KPICard 
           title="Ventas YTD vs Ppto YTD" 
           value={kpis?.ventas || 0} 
@@ -119,6 +119,24 @@ export const FinancialDashboard: React.FC = () => {
           infoProps={{
             description: "Comparativa de facturación real acumulada frente al presupuesto acumulado a fecha de hoy.",
             formulas: "Ventas YTD vs Presupuesto YTD"
+          }}
+        />
+        <KPICard 
+          title="VENTAS ACTUAL VS ANTERIOR" 
+          value={kpis?.ventas || 0} 
+          subValue={kpis?.facturacionAnioAnterior || 0}
+          deviation={kpis?.facturacionAnioAnterior && kpis.facturacionAnioAnterior > 0 
+            ? ((kpis.ventas - kpis.facturacionAnioAnterior) / kpis.facturacionAnioAnterior) * 100 
+            : 0}
+          type="currency" 
+          icon={BarChart2} 
+          color="indigo"
+          variant="comparison"
+          label1="2026:"
+          label2="2025:"
+          infoProps={{
+            description: "Comparativa de facturación acumulada (YTD) frente al mismo periodo del año anterior.",
+            formulas: "Ventas Actuales vs Ventas Año Anterior (Mismo periodo)"
           }}
         />
         
