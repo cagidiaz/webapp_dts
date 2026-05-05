@@ -379,9 +379,10 @@ export class SalesService {
     const ordersRaw = await this.prisma.sales_orders.findMany({
       where: ordersWhere,
       select: { 
+        quantity: true,
         outstanding_quantity: true, 
         qty_shipped_not_invoiced: true, 
-        unit_price: true,
+        line_amount: true,
         type: true
       },
     });
@@ -393,13 +394,21 @@ export class SalesService {
 
     if (ordersRaw && ordersRaw.length > 0) {
       for (const order of ordersRaw) {
-        const price = Number(order.unit_price) || 0;
+        const totalQty = Number(order.quantity) || 0;
+        const lineAmount = Number(order.line_amount) || 0;
+        
+        // Calculamos el precio efectivo (neto) para incluir descuentos
+        const effectivePrice = totalQty > 0 ? (lineAmount / totalQty) : 0;
+        
+        // Si el precio efectivo es 0, ignoramos la línea según lo solicitado
+        if (effectivePrice === 0) continue;
+
         const outstanding = Number(order.outstanding_quantity) || 0;
         const shippedNotInv = Number(order.qty_shipped_not_invoiced) || 0;
         const isAccount = order.type === 'G/L Account';
 
-        const lineCartera = (outstanding * price);
-        const lineShippedNotInv = (shippedNotInv * price);
+        const lineCartera = (outstanding * effectivePrice);
+        const lineShippedNotInv = (shippedNotInv * effectivePrice);
 
         totalCartera += lineCartera;
         if (isAccount) totalCarteraAccounts += lineCartera;
@@ -868,7 +877,13 @@ export class SalesService {
 
     const ordersRaw = await this.prisma.sales_orders.findMany({
       where: ordersWhere,
-      select: { outstanding_quantity: true, qty_shipped_not_invoiced: true, unit_price: true, type: true },
+      select: { 
+        quantity: true,
+        outstanding_quantity: true, 
+        qty_shipped_not_invoiced: true, 
+        line_amount: true, 
+        type: true 
+      },
     });
 
     let totalCartera = 0;
@@ -877,10 +892,15 @@ export class SalesService {
     let totalEnviadoNoFacturadoAccounts = 0;
 
     for (const order of ordersRaw) {
-      const price = Number(order.unit_price) || 0;
+      const totalQty = Number(order.quantity) || 0;
+      const lineAmount = Number(order.line_amount) || 0;
+      const effectivePrice = totalQty > 0 ? (lineAmount / totalQty) : 0;
+      
+      if (effectivePrice === 0) continue;
+
       const isAccount = order.type === 'G/L Account';
-      const lineCartera = (Number(order.outstanding_quantity) || 0) * price;
-      const lineShippedNotInv = (Number(order.qty_shipped_not_invoiced) || 0) * price;
+      const lineCartera = (Number(order.outstanding_quantity) || 0) * effectivePrice;
+      const lineShippedNotInv = (Number(order.qty_shipped_not_invoiced) || 0) * effectivePrice;
 
       totalCartera += lineCartera;
       if (isAccount) totalCarteraAccounts += lineCartera;

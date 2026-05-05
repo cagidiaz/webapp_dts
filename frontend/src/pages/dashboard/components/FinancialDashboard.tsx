@@ -161,6 +161,8 @@ export const FinancialDashboard: React.FC = () => {
           title="CARTERA DE PEDIDOS" 
           value={kpis?.carteraVentas || 0} 
           subValue={kpis?.enviadosFacturar || 0}
+          accountValue={kpis?.carteraVentasAccounts}
+          accountSubValue={kpis?.enviadosFacturarAccounts}
           type="currency" 
           icon={Package} 
           color="emerald"
@@ -323,7 +325,7 @@ export const FinancialDashboard: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, subValue, extraValue, accountValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "" }: any) => {
+const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "" }: any) => {
   const colorMap: any = {
     blue: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
     emerald: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20',
@@ -350,12 +352,28 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, deviation, 
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-gray-400 w-12">{label1}</span>
-            <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+            <div className="flex flex-col">
+              <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">
+                {formattedValue}
+              </div>
+              {accountValue !== undefined && accountValue > 0 && (
+                <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
+                  ({formatCurrency(accountValue, 0)})
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-gray-400 w-12">{label2}</span>
-            <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">
-              {label2 === 'TOTAL:' || label2 === 'CANT:' ? `${subValue}${suffix}` : formattedSubValue}
+            <div className="flex flex-col">
+              <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">
+                {label2 === 'TOTAL:' || label2 === 'CANT:' ? `${subValue}${suffix}` : formattedSubValue}
+              </div>
+              {accountSubValue !== undefined && accountSubValue > 0 && (
+                <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
+                  ({formatCurrency(accountSubValue, 0)})
+                </span>
+              )}
             </div>
           </div>
           {extraValue !== undefined && (
@@ -371,11 +389,7 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, deviation, 
         <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
       )}
       
-      {accountValue !== undefined && accountValue > 0 && (
-        <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
-          ({formatCurrency(accountValue, 0)})
-        </div>
-      )}
+      {/* Deviation and Footer */}
 
       {deviation !== undefined && (
         <div className="mt-0.5 flex items-center justify-between pt-0">

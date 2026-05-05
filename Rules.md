@@ -84,11 +84,12 @@
 
 \#\#\# 5.2 Control de Versiones (Git) y Despliegue  
 \* \*\*Commits Semánticos:\*\* \`feat:\`, \`fix:\`, \`docs:\`, \`style:\`, etc.  
+\* \*\*Idioma de los Commits:\*\* \*\*TODOS\*\* los mensajes de commit deben redactarse en \*\*español\*\*, independientemente de su tipo.  
 \* \*\*Flujo de Pushes:\*\*  
     \* \*\*PROHIBIDO EL PUSH AUTOMÁTICO:\*\* Antigravity nunca debe realizar un \`git push\` de forma automática. Siempre debe esperar a que el usuario lo solicite explícitamente.  
 \* \*\*Registro de Actualizaciones (Novedades):\*\*  
-    \* Al realizar una actualización funcional o visual (no técnica), el mensaje del commit debe estar en \*\*español\*\* y ser descriptivo para el usuario final (ej. "Añadido nuevo KPI de Cartera de Pedidos").  
-    \* \*\*Filtrado:\*\* No incluir correcciones de errores técnicos (\`fix:\`) o cambios puramente de código en los mensajes que se mostrarán como novedades en la aplicación.  
+    \* El mensaje del commit para actualizaciones funcionales o visuales (\`feat:\`, \`style:\`) debe ser descriptivo para el usuario final (ej. "Añadido nuevo KPI de Cartera de Pedidos").  
+    \* \*\*Filtrado:\*\* Los commits técnicos (\`fix:\`, \`docs:\`, \`refactor:\`) no se mostrarán como novedades en la aplicación, pero deben estar igualmente en español.  
     \* \*\*Etiquetado por Rol:\*\* Si una funcionalidad es específica para un rol, usar corchetes al inicio: \`[ADMIN]\`, \`[SALES]\`, etc. (ej. "\[ADMIN\] Nueva gestión de usuarios").  
 \#\#\# 5.3 Implementación del Simulador  
 \* \*\*Paso 1:\*\* Crea primero la estructura de tablas para escenarios manuales.  

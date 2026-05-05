@@ -73,9 +73,10 @@ export class SalesOrdersService {
           where,
           select: {
             document_number: true,
+            quantity: true,
             outstanding_quantity: true,
             qty_shipped_not_invoiced: true,
-            unit_price: true,
+            line_amount: true,
             type: true,
           },
         }),
@@ -89,13 +90,18 @@ export class SalesOrdersService {
       const uniqueOrderNumbers = new Set<string>();
 
       allRelevantOrders.forEach(order => {
-        const price = Number(order.unit_price || 0);
+        const totalQty = Number(order.quantity || 0);
+        const lineAmount = Number(order.line_amount || 0);
+        const effectivePrice = totalQty > 0 ? (lineAmount / totalQty) : 0;
+        
+        if (effectivePrice === 0) return; // Equivalente a continue en forEach
+
         const outstanding = Number(order.outstanding_quantity || 0);
         const shippedNotInv = Number(order.qty_shipped_not_invoiced || 0);
         const isAccount = (order as any).type === 'G/L Account';
 
-        const lineCartera = (outstanding * price);
-        const lineShippedNotInv = (shippedNotInv * price);
+        const lineCartera = (outstanding * effectivePrice);
+        const lineShippedNotInv = (shippedNotInv * effectivePrice);
 
         totalCartera += lineCartera;
         if (isAccount) totalCarteraAccounts += lineCartera;
@@ -113,7 +119,12 @@ export class SalesOrdersService {
           totalOrders: uniqueOrderNumbers.size,
           totalAmount: totalCartera,
           totalAmountAccounts: totalCarteraAccounts,
-          totalOutstandingUnits: allRelevantOrders.reduce((acc, curr) => acc + Number(curr.outstanding_quantity || 0), 0),
+          totalOutstandingUnits: allRelevantOrders.reduce((acc, curr) => {
+            const totalQty = Number(curr.quantity || 0);
+            const lineAmount = Number(curr.line_amount || 0);
+            if (totalQty > 0 && (lineAmount / totalQty) === 0) return acc;
+            return acc + Number(curr.outstanding_quantity || 0);
+          }, 0),
           totalEnviadoNoFacturado: totalEnviadoNoFacturado,
           totalEnviadoNoFacturadoAccounts: totalEnviadoNoFacturadoAccounts,
         }
