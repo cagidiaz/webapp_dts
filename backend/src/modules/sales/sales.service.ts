@@ -94,10 +94,11 @@ export class SalesService {
     sortDir?: 'asc' | 'desc';
     take?: number;
     skip?: number;
+    limitToToday?: boolean;
   }) {
     const { 
       year, months, salespersonCode, familyCode, subfamilyCode, 
-      customerCode, search, sortBy, sortDir, take, skip 
+      customerCode, search, sortBy, sortDir, take, skip, limitToToday 
     } = filters;
 
 
@@ -113,11 +114,11 @@ export class SalesService {
       },
     };
 
-    const isCurrentYear = year === new Date().getFullYear();
+    const isTodayFilter = limitToToday || false;
 
     if (months && months.length > 0) {
       salesWhere.reg_date = {
-        in: await this.getDatesForMonths(year, months, isCurrentYear)
+        in: await this.getDatesForMonths(year, months, isTodayFilter)
       };
     }
     if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
@@ -148,7 +149,7 @@ export class SalesService {
     };
     if (months && months.length > 0) {
       budgetWhere.budget_date = {
-        in: await this.getDatesForMonths(year, months, isCurrentYear)
+        in: await this.getDatesForMonths(year, months, isTodayFilter)
       };
     }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
@@ -162,7 +163,7 @@ export class SalesService {
 
     // 3. Obtener sumatorios paralelos
     const prevYear = year - 1;
-    const prevYearDates = await this.getDatesForMonths(prevYear, months, isCurrentYear);
+    const prevYearDates = await this.getDatesForMonths(prevYear, months, isTodayFilter);
 
     const [salesRaw, budgetsRaw, prevYearSalesRaw] = await Promise.all([
       this.prisma.value_entries.groupBy({
@@ -630,10 +631,11 @@ export class SalesService {
     sortDir?: 'asc' | 'desc';
     take?: number;
     skip?: number;
+    limitToToday?: boolean;
   }) {
     const {
       year, months, salespersonCode, pmCode, familyCode, subfamilyCode,
-      search, sortBy, sortDir, take, skip
+      search, sortBy, sortDir, take, skip, limitToToday
     } = filters;
 
     const startDate = new Date(year, 0, 1);
@@ -667,9 +669,9 @@ export class SalesService {
       reg_date: { gte: startDate, lte: endDate },
     };
 
-    const isCurrentYear = year === new Date().getFullYear();
+    const isTodayFilter = limitToToday || false;
     if (months && months.length > 0) {
-      salesWhere.reg_date = { in: await this.getDatesForMonths(year, months, isCurrentYear) };
+      salesWhere.reg_date = { in: await this.getDatesForMonths(year, months, isTodayFilter) };
     }
     if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
     if (itemNos !== null) salesWhere.item_no = { in: itemNos };
@@ -679,14 +681,14 @@ export class SalesService {
       budget_date: { gte: startDate, lte: endDate },
     };
     if (months && months.length > 0) {
-      budgetWhere.budget_date = { in: await this.getDatesForMonths(year, months, isCurrentYear) };
+      budgetWhere.budget_date = { in: await this.getDatesForMonths(year, months, isTodayFilter) };
     }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
     if (itemNos !== null) budgetWhere.item_no = { in: itemNos };
 
     // 4. Obtener datos agrupados por cliente+producto en paralelo
     const prevYear = year - 1;
-    const prevYearDates = await this.getDatesForMonths(prevYear, months, isCurrentYear);
+    const prevYearDates = await this.getDatesForMonths(prevYear, months, isTodayFilter);
 
     const [salesRaw, budgetsRaw, prevYearSalesRaw] = await Promise.all([
       this.prisma.value_entries.groupBy({

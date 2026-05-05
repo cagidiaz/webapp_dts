@@ -29,7 +29,11 @@ export const FinancialDashboard: React.FC = () => {
   // 2. Fetch Sales Performance (for Sales, Backlog, Shipped not Invoiced)
   const { data: salesPerf, isLoading: pLoading } = useQuery({
     queryKey: ['salesPerf', currentYear, currentMonths],
-    queryFn: () => getSalesBudgetPerformance({ year: currentYear, months: currentMonths })
+    queryFn: () => getSalesBudgetPerformance({ 
+      year: currentYear, 
+      months: currentMonths,
+      limitToToday: true 
+    })
   });
 
   // 3. Fetch Sales Evolution (for the chart)

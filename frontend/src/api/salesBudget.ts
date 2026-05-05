@@ -13,6 +13,7 @@ export interface SalesBudgetPerformanceFilters {
 
   sortBy?: string;
   sortDir?: 'asc' | 'desc';
+  limitToToday?: boolean;
 }
 
 export interface SalesBudgetPerformanceKPIs {
@@ -78,6 +79,7 @@ export const getSalesBudgetPerformance = async (
   if (skip !== undefined) params.append('skip', String(skip));
   if (sortBy) params.append('sortBy', sortBy);
   if (sortDir) params.append('sortDir', sortDir);
+  if (filters.limitToToday) params.append('limitToToday', 'true');
 
 
   const response = await apiClient.get<SalesBudgetPerformanceResponse>(`/sales/budget-performance?${params.toString()}`);

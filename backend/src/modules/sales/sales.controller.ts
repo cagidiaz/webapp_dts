@@ -52,8 +52,10 @@ export class SalesController {
     @Query('sortDir') sortDir?: 'asc' | 'desc',
     @Query('take') take?: string,
     @Query('skip') skip?: string,
+    @Query('limitToToday') limitToToday?: string,
   ) {
     const targetYear = year ? Number(year) : new Date().getFullYear();
+    const isLimitToToday = limitToToday === 'true';
 
     let targetMonths;
     if (months) {
@@ -72,7 +74,8 @@ export class SalesController {
       sortBy,
       sortDir,
       take: take ? Number(take) : undefined,
-      skip: skip ? Number(skip) : undefined
+      skip: skip ? Number(skip) : undefined,
+      limitToToday: isLimitToToday
     });
   }
 
@@ -142,8 +145,10 @@ export class SalesController {
     @Query('sortDir') sortDir?: 'asc' | 'desc',
     @Query('take') take?: string,
     @Query('skip') skip?: string,
+    @Query('limitToToday') limitToToday?: string,
   ) {
     const targetYear = year ? Number(year) : new Date().getFullYear();
+    const isLimitToToday = limitToToday === 'true';
     let targetMonths;
     if (months) {
       targetMonths = months.split(',').map(m => Number(m.trim())).filter(m => !isNaN(m));
@@ -162,6 +167,7 @@ export class SalesController {
       sortDir,
       take: take ? Number(take) : undefined,
       skip: skip ? Number(skip) : undefined,
+      limitToToday: isLimitToToday,
     });
   }
 
