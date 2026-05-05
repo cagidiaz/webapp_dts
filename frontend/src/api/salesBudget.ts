@@ -27,6 +27,7 @@ export interface SalesBudgetPerformanceKPIs {
   facturacionNuevos: number;
   countNuevos: number;
   countNuevosSinVenta: number;
+  facturacionAnioAnterior: number;
 }
 
 export interface SalesBudgetPerformanceDataRow {
@@ -34,6 +35,7 @@ export interface SalesBudgetPerformanceDataRow {
   customerName: string;
   isNew?: boolean;
   facturacion: number;
+  facturacionAnioAnterior?: number;
   objetivo: number;
   desviacion: number;
   desviacionPorcentaje: number;
