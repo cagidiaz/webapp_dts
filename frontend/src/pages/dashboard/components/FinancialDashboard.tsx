@@ -378,12 +378,12 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, deviation, 
       )}
 
       {deviation !== undefined && (
-        <div className="mt-4 flex items-center justify-between border-t border-gray-50 dark:border-gray-800 pt-3">
+        <div className="mt-0.5 flex items-center justify-between pt-0">
           {variant !== 'comparison' && (
             <span className="text-[10px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>
           )}
-          <div className={`flex items-center gap-0.5 text-[10px] font-bold ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'} ${variant === 'comparison' ? 'ml-auto' : ''}`}>
-            {deviation >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+          <div className={`flex items-center gap-1 text-xl font-light ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'} ${variant === 'comparison' ? 'ml-auto' : ''}`}>
+            {deviation >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
             {deviation > 0 ? '+' : ''}{deviation.toFixed(1)}%
           </div>
         </div>
