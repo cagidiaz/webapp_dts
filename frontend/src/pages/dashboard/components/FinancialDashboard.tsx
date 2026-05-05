@@ -154,7 +154,7 @@ export const FinancialDashboard: React.FC = () => {
         </div>
 
         <KPICard 
-          title="CARTERA Y PENDIENTES" 
+          title="CARTERA DE PEDIDOS" 
           value={kpis?.carteraVentas || 0} 
           subValue={kpis?.enviadosFacturar || 0}
           type="currency" 
