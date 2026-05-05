@@ -143,7 +143,7 @@ export const FinancialDashboard: React.FC = () => {
         {/* Speedometer KPI */}
         <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
           <div className="absolute top-4 left-6 flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Anual</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Facturación Anual</span>
           </div>
           <div className="w-full h-24 mt-4">
             <GaugeChart value={annualStats.pctAchievement} />

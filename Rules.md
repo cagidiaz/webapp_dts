@@ -82,12 +82,14 @@
 \* \*\*Multistage Builds:\*\* Los \`Dockerfile\` deben separar la etapa de construcción (build) de la de ejecución para minimizar el tamaño de la imagen.  
 \* \*\*Variables de Entorno:\*\* Nunca hardcodear credenciales. Usar \`.env\` y proporcionar un \`.env.example\`.
 
-\#\#\# 5.2 Control de Versiones (Git)  
-\* \*\*Commits Semánticos:\*\* \* \`feat:\` para nuevas funcionalidades.  
-    \* \`fix:\` para corrección de errores.  
-    \* \`docs:\` para cambios en documentación.  
-    \* \`style:\` para cambios visuales que no afectan la lógica.
-
+\#\#\# 5.2 Control de Versiones (Git) y Despliegue  
+\* \*\*Commits Semánticos:\*\* \`feat:\`, \`fix:\`, \`docs:\`, \`style:\`, etc.  
+\* \*\*Flujo de Pushes:\*\*  
+    \* \*\*PROHIBIDO EL PUSH AUTOMÁTICO:\*\* Antigravity nunca debe realizar un \`git push\` de forma automática. Siempre debe esperar a que el usuario lo solicite explícitamente.  
+\* \*\*Registro de Actualizaciones (Novedades):\*\*  
+    \* Al realizar una actualización funcional o visual (no técnica), el mensaje del commit debe estar en \*\*español\*\* y ser descriptivo para el usuario final (ej. "Añadido nuevo KPI de Cartera de Pedidos").  
+    \* \*\*Filtrado:\*\* No incluir correcciones de errores técnicos (\`fix:\`) o cambios puramente de código en los mensajes que se mostrarán como novedades en la aplicación.  
+    \* \*\*Etiquetado por Rol:\*\* Si una funcionalidad es específica para un rol, usar corchetes al inicio: \`[ADMIN]\`, \`[SALES]\`, etc. (ej. "\[ADMIN\] Nueva gestión de usuarios").  
 \#\#\# 5.3 Implementación del Simulador  
 \* \*\*Paso 1:\*\* Crea primero la estructura de tablas para escenarios manuales.  
 \* \*\*Paso 2:\*\* Implementa la lógica de "Clonado de Escenario" (copiar líneas de un escenario a otro).  

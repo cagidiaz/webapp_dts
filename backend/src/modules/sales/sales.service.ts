@@ -113,15 +113,11 @@ export class SalesService {
       },
     };
 
+    const isCurrentYear = year === new Date().getFullYear();
+
     if (months && months.length > 0) {
-      // Si hay meses específicos, usamos una condición OR para las fechas o filtramos después.
-      // Pero Prisma no permite extraer el mes en el where fácilmente sin raw query.
-      // Sin embargo, podemos aproximar o filtrar por los rangos de esos meses.
-      // Para simplificar y mantener compatibilidad con groupBy,
-      // usaremos el campo reg_date con una lista de rangos si es necesario, 
-      // o mejor, aprovechamos que la tabla calendar existe pero la filtramos por fechas.
       salesWhere.reg_date = {
-        in: await this.getDatesForMonths(year, months)
+        in: await this.getDatesForMonths(year, months, isCurrentYear)
       };
     }
     if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
@@ -152,7 +148,7 @@ export class SalesService {
     };
     if (months && months.length > 0) {
       budgetWhere.budget_date = {
-        in: await this.getDatesForMonths(year, months)
+        in: await this.getDatesForMonths(year, months, isCurrentYear)
       };
     }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
@@ -166,7 +162,7 @@ export class SalesService {
 
     // 3. Obtener sumatorios paralelos
     const prevYear = year - 1;
-    const prevYearDates = await this.getDatesForMonths(prevYear, months);
+    const prevYearDates = await this.getDatesForMonths(prevYear, months, isCurrentYear);
 
     const [salesRaw, budgetsRaw, prevYearSalesRaw] = await Promise.all([
       this.prisma.value_entries.groupBy({
@@ -671,8 +667,9 @@ export class SalesService {
       reg_date: { gte: startDate, lte: endDate },
     };
 
+    const isCurrentYear = year === new Date().getFullYear();
     if (months && months.length > 0) {
-      salesWhere.reg_date = { in: await this.getDatesForMonths(year, months) };
+      salesWhere.reg_date = { in: await this.getDatesForMonths(year, months, isCurrentYear) };
     }
     if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
     if (itemNos !== null) salesWhere.item_no = { in: itemNos };
@@ -682,14 +679,14 @@ export class SalesService {
       budget_date: { gte: startDate, lte: endDate },
     };
     if (months && months.length > 0) {
-      budgetWhere.budget_date = { in: await this.getDatesForMonths(year, months) };
+      budgetWhere.budget_date = { in: await this.getDatesForMonths(year, months, isCurrentYear) };
     }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
     if (itemNos !== null) budgetWhere.item_no = { in: itemNos };
 
     // 4. Obtener datos agrupados por cliente+producto en paralelo
     const prevYear = year - 1;
-    const prevYearDates = await this.getDatesForMonths(prevYear, months);
+    const prevYearDates = await this.getDatesForMonths(prevYear, months, isCurrentYear);
 
     const [salesRaw, budgetsRaw, prevYearSalesRaw] = await Promise.all([
       this.prisma.value_entries.groupBy({
@@ -1024,11 +1021,29 @@ export class SalesService {
   /**
    * Obtiene las fechas correspondientes a los meses seleccionados de un año
    */
-  private async getDatesForMonths(year: number, months?: number[]) {
+  private async getDatesForMonths(year: number, months?: number[], limitToToday: boolean = false) {
     const where: any = { year };
     if (months && months.length > 0) {
       where.month = { in: months };
     }
+    
+    if (limitToToday) {
+      const today = new Date();
+      // Solo aplicamos el límite si el año de la consulta es <= año actual
+      if (year <= today.getFullYear()) {
+        const currentMonth = today.getMonth() + 1;
+        const currentDay = today.getDate();
+        
+        where.OR = [
+          { month: { lt: currentMonth } },
+          { 
+            month: currentMonth,
+            day: { lte: currentDay }
+          }
+        ];
+      }
+    }
+
     const dates = await this.prisma.calendar.findMany({
       where,
       select: { date: true }
