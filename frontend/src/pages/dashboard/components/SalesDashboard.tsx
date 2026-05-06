@@ -8,13 +8,14 @@ import {
 import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
   TrendingUp, Target, Activity, Users, Package, BarChart2,
-  TrendingDown
+  TrendingDown, Euro, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
 import { useUIStore } from '../../../store/uiStore';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell 
 } from 'recharts';
 import { useAuthStore } from '../../../store/authStore';
 
@@ -122,6 +123,30 @@ export const SalesDashboard: React.FC = () => {
     })
   });
 
+  // Global Queries (Total Company - Not affected by salesperson profile)
+  // We use EXACTLY the same query keys as the Executive Panel to match global data
+  const { data: globalPerf, isLoading: isLoadingGlobalPerf } = useQuery({
+    queryKey: ['salesPerf', year, initialMonths],
+    queryFn: () => getSalesBudgetPerformance({ 
+      year, 
+      months: initialMonths,
+      limitToToday: true 
+    })
+  });
+
+  const { data: globalEvol, isLoading: isLoadingGlobalEvol } = useQuery({
+    queryKey: ['salesEvolution', year],
+    queryFn: () => getSalesBudgetEvolution({ year })
+  });
+
+  const globalAnnualStats = React.useMemo(() => {
+    if (!globalEvol || globalEvol.length === 0) return { totalAnnualBudget: 0, pctAchievement: 0 };
+    const totalAnnualBudget = globalEvol.reduce((acc, curr) => acc + (curr.objetivo || 0), 0);
+    const currentSales = globalPerf?.kpis?.ventas || 0;
+    const pctAchievement = totalAnnualBudget > 0 ? (currentSales / totalAnnualBudget) * 100 : 0;
+    return { totalAnnualBudget, pctAchievement };
+  }, [globalEvol, globalPerf]);
+
   const annualTarget = React.useMemo(() => {
     return (evolutionData || []).reduce((acc, curr) => acc + (curr.objetivo || 0), 0);
   }, [evolutionData]);
@@ -140,7 +165,74 @@ export const SalesDashboard: React.FC = () => {
         onClose={() => setIsDrawerOpen(false)} 
         customerCode={selectedCustCode} 
       />
-      {/* Redundant local header removed */}
+      
+      {/* Global Company KPIs Section */}
+      <div className="bg-white dark:bg-surface-card-dark p-8 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
+
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <GlobalKPICard 
+            title="Ventas TTD vs Ppto YTD (Global)" 
+            value={globalPerf?.kpis?.ventas || 0} 
+            subValue={globalPerf?.kpis?.objetivo || 0}
+            deviation={globalPerf?.kpis?.desviacionPct || 0}
+            type="currency" 
+            icon={Euro} 
+            color="blue"
+            variant="comparison"
+            isLoading={isLoadingGlobalPerf}
+            infoProps={{
+              description: "Comparativa de facturación real global acumulada frente al presupuesto global a fecha de hoy.",
+              formulas: "Ventas YTD Global vs Presupuesto YTD Global"
+            }}
+          />
+          <GlobalKPICard 
+            title="Ventas Actual vs Anterior (Global)" 
+            value={globalPerf?.kpis?.ventas || 0} 
+            subValue={globalPerf?.kpis?.facturacionAnioAnterior || 0}
+            deviation={globalPerf?.kpis?.facturacionAnioAnterior && globalPerf.kpis.facturacionAnioAnterior > 0 
+              ? ((globalPerf.kpis.ventas - globalPerf.kpis.facturacionAnioAnterior) / globalPerf.kpis.facturacionAnioAnterior) * 100 
+              : 0}
+            type="currency" 
+            icon={BarChart2} 
+            color="indigo"
+            variant="comparison"
+            label1={`${year}:`}
+            label2={`${year-1}:`}
+            isLoading={isLoadingGlobalPerf}
+            infoProps={{
+              description: "Facturación global del ejercicio actual comparada con el mismo periodo del año anterior.",
+              formulas: "Ventas Globales Actuales vs Ventas Globales Año Anterior (Hasta hoy)"
+            }}
+          />
+          
+          <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-gray-800/50 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group min-h-[160px]">
+            {isLoadingGlobalPerf || isLoadingGlobalEvol ? (
+              <div className="w-full h-full animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
+            ) : (
+              <>
+                <div className="absolute top-4 left-6 flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Facturación Anual</span>
+                  <InfoPopover 
+                    title="Objetivo Facturación Anual" 
+                    description="Porcentaje de consecución del presupuesto total global de ventas para el ejercicio completo."
+                    formulas="(Ventas Actuales / Presupuesto Anual) * 100"
+                    iconSize={12} 
+                  />
+                </div>
+                <div className="w-full h-24 mt-4">
+                  <GaugeChart value={globalAnnualStats.pctAchievement} />
+                </div>
+                <div className="text-center mt-2">
+                  <span className="text-2xl font-light text-dts-primary dark:text-white">{globalAnnualStats.pctAchievement.toFixed(1)}%</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
@@ -355,6 +447,168 @@ const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status,
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "", isLoading }: any) => {
+  if (isLoading) return <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-40 animate-pulse" />;
+
+  const colorMap: any = {
+    blue: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
+    emerald: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20',
+    amber: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20',
+    indigo: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+  };
+
+  const formattedValue = type === 'currency' ? formatCurrency(value, 0) : value;
+  const formattedSubValue = type === 'currency' ? formatCurrency(subValue, 0) : subValue;
+
+  return (
+    <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-gray-800/50 shadow-sm transition-all hover:shadow-card-hover group">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+          <span className="text-[10px] font-bold uppercase tracking-wider">{title}</span>
+          {infoProps && <InfoPopover title={title} {...infoProps} iconSize={12} />}
+        </div>
+        <div className={`p-2 rounded-xl transition-transform group-hover:scale-110 duration-300 ${colorMap[color] || colorMap.blue}`}>
+          <Icon size={18} />
+        </div>
+      </div>
+      
+      {variant === 'comparison' ? (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-gray-400 w-12">{label1}</span>
+            <div className="flex flex-col">
+              <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">
+                {formattedValue}
+              </div>
+              {accountValue !== undefined && accountValue > 0 && (
+                <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
+                  ({formatCurrency(accountValue, 0)})
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-gray-400 w-12">{label2}</span>
+            <div className="flex flex-col">
+              <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">
+                {label2 === 'TOTAL:' || label2 === 'CANT:' ? `${subValue}${suffix}` : formattedSubValue}
+              </div>
+              {accountSubValue !== undefined && accountSubValue > 0 && (
+                <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
+                  ({formatCurrency(accountSubValue, 0)})
+                </span>
+              )}
+            </div>
+          </div>
+          {extraValue !== undefined && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-gray-400 w-12">{label3}</span>
+              <div className="text-2xl font-light text-red-400 tracking-tight">
+                {extraValue}{suffix}
+              </div>
+            </div>
+          )}
+          </div>
+      ) : (
+        <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+      )}
+      
+      {deviation !== undefined && (
+        <div className="mt-0.5 flex items-center justify-between pt-0">
+          {variant !== 'comparison' && (
+            <span className="text-[10px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>
+          )}
+          <div className={`flex items-center gap-1 text-xl font-light ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'} ${variant === 'comparison' ? 'ml-auto' : ''}`}>
+            {deviation >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+            {deviation > 0 ? '+' : ''}{deviation.toFixed(1)}%
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const GaugeChart = ({ value }: { value: number }) => {
+  const normalizedValue = Math.min(Math.max(value, 0), 100);
+  const data = [
+    { value: normalizedValue, color: '#22C55E' },
+    { value: 100 - normalizedValue, color: '#E5E7EB' },
+  ];
+  
+  const isDark = document.documentElement.classList.contains('dark');
+  if (isDark) data[1].color = '#1F2937';
+
+  if (normalizedValue < 40) data[0].color = '#EF4444'; 
+  else if (normalizedValue < 75) data[0].color = '#3B82F6'; 
+  else data[0].color = '#22C55E'; 
+
+  return (
+    <div className="relative w-full h-full">
+      <div 
+        className="absolute left-1/2 -translate-x-1/2 aspect-square h-[170%] border border-gray-200 dark:border-white/20 rounded-full pointer-events-none z-0"
+        style={{ 
+          bottom: '-85%',
+          clipPath: 'inset(0 0 50% 0)' 
+        }}
+      />
+
+      {[0, 25, 50, 75, 100].map((tick) => (
+        <div 
+          key={tick}
+          className="absolute bottom-0 left-1/2 w-px h-[85%] origin-bottom pointer-events-none z-10"
+          style={{ transform: `translateX(-50%) rotate(${(tick * 1.8) - 90}deg)` }}
+        >
+          <div className="w-full h-1 bg-gray-400 dark:bg-gray-500 opacity-50" />
+          <div 
+            className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[7px] font-black text-gray-500 dark:text-gray-400"
+            style={{ transform: `translateX(-50%) rotate(${-( (tick * 1.8) - 90 )}deg)` }}
+          >
+            {tick}%
+          </div>
+        </div>
+      ))}
+
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="100%"
+            startAngle={180}
+            endAngle={0}
+            innerRadius="65%"
+            outerRadius="100%"
+            paddingAngle={0}
+            dataKey="value"
+            stroke="none"
+            animationDuration={1500}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      
+      <div 
+        className="absolute bottom-0 left-1/2 w-4 h-[85%] origin-bottom transition-transform duration-1000 ease-out z-20"
+        style={{ 
+          transform: `translateX(-50%) rotate(${(normalizedValue * 1.8) - 90}deg)`,
+        }}
+      >
+        <div 
+          className="w-full h-full bg-dts-primary dark:bg-dts-secondary shadow-lg"
+          style={{ 
+            clipPath: 'polygon(50% 0%, 35% 100%, 65% 100%)' 
+          }}
+        />
+      </div>
+      
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-4 h-4 bg-dts-primary dark:bg-white rounded-full border-2 border-white dark:border-surface-dark shadow-lg z-10" />
     </div>
   );
 };

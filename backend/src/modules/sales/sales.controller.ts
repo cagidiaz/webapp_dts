@@ -57,11 +57,8 @@ export class SalesController {
     const targetYear = year ? Number(year) : new Date().getFullYear();
     const isLimitToToday = limitToToday === 'true';
 
-    let targetMonths;
-    if (months) {
-      targetMonths = months.split(',').map(m => Number(m.trim())).filter(m => !isNaN(m));
-    }
-    const code = await this.getSalespersonCode(req, salespersonCode);
+    const targetMonths = months ? months.split(',').map(m => Number(m.trim())).filter(m => !isNaN(m)) : undefined;
+    const code = await this.getSalespersonCode(req, salespersonCode, false);
 
     return this.salesService.getSalesBudgetPerformance({
       year: targetYear,
@@ -92,8 +89,7 @@ export class SalesController {
     @Query('search') search?: string,
   ) {
     const targetYear = year ? Number(year) : new Date().getFullYear();
-
-    const code = await this.getSalespersonCode(req, salespersonCode);
+    const code = await this.getSalespersonCode(req, salespersonCode, false);
 
 
     return this.salesService.getSalesBudgetEvolution({
@@ -116,7 +112,7 @@ export class SalesController {
     @Query('salespersonCode') salespersonCode?: string,
   ) {
     const targetYear = year ? Number(year) : new Date().getFullYear();
-    const code = await this.getSalespersonCode(req, salespersonCode);
+    const code = await this.getSalespersonCode(req, salespersonCode, false);
     return this.salesService.getTopProducts({
       year: targetYear,
       salespersonCode: code,

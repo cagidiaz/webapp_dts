@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell
 } from 'recharts';
 import { 
   TrendingUp, Target, DollarSign, Activity, Loader2, Filter, X, Package, Search,
@@ -215,6 +216,8 @@ export const SalesBudgetPage: React.FC = () => {
     }),
   });
 
+
+
   const { data: categories = [] } = useQuery({ queryKey: ['prodCats'], queryFn: getProductFamilies });
   const { data: salespersons = [] } = useQuery({ queryKey: ['salesReps'], queryFn: getSalesReps, enabled: !isSalesperson });
 
@@ -317,6 +320,10 @@ export const SalesBudgetPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+
+
+
+
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6">
@@ -506,3 +513,4 @@ export const SalesBudgetPage: React.FC = () => {
     </div>
   );
 };
+

@@ -49,20 +49,52 @@ export const useUpdatesStore = create<UpdatesState>()(
           
           let commits: GithubCommit[] = await response.json();
           
-          // Filtrado por rol
-          if (userRole) {
-            const roleUpper = userRole.toUpperCase();
-            commits = commits.filter(c => {
-              const msg = c.commit.message.toUpperCase();
-              const tagMatch = msg.match(/\[([A-Z]+)\]/);
-              
-              if (!tagMatch) return true; // Sin etiqueta = Global
-              
-              const tag = tagMatch[1];
-              if (roleUpper === 'ADMIN') return true; // ADMIN ve todo
-              return tag === roleUpper;
-            });
-          }
+          // Normalizar el rol del usuario
+          const roleUpper = userRole?.toUpperCase() || 'GUEST';
+          
+          commits = commits.filter(c => {
+            const msg = c.commit.message.toUpperCase();
+            
+            // Extraer etiqueta entre corchetes ej: [ADMIN], [VENTAS]
+            const tagMatch = msg.match(/\[([A-Z]+)\]/);
+            
+            // 1. Si no hay etiqueta, es una actualización global (visible para todos)
+            // EXCEPCIÓN: Si el mensaje contiene palabras clave de admin/sistema, lo ocultamos a no-admins
+            if (!tagMatch) {
+              const isAdminContent = msg.includes('ADMIN') || msg.includes('SYSTEM') || msg.includes('DATABASE') || msg.includes('DB ');
+              if (roleUpper === 'ADMIN') return true;
+              return !isAdminContent;
+            }
+            
+            const tag = tagMatch[1];
+            
+            // 2. Reglas de visibilidad por rol
+            if (roleUpper === 'ADMIN') return true; // ADMIN ve absolutamente todo
+            
+            // 3. Mapeos específicos para el equipo de ventas
+            if (roleUpper === 'VENTAS') {
+              const salesTags = ['VENTAS', 'COMERCIAL', 'SALES', 'GLOBAL'];
+              return salesTags.includes(tag);
+            }
+            
+            // 4. Mapeos para dirección
+            if (roleUpper === 'DIRECCION') {
+              const dirTags = ['DIRECCION', 'VENTAS', 'COMERCIAL', 'GLOBAL', 'FINANZAS'];
+              return dirTags.includes(tag);
+            }
+
+            // 5. Caso por defecto: solo ver lo que coincide con su etiqueta o lo GLOBAL
+            return tag === roleUpper || tag === 'GLOBAL';
+          });
+
+          // Limpiar los mensajes para la UI (quitar los corchetes)
+          commits = commits.map(c => ({
+            ...c,
+            commit: {
+              ...c.commit,
+              message: c.commit.message.replace(/\[[A-Z]+\]\s*/gi, '').trim()
+            }
+          }));
 
           // Nos quedamos solo con los 10 más recientes después de filtrar
           commits = commits.slice(0, 10);
