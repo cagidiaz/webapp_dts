@@ -126,7 +126,7 @@ export const FinancialDashboard: React.FC = () => {
           }}
         />
         <KPICard 
-          title="VENTAS ACTUAL VS ANTERIOR" 
+          title="VENTAS YTD VS VENTAS LYTD" 
           value={kpis?.ventas || 0} 
           subValue={kpis?.facturacionAnioAnterior || 0}
           deviation={kpis?.facturacionAnioAnterior && kpis.facturacionAnioAnterior > 0 
@@ -139,8 +139,8 @@ export const FinancialDashboard: React.FC = () => {
           label1="2026:"
           label2="2025:"
           infoProps={{
-            description: "Comparativa de facturación acumulada (YTD) frente al mismo periodo del año anterior.",
-            formulas: "Ventas Actuales vs Ventas Año Anterior (Mismo periodo)"
+            description: "Facturación total del ejercicio actual comparada con el mismo periodo del año anterior (comparativa día a día).",
+            formulas: "Ventas Actuales vs Ventas Año Anterior (Hasta hoy)"
           }}
         />
         
@@ -148,6 +148,12 @@ export const FinancialDashboard: React.FC = () => {
         <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
           <div className="absolute top-4 left-6 flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
             <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Facturación Anual</span>
+            <InfoPopover 
+              title="Objetivo Facturación Anual" 
+              description="Porcentaje de consecución del presupuesto total de ventas fijado para el ejercicio completo."
+              formulas="(Ventas Actuales / Presupuesto Anual) * 100"
+              iconSize={12} 
+            />
           </div>
           <div className="w-full h-24 mt-4">
             <GaugeChart value={annualStats.pctAchievement} />
@@ -170,8 +176,8 @@ export const FinancialDashboard: React.FC = () => {
           label1="CARTE:"
           label2="PEND:"
           infoProps={{
-            description: "Resumen de cartera (pedidos abiertos) y pendientes de facturar (mercancía ya enviada).",
-            formulas: "Suma(Cartera) | Suma(Pendientes Factura)"
+            description: "Resumen de cartera (pedidos abiertos) y mercancía enviada no facturada (Pendientes). Valoración basada en precio neto efectivo (incluye descuentos) y excluyendo líneas a cero. El valor entre paréntesis indica el total correspondiente a líneas de cuentas contables.",
+            formulas: "Suma(Cantidad * (Importe Neto / Cantidad Total))"
           }}
         />
         <KPICard 
