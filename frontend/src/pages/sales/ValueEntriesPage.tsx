@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { getValueEntries } from '../../api';
-import { formatCurrency, formatNumber } from '../../api/formatters';
+import { formatCurrency } from '../../api/formatters';
 import { 
   Search, FileText, Loader2, ArrowUpDown, ChevronUp, ChevronDown, Filter
 } from 'lucide-react';
-import { InfoPopover, TableSkeleton, ExportButton, SearchableSelect } from '../../components/ui';
+import { TableSkeleton, ExportButton, SearchableSelect } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
 import { exportToXlsx } from '../../utils/exportToXlsx';
 
