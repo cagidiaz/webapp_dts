@@ -3,9 +3,9 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { getValueEntries } from '../../api';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
-  Search, FileText, DollarSign, Activity, Loader2, ArrowUpDown, ChevronUp, ChevronDown, RefreshCw, Filter
+  Search, FileText, Loader2, ArrowUpDown, ChevronUp, ChevronDown, Filter
 } from 'lucide-react';
-import { InfoPopover, KPISkeleton, TableSkeleton, ExportButton, SearchableSelect } from '../../components/ui';
+import { InfoPopover, TableSkeleton, ExportButton, SearchableSelect } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
 import { exportToXlsx } from '../../utils/exportToXlsx';
 
@@ -39,7 +39,7 @@ export const ValueEntriesPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, refetch } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
     queryKey: ['valueEntries', debouncedSearch, docTypeFilter, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getValueEntries({ 
       take: pageSize, skip: pageParam as number, search: debouncedSearch,
@@ -62,15 +62,9 @@ export const ValueEntriesPage: React.FC = () => {
     return () => { if (observerTarget.current) observer.unobserve(observerTarget.current); };
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-  const { entries, totalEntries, sumSales, sumCost } = useMemo(() => {
+  const { entries } = useMemo(() => {
     const allItems = data?.pages.flatMap(page => page.rows) || [];
-    const totalCount = data?.pages[0]?.total || 0;
-    
-    // Calculate sums for loaded items as metadata
-    const sales = allItems.reduce((acc, entry) => acc + (entry?.sales_amount || 0), 0);
-    const cost = allItems.reduce((acc, entry) => acc + (entry?.cost_amount || 0), 0);
-
-    return { entries: allItems, totalEntries: totalCount, sumSales: sales, sumCost: cost };
+    return { entries: allItems };
   }, [data]);
 
   const handleSort = (field: string) => {
@@ -236,35 +230,6 @@ export const ValueEntriesPage: React.FC = () => {
           </table>
         </div>
       </div>
-    </div>
-  );
-};
-
-const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, decimals }: any) => {
-  if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse"></div>;
-  const colorClass = status === 'success' ? 'text-emerald-500' : status === 'warning' ? 'text-amber-500' : 'text-dts-primary dark:text-white';
-  
-  const effectiveDecimals = decimals !== undefined ? decimals : (type === 'currency' ? 2 : 0);
-  const numericValue = Number(value);
-  const formattedValue = type === 'currency' ? formatCurrency(numericValue, effectiveDecimals) : formatNumber(numericValue, effectiveDecimals);
-  
-  return (
-    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{title}</span>
-          {infoProps && (
-            <InfoPopover 
-              title={title} 
-              description={infoProps.description} 
-              iconSize={12}
-              className="text-gray-300 group-hover:text-dts-secondary transition-colors"
-            />
-          )}
-        </div>
-        <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
-      </div>
-      <div className={`text-2xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
     </div>
   );
 };
