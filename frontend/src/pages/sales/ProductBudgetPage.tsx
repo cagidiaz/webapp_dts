@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
 import { 
   TrendingUp, Target, DollarSign, Activity, Loader2, Filter, X, Package, Search,
@@ -61,8 +61,6 @@ interface KPICardProps {
   accountValue?: number;
 }
 
-// --- Helper Components ---
-
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const monthLabel = MONTHS.find(m => m.val === label)?.label || label;
@@ -91,7 +89,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 const RenderCustomLegend = (props: any) => {
   const { payload } = props;
   if (!payload) return null;
-  const sortedPayload = [...payload].sort((a) => a.value === 'Ventas Reales' ? -1 : 1);
+  const sortedPayload = [...payload].sort((a) => a.value === 'Ventas Año en Curso' ? -1 : 1);
   return (
     <div className="flex justify-center gap-6 mb-4">
       {sortedPayload.map((entry, index) => (
@@ -596,15 +594,16 @@ export const ProductBudgetPage: React.FC = () => {
         </div>
         <div className="flex-1 w-full min-h-[300px]">
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={(evolutionData || []).filter(d => selectedMonths.length === 0 || selectedMonths.includes(d.month))}>
+            <ComposedChart data={(evolutionData || []).filter(d => selectedMonths.length === 0 || selectedMonths.includes(d.month))}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
               <XAxis dataKey="month" tickFormatter={(m) => MONTHS.find(x => x.val === m)?.label || m} tick={{fontSize: 10}} />
               <YAxis tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} tick={{fontSize: 10}} />
               <Tooltip content={<CustomTooltip />} cursor={false}/>
               <Legend verticalAlign="top" content={RenderCustomLegend} />
-              <Bar dataKey="ventas" name="Ventas Reales" fill="#00B0B9" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="ventas" name="Ventas Año en Curso" fill="#00B0B9" radius={[4, 4, 0, 0]} />
               <Bar dataKey="objetivo" name="Objetivo (Presupuesto)" fill="#64748B" radius={[4, 4, 0, 0]} />
-            </BarChart>
+              <Line type="monotone" dataKey="ventasAnterior" name="Ventas Año Anterior" stroke="#F59E0B" strokeDasharray="5 5" strokeWidth={1.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>

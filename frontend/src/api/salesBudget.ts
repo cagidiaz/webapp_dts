@@ -134,3 +134,52 @@ export const getSalesBudgetPerformanceExport = async (
 ): Promise<SalesBudgetPerformanceResponse> => {
   return getSalesBudgetPerformance({ ...filters, take: 99999, skip: 0 });
 };
+
+export interface ValueEntry {
+  id: string;
+  reg_date: string;
+  movement_type?: string;
+  document_type?: string;
+  document_no: string;
+  sales_amount: number;
+  cost_amount: number;
+  quantity: number;
+  unit_cost: number;
+  item_no: string;
+  salesperson_code?: string;
+  user_id?: string;
+  source_code?: string;
+  source_type?: string;
+  source_no?: string;
+  external_doc_no?: string;
+  entry_no?: number;
+  source_description?: string;
+  source_order_no?: string;
+}
+
+export interface ValueEntriesResponse {
+  rows: ValueEntry[];
+  total: number;
+}
+
+export const getValueEntries = async (params: {
+  search?: string;
+  documentType?: string;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  take?: number;
+  skip?: number;
+}): Promise<ValueEntriesResponse> => {
+  const { search, documentType, sortBy, sortDir, take, skip } = params;
+  
+  const searchParams = new URLSearchParams();
+  if (search) searchParams.append('search', search);
+  if (documentType) searchParams.append('documentType', documentType);
+  if (sortBy) searchParams.append('sortBy', sortBy);
+  if (sortDir) searchParams.append('sortDir', sortDir);
+  if (take !== undefined) searchParams.append('take', String(take));
+  if (skip !== undefined) searchParams.append('skip', String(skip));
+
+  const response = await apiClient.get<ValueEntriesResponse>(`/sales/value-entries?${searchParams.toString()}`);
+  return response.data;
+};

@@ -53,6 +53,7 @@ const navItems: NavItem[] = [
       { name: 'Pedidos de Venta', path: '/sales/orders' },
       { name: 'Presupuestos', path: '/sales/budgets' },
       { name: 'Ppto. x Product Mgr.', path: '/sales/product-budgets' },
+      { name: 'Histórico de Ventas', path: '/sales/value-entries', roles: ['ADMIN', 'DIRECCION'] },
     ]
   },
   { 
@@ -187,7 +188,9 @@ export const Sidebar: React.FC = () => {
                 {/* Submenu Items */}
                 {!isSidebarCollapsed && openSubmenu === item.name && (
                   <div className="mt-0.5 ml-3 pl-6 border-l border-white/5 flex flex-col gap-0.5">
-                    {item.children.map((child) => (
+                    {item.children
+                      .filter(child => !child.roles || child.roles.includes(userRole))
+                      .map((child) => (
                       <NavLink
                         key={child.path}
                         to={child.path}

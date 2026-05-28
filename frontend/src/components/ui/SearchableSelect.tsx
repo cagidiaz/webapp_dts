@@ -20,6 +20,7 @@ interface SearchableSelectProps {
   onChange: (value: string) => void;
   placeholder: string;
   isFetching?: boolean;
+  showIcon?: boolean;
 }
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({ 
@@ -27,7 +28,8 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   value, 
   onChange, 
   placeholder,
-  isFetching = false
+  isFetching = false,
+  showIcon = true
 }) => {
   const [query, setQuery] = useState('');
 
@@ -46,12 +48,14 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
         onClose={() => setQuery('')}
       >
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-             {isFetching ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
-          </div>
+          {showIcon && (
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+               {isFetching ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
+            </div>
+          )}
           
           <ComboboxInput
-            className="block w-full pl-9 pr-10 py-1.5 text-xs text-gray-900 dark:text-gray-200 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-dts-secondary focus:border-dts-secondary transition-all outline-none"
+            className={`block w-full pr-10 py-1.5 text-xs text-gray-900 dark:text-gray-200 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-dts-secondary focus:border-dts-secondary transition-all outline-none ${showIcon ? 'pl-9' : 'pl-3'}`}
             displayValue={(val: string) => options.find(o => o.value === val)?.label || ''}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={placeholder}

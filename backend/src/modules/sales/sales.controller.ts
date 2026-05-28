@@ -190,4 +190,36 @@ export class SalesController {
       search,
     });
   }
+
+  @Get('value-entries')
+  @ApiOperation({ summary: 'Get value entries for admin and management' })
+  async getValueEntries(
+    @Req() req: any,
+    @Query('search') search?: string,
+    @Query('documentType') documentType?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: 'asc' | 'desc',
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) throw new UnauthorizedException('User not authenticated');
+    const profile = await this.prisma.profiles.findUnique({
+      where: { id: userId },
+      include: { roles: true }
+    });
+    const userRole = profile?.roles?.name?.toUpperCase();
+    if (userRole !== 'ADMIN' && userRole !== 'DIRECCION') {
+      throw new UnauthorizedException('Access denied: Admins and Management only');
+    }
+
+    return this.salesService.getValueEntries({
+      search,
+      documentType,
+      sortBy,
+      sortDir,
+      take: take ? Number(take) : undefined,
+      skip: skip ? Number(skip) : undefined,
+    });
+  }
 }

@@ -1040,6 +1040,59 @@ export class SalesService {
     return monthsData;
   }
 
+  async getValueEntries(filters: {
+    search?: string;
+    documentType?: string;
+    sortBy?: string;
+    sortDir?: 'asc' | 'desc';
+    take?: number;
+    skip?: number;
+  }) {
+    const { search, documentType, sortBy = 'reg_date', sortDir = 'desc', take = 50, skip = 0 } = filters;
+
+    const where: any = {};
+
+    if (search && search.trim() !== '') {
+      const s = search.trim();
+      where.OR = [
+        { document_no: { contains: s, mode: 'insensitive' } },
+        { item_no: { contains: s, mode: 'insensitive' } },
+        { source_no: { contains: s, mode: 'insensitive' } },
+        { source_description: { contains: s, mode: 'insensitive' } },
+        { external_doc_no: { contains: s, mode: 'insensitive' } },
+        { salesperson_code: { contains: s, mode: 'insensitive' } },
+      ];
+    }
+
+    if (documentType && documentType.trim() !== '') {
+      where.document_type = documentType.trim();
+    }
+
+    const [rows, total] = await Promise.all([
+      this.prisma.value_entries.findMany({
+        where,
+        orderBy: { [sortBy]: sortDir },
+        take: Number(take),
+        skip: Number(skip),
+      }),
+      this.prisma.value_entries.count({ where }),
+    ]);
+
+    // Convert BigInt and Decimal to JSON-friendly types
+    const formattedRows = rows.map(row => ({
+      ...row,
+      entry_no: row.entry_no ? Number(row.entry_no) : undefined,
+      sales_amount: row.sales_amount ? Number(row.sales_amount) : 0,
+      cost_amount: row.cost_amount ? Number(row.cost_amount) : 0,
+      unit_cost: row.unit_cost ? Number(row.unit_cost) : 0,
+    }));
+
+    return {
+      rows: formattedRows,
+      total,
+    };
+  }
+
   /**
    * Obtiene las fechas correspondientes a los meses seleccionados de un año
    */
