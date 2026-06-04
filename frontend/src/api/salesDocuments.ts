@@ -74,9 +74,15 @@ export const getAllSalesDocuments = async (params: {
   type?: string;
   sortBy?: string;
   sortDir?: string;
-  year?: number;
+  years?: number[];
+  months?: number[];
 }): Promise<SalesDocumentsResponse> => {
-  const { data } = await apiClient.get('/sales-documents', { params });
+  const queryParams = {
+    ...params,
+    years: params.years?.join(','),
+    months: params.months?.join(',')
+  };
+  const { data } = await apiClient.get('/sales-documents', { params: queryParams });
   return data;
 };
 
@@ -87,5 +93,20 @@ export const getSalesDocumentById = async (id: string): Promise<SalesDocument> =
 
 export const getSalesDocumentsByCustomer = async (customerCode: string): Promise<SalesDocumentsResponse> => {
   const { data } = await apiClient.get(`/sales-documents/customer/${customerCode}`);
+  return data;
+};
+
+export interface BillingHistoryDashboardItem {
+  customer_no: string;
+  customer_name: string;
+  year: number;
+  month: number;
+  salesperson_code: string;
+  salesperson_name: string;
+  amount: number;
+}
+
+export const getBillingHistoryDashboard = async (): Promise<BillingHistoryDashboardItem[]> => {
+  const { data } = await apiClient.get('/sales-documents/billing-history/dashboard');
   return data;
 };

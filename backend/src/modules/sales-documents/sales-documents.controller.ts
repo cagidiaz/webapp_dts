@@ -19,7 +19,8 @@ export class SalesDocumentsController {
   @ApiQuery({ name: 'type', required: false, type: String })
   @ApiQuery({ name: 'sortBy', required: false, type: String })
   @ApiQuery({ name: 'sortDir', required: false, type: String })
-  @ApiQuery({ name: 'year', required: false, type: Number })
+  @ApiQuery({ name: 'years', required: false, type: String })
+  @ApiQuery({ name: 'months', required: false, type: String })
   async getAll(
     @Query('take') take?: number,
     @Query('skip') skip?: number,
@@ -28,9 +29,18 @@ export class SalesDocumentsController {
     @Query('type') type?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortDir') sortDir?: 'asc' | 'desc',
-    @Query('year') year?: number,
+    @Query('years') years?: string,
+    @Query('months') months?: string,
   ) {
-    return this.salesDocumentsService.getAll({ take, skip, search, customerCode, type, sortBy, sortDir, year });
+    const parsedYears = years ? years.split(',').map(y => Number(y.trim())).filter(y => !isNaN(y)) : undefined;
+    const parsedMonths = months ? months.split(',').map(m => Number(m.trim())).filter(m => !isNaN(m)) : undefined;
+    return this.salesDocumentsService.getAll({ take, skip, search, customerCode, type, sortBy, sortDir, years: parsedYears, months: parsedMonths });
+  }
+
+  @Get('billing-history/dashboard')
+  @ApiOperation({ summary: 'Obtener datos del dashboard histórico de facturación' })
+  async getBillingHistoryDashboard() {
+    return this.salesDocumentsService.getBillingHistoryDashboard();
   }
 
   @Get(':id')

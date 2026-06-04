@@ -16,21 +16,28 @@ export class SalesDocumentsService {
     type?: string;
     sortBy?: string;
     sortDir?: 'asc' | 'desc';
-    year?: number;
+    years?: number[];
+    months?: number[];
   } = {}) {
-    const { skip, take, search, customerCode, type, sortBy = 'document_date', sortDir = 'desc', year } = params;
+    const { skip, take, search, customerCode, type, sortBy = 'document_date', sortDir = 'desc', years, months } = params;
 
     const where: any = {};
     const and: any[] = [];
 
-    if (year) {
-      const yearNum = Number(year);
-      and.push({
-        document_date: {
-          gte: new Date(`${yearNum}-01-01`),
-          lte: new Date(`${yearNum}-12-31T23:59:59.999Z`),
-        }
+    if (years && years.length > 0) {
+      const activeMonths = months && months.length > 0 ? months : Array.from({ length: 12 }, (_, i) => i + 1);
+      const dateFilters: any[] = [];
+      years.forEach(y => {
+        activeMonths.forEach(m => {
+          dateFilters.push({
+            document_date: {
+              gte: new Date(y, m - 1, 1),
+              lte: new Date(y, m, 0, 23, 59, 59, 999),
+            }
+          });
+        });
       });
+      and.push({ OR: dateFilters });
     }
 
     if (search) {
@@ -233,5 +240,76 @@ export class SalesDocumentsService {
    */
   async getByCustomer(customerCode: string) {
     return this.getAll({ customerCode });
+  }
+
+  /**
+   * Obtiene datos agregados de facturación para el dashboard histórico de facturación.
+   */
+  async getBillingHistoryDashboard() {
+    try {
+      const documents = await this.prisma.sales_documents.findMany({
+        select: {
+          document_no: true,
+          document_type: true,
+          total_amount_excl_vat: true,
+          document_date: true,
+          customer_no: true,
+          customer: {
+            select: {
+              name: true,
+              salesperson_code: true,
+              sales_rep: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const aggregated: Record<string, {
+        customer_no: string;
+        customer_name: string;
+        year: number;
+        month: number;
+        salesperson_code: string;
+        salesperson_name: string;
+        amount: number;
+      }> = {};
+
+      documents.forEach(doc => {
+        const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB');
+        const multiplier = isAbono ? -1 : 1;
+        const amount = Number(doc.total_amount_excl_vat || 0) * multiplier;
+        const date = doc.document_date ? new Date(doc.document_date) : null;
+        if (!date) return;
+        
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const customer_no = doc.customer_no;
+        const customer_name = doc.customer?.name || 'Desconocido';
+        const salesperson_code = doc.customer?.salesperson_code || 'En blanco';
+        const salesperson_name = doc.customer?.sales_rep?.name || 'En blanco';
+
+        const key = `${customer_no}_${year}_${month}`;
+        if (!aggregated[key]) {
+          aggregated[key] = {
+            customer_no,
+            customer_name,
+            year,
+            month,
+            salesperson_code,
+            salesperson_name,
+            amount: 0
+          };
+        }
+        aggregated[key].amount += amount;
+      });
+
+      return Object.values(aggregated);
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
   }
 }
