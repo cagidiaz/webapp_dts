@@ -5,3 +5,4 @@ export * from './products';
 export * from './salesBudget';
 export * from './salesOrders';
 export * from './salesProductBudget';
+export * from './salesDocuments';

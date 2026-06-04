@@ -12,7 +12,7 @@ import {
   RatiosChartsPage,
   SimulationsPage
 } from './pages/finance';
-import { CustomersPage, ProductsPage, SalesBudgetPage, SalesOrdersPage, ProductBudgetPage, ValueEntriesPage } from './pages/sales';
+import { CustomersPage, ProductsPage, SalesBudgetPage, SalesOrdersPage, ProductBudgetPage, ValueEntriesPage, SalesInvoicesPage } from './pages/sales';
 
 
 import { supabase } from './api/supabase';
@@ -112,6 +112,7 @@ const App: React.FC = () => {
                 <Route path="orders" element={<SalesOrdersPage />} />
                 <Route path="budgets" element={<SalesBudgetPage />} />
                 <Route path="product-budgets" element={<ProductBudgetPage />} />
+                <Route path="invoices" element={<SalesInvoicesPage />} />
                 <Route path="value-entries" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION']}><ValueEntriesPage /></RoleGuard>} />
 
               </Route>

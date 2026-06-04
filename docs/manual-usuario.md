@@ -28,5 +28,17 @@ Vista de auditoría transaccional de la tabla `value_entries`, restringida exclu
 - **Ordenación Completa**: Todas las columnas (Nº Movimiento, Fecha, Documento, Producto, Cliente, Cantidad, Ventas y Costes) son interactivas y ordenables.
 - **Exportación Directa**: Botón para descargar el histórico filtrado y ordenado a un documento Excel (`.xlsx`).
 
+## 5. Histórico de Facturación (Consolidación de Documentos y Líneas)
+Vista unificada para consultar facturas y abonos de venta con soporte para filtros y desglose de líneas detalladas.
+- **Desglose de Líneas**: Permite expandir cada fila de factura para consultar sus líneas detalladas (SKU/Producto, Descripción, Tipo de línea, Cantidad, Precio Unitario, Descuento %, Importe Neto, Margen LDR y el número de línea `line_no`).
+- **Resumen y KPIs de Facturación**: Panel de indicadores superiores que calcula en tiempo real para la selección actual:
+  - Facturación Neta total (Excl. IVA) y el desglose correspondiente a portes y servicios.
+  - Margen Real Medio (%).
+  - Cantidad de Documentos Emitidos.
+  - Descuentos Aplicados en las líneas.
+- **Filtros Avanzados**: Desplegables para filtrar de forma simultánea por año de emisión del documento y tipo de línea (productos o cuentas contables de servicio).
+- **Búsqueda Dinámica**: Filtro reactivo en tiempo real por número de documento, código o nombre de cliente, SKU, pedido de origen o referencia externa.
+- **Exportación Excel**: Botón de exportación para descargar a un reporte Excel (`.xlsx`) el detalle consolidado de las cabeceras junto con sus líneas (incluyendo la nueva columna de número de línea `line_no`).
+
 ---
-*Manual de dTS Instruments v4.0 — Actualizado a 28 de mayo 2026.*
+*Manual de dTS Instruments v5.0 — Actualizado a 4 de junio 2026.*

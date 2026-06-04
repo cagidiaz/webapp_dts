@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema", "partialIndexes"]
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -422,7 +422,7 @@ model sales_budgets {
   created_at       DateTime?  @default(now()) @db.Timestamptz(6)
   calendar         calendar   @relation(fields: [budget_date], references: [date], onDelete: NoAction)
   customer         customers  @relation(fields: [customer_code], references: [client_id], onDelete: NoAction)
-  sales_rep        sales_reps @relation(fields: [salesperson_code], references: [code], onDelete: SetNull)
+  sales_rep        sales_reps @relation(fields: [salesperson_code], references: [code], onDelete: NoAction)
 
   @@index([budget_date], map: "idx_budget_date")
   @@index([customer_code], map: "idx_customer")
@@ -546,6 +546,7 @@ model customers {
   sales_rep                sales_reps?     @relation(fields: [salesperson_code], references: [code])
   sales_budgets            sales_budgets[]
   sales_orders             sales_orders[]
+  sales_documents          sales_documents[]
 
   @@schema("public")
 }
@@ -574,6 +575,7 @@ model products {
   updated_at          DateTime?          @default(now()) @db.Timestamptz(6)
   category            product_categories? @relation(fields: [subfamily_code], references: [subfamily_code], onDelete: SetNull)
   sales_orders        sales_orders[]
+  sales_document_lines sales_document_lines[]
 
   @@index([vendor_no], map: "idx_product_vendor")
   @@index([subfamily_code], map: "idx_product_subfamily")
@@ -677,3 +679,62 @@ model sales_orders {
   @@index([document_number], map: "idx_sales_orders_doc_no")
   @@schema("public")
 }
+
+model sales_documents {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document_no            String                 @unique @db.VarChar(20)
+  disc_amount            Decimal?               @default(0.0) @db.Decimal(15, 4)
+  total_amount_excl_vat  Decimal?               @default(0.0) @db.Decimal(15, 4)
+  total_vat_amount       Decimal?               @default(0.0) @db.Decimal(15, 4)
+  total_amount_incl_vat  Decimal?               @default(0.0) @db.Decimal(15, 4)
+  invoice_margen         Decimal?               @default(0.0) @db.Decimal(15, 4)
+  customer_no            String                 @db.VarChar(20)
+  your_reference         String?                @db.VarChar(100)
+  document_date          DateTime?              @db.Date
+  posting_date           DateTime?              @db.Date
+  quote_no               String?                @db.VarChar(20)
+  order_no               String?                @db.VarChar(20)
+  external_doc_no        String?                @db.VarChar(100)
+  corrected_invoice_no   String?                @db.VarChar(20)
+  shipment_no            String?                @db.VarChar(20)
+  shipment_date          DateTime?              @db.Date
+  payment_terms_code     String?                @db.VarChar(50)
+  payment_method_code    String?                @db.VarChar(50)
+  created_at             DateTime?              @default(now()) @db.Timestamptz(6)
+  document_type          String?                @db.VarChar(50)
+
+  customer               customers              @relation(fields: [customer_no], references: [client_id], onDelete: Cascade)
+  lines                  sales_document_lines[]
+
+  @@index([customer_no], map: "idx_sales_documents_customer")
+  @@index([document_date], map: "idx_sales_documents_date")
+  @@schema("public")
+}
+
+model sales_document_lines {
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document_no           String          @db.VarChar(20)
+  line_no               Int?
+  type                  String?         @db.VarChar(50)
+  product_no            String?         @db.VarChar(50)
+  gen_prod_posting_group String?         @db.VarChar(50)
+  vat_bus_posting_group String?         @db.VarChar(50)
+  quantity              Decimal?        @default(0.0) @db.Decimal(18, 4)
+  unit_of_measure_code  String?         @db.VarChar(20)
+  unit_cost_lcy         Decimal?        @default(0.0) @db.Decimal(18, 4)
+  unit_price            Decimal?        @default(0.0) @db.Decimal(18, 4)
+  vat_percent           Decimal?        @default(0.0) @db.Decimal(5, 2)
+  line_disc_percent     Decimal?        @default(0.0) @db.Decimal(5, 2)
+  line_amount           Decimal?        @default(0.0) @db.Decimal(18, 4)
+  line_disc_amount      Decimal?        @default(0.0) @db.Decimal(18, 4)
+  margen_percent_ldr    Decimal?        @default(0.0) @db.Decimal(15, 4)
+  created_at            DateTime?       @default(now()) @db.Timestamptz(6)
+
+  document              sales_documents @relation(fields: [document_no], references: [document_no], onDelete: Cascade)
+  product               products?       @relation(fields: [product_no], references: [item_no], onDelete: Cascade)
+
+  @@index([document_no], map: "idx_sales_document_lines_doc")
+  @@index([product_no], map: "idx_sales_document_lines_prod")
+  @@schema("public")
+}
+

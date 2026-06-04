@@ -59,4 +59,41 @@ export class UsersController {
   async deleteUser(@Param('id') id: string) {
     return this.usersService.deleteUser(id);
   }
+
+  @Get('modules')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Get all modules (Admin only)' })
+  async getModules() {
+    return this.usersService.getModules();
+  }
+
+  @Get('roles/:roleId/modules')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Get modules assigned to a role (Admin only)' })
+  async getRolePermissions(@Param('roleId') roleId: string) {
+    return this.usersService.getRolePermissions(roleId);
+  }
+
+  @Post('roles/:roleId/modules')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Update modules assigned to a role (Admin only)' })
+  async updateRolePermissions(
+    @Param('roleId') roleId: string,
+    @Body('permissions') permissions: { moduleId: string, canView: boolean }[]
+  ) {
+    return this.usersService.updateRolePermissions(roleId, permissions);
+  }
+
+  @Get('permissions/me')
+  @ApiOperation({ summary: 'Get modules allowed for the current logged-in user' })
+  async getMyPermissions(@Request() req: any) {
+    const status = await this.usersService.getUserStatus(req.user.userId);
+    if (!status.existsInProfiles || !status.rawProfile.role_id) {
+      return [];
+    }
+    return this.usersService.getRolePermissions(status.rawProfile.role_id);
+  }
 }

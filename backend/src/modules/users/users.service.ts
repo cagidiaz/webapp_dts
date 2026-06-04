@@ -124,4 +124,42 @@ export class UsersService {
     await this.supabaseAdmin.from('profiles').delete().eq('id', id);
     return { success: true };
   }
+
+  async getModules() {
+    const { data, error } = await this.supabaseAdmin.from('modules').select('*');
+    if (error) throw new InternalServerErrorException(error.message);
+    return data;
+  }
+
+  async getRolePermissions(roleId: string) {
+    const { data, error } = await this.supabaseAdmin
+      .from('role_modules')
+      .select('module_id, can_view, modules(name, route_path)')
+      .eq('role_id', roleId);
+    if (error) throw new InternalServerErrorException(error.message);
+    return data.map(rm => {
+      const modulesObj = Array.isArray(rm.modules) ? rm.modules[0] : rm.modules;
+      return {
+        moduleId: rm.module_id,
+        canView: rm.can_view,
+        name: modulesObj?.name,
+        routePath: modulesObj?.route_path
+      };
+    });
+  }
+
+  async updateRolePermissions(roleId: string, permissions: { moduleId: string, canView: boolean }[]) {
+    const upsertData = permissions.map(p => ({
+      role_id: roleId,
+      module_id: p.moduleId,
+      can_view: p.canView
+    }));
+
+    const { error } = await this.supabaseAdmin
+      .from('role_modules')
+      .upsert(upsertData);
+
+    if (error) throw new InternalServerErrorException(error.message);
+    return { success: true };
+  }
 }

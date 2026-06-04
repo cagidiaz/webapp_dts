@@ -4,4 +4,5 @@ export * from './SalesBudgetPage';
 export * from './SalesOrdersPage';
 export * from './ProductBudgetPage';
 export * from './ValueEntriesPage';
+export * from './SalesInvoicesPage';
 

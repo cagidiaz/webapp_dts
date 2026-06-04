@@ -41,6 +41,15 @@ export const UsersPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Tab State
+  const [activeTab, setActiveTab] = useState<'users' | 'permissions'>('users');
+  
+  // Permissions State
+  const [selectedPermissionRoleId, setSelectedPermissionRoleId] = useState<string>('');
+  const [allModules, setAllModules] = useState<any[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, boolean>>({});
+  const [savingPermissions, setSavingPermissions] = useState(false);
+
   // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
@@ -73,6 +82,18 @@ export const UsersPage: React.FC = () => {
     return () => setPageInfo({ title: '', subtitle: '', icon: null });
   }, [setPageInfo]);
 
+  useEffect(() => {
+    if (selectedPermissionRoleId) {
+      fetchRolePermissions(selectedPermissionRoleId);
+    }
+  }, [selectedPermissionRoleId]);
+
+  useEffect(() => {
+    if (activeTab === 'permissions') {
+      fetchAllModules();
+    }
+  }, [activeTab]);
+
   const fetchUsers = async () => {
     try {
       const response = await apiClient.get('/users');
@@ -88,11 +109,53 @@ export const UsersPage: React.FC = () => {
     try {
       const response = await apiClient.get('/users/roles');
       setRoles(response.data);
-      if (response.data.length > 0 && !roleId) {
-        setRoleId(response.data[0].id);
+      if (response.data.length > 0) {
+        if (!roleId) setRoleId(response.data[0].id);
+        setSelectedPermissionRoleId(response.data[0].id);
       }
     } catch (error) {
       console.error("Error al cargar los roles", error);
+    }
+  };
+
+  const fetchAllModules = async () => {
+    try {
+      const response = await apiClient.get('/users/modules');
+      setAllModules(response.data);
+    } catch (error) {
+      console.error("Error al cargar módulos:", error);
+    }
+  };
+
+  const fetchRolePermissions = async (roleId: string) => {
+    try {
+      const response = await apiClient.get(`/users/roles/${roleId}/modules`);
+      const mapping: Record<string, boolean> = {};
+      response.data.forEach((p: any) => {
+        mapping[p.moduleId] = p.canView;
+      });
+      setRolePermissions(mapping);
+    } catch (error) {
+      console.error("Error al cargar permisos del rol:", error);
+    }
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedPermissionRoleId) return;
+    setSavingPermissions(true);
+    try {
+      const permissionsPayload = allModules.map(m => ({
+        moduleId: m.id,
+        canView: !!rolePermissions[m.id]
+      }));
+      await apiClient.post(`/users/roles/${selectedPermissionRoleId}/modules`, {
+        permissions: permissionsPayload
+      });
+      alert("Permisos guardados correctamente. Los cambios se aplicarán en la próxima recarga.");
+    } catch (error: any) {
+      alert("Error al guardar permisos: " + (error.response?.data?.message || error.message));
+    } finally {
+      setSavingPermissions(false);
     }
   };
 
@@ -214,29 +277,218 @@ export const UsersPage: React.FC = () => {
 
   const selectedRole = roles.find(r => r.id === roleId) || roles[0];
 
+  const groupedModules = useMemo(() => {
+    const parents = allModules.filter(m => 
+      m.route_path === '/dashboard' || 
+      m.route_path === '/finance' || 
+      m.route_path === '/sales' || 
+      m.route_path === '/config'
+    );
+
+    return parents.map(parent => {
+      let children = [];
+      if (parent.route_path === '/config') {
+        children = allModules.filter(m => m.route_path === '/users' || m.route_path === '/settings');
+      } else {
+        children = allModules.filter(m => m.route_path.startsWith(parent.route_path + '/'));
+      }
+      return { parent, children };
+    });
+  }, [allModules]);
+
   return (
     <div className="min-h-screen bg-transparent p-4 md:p-8 animate-in fade-in duration-500">
       <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Compact Stats Banner */}
-        <div className="flex justify-end bg-white dark:bg-white/5 p-2 rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
-          <div className="flex items-center gap-6 px-4">
-             <div className="text-center border-r border-gray-100 dark:border-white/5 pr-6 py-1">
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
-                <p className="text-lg font-black text-dts-primary dark:text-white">{stats.total}</p>
-             </div>
-             <div className="text-center border-r border-gray-100 dark:border-white/5 pr-6 py-1">
-                <p className="text-[9px] font-bold text-status-success uppercase tracking-widest">Activos</p>
-                <p className="text-lg font-black text-dts-primary dark:text-white">{stats.active}</p>
-             </div>
-             <div className="text-center py-1">
-                <p className="text-[9px] font-bold text-dts-secondary uppercase tracking-widest">Admins</p>
-                <p className="text-lg font-black text-dts-primary dark:text-white">{stats.admins}</p>
-             </div>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-gray-100 dark:border-white/5 gap-2">
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${
+              activeTab === 'users'
+                ? 'border-dts-secondary text-dts-secondary font-black'
+                : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-white'
+            }`}
+          >
+            Usuarios
+          </button>
+          <button
+            onClick={() => setActiveTab('permissions')}
+            className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${
+              activeTab === 'permissions'
+                ? 'border-dts-secondary text-dts-secondary font-black'
+                : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-white'
+            }`}
+          >
+            Permisos de Rol
+          </button>
+        </div>
+        
+        {activeTab === 'permissions' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Roles List */}
+            <div className="lg:col-span-1">
+              <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-white/5 shadow-2xl space-y-6 sticky top-8">
+                <h2 className="text-lg font-bold text-dts-secondary uppercase tracking-wider">
+                  Roles de Usuario
+                </h2>
+                <div className="flex flex-col gap-2">
+                  {roles.map((role) => (
+                    <button
+                      key={role.id}
+                      onClick={() => setSelectedPermissionRoleId(role.id)}
+                      className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-bold flex items-center justify-between ${
+                        selectedPermissionRoleId === role.id
+                          ? 'bg-dts-primary text-white border-dts-primary shadow-md'
+                          : 'bg-gray-50 dark:bg-dts-primary-dark/40 border-gray-200 dark:border-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      <span>{role.name}</span>
+                      <Shield size={16} className={selectedPermissionRoleId === role.id ? 'text-dts-secondary' : 'text-gray-400'} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modules / Permissions Checkboxes */}
+            <div className="lg:col-span-2">
+              <div className="bg-white dark:bg-surface-card-dark rounded-2xl shadow-2xl border border-gray-100 dark:border-white/5 overflow-hidden p-6 space-y-6">
+                <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-dts-primary dark:text-white uppercase tracking-wider">
+                      Vistas y Módulos Accesibles
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Habilita o deshabilita los accesos de navegación para el rol seleccionado
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  {groupedModules.map((group) => {
+                    if (!group.parent) return null;
+                    const isParentChecked = !!rolePermissions[group.parent.id];
+                    return (
+                      <div key={group.parent.id} className="bg-gray-50/50 dark:bg-dts-primary-dark/10 rounded-2xl p-4 border border-gray-100 dark:border-white/5 space-y-4 shadow-sm">
+                        {/* Parent Row */}
+                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-dts-secondary animate-pulse" />
+                              {group.parent.name.replace('Módulo: ', '').replace(' (General)', '')}
+                            </span>
+                            <span className="text-[10px] font-mono text-gray-400">
+                              Ruta Base: {group.parent.route_path}
+                            </span>
+                          </div>
+                          <div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isParentChecked}
+                                onChange={(e) => {
+                                  const updated = {
+                                    ...rolePermissions,
+                                    [group.parent.id]: e.target.checked
+                                  };
+                                  if (!e.target.checked) {
+                                    group.children.forEach(child => {
+                                      updated[child.id] = false;
+                                    });
+                                  } else {
+                                    group.children.forEach(child => {
+                                      updated[child.id] = true;
+                                    });
+                                  }
+                                  setRolePermissions(updated);
+                                }}
+                                className="sr-only peer"
+                              />
+                              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-dts-secondary"></div>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Children Submenu List */}
+                        {group.children.length > 0 && (
+                          <div className="pl-6 space-y-3 border-l-2 border-dashed border-gray-200 dark:border-white/10 ml-1.5">
+                            {group.children.map((child) => {
+                              const isChildChecked = !!rolePermissions[child.id];
+                              return (
+                                <div key={child.id} className="flex items-center justify-between py-1 hover:bg-gray-100/50 dark:hover:bg-white/5 px-2 rounded-lg transition-colors">
+                                  <div className="flex flex-col">
+                                    <span className="font-semibold text-gray-700 dark:text-gray-300 text-xs">
+                                      {child.name.includes(':') ? child.name.substring(child.name.indexOf(':') + 1).trim() : child.name}
+                                    </span>
+                                    <span className="text-[9px] font-mono text-gray-400">
+                                      {child.route_path}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={isChildChecked}
+                                        disabled={!isParentChecked}
+                                        onChange={(e) => {
+                                          setRolePermissions({
+                                            ...rolePermissions,
+                                            [child.id]: e.target.checked
+                                          });
+                                        }}
+                                        className="sr-only peer"
+                                      />
+                                      <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-dts-secondary opacity-80 peer-disabled:opacity-40"></div>
+                                    </label>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-white/5">
+                  <button
+                    onClick={handleSavePermissions}
+                    disabled={savingPermissions || !selectedPermissionRoleId}
+                    className="px-6 py-3 bg-linear-to-r from-dts-secondary-dark to-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {savingPermissions ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      'GUARDAR PERMISOS'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Compact Stats Banner */}
+            <div className="flex justify-end bg-white dark:bg-white/5 p-2 rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+              <div className="flex items-center gap-6 px-4">
+                 <div className="text-center border-r border-gray-100 dark:border-white/5 pr-6 py-1">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
+                    <p className="text-lg font-black text-dts-primary dark:text-white">{stats.total}</p>
+                 </div>
+                 <div className="text-center border-r border-gray-100 dark:border-white/5 pr-6 py-1">
+                    <p className="text-[9px] font-bold text-status-success uppercase tracking-widest">Activos</p>
+                    <p className="text-lg font-black text-dts-primary dark:text-white">{stats.active}</p>
+                 </div>
+                 <div className="text-center py-1">
+                    <p className="text-[9px] font-bold text-dts-secondary uppercase tracking-widest">Admins</p>
+                    <p className="text-lg font-black text-dts-primary dark:text-white">{stats.admins}</p>
+                 </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Form Section */}
           <div className="lg:col-span-1">
@@ -348,7 +600,7 @@ export const UsersPage: React.FC = () => {
                    )}
                    <button 
                     type="submit" disabled={loading}
-                    className={`flex-[2] py-3 px-4 bg-gradient-to-r ${editingId ? 'from-dts-primary to-dts-primary-light' : 'from-dts-secondary-dark to-dts-secondary'} hover:brightness-110 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2`}
+                    className={`flex-2 py-3 px-4 bg-linear-to-r ${editingId ? 'from-dts-primary to-dts-primary-light' : 'from-dts-secondary-dark to-dts-secondary'} hover:brightness-110 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2`}
                   >
                     {loading ? (
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -413,7 +665,7 @@ export const UsersPage: React.FC = () => {
                         <tr key={user.id} className="group hover:bg-gray-50 dark:hover:bg-white/2 transition-colors">
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-lg ${user.isActive ? 'bg-gradient-to-br from-dts-primary to-dts-secondary' : 'bg-gray-200 dark:bg-gray-800'}`}>
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-lg ${user.isActive ? 'bg-linear-to-br from-dts-primary to-dts-secondary' : 'bg-gray-200 dark:bg-gray-800'}`}>
                                  {(user.firstName?.[0] || 'U')}{(user.lastName?.[0] || '')}
                               </div>
                               <div className="flex flex-col">
@@ -480,7 +732,9 @@ export const UsersPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import logo from '../../assets/Logodts_white.svg';
 import { supabase } from '../../api/supabase';
-
+import apiClient from '../../api/apiClient';
 import { useAuthStore } from '../../store/authStore';
 
 interface NavItem {
@@ -53,6 +53,7 @@ const navItems: NavItem[] = [
       { name: 'Pedidos de Venta', path: '/sales/orders' },
       { name: 'Presupuestos', path: '/sales/budgets' },
       { name: 'Ppto. x Product Mgr.', path: '/sales/product-budgets' },
+      { name: 'Histórico de Facturación', path: '/sales/invoices' },
       { name: 'Histórico de Ventas', path: '/sales/value-entries', roles: ['ADMIN', 'DIRECCION'] },
     ]
   },
@@ -71,8 +72,18 @@ export const Sidebar: React.FC = () => {
   const { isSidebarCollapsed, toggleSidebar } = useUIStore();
   const { profile, session } = useAuthStore();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [allowedPermissions, setAllowedPermissions] = useState<any[]>([]);
   const location = useLocation();
   const firstRender = useRef(true);
+
+  // Fetch permissions on mount/session change
+  useEffect(() => {
+    if (session) {
+      apiClient.get('/users/permissions/me')
+        .then(res => setAllowedPermissions(res.data))
+        .catch(err => console.error('Error fetching permissions:', err));
+    }
+  }, [session, profile]);
 
   // Autodetect open submenu on mount and when path changes
   useEffect(() => {
@@ -101,12 +112,37 @@ export const Sidebar: React.FC = () => {
 
   const userRole = profile?.roles?.name?.toUpperCase() || '';
 
-  // Filter nav items based on user role
+  // Helper to determine if a path is allowed
+  const isPathAllowed = (path: string) => {
+    if (allowedPermissions.length === 0) return true; // Default to allow if not loaded
+    const perm = allowedPermissions.find(p => 
+      p.routePath === path || 
+      (p.routePath === '/simulations' && path === '/finance/simulations')
+    );
+    return perm ? perm.canView : true;
+  };
+
+  // Filter nav items based on user role and DB permissions
   const filteredNavItems = navItems.filter(item => {
-    // If no roles defined, it's public for authenticated users
-    if (!item.roles) return true;
-    // Check if user's role is in the allowed list
-    return item.roles.includes(userRole);
+    if (item.roles && !item.roles.includes(userRole)) return false;
+
+    if (item.path && !isPathAllowed(item.path)) return false;
+
+    if (item.children) {
+      const allowedChildren = item.children.filter(child => {
+        if (child.roles && !child.roles.includes(userRole)) return false;
+        if (!isPathAllowed(child.path)) return false;
+        
+        // Also check parent prefix
+        const parentRoute = child.path.substring(0, child.path.indexOf('/', 1) > 0 ? child.path.indexOf('/', 1) : child.path.length);
+        if (parentRoute && !isPathAllowed(parentRoute)) return false;
+
+        return true;
+      });
+      if (allowedChildren.length === 0) return false;
+    }
+
+    return true;
   });
 
   const handleLogout = async () => {
@@ -189,7 +225,15 @@ export const Sidebar: React.FC = () => {
                 {!isSidebarCollapsed && openSubmenu === item.name && (
                   <div className="mt-0.5 ml-3 pl-6 border-l border-white/5 flex flex-col gap-0.5">
                     {item.children
-                      .filter(child => !child.roles || child.roles.includes(userRole))
+                      .filter(child => {
+                        if (child.roles && !child.roles.includes(userRole)) return false;
+                        if (!isPathAllowed(child.path)) return false;
+                        
+                        const parentRoute = child.path.substring(0, child.path.indexOf('/', 1) > 0 ? child.path.indexOf('/', 1) : child.path.length);
+                        if (parentRoute && !isPathAllowed(parentRoute)) return false;
+                        
+                        return true;
+                      })
                       .map((child) => (
                       <NavLink
                         key={child.path}
