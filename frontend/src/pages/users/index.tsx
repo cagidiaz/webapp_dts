@@ -388,7 +388,7 @@ export const UsersPage: React.FC = () => {
                                 type="checkbox"
                                 checked={isParentChecked}
                                 onChange={(e) => {
-                                  const updated = {
+                                  const updated: Record<string, boolean> = {
                                     ...rolePermissions,
                                     [group.parent.id]: e.target.checked
                                   };
