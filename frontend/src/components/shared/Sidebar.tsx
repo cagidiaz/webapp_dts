@@ -53,8 +53,9 @@ const navItems: NavItem[] = [
       { name: 'Pedidos de Venta', path: '/sales/orders' },
       { name: 'Presupuestos', path: '/sales/budgets' },
       { name: 'Ppto. x Product Mgr.', path: '/sales/product-budgets' },
+      { name: 'Ofertas', path: '/sales/quotes' },
       { name: 'Histórico de Facturación', path: '/sales/invoices' },
-      { name: 'Histórico de Ventas', path: '/sales/value-entries', roles: ['ADMIN', 'DIRECCION'] },
+      { name: 'Movimientos Valor', path: '/sales/value-entries', roles: ['ADMIN', 'DIRECCION'] },
     ]
   },
   { 
@@ -240,7 +241,7 @@ export const Sidebar: React.FC = () => {
                         to={child.path}
                         onClick={handleLinkClick}
                         className={({ isActive }) => `
-                          block px-3 py-1.5 text-[11px] rounded-md transition-all duration-200
+                          block px-3 py-1 text-[12px] rounded-md transition-all duration-200
                           ${isActive 
                             ? 'text-dts-secondary font-bold' 
                             : 'text-gray-500 hover:text-white hover:translate-x-1'

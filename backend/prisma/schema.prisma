@@ -547,6 +547,7 @@ model customers {
   sales_budgets            sales_budgets[]
   sales_orders             sales_orders[]
   sales_documents          sales_documents[]
+  sales_quotes             sales_quotes[]
 
   @@schema("public")
 }
@@ -605,6 +606,7 @@ model sales_reps {
   customers      customers[]
   profiles       profiles[]
   sales_budgets  sales_budgets[]
+  sales_quotes   sales_quotes[]
 
   @@index([code], map: "idx_sales_reps_code")
   @@schema("public")
@@ -737,4 +739,39 @@ model sales_document_lines {
   @@index([product_no], map: "idx_sales_document_lines_prod")
   @@schema("public")
 }
+
+model sales_quotes {
+  id                      String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document_type           String?     @db.VarChar(50)
+  document_no             String      @unique @db.VarChar(50)
+  customer_no             String      @db.VarChar(50)
+  amount                  Decimal?    @default(0.0) @db.Decimal(15, 4)
+  salesperson_code        String?     @db.VarChar(20)
+  cerrado                 Boolean     @default(false)
+  catproducto_code        String?     @db.VarChar(50)
+  document_date           DateTime?   @db.Date
+  estado_oferta           String?     @db.VarChar(50)
+  external_doc_no         String?     @db.VarChar(100)
+  confirmacion_date       DateTime?   @db.Date
+  cierreprev_date         DateTime?   @db.Date
+  motivo_ganada           String?     @db.Text
+  motivo_perdida          String?     @db.Text
+  observaciones           String?     @db.Text
+  pedido_confirmado       Boolean     @default(false)
+  probabilidad_exito      Decimal?    @db.Decimal(5, 2)
+  oferta_type             String?     @db.VarChar(50)
+  valor_oferta_ponderado  Decimal?    @default(0.0) @db.Decimal(15, 4)
+  your_reference          String?     @db.VarChar(100)
+  created_at              DateTime?   @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?   @default(now()) @db.Timestamptz(6)
+
+  customer                customers   @relation(fields: [customer_no], references: [client_id], onDelete: Cascade)
+  sales_rep               sales_reps? @relation(fields: [salesperson_code], references: [code])
+
+  @@index([customer_no], map: "idx_sales_quotes_customer")
+  @@index([salesperson_code], map: "idx_sales_quotes_salesperson")
+  @@index([document_date], map: "idx_sales_quotes_date")
+  @@schema("public")
+}
+
 
