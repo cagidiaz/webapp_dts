@@ -36,7 +36,7 @@ El sistema consta de tres capas principales:
 * **Administrador:** Acceso total a todos los módulos y gestión de usuarios/roles.  
 * **Dirección / C-Level:** Acceso a vistas consolidadas, contabilidad y presupuestos.  
 * **Ventas:** Acceso exclusivo a módulos comerciales y facturación.  
-* **Operaciones:** Acceso a fabricación, stock y maestros.
+* **Operaciones:** Acceso a fabricación, stock, maestros, panel de control comercial (ventas) y vistas comerciales configurables desde el panel de administración.
 
 ---
 

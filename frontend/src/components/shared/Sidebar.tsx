@@ -46,7 +46,7 @@ const navItems: NavItem[] = [
   { 
     name: 'Ventas', 
     icon: TrendingUp, 
-    roles: ['ADMIN', 'DIRECCION', 'VENTAS'],
+    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES'],
     children: [
       { name: 'Clientes', path: '/sales/customers' },
       { name: 'Productos', path: '/sales/products' },

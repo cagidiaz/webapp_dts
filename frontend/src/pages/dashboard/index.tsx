@@ -11,7 +11,7 @@ export const DashboardPage: React.FC = () => {
   // ADMIN and DIRECCION see the Financial Dashboard
   // VENTAS sees the Sales Dashboard
   
-  if (userRole === 'VENTAS') {
+  if (userRole === 'VENTAS' || userRole === 'OPERACIONES') {
     return <SalesDashboard />;
   }
 

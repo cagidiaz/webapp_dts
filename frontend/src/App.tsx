@@ -104,8 +104,8 @@ const App: React.FC = () => {
                 <Route path="simulations" element={<SimulationsPage />} />
               </Route>
 
-              {/* Modulo Ventas: Todos los roles (ADMIN, DIRECCION, VENTAS) */}
-              <Route path="sales" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS']}><Outlet /></RoleGuard>}>
+              {/* Modulo Ventas: Todos los roles (ADMIN, DIRECCION, VENTAS, OPERACIONES) */}
+              <Route path="sales" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']}><Outlet /></RoleGuard>}>
                 <Route index element={<Navigate to="customers" replace />} />
                 <Route path="customers" element={<CustomersPage />} />
                 <Route path="products" element={<ProductsPage />} />
