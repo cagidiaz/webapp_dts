@@ -1,0 +1,39 @@
+# 📜 Reglas de Desarrollo y Buenas Prácticas - dTS Instruments (.cursorrules)
+
+Este archivo contiene las directrices críticas que la Inteligencia Artificial y los desarrolladores deben seguir estrictamente en este proyecto. **Léelo al inicio de cada interacción.**
+
+---
+
+## 1. CONTROL DE VERSIONES (GIT) - CRÍTICO 🚨
+* **Idioma:** **TODOS** los mensajes de commit deben redactarse en **ESPAÑOL**.
+* **Formato:** Usar prefijos semánticos (`feat:`, `fix:`, `style:`, `docs:`, etc.) y opcionalmente etiquetas de rol: `[ADMIN]`, `[SALES]`, `[OPERACIONES]`.
+* **Push:** Está estrictamente prohibido que la IA realice `git push` de manera automática. Solo se hará ante la solicitud explícita del usuario.
+
+---
+
+## 2. INMUTABILIDAD DE DATOS (REGLA DE ORO) 🔒
+* **Solo Lectura:** Los datos de negocio sincronizados desde Dynamics 365 Business Central son de **SOLO LECTURA** (tablas de clientes, facturación, stock, etc.). Prohibidas las operaciones `INSERT`, `UPDATE`, `PATCH` o `DELETE` sobre ellas.
+* **Excepción:** Solo se permite escribir en las tablas de control de acceso gestionadas por Supabase (`auth`, `profiles`, `roles`, `role_modules`).
+
+---
+
+## 3. CONTROL DE ACCESO (RBAC) Y ROL DE OPERACIONES 👥
+* **Vistas de Ventas configurables:** El rol de **Operaciones** (`OPERACIONES`) tiene acceso autorizado a la ruta de Ventas (`/sales`). Sin embargo, el acceso a las sub-vistas específicas se controla dinámicamente mediante los permisos configurados en la base de datos (tabla `role_modules`).
+* **Dashboard:** El rol de `OPERACIONES` debe cargar por defecto el **Panel de Control Comercial** (`SalesDashboard`) en lugar del financiero, al igual que el rol `VENTAS`.
+* **Páginas Protegidas:** Asegurar que `App.tsx` y `Sidebar.tsx` permitan los accesos a `OPERACIONES` según corresponda.
+
+---
+
+## 4. CÁLCULO DE KPIS Y REGLAS DE NEGOCIO 📊
+* **Precio Efectivo (Neto):** No utilizar `unit_price` directamente para valorar pedidos si existen descuentos. La fórmula correcta es `(line_amount / quantity)`.
+* **Exclusión de Ceros:** Excluir del cálculo de KPIs cualquier línea cuyo precio efectivo o cantidad sea igual a cero.
+* **Comparativas YTD:** Las comparativas temporales de ventas acumuladas anuales deben ser "día a día" (YTD vs LYTD) para evitar sesgos con meses incompletos.
+
+---
+
+## 5. CAPA VISUAL Y DISEÑO (UX/UI) 🎨
+* **Colores Corporativos:**
+  * **Primario:** `#003E51` (Azul corporativo dTS - representa datos Reales y menús).
+  * **Secundario/Acento:** `#00B0B9` (Cian corporativo dTS - representa Previsiones, botones y tendencias).
+* **Desviaciones:** Los porcentajes de desviación en el Dashboard deben usar clases grandes y ligeras (`text-xl`, `font-light`, `mt-0.5`).
+* **Responsividad:** El menú lateral (`Sidebar`) debe colapsarse automáticamente en pantallas de ancho inferior a 1024px.
