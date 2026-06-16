@@ -40,6 +40,7 @@ export const CrmPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [selectedQuote, setSelectedQuote] = useState<CRMQuote | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   // Activity Form State
   const [newActivityType, setNewActivityType] = useState('Llamada');
@@ -233,12 +234,20 @@ export const CrmPage: React.FC = () => {
   // Drag & Drop
   const handleDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData('text/plain', id);
+    setTimeout(() => {
+      setDraggingId(id);
+    }, 0);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
   };
 
   const handleDrop = (e: React.DragEvent, targetStage: string) => {
     e.preventDefault();
     const id = e.dataTransfer.getData('text/plain');
     if (!id) return;
+    setDraggingId(null);
 
     // Ejecutar actualización
     updateQuoteMutation.mutate({ 
@@ -515,8 +524,11 @@ export const CrmPage: React.FC = () => {
                           key={quote.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, quote.id)}
+                          onDragEnd={handleDragEnd}
                           onClick={() => openDrawer(quote)}
-                          className="bg-white dark:bg-surface-card-dark p-4 rounded-xl border border-gray-200/60 dark:border-white/5 shadow-sm hover:shadow-md hover:border-dts-secondary/50 dark:hover:border-dts-secondary/40 cursor-pointer transition-all duration-200 relative group"
+                          className={`bg-white dark:bg-surface-card-dark p-4 rounded-xl border border-gray-200/60 dark:border-white/5 shadow-sm hover:shadow-md hover:border-dts-secondary/50 dark:hover:border-dts-secondary/40 cursor-pointer transition-all duration-200 relative group ${
+                            draggingId === quote.id ? 'opacity-30 border-dashed scale-95' : 'opacity-100'
+                          }`}
                         >
                           {/* Upper info */}
                           <div className="flex justify-between items-start mb-2">
