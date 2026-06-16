@@ -14,10 +14,11 @@ import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
   Briefcase, Euro, Percent, Sparkles, AlertTriangle, 
   Search, Calendar, User, Mail, Phone, Plus, Trash2,
-  Table, LayoutGrid
+  Table, LayoutGrid, ArrowRight, X
 } from 'lucide-react';
 import { KPISkeleton, InfoPopover } from '../../components/ui';
 import { Drawer } from '../../components/shared';
+import { Dialog, Transition, TransitionChild, DialogPanel, DialogTitle } from '@headlessui/react';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 
@@ -41,6 +42,13 @@ export const CrmPage: React.FC = () => {
   const [selectedQuote, setSelectedQuote] = useState<CRMQuote | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  // State Change Modal States
+  const [isStateModalOpen, setIsStateModalOpen] = useState(false);
+  const [pendingDropQuote, setPendingDropQuote] = useState<CRMQuote | null>(null);
+  const [targetStage, setTargetStage] = useState<string>('');
+  const [stateChangeNotes, setStateChangeNotes] = useState<string>('');
+  const [stateChangeActivityType, setStateChangeActivityType] = useState<string>('Nota');
 
   // Activity Form State
   const [newActivityType, setNewActivityType] = useState('Llamada');
@@ -249,10 +257,79 @@ export const CrmPage: React.FC = () => {
     if (!id) return;
     setDraggingId(null);
 
-    // Ejecutar actualización
-    updateQuoteMutation.mutate({ 
-      id, 
-      data: { estado_oferta: targetStage } 
+    const quote = quotes.find(q => q.id === id);
+    if (!quote) return;
+
+    const currentStage = (quote.estado_oferta || '').toLowerCase().trim();
+    const targetStageLower = targetStage.toLowerCase().trim();
+
+    if (currentStage === targetStageLower) return;
+
+    setPendingDropQuote(quote);
+    setTargetStage(targetStageLower);
+    setStateChangeNotes('');
+    setStateChangeActivityType('Nota');
+    setIsStateModalOpen(true);
+  };
+
+  const handleConfirmStateChange = async (onlyChange = false) => {
+    if (!pendingDropQuote) return;
+
+    let prob = pendingDropQuote.probabilidad_exito;
+    const stage = targetStage.toLowerCase();
+    if (stage === 'borrador') prob = 10;
+    else if (stage === 'enviada') prob = 25;
+    else if (stage === 'en negociación') prob = 50;
+    else if (stage === 'ganada') prob = 100;
+    else if (stage === 'perdida') prob = 0;
+
+    const updateData: any = {
+      estado_oferta: targetStage,
+      probabilidad_exito: prob
+    };
+
+    if (!onlyChange && stateChangeNotes.trim()) {
+      if (targetStage === 'ganada') {
+        updateData.motivo_ganada = stateChangeNotes;
+      } else if (targetStage === 'perdida') {
+        updateData.motivo_perdida = stateChangeNotes;
+      }
+    }
+
+    updateQuoteMutation.mutate({
+      id: pendingDropQuote.id,
+      data: updateData
+    }, {
+      onSuccess: async () => {
+        try {
+          const fromStage = (pendingDropQuote.estado_oferta || 'borrador').toUpperCase();
+          const toStage = targetStage.toUpperCase();
+          
+          if (!onlyChange && stateChangeNotes.trim()) {
+            await addQuoteActivity(pendingDropQuote.id, {
+              tipo: stateChangeActivityType,
+              notas: `Cambio de estado [${fromStage} -> ${toStage}]. Motivo: ${stateChangeNotes}`,
+              fecha: new Date().toISOString(),
+              hecho: true
+            });
+          } else {
+            await addQuoteActivity(pendingDropQuote.id, {
+              tipo: 'Sistema',
+              notas: `Cambio de estado automático [${fromStage} -> ${toStage}]`,
+              fecha: new Date().toISOString(),
+              hecho: true
+            });
+          }
+        } catch (err) {
+          console.error("Error al registrar actividad del cambio de estado:", err);
+        }
+
+        setIsStateModalOpen(false);
+        setPendingDropQuote(null);
+        queryClient.invalidateQueries({ queryKey: ['crm-quotes'] });
+        queryClient.invalidateQueries({ queryKey: ['crm-quote-activities', pendingDropQuote.id] });
+        refetch();
+      }
     });
   };
 
@@ -1008,6 +1085,137 @@ export const CrmPage: React.FC = () => {
           </div>
         )}
       </Drawer>
+
+      {/* State Change Reason Dialog Modal */}
+      <Transition show={isStateModalOpen} as={React.Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => { setIsStateModalOpen(false); setPendingDropQuote(null); }}>
+          <TransitionChild
+            as={React.Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity" />
+          </TransitionChild>
+
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+              <TransitionChild
+                as={React.Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                enterTo="opacity-100 translate-y-0 sm:scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+                leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+              >
+                <DialogPanel className="relative transform overflow-hidden rounded-2xl bg-white dark:bg-surface-card-dark text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-gray-100 dark:border-white/5 p-6 space-y-6">
+                  {/* Close button */}
+                  <button
+                    onClick={() => { setIsStateModalOpen(false); setPendingDropQuote(null); }}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <X size={18} />
+                  </button>
+
+                  <div className="space-y-4">
+                    <DialogTitle as="h3" className="text-base font-bold text-dts-primary dark:text-white uppercase tracking-wider flex items-center gap-2">
+                      <Briefcase className="text-dts-secondary" size={18} />
+                      Registrar Cambio de Estado
+                    </DialogTitle>
+                    <p className="text-xs text-gray-400">
+                      ¿Quieres registrar un motivo o actividad en el historial para esta transición de estado?
+                    </p>
+                  </div>
+
+                  {pendingDropQuote && (
+                    <div className="bg-gray-50 dark:bg-dts-primary-dark/40 p-4 rounded-xl border border-gray-200/50 dark:border-white/5 space-y-3">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-bold font-mono text-dts-secondary">{pendingDropQuote.document_no}</span>
+                        <span className="text-gray-400 font-medium truncate max-w-[200px]">{pendingDropQuote.customer_name}</span>
+                      </div>
+                      
+                      {/* Transition visual indicator */}
+                      <div className="flex items-center justify-center gap-4 py-2 border-t border-gray-200/50 dark:border-white/5 mt-2">
+                        <span className="px-3 py-1 bg-gray-200/50 dark:bg-white/5 text-gray-700 dark:text-gray-300 font-bold uppercase tracking-wider text-[10px] rounded-lg border border-gray-200 dark:border-white/5">
+                          {pendingDropQuote.estado_oferta || 'Borrador'}
+                        </span>
+                        <ArrowRight className="text-dts-secondary animate-pulse" size={16} />
+                        <span className="px-3 py-1 bg-dts-secondary/15 text-dts-secondary font-bold uppercase tracking-wider text-[10px] rounded-lg border border-dts-secondary/20">
+                          {targetStage}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Form fields */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Tipo de Actividad</label>
+                      <select
+                        value={stateChangeActivityType}
+                        onChange={(e) => setStateChangeActivityType(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                      >
+                        <option value="Nota">📝 Nota de Estado</option>
+                        <option value="Llamada">📞 Llamada de Seguimiento</option>
+                        <option value="Email">📧 Email de Negociación</option>
+                        <option value="Reunión">🤝 Reunión con Cliente</option>
+                        <option value="Tarea">✅ Tarea Realizada</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">
+                        {targetStage === 'ganada' ? 'Motivo de Éxito / Ganada' : targetStage === 'perdida' ? 'Motivo de Pérdida / Descarte' : 'Notas del Cambio / Motivo'}
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={stateChangeNotes}
+                        onChange={(e) => setStateChangeNotes(e.target.value)}
+                        placeholder={
+                          targetStage === 'ganada' 
+                            ? "Ej. El cliente aprobó el presupuesto final por mejoras de entrega..." 
+                            : targetStage === 'perdida' 
+                              ? "Ej. Perdido por precio frente a la competencia..." 
+                              : "Detalles del cambio de estado o notas de seguimiento..."
+                        }
+                        className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                    <button
+                      onClick={() => { setIsStateModalOpen(false); setPendingDropQuote(null); }}
+                      className="flex-1 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-white font-bold rounded-xl transition-all border border-gray-200 dark:border-white/5 text-xs text-center"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => handleConfirmStateChange(true)}
+                      className="flex-1 py-2.5 bg-gray-200/50 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-800 dark:text-white font-bold rounded-xl transition-all text-xs text-center"
+                    >
+                      Solo Cambiar Estado
+                    </button>
+                    <button
+                      onClick={() => handleConfirmStateChange(false)}
+                      disabled={!stateChangeNotes.trim()}
+                      className="flex-1 py-2.5 bg-linear-to-r from-dts-secondary-dark to-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-[0.98] disabled:opacity-50 text-xs text-center"
+                    >
+                      Guardar con Motivo
+                    </button>
+                  </div>
+                </DialogPanel>
+              </TransitionChild>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
 
     </div>
   );
