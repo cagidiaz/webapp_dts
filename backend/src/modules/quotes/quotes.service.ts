@@ -72,7 +72,12 @@ export class QuotesService {
     }
 
     if (estadoOferta) {
-      and.push({ estado_oferta: estadoOferta });
+      and.push({
+        estado_oferta: {
+          equals: estadoOferta,
+          mode: 'insensitive'
+        }
+      });
     }
 
     if (cerrado !== undefined && cerrado !== '') {
@@ -357,7 +362,14 @@ export class QuotesService {
       if (params.estadoOferta) {
         and.push({
           OR: [
-            { sales_quotes_crm: { estado_oferta: params.estadoOferta } },
+            {
+              sales_quotes_crm: {
+                estado_oferta: {
+                  equals: params.estadoOferta,
+                  mode: 'insensitive'
+                }
+              }
+            },
             {
               AND: [
                 { sales_quotes_crm: null },
