@@ -10,8 +10,10 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Landmark
+  Landmark,
+  Briefcase
 } from 'lucide-react';
+
 import logo from '../../assets/Logodts_white.svg';
 import { supabase } from '../../api/supabase';
 import apiClient from '../../api/apiClient';
@@ -32,7 +34,14 @@ const navItems: NavItem[] = [
     path: '/dashboard' 
   },
   { 
+    name: 'CRM Ofertas', 
+    icon: Briefcase, 
+    path: '/crm',
+    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']
+  },
+  { 
     name: 'Finanzas', 
+
     icon: Landmark, 
     roles: ['ADMIN', 'DIRECCION'],
     children: [

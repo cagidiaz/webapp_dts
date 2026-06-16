@@ -91,3 +91,92 @@ export const getQuoteById = async (id: string): Promise<SalesQuote> => {
   const { data } = await apiClient.get(`/quotes/${id}`);
   return data;
 };
+
+// --- CRM TYPES & API ENDPOINTS ---
+
+export interface CRMQuoteActivity {
+  id: string;
+  crm_quote_id: string;
+  tipo: string;
+  notas: string;
+  fecha: string;
+  hecho: boolean;
+  created_at?: string;
+}
+
+export interface CRMQuote {
+  id: string;
+  document_no: string;
+  document_date: string | null;
+  amount: number;
+  salesperson_code: string | null;
+  customer_no: string;
+  customer_name: string;
+  salesperson_name: string;
+  
+  crm_id: string | null;
+  estado_oferta: string;
+  probabilidad_exito: number;
+  oferta_type: string;
+  cierreprev_date: string | null;
+  confirmacion_date: string | null;
+  motivo_ganada: string | null;
+  motivo_perdida: string | null;
+  observaciones: string | null;
+  contacto_nombre: string | null;
+  contacto_email: string | null;
+  contacto_telefono: string | null;
+  proxima_accion: string | null;
+  fecha_proxima_accion: string | null;
+  valor_oferta_ponderado: number;
+  
+  activities: CRMQuoteActivity[];
+}
+
+export const getAllCrmQuotes = async (params?: {
+  salespersonCode?: string;
+  estadoOferta?: string;
+  probabilidadExito?: string;
+  ofertaType?: string;
+  search?: string;
+  year?: number | string;
+}): Promise<CRMQuote[]> => {
+  const { data } = await apiClient.get('/quotes/crm', { params });
+  return data;
+};
+
+export const updateCrmQuote = async (id: string, updateData: Partial<CRMQuote>): Promise<any> => {
+  const { data } = await apiClient.patch(`/quotes/crm/${id}`, updateData);
+  return data;
+};
+
+export const getQuoteActivities = async (id: string): Promise<CRMQuoteActivity[]> => {
+  const { data } = await apiClient.get(`/quotes/crm/${id}/activities`);
+  return data;
+};
+
+export const addQuoteActivity = async (id: string, activityData: {
+  tipo: string;
+  notas: string;
+  fecha: string;
+  hecho?: boolean;
+}): Promise<CRMQuoteActivity> => {
+  const { data } = await apiClient.post(`/quotes/crm/${id}/activities`, activityData);
+  return data;
+};
+
+export const updateQuoteActivity = async (activityId: string, activityData: {
+  tipo?: string;
+  notas?: string;
+  fecha?: string;
+  hecho?: boolean;
+}): Promise<CRMQuoteActivity> => {
+  const { data } = await apiClient.patch(`/quotes/crm/activities/${activityId}`, activityData);
+  return data;
+};
+
+export const deleteQuoteActivity = async (activityId: string): Promise<any> => {
+  const { data } = await apiClient.delete(`/quotes/crm/activities/${activityId}`);
+  return data;
+};
+

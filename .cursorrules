@@ -7,7 +7,7 @@ Este archivo contiene las directrices críticas que la Inteligencia Artificial y
 ## 1. CONTROL DE VERSIONES (GIT) - CRÍTICO 🚨
 * **Idioma:** **TODOS** los mensajes de commit deben redactarse en **ESPAÑOL**.
 * **Formato:** Usar prefijos semánticos (`feat:`, `fix:`, `style:`, `docs:`, etc.) y opcionalmente etiquetas de rol: `[ADMIN]`, `[SALES]`, `[OPERACIONES]`.
-* **Push:** Está estrictamente prohibido que la IA realice `git push` de manera automática. Solo se hará ante la solicitud explícita del usuario.
+* **Push (Subidas a GitHub):** Está estrictamente prohibido que la IA realice cualquier subida (`git push`) a GitHub por su cuenta. No debes hacer subidas a GitHub bajo ninguna circunstancia hasta que el usuario te lo indique explícitamente.
 
 ---
 

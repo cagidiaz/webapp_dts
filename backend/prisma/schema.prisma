@@ -767,11 +767,53 @@ model sales_quotes {
 
   customer                customers   @relation(fields: [customer_no], references: [client_id], onDelete: Cascade)
   sales_rep               sales_reps? @relation(fields: [salesperson_code], references: [code])
+  sales_quotes_crm        sales_quotes_crm?
 
   @@index([customer_no], map: "idx_sales_quotes_customer")
   @@index([salesperson_code], map: "idx_sales_quotes_salesperson")
   @@index([document_date], map: "idx_sales_quotes_date")
   @@schema("public")
 }
+
+model sales_quotes_crm {
+  id                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document_no           String                   @unique @db.VarChar(50)
+  estado_oferta         String                   @default("borrador") @db.VarChar(50)
+  probabilidad_exito    Decimal?                 @default(10.0) @db.Decimal(5, 2)
+  oferta_type           String                   @default("proyecto") @db.VarChar(50)
+  cierreprev_date       DateTime?                @db.Date
+  confirmacion_date     DateTime?                @db.Date
+  motivo_ganada         String?                  @db.Text
+  motivo_perdida        String?                  @db.Text
+  observaciones         String?                  @db.Text
+  contacto_nombre       String?                  @db.VarChar(100)
+  contacto_email        String?                  @db.VarChar(100)
+  contacto_telefono     String?                  @db.VarChar(50)
+  proxima_accion        String?                  @db.Text
+  fecha_proxima_accion  DateTime?                @db.Date
+  created_at            DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?                @default(now()) @db.Timestamptz(6)
+
+  sales_quote           sales_quotes             @relation(fields: [document_no], references: [document_no], onDelete: Cascade)
+  activities            sales_quote_activities[]
+
+  @@schema("public")
+}
+
+model sales_quote_activities {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  crm_quote_id String           @db.Uuid
+  tipo         String           @db.VarChar(50)
+  notas        String           @db.Text
+  fecha        DateTime         @db.Timestamptz(6)
+  hecho        Boolean          @default(false)
+  created_at   DateTime?        @default(now()) @db.Timestamptz(6)
+
+  crm_quote    sales_quotes_crm @relation(fields: [crm_quote_id], references: [id], onDelete: Cascade)
+
+  @@index([crm_quote_id], map: "idx_sales_quote_activities_crm_quote")
+  @@schema("public")
+}
+
 
 

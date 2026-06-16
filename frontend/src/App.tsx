@@ -13,6 +13,8 @@ import {
   SimulationsPage
 } from './pages/finance';
 import { CustomersPage, ProductsPage, SalesBudgetPage, SalesOrdersPage, ProductBudgetPage, ValueEntriesPage, SalesInvoicesPage, QuotesPage } from './pages/sales';
+import { CrmPage } from './pages/crm';
+
 
 
 import { supabase } from './api/supabase';
@@ -118,6 +120,7 @@ const App: React.FC = () => {
 
               </Route>
               
+              <Route path="crm" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']}><CrmPage /></RoleGuard>} />
               <Route path="users" element={<RoleGuard allowedRoles={['ADMIN']}><UsersPage /></RoleGuard>} />
               <Route path="settings" element={<RoleGuard allowedRoles={['ADMIN']}><SettingsPage /></RoleGuard>} />
             </Route>

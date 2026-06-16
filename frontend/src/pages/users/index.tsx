@@ -282,7 +282,8 @@ export const UsersPage: React.FC = () => {
       m.route_path === '/dashboard' || 
       m.route_path === '/finance' || 
       m.route_path === '/sales' || 
-      m.route_path === '/config'
+      m.route_path === '/config' ||
+      m.route_path === '/crm'
     );
 
     return parents.map(parent => {

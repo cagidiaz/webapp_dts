@@ -72,5 +72,6 @@ INSERT INTO public.modules (name, route_path) VALUES
 ('Ventas y Compras', '/sales'),
 ('Escenarios y Presupuestos', '/simulations'),
 ('Fabricación y Stock', '/inventory'),
-('Gestión de Usuarios', '/users')
+('Gestión de Usuarios', '/users'),
+('CRM Ofertas', '/crm')
 ON CONFLICT (name) DO NOTHING;

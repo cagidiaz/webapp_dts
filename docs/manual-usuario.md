@@ -40,5 +40,20 @@ Vista unificada para consultar facturas y abonos de venta con soporte para filtr
 - **Búsqueda Dinámica**: Filtro reactivo en tiempo real por número de documento, código o nombre de cliente, SKU, pedido de origen o referencia externa.
 - **Exportación Excel**: Botón de exportación para descargar a un reporte Excel (`.xlsx`) el detalle consolidado de las cabeceras junto con sus líneas (incluyendo la nueva columna de número de línea `line_no`).
 
+## 6. CRM de Ofertas (Seguimiento del Pipeline Comercial)
+El módulo CRM de Ofertas permite centralizar, gestionar y dar seguimiento a las oportunidades comerciales y cotizaciones emitidas de manera interactiva.
+- **Vista Tablero (Kanban)**: Permite visualizar las ofertas agrupadas en columnas según su estado comercial actual: *Borrador*, *Enviada*, *En Negociación*, *Ganada* o *Perdida*. Facilita el avance del embudo mediante arrastrar y soltar (Drag & Drop) tarjetas entre columnas.
+- **Vista de Tabla**: Presentación tabular compacta y detallada de todas las ofertas que facilita búsquedas globales, filtros simultáneos por año, comercial asignado o tipo de oferta (Proyecto, Cliente Nuevo, Cliente Existente) y ordenamiento ágil de datos.
+- **Panel de KPIs Superiores**: Indicadores clave de rendimiento calculados reactivamente:
+  - **Pipeline Activo**: Sumatorio total del importe de ofertas en estados abiertos.
+  - **Previsión Ponderada**: Estimación probabilística de facturación calculada como `Sumatorio(Importe * Probabilidad / 100)`.
+  - **Tasa de Cierre**: Porcentaje de éxito basado en ofertas Ganadas frente al total de cerradas.
+  - **Seguimiento Vencido**: Cantidad de oportunidades activas cuya fecha de próxima acción programada es anterior a la fecha de hoy.
+- **Drawer de Detalles y Registro de Actividades**: Al hacer clic en cualquier oferta se despliega un panel lateral para:
+  - Cambiar manualmente el estado, la probabilidad de éxito (con preajustes por estado) o el tipo de oferta.
+  - Asignar fechas de cierre previsto o de seguimiento.
+  - Registrar notas y justificaciones de éxito o pérdida.
+  - Registrar bitácoras de actividades (Llamadas, Visitas, Correos, Tareas, etc.) marcándolas como completadas o pendientes.
+
 ---
-*Manual de dTS Instruments v5.0 — Actualizado a 4 de junio 2026.*
+*Manual de dTS Instruments v5.1 — Actualizado a 16 de junio 2026.*

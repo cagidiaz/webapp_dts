@@ -7,9 +7,10 @@ interface DrawerProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
 }
 
-export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children }) => {
+export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -35,6 +36,16 @@ export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children
 
   if (!mounted) return null;
 
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+  };
+
   return createPortal(
     <>
       {/* Backdrop */}
@@ -47,7 +58,7 @@ export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children
       
       {/* Panel */}
       <aside 
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white dark:bg-dts-primary-dark shadow-2xl z-101 transition-transform duration-300 ease-in-out transform flex flex-col ${
+        className={`fixed top-0 right-0 h-full w-full ${sizeClasses[size]} bg-white dark:bg-dts-primary-dark shadow-2xl z-101 transition-transform duration-300 ease-in-out transform flex flex-col ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
