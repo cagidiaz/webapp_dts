@@ -131,12 +131,12 @@ export const SalesInvoicesPage: React.FC = () => {
   // Dashboard Calculations (Aggregated In-Memory for the charts)
   // ----------------------------------------------------
   const dashboardCalculations = useMemo(() => {
-    // 1. Yearly totals for KPI Cards and Yearly Billing Bar Chart (Unfiltered)
+    // 1. Yearly totals for KPI Cards and Yearly Billing Bar Chart (Filtered by selectedMonths)
     const yearlyTotals: Record<number, number> = {
       2022: 0, 2023: 0, 2024: 0, 2025: 0, 2026: 0
     };
     dashboardData.forEach(item => {
-      if (item.year >= 2022 && item.year <= 2026) {
+      if (item.year >= 2022 && item.year <= 2026 && selectedMonths.includes(item.month)) {
         yearlyTotals[item.year] += item.amount;
       }
     });
