@@ -21,6 +21,7 @@ export class QuotesService {
     sortBy?: string;
     sortDir?: 'asc' | 'desc';
     year?: number;
+    probabilidadExito?: string;
   } = {}) {
     const { 
       skip, 
@@ -32,7 +33,8 @@ export class QuotesService {
       cerrado, 
       sortBy = 'document_date', 
       sortDir = 'desc',
-      year
+      year,
+      probabilidadExito
     } = params;
 
     const where: any = {};
@@ -83,6 +85,15 @@ export class QuotesService {
     if (cerrado !== undefined && cerrado !== '') {
       const isCerrado = cerrado === true || cerrado === 'true';
       and.push({ cerrado: isCerrado });
+    }
+
+    if (probabilidadExito) {
+      const probValue = Number(probabilidadExito);
+      if (!isNaN(probValue)) {
+        and.push({
+          probabilidad_exito: probValue,
+        });
+      }
     }
 
     if (and.length > 0) {

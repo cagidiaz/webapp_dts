@@ -24,6 +24,7 @@ export class QuotesController {
   @ApiQuery({ name: 'sortBy', required: false, type: String })
   @ApiQuery({ name: 'sortDir', required: false, type: String })
   @ApiQuery({ name: 'year', required: false, type: Number })
+  @ApiQuery({ name: 'probabilidadExito', required: false, type: String })
   async getAll(
     @Query('take') take?: number,
     @Query('skip') skip?: number,
@@ -35,6 +36,7 @@ export class QuotesController {
     @Query('sortBy') sortBy?: string,
     @Query('sortDir') sortDir?: 'asc' | 'desc',
     @Query('year') year?: number,
+    @Query('probabilidadExito') probabilidadExito?: string,
   ) {
     return this.quotesService.getAll({ 
       take, 
@@ -46,7 +48,8 @@ export class QuotesController {
       cerrado, 
       sortBy, 
       sortDir,
-      year: year ? Number(year) : undefined
+      year: year ? Number(year) : undefined,
+      probabilidadExito
     });
   }
 

@@ -5,7 +5,7 @@ import { getCustomerSalespersons } from '../../api/customers';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
   Search, FileText, Euro, CheckCircle, Percent, ArrowUpDown, 
-  ChevronUp, ChevronDown, Sparkles, BarChart3
+  ChevronUp, ChevronDown, Sparkles, BarChart3, Calendar
 } from 'lucide-react';
 import { KPISkeleton, TableSkeleton, InfoPopover, ExportButton } from '../../components/ui';
 import { Drawer } from '../../components/shared';
@@ -31,6 +31,7 @@ export const QuotesPage: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [salespersonFilter, setSalespersonFilter] = useState('');
   const [stateFilter, setStateFilter] = useState('');
+  const [probabilityFilter, setProbabilityFilter] = useState('');
   const closedFilter = '';
   const [sortBy, setSortBy] = useState('document_date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -79,7 +80,7 @@ export const QuotesPage: React.FC = () => {
 
   // Query quotes with infinite scroll
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ['sales-quotes', debouncedSearch, salespersonFilter, stateFilter, closedFilter, sortBy, sortDir, yearFilter],
+    queryKey: ['sales-quotes', debouncedSearch, salespersonFilter, stateFilter, closedFilter, sortBy, sortDir, yearFilter, probabilityFilter],
     queryFn: ({ pageParam = 0 }) => getAllQuotes({
       take: pageSize,
       skip: pageParam as number,
@@ -89,7 +90,8 @@ export const QuotesPage: React.FC = () => {
       cerrado: closedFilter === '' ? undefined : (closedFilter === 'true'),
       sortBy,
       sortDir,
-      year: yearFilter ? Number(yearFilter) : undefined
+      year: yearFilter ? Number(yearFilter) : undefined,
+      probabilidadExito: probabilityFilter || undefined
     }),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
@@ -138,7 +140,8 @@ export const QuotesPage: React.FC = () => {
       cerrado: closedFilter === '' ? undefined : (closedFilter === 'true'),
       sortBy,
       sortDir,
-      year: yearFilter ? Number(yearFilter) : undefined
+      year: yearFilter ? Number(yearFilter) : undefined,
+      probabilidadExito: probabilityFilter || undefined
     });
 
     const columns = [
@@ -151,7 +154,7 @@ export const QuotesPage: React.FC = () => {
       { key: 'estado_oferta', label: 'Estado' },
       { key: 'cerrado', label: 'Cerrada', format: (v: any) => v ? 'Sí' : 'No' },
       { key: 'probabilidad_exito', label: 'Prob. Éxito (%)', format: (v: any) => v ? `${v}%` : '' },
-      { key: 'valor_oferta_ponderado', label: 'Valor Ponderado (€)', format: (v: any) => Number(Number(v).toFixed(2)) },
+      { key: 'cierreprev_date', label: 'Cierre Previsto', format: (v: any) => v ? new Date(v).toLocaleDateString('es-ES') : '' },
       { key: 'pedido_confirmado', label: 'Pedido Confirmado', format: (v: any) => v ? 'Sí' : 'No' },
       { key: 'motivo_ganada', label: 'Motivo Ganada' },
       { key: 'motivo_perdida', label: 'Motivo Perdida' },
@@ -183,13 +186,31 @@ export const QuotesPage: React.FC = () => {
     return { quotesList: list, summary: sum };
   }, [data]);
 
+  // Separate query for chart data — NOT affected by state/probability filters
+  const { data: chartQueryData } = useQuery({
+    queryKey: ['sales-quotes-charts', debouncedSearch, salespersonFilter, yearFilter],
+    queryFn: () => getAllQuotes({
+      take: 1,
+      skip: 0,
+      search: debouncedSearch,
+      salespersonCode: salespersonFilter || undefined,
+      sortBy: 'document_date',
+      sortDir: 'desc',
+      year: yearFilter ? Number(yearFilter) : undefined,
+    }),
+  });
+
+  const chartSummary = useMemo(() => {
+    return chartQueryData?.summary || summary;
+  }, [chartQueryData, summary]);
+
   const { salespersonChartData, salespersonNames } = useMemo(() => {
-    if (!summary.chartData?.monthlySalespersonData) {
+    if (!chartSummary.chartData?.monthlySalespersonData) {
       return { salespersonChartData: [], salespersonNames: [] };
     }
     const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const spNamesSet = new Set<string>();
-    summary.chartData.monthlySalespersonData.forEach(d => {
+    chartSummary.chartData.monthlySalespersonData.forEach(d => {
       spNamesSet.add(d.salespersonName);
     });
     const spNames = Array.from(spNamesSet);
@@ -200,7 +221,7 @@ export const QuotesPage: React.FC = () => {
         row[name] = 0;
       });
 
-      const monthData = summary.chartData!.monthlySalespersonData.filter(d => d.month === m);
+      const monthData = chartSummary.chartData!.monthlySalespersonData.filter(d => d.month === m);
       let totalCount = 0;
       let totalWon = 0;
 
@@ -215,18 +236,18 @@ export const QuotesPage: React.FC = () => {
     });
 
     return { salespersonChartData: chartData, salespersonNames: spNames };
-  }, [summary.chartData]);
+  }, [chartSummary.chartData]);
 
   const statusChartData = useMemo(() => {
-    if (!summary.chartData?.monthlyStatusData) return [];
-    return summary.chartData.monthlyStatusData.map(d => ({
+    if (!chartSummary.chartData?.monthlyStatusData) return [];
+    return chartSummary.chartData.monthlyStatusData.map(d => ({
       month: d.month,
       'Creadas (€)': Number((d.createdAmount / 1000).toFixed(1)), // K €
       'Aprobadas (€)': Number((d.approvedAmount / 1000).toFixed(1)), // K €
       'Creadas (Cant.)': d.createdCount,
       'Aprobadas (Cant.)': d.approvedCount,
     }));
-  }, [summary.chartData]);
+  }, [chartSummary.chartData]);
 
   const openQuoteDetails = (quote: SalesQuote) => {
     setSelectedQuoteId(quote.id);
@@ -440,9 +461,26 @@ export const QuotesPage: React.FC = () => {
                   onChange={(e) => setStateFilter(e.target.value)}
                 >
                   <option value="">Todos</option>
+                  <option value="Enviada">Enviada</option>
                   <option value="Ganada">Ganada</option>
                   <option value="Perdida">Perdida</option>
-                  <option value="Pendiente">Pendiente / En Curso</option>
+                </select>
+              </div>
+
+              {/* Probability Filter */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500 font-medium">Prob.&nbsp;Éxito:</span>
+                <select 
+                  className="block pl-2 pr-8 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  value={probabilityFilter}
+                  onChange={(e) => setProbabilityFilter(e.target.value)}
+                >
+                  <option value="">Todas</option>
+                  <option value="10">10%</option>
+                  <option value="30">30%</option>
+                  <option value="50">50%</option>
+                  <option value="75">75%</option>
+                  <option value="90">90%</option>
                 </select>
               </div>
 
@@ -477,7 +515,7 @@ export const QuotesPage: React.FC = () => {
                   { label: 'Comercial', key: 'salesperson_code', className: 'text-[10px] font-bold tracking-wider' },
                   { label: 'Importe', key: 'amount', align: 'right', className: 'text-[10px] font-bold tracking-wider' },
                   { label: 'Prob. Éxito', key: 'probabilidad_exito', align: 'right', className: 'text-[10px] font-bold tracking-wider' },
-                  { label: 'Valor Ponderado', key: 'valor_oferta_ponderado', align: 'right', className: 'text-[10px] font-bold tracking-wider' },
+                  { label: 'Cierre Previsto', key: 'cierreprev_date', align: 'center', className: 'text-[10px] font-bold tracking-wider' },
                   { label: 'Estado', key: 'estado_oferta', align: 'center', className: 'text-[10px] font-bold tracking-wider' }
                 ].map(col => (
                   <th 
@@ -521,8 +559,11 @@ export const QuotesPage: React.FC = () => {
                   <td className="px-4 py-3 text-right font-mono text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                     {quote.probabilidad_exito !== null ? `${formatNumber(Number(quote.probabilidad_exito), 1)}%` : '---'}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono font-bold text-xs text-dts-primary dark:text-dts-secondary whitespace-nowrap">
-                    {formatCurrency(Number(quote.valor_oferta_ponderado || 0), 2)}
+                  <td className="px-4 py-3 text-center text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar size={12} className="text-gray-400" />
+                      {quote.cierreprev_date ? new Date(quote.cierreprev_date).toLocaleDateString('es-ES') : '---'}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-center whitespace-nowrap">
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${getStateBadgeClass(quote.estado_oferta)}`}>
@@ -582,9 +623,9 @@ export const QuotesPage: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Valor Ponderado</span>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Cierre Previsto</span>
                   <span className="text-lg font-black text-dts-primary dark:text-dts-secondary font-mono mt-0.5">
-                    {formatCurrency(Number(selectedQuote.valor_oferta_ponderado || 0), 2)}
+                    {selectedQuote.cierreprev_date ? new Date(selectedQuote.cierreprev_date).toLocaleDateString('es-ES') : '---'}
                   </span>
                 </div>
               </div>
