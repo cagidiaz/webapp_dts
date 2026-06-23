@@ -4,9 +4,10 @@ import { useUIStore } from '../../store/uiStore';
 import { CrmCustomers } from './components/CrmCustomers';
 import { CrmPipeline } from './components/CrmPipeline';
 import { CrmCustomerDetail } from './components/CrmCustomerDetail';
+import { CrmContacts } from './components/CrmContacts';
 
 interface CrmPageProps {
-  mode: 'customers' | 'pipeline';
+  mode: 'customers' | 'pipeline' | 'contacts';
 }
 
 export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
@@ -15,8 +16,15 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
 
   // Set Page Info in Layout
   useEffect(() => {
+    let title = 'CRM - Directorio de empresas';
+    if (mode === 'pipeline') {
+      title = 'CRM - Embudo de Oportunidades';
+    } else if (mode === 'contacts') {
+      title = 'CRM - Directorio de Contactos';
+    }
+
     setPageInfo({
-      title: 'CRM - Directorio de empresas',
+      title,
       subtitle: 'Gestión de cuentas comerciales, contactos y pipeline de ventas de dTS Instruments',
       icon: <Briefcase size={20} />,
       infoProps: {
@@ -27,7 +35,7 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
       }
     });
     return () => setPageInfo({ title: '', subtitle: '', icon: null });
-  }, [setPageInfo]);
+  }, [setPageInfo, mode]);
 
   // Reset selected customer when mode (tab) changes
   useEffect(() => {
@@ -49,8 +57,10 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
       {/* Conditionally render mode */}
       {mode === 'customers' ? (
         <CrmCustomers onSelectCustomer={(id) => setSelectedCustomerId(id)} />
-      ) : (
+      ) : mode === 'pipeline' ? (
         <CrmPipeline />
+      ) : (
+        <CrmContacts onSelectCustomer={(id) => setSelectedCustomerId(id)} />
       )}
     </div>
   );

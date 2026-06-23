@@ -123,6 +123,7 @@ const App: React.FC = () => {
               <Route path="crm" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']}><Outlet /></RoleGuard>}>
                 <Route index element={<Navigate to="customers" replace />} />
                 <Route path="customers" element={<CrmPage mode="customers" />} />
+                <Route path="contacts" element={<CrmPage mode="contacts" />} />
                 <Route path="pipeline" element={<CrmPage mode="pipeline" />} />
               </Route>
               <Route path="users" element={<RoleGuard allowedRoles={['ADMIN']}><UsersPage /></RoleGuard>} />

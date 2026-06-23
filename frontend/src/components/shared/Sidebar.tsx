@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
     roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES'],
     children: [
       { name: 'Clientes', path: '/crm/customers' },
+      { name: 'Contactos', path: '/crm/contacts' },
       { name: 'Oportunidades', path: '/crm/pipeline' },
     ]
   },

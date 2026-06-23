@@ -670,9 +670,14 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                     <div key={contact.id} className="p-4 bg-gray-50 dark:bg-white/2 rounded-xl border border-gray-200/50 dark:border-white/5 space-y-2">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h4 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                          <h4 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5 flex-wrap">
                             <User size={14} className="text-dts-secondary shrink-0" />
-                            {contact.name}
+                            <span>{contact.name}</span>
+                            {contact.org_level_code && (
+                              <span className="text-[9px] text-gray-400 font-mono">
+                                ({contact.org_level_code.replace(/\.+$/, '')})
+                              </span>
+                            )}
                           </h4>
                           {contact.job_title && (
                             <span className="text-[9px] bg-dts-secondary/15 text-dts-secondary px-2 py-0.5 rounded font-bold uppercase tracking-wider mt-1 inline-block">
