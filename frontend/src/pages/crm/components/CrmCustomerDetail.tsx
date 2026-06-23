@@ -1,14 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  getCustomerByClientId, getContacts, getAllQuotes, updateContactLinkedin
+  getCustomerByClientId, getContacts, updateContactLinkedin,
+  getCrmActivities, createCrmActivity, updateCrmActivity, deleteCrmActivity,
+  getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
+  getQuoteActivities, updateQuoteActivity, deleteQuoteActivity
 } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
   ArrowLeft, Phone, Mail, MapPin, 
   Linkedin, Edit2, Check, X, Plus, Calendar as CalendarIcon, 
-  Clock, Briefcase, FileText, CheckSquare, Send, User, Activity
+  Clock, Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2
 } from 'lucide-react';
+import { Drawer } from '../../../components/shared';
+
+const STAGES = [
+  { id: 'borrador', label: 'Borrador', color: 'border-t-slate-400 bg-slate-500/5' },
+  { id: 'enviada', label: 'Enviada', color: 'border-t-blue-400 bg-blue-500/5' },
+  { id: 'en negociación', label: 'En Negociación', color: 'border-t-amber-400 bg-amber-500/5' },
+  { id: 'ganada', label: 'Ganada', color: 'border-t-emerald-400 bg-emerald-500/5' },
+  { id: 'perdida', label: 'Perdida', color: 'border-t-rose-400 bg-rose-500/5' }
+];
 
 interface CrmCustomerDetailProps {
   clientId: string;
@@ -23,12 +35,6 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const [editingLinkedinId, setEditingLinkedinId] = useState<string | null>(null);
   const [linkedinValue, setLinkedinValue] = useState<string>('');
   const [isSavingLinkedin, setIsSavingLinkedin] = useState<boolean>(false);
-
-  // Local storage states for CRM data
-  const [tasks, setTasks] = useState<{ id: string; title: string; date: string; done: boolean }[]>([]);
-  const [notes, setNotes] = useState<{ id: string; text: string; date: string }[]>([]);
-  const [emails, setEmails] = useState<{ id: string; subject: string; body: string; date: string }[]>([]);
-  const [events, setEvents] = useState<{ id: string; title: string; date: string; time: string }[]>([]);
 
   // Modal show states
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -46,52 +52,281 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const [newEventDate, setNewEventDate] = useState(new Date().toISOString().split('T')[0]);
   const [newEventTime, setNewEventTime] = useState('10:00');
 
-  // Load local data
-  useEffect(() => {
-    const loadedTasks = localStorage.getItem(`crm_tasks_${clientId}`);
-    const loadedNotes = localStorage.getItem(`crm_notes_${clientId}`);
-    const loadedEmails = localStorage.getItem(`crm_emails_${clientId}`);
-    const loadedEvents = localStorage.getItem(`crm_events_${clientId}`);
+  // Query CRM activities from Postgres database
+  const { data: dbActivities = [] } = useQuery({
+    queryKey: ['crmActivities', clientId],
+    queryFn: () => getCrmActivities(clientId),
+  });
 
-    if (loadedTasks) setTasks(JSON.parse(loadedTasks));
-    else setTasks([
-      { id: '1', title: 'Enviar catálogo de instrumentación actualizado', date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0], done: false },
-      { id: '2', title: 'Llamar para concretar visita comercial técnica', date: new Date(Date.now() - 86400000).toISOString().split('T')[0], done: true }
-    ]);
+  // Query CRM quotes
+  const { data: crmQuotes = [] } = useQuery({
+    queryKey: ['customerCrmQuotes', clientId],
+    queryFn: () => getAllCrmQuotes(),
+  });
 
-    if (loadedNotes) setNotes(JSON.parse(loadedNotes));
-    else setNotes([
-      { id: '1', text: 'El cliente muestra gran interés en los transductores de presión de alta temperatura. Solicita precios de volumen para proyectos del segundo semestre.', date: new Date(Date.now() - 86400000 * 3).toISOString() }
-    ]);
+  const filteredCrmQuotes = useMemo(() => {
+    return crmQuotes.filter(q => q.customer_no === clientId);
+  }, [crmQuotes, clientId]);
 
-    if (loadedEmails) setEmails(JSON.parse(loadedEmails));
-    else setEmails([
-      { id: '1', subject: 'Confirmación de Reunión Técnica dTS Instruments', body: 'Hola,\n\nConfirmamos la cita para el próximo martes a las 10:00h en sus oficinas para revisar las especificaciones de caudalímetros.\n\nSaludos.', date: new Date(Date.now() - 86400000 * 4).toISOString() }
-    ]);
+  // Mutations
+  const createActivityMutation = useMutation({
+    mutationFn: createCrmActivity,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crmActivities', clientId] });
+    }
+  });
 
-    if (loadedEvents) setEvents(JSON.parse(loadedEvents));
-    else setEvents([
-      { id: '1', title: 'Presentación de Portafolio Técnico', date: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], time: '11:30' }
-    ]);
-  }, [clientId]);
+  const updateActivityMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { isCompleted?: boolean; title?: string; description?: string } }) =>
+      updateCrmActivity(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crmActivities', clientId] });
+    }
+  });
 
-  // Persist local data
-  const saveTasks = (newTasks: typeof tasks) => {
-    setTasks(newTasks);
-    localStorage.setItem(`crm_tasks_${clientId}`, JSON.stringify(newTasks));
+  const deleteActivityMutation = useMutation({
+    mutationFn: deleteCrmActivity,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crmActivities', clientId] });
+    }
+  });
+
+  const updateQuoteMutation = useMutation({
+    mutationFn: async ({ id, data, fromStage, toStage, documentNo }: { id: string; data: any; fromStage: string; toStage: string; documentNo: string }) => {
+      // 1. Actualizar el estado de la oferta
+      const result = await updateCrmQuote(id, data);
+
+      // 2. Registrar actividad a nivel de oferta (fault-tolerant)
+      try {
+        await addQuoteActivity(id, {
+          tipo: 'Sistema',
+          notas: `Cambio de estado automático [${fromStage} -> ${toStage}]`,
+          fecha: new Date().toISOString(),
+          hecho: true
+        });
+      } catch (err) {
+        console.error("Error al registrar actividad del cambio de estado en la oferta:", err);
+      }
+
+      // 3. Registrar actividad a nivel de línea de tiempo del cliente (fault-tolerant)
+      try {
+        await createCrmActivity({
+          clientId,
+          type: 'NOTE',
+          title: `Cambio de estado: Oferta ${documentNo}`,
+          description: `Se ha cambiado el estado de la oferta de [${fromStage}] a [${toStage}]`
+        });
+      } catch (err) {
+        console.error("Error al registrar actividad del cambio de estado en el cliente:", err);
+      }
+
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customerCrmQuotes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['crmActivities', clientId] });
+    }
+  });
+
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.setData('text/plain', id);
+    setTimeout(() => {
+      setDraggingId(id);
+    }, 0);
   };
-  const saveNotes = (newNotes: typeof notes) => {
-    setNotes(newNotes);
-    localStorage.setItem(`crm_notes_${clientId}`, JSON.stringify(newNotes));
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
   };
-  const saveEmails = (newEmails: typeof emails) => {
-    setEmails(newEmails);
-    localStorage.setItem(`crm_emails_${clientId}`, JSON.stringify(newEmails));
+
+  const handleDrop = async (e: React.DragEvent, targetStage: string) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    if (!id) return;
+    setDraggingId(null);
+
+    const quote = filteredCrmQuotes.find(q => q.id === id);
+    if (!quote) return;
+
+    const currentStage = (quote.estado_oferta || '').toLowerCase().trim();
+    const targetStageLower = targetStage.toLowerCase().trim();
+
+    if (currentStage === targetStageLower) return;
+
+    let prob = quote.probabilidad_exito;
+    if (targetStageLower === 'borrador') prob = 10;
+    else if (targetStageLower === 'enviada') prob = 25;
+    else if (targetStageLower === 'en negociación') prob = 50;
+    else if (targetStageLower === 'ganada') prob = 100;
+    else if (targetStageLower === 'perdida') prob = 0;
+
+    updateQuoteMutation.mutate({
+      id: quote.id,
+      data: {
+        estado_oferta: targetStageLower,
+        probabilidad_exito: prob
+      },
+      fromStage: (quote.estado_oferta || 'borrador').toUpperCase(),
+      toStage: targetStageLower.toUpperCase(),
+      documentNo: quote.document_no
+    });
   };
-  const saveEvents = (newEvents: typeof events) => {
-    setEvents(newEvents);
-    localStorage.setItem(`crm_events_${clientId}`, JSON.stringify(newEvents));
+
+  // Estados para el Drawer de detalle de Oferta CRM
+  const [selectedQuote, setSelectedQuote] = useState<CRMQuote | null>(null);
+  const [isQuoteDrawerOpen, setIsQuoteDrawerOpen] = useState(false);
+  const [newQuoteActivityType, setNewQuoteActivityType] = useState('Llamada');
+  const [newQuoteActivityDate, setNewQuoteActivityDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newQuoteActivityNotes, setNewQuoteActivityNotes] = useState('');
+
+  // Consulta de actividades específicas de la oferta seleccionada
+  const { data: quoteActivities = [] } = useQuery({
+    queryKey: ['crm-quote-activities', selectedQuote?.id],
+    queryFn: () => getQuoteActivities(selectedQuote!.id),
+    enabled: !!selectedQuote,
+  });
+
+  // Mutación para campos editables individuales de la oferta
+  const updateFieldMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => updateCrmQuote(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customerCrmQuotes', clientId] });
+    }
+  });
+
+  // Mutación para añadir interacciones a la oferta
+  const addQuoteActivityMutation = useMutation({
+    mutationFn: (actData: any) => addQuoteActivity(selectedQuote!.id, actData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm-quote-activities', selectedQuote?.id] });
+    }
+  });
+
+  // Mutación para borrar interacciones de la oferta
+  const deleteQuoteActivityMutation = useMutation({
+    mutationFn: deleteQuoteActivity,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm-quote-activities', selectedQuote?.id] });
+    }
+  });
+
+  // Mutación para alternar estado de tareas de la oferta
+  const updateQuoteActivityMutation = useMutation({
+    mutationFn: ({ activityId, data }: { activityId: string; data: any }) => updateQuoteActivity(activityId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm-quote-activities', selectedQuote?.id] });
+    }
+  });
+
+  // Handlers para el Drawer
+  const openQuoteDrawer = (quote: CRMQuote) => {
+    setSelectedQuote(quote);
+    setIsQuoteDrawerOpen(true);
   };
+
+  const handleStageChange = (newStage: string) => {
+    if (!selectedQuote) return;
+
+    let prob = selectedQuote.probabilidad_exito;
+    const stage = newStage.toLowerCase();
+    if (stage === 'borrador') prob = 10;
+    else if (stage === 'enviada') prob = 25;
+    else if (stage === 'en negociación') prob = 50;
+    else if (stage === 'ganada') prob = 100;
+    else if (stage === 'perdida') prob = 0;
+
+    const fromStage = (selectedQuote.estado_oferta || 'borrador').toUpperCase();
+    const toStage = newStage.toUpperCase();
+
+    updateQuoteMutation.mutate({
+      id: selectedQuote.id,
+      data: { 
+        estado_oferta: newStage,
+        probabilidad_exito: prob 
+      },
+      fromStage,
+      toStage,
+      documentNo: selectedQuote.document_no
+    }, {
+      onSuccess: () => {
+        setSelectedQuote(prev => prev ? { ...prev, estado_oferta: newStage, probabilidad_exito: prob } : null);
+      }
+    });
+  };
+
+  const handleFieldChange = (fieldName: string, value: any) => {
+    if (!selectedQuote) return;
+    updateFieldMutation.mutate({
+      id: selectedQuote.id,
+      data: { [fieldName]: value }
+    }, {
+      onSuccess: () => {
+        setSelectedQuote(prev => prev ? { ...prev, [fieldName]: value } : null);
+      }
+    });
+  };
+
+  const handleAddQuoteActivity = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newQuoteActivityNotes.trim() || !selectedQuote) return;
+
+    addQuoteActivityMutation.mutate({
+      tipo: newQuoteActivityType,
+      notas: newQuoteActivityNotes,
+      fecha: new Date(newQuoteActivityDate).toISOString(),
+      hecho: newQuoteActivityType === 'Tarea' ? false : true
+    }, {
+      onSuccess: () => {
+        setNewQuoteActivityNotes('');
+      }
+    });
+  };
+
+  // Derived tasks, notes, emails, and events lists to maintain UI compatibility
+  const tasks = useMemo(() => {
+    return dbActivities
+      .filter(act => act.type === 'TASK')
+      .map(act => ({
+        id: act.id,
+        title: act.title,
+        date: act.due_date ? act.due_date.split('T')[0] : '',
+        done: act.is_completed
+      }));
+  }, [dbActivities]);
+
+  const notes = useMemo(() => {
+    return dbActivities
+      .filter(act => act.type === 'NOTE')
+      .map(act => ({
+        id: act.id,
+        text: act.description || act.title,
+        date: act.created_at
+      }));
+  }, [dbActivities]);
+
+  const emails = useMemo(() => {
+    return dbActivities
+      .filter(act => act.type === 'EMAIL')
+      .map(act => ({
+        id: act.id,
+        subject: act.title,
+        body: act.description || '',
+        date: act.created_at
+      }));
+  }, [dbActivities]);
+
+  const events = useMemo(() => {
+    return dbActivities
+      .filter(act => act.type === 'EVENT')
+      .map(act => ({
+        id: act.id,
+        title: act.title,
+        date: act.due_date ? act.due_date.split('T')[0] : '',
+        time: act.time_scheduled || '10:00'
+      }));
+  }, [dbActivities]);
 
   // Compile all activities for timeline
   const timelineActivities = useMemo(() => {
@@ -172,11 +407,6 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
     queryFn: () => getContacts({ clientId }),
   });
 
-  const { data: quotesData, isLoading: isLoadingQuotes } = useQuery({
-    queryKey: ['customerQuotes', clientId],
-    queryFn: () => getAllQuotes({ customerCode: clientId }),
-  });
-
   const handleSaveLinkedin = async (contactId: string) => {
     setIsSavingLinkedin(true);
     try {
@@ -194,8 +424,12 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
-    const newTasks = [...tasks, { id: Date.now().toString(), title: newTaskTitle, date: newTaskDate, done: false }];
-    saveTasks(newTasks);
+    createActivityMutation.mutate({
+      clientId,
+      type: 'TASK',
+      title: newTaskTitle,
+      dueDate: newTaskDate
+    });
     setNewTaskTitle('');
     setShowTaskModal(false);
   };
@@ -203,8 +437,12 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const handleCreateNote = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNoteText.trim()) return;
-    const newNotes = [{ id: Date.now().toString(), text: newNoteText, date: new Date().toISOString() }, ...notes];
-    saveNotes(newNotes);
+    createActivityMutation.mutate({
+      clientId,
+      type: 'NOTE',
+      title: 'Nota Comercial Registrada',
+      description: newNoteText
+    });
     setNewNoteText('');
     setShowNoteModal(false);
   };
@@ -212,8 +450,12 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const handleCreateEmail = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmailSubject.trim() || !newEmailBody.trim()) return;
-    const newEmails = [{ id: Date.now().toString(), subject: newEmailSubject, body: newEmailBody, date: new Date().toISOString() }, ...emails];
-    saveEmails(newEmails);
+    createActivityMutation.mutate({
+      clientId,
+      type: 'EMAIL',
+      title: newEmailSubject,
+      description: newEmailBody
+    });
     setNewEmailSubject('');
     setNewEmailBody('');
     setShowEmailModal(false);
@@ -222,19 +464,29 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const handleCreateEvent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEventTitle.trim()) return;
-    const newEvents = [...events, { id: Date.now().toString(), title: newEventTitle, date: newEventDate, time: newEventTime }];
-    saveEvents(newEvents);
+    createActivityMutation.mutate({
+      clientId,
+      type: 'EVENT',
+      title: newEventTitle,
+      dueDate: newEventDate,
+      timeScheduled: newEventTime
+    });
     setNewEventTitle('');
     setShowEventModal(false);
   };
 
   const toggleTask = (id: string) => {
-    const updated = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
-    saveTasks(updated);
+    const task = dbActivities.find(act => act.id === id);
+    if (task) {
+      updateActivityMutation.mutate({
+        id,
+        payload: { isCompleted: !task.is_completed }
+      });
+    }
   };
 
   const deleteTask = (id: string) => {
-    saveTasks(tasks.filter(t => t.id !== id));
+    deleteActivityMutation.mutate(id);
   };
 
   if (isLoadingCustomer) {
@@ -296,34 +548,37 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex border-b border-gray-200 dark:border-white/5 bg-white dark:bg-surface-card-dark rounded-xl p-1 shadow-xs">
-        {[
-          { id: 'info', label: 'Información y Contactos', icon: User },
-          { id: 'quotes', label: 'Oportunidades', icon: Briefcase },
-          { id: 'tasks', label: 'Tareas', icon: CheckSquare },
-          { id: 'notes', label: 'Notas', icon: FileText },
-          { id: 'timeline', label: 'Historial / Timeline', icon: Activity },
-          { id: 'emails', label: 'Emails', icon: Send },
-          { id: 'calendar', label: 'Calendario', icon: CalendarIcon }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 py-2.5 px-2 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === tab.id 
-                ? 'bg-dts-primary text-white dark:bg-dts-secondary shadow-xs' 
-                : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5'
-            }`}
-          >
-            <tab.icon size={14} />
-            <span className="hidden lg:inline">{tab.label}</span>
-          </button>
-        ))}
-      </div>
+      {/* Unified panel with screen-viewport height */}
+      <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-280px)] min-h-[450px]">
+        
+        {/* Tabs Navigation */}
+        <div className="flex border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-zinc-800/20 p-1 shrink-0">
+          {[
+            { id: 'info', label: 'Información y Contactos', icon: User },
+            { id: 'timeline', label: 'Historial / Timeline', icon: Activity },
+            { id: 'quotes', label: 'Oportunidades', icon: Briefcase },
+            { id: 'tasks', label: 'Tareas', icon: CheckSquare },
+            { id: 'notes', label: 'Notas', icon: FileText },
+            { id: 'emails', label: 'Emails', icon: Send },
+            { id: 'calendar', label: 'Calendario', icon: CalendarIcon }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 py-2 px-2 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === tab.id 
+                  ? 'bg-dts-primary text-white dark:bg-dts-secondary shadow-xs' 
+                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'
+              }`}
+            >
+              <tab.icon size={14} />
+              <span className="hidden lg:inline">{tab.label}</span>
+            </button>
+          ))}
+        </div>
 
-      {/* Tab Contents */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 min-h-[350px]">
+        {/* Tab Contents (scrollable container) */}
+        <div className="p-6 overflow-y-auto flex-1">
         
         {/* Info Tab */}
         {activeTab === 'info' && (
@@ -475,57 +730,84 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
 
         {/* Quotes Tab */}
         {activeTab === 'quotes' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center border-b border-gray-100 dark:border-white/5 pb-3">
+          <div className="space-y-6 h-full flex flex-col">
+            <div className="flex justify-between items-center border-b border-gray-100 dark:border-white/5 pb-3 shrink-0">
               <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider">
-                Historial de Ofertas / Oportunidades
+                Embudo de Oportunidades CRM
               </h3>
-              <button 
-                onClick={() => alert('Para crear una oferta comercial, proceda al módulo de "CRM Ofertas" (Pestaña Oportunidades) para registrarla sobre los números oficiales del ERP.')}
-                className="flex items-center gap-1.5 py-1 px-3 bg-dts-primary hover:brightness-110 text-white rounded-lg font-bold text-xs cursor-pointer"
-              >
-                <Plus size={14} /> Nueva Oportunidad
-              </button>
             </div>
 
-            {isLoadingQuotes ? (
-              <div className="text-xs text-gray-400 italic py-4">Cargando oportunidades...</div>
-            ) : !quotesData || quotesData.data.length === 0 ? (
+            {filteredCrmQuotes.length === 0 ? (
               <div className="text-xs text-gray-400 italic py-10 bg-gray-50 dark:bg-white/1 border border-dashed border-gray-200 dark:border-white/5 rounded-xl text-center">
-                No hay ofertas comerciales registradas para este cliente en el ERP.
+                No hay ofertas comerciales registradas en el CRM para este cliente.
               </div>
             ) : (
-              <div className="overflow-x-auto border border-gray-100 dark:border-white/5 rounded-xl">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-gray-200/60 dark:border-white/5 bg-gray-50/50 dark:bg-white/1 font-bold text-gray-500">
-                      <th className="px-4 py-2.5">Nº Documento</th>
-                      <th className="px-4 py-2.5">Fecha</th>
-                      <th className="px-4 py-2.5 text-right">Importe</th>
-                      <th className="px-4 py-2.5 text-center">Estado ERP</th>
-                      <th className="px-4 py-2.5">Ref. Cliente</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                    {quotesData.data.map(q => (
-                      <tr key={q.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                        <td className="px-4 py-2.5 font-bold font-mono text-dts-primary dark:text-dts-secondary">{q.document_no}</td>
-                        <td className="px-4 py-2.5">{q.document_date ? new Date(q.document_date).toLocaleDateString() : '---'}</td>
-                        <td className="px-4 py-2.5 text-right font-mono font-bold">{formatCurrency(q.amount || 0, 2)}</td>
-                        <td className="px-4 py-2.5 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                            q.cerrado 
-                              ? 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-400'
-                              : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
-                          }`}>
-                            {q.cerrado ? 'Cerrada' : 'Abierta'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-gray-400 truncate max-w-[150px]">{q.your_reference || '---'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pb-4 overflow-x-auto">
+                {STAGES.map(stage => {
+                  const stageQuotes = filteredCrmQuotes.filter(
+                    q => (q.estado_oferta || '').toLowerCase().trim() === stage.id
+                  );
+                  return (
+                    <div 
+                      key={stage.id} 
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => handleDrop(e, stage.id)}
+                      className="bg-gray-50/50 dark:bg-white/1 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col min-w-[150px] h-[380px] overflow-hidden"
+                    >
+                      <div className={`p-2.5 border-t-4 ${stage.color} border-b border-b-gray-200/60 dark:border-b-white/5 bg-white dark:bg-zinc-800 flex justify-between items-center`}>
+                        <span className="font-bold text-[9px] uppercase tracking-wider text-gray-800 dark:text-gray-200">
+                          {stage.label}
+                        </span>
+                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-300">
+                          {stageQuotes.length}
+                        </span>
+                      </div>
+                      <div className="flex-1 p-2 overflow-y-auto space-y-2 custom-scrollbar">
+                        {stageQuotes.length === 0 ? (
+                          <div className="h-full flex items-center justify-center border border-dashed border-gray-200 dark:border-white/5 rounded-xl py-6">
+                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Soltar aquí</span>
+                          </div>
+                        ) : (
+                          stageQuotes.map(quote => (
+                            <div 
+                              key={quote.id} 
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, quote.id)}
+                              onDragEnd={handleDragEnd}
+                              onClick={() => openQuoteDrawer(quote)}
+                              className={`bg-white dark:bg-surface-card-dark p-2.5 rounded-lg border border-gray-200/60 dark:border-white/5 shadow-xs hover:border-dts-secondary/50 hover:shadow-md transition-all cursor-pointer relative group ${
+                                draggingId === quote.id ? 'opacity-30 border-dashed scale-95' : 'opacity-100'
+                              }`}
+                            >
+                              <div className="flex justify-between items-start mb-1">
+                                <span className="text-xs font-bold font-mono text-dts-primary dark:text-dts-secondary">
+                                  {quote.document_no}
+                                </span>
+                                <span className="text-[8px] uppercase px-1 rounded bg-gray-100 dark:bg-white/5 text-gray-400 font-bold">
+                                  {quote.oferta_type}
+                                </span>
+                              </div>
+                              <h4 className="text-[10px] font-bold text-gray-900 dark:text-white truncate">
+                                {quote.customer_name}
+                              </h4>
+                              <div className="flex justify-between items-end mt-2 pt-2 border-t border-gray-50 dark:border-white/5">
+                                <div>
+                                  <span className="text-[8px] text-gray-400 block">Importe</span>
+                                  <span className="text-[10px] font-mono font-black text-gray-900 dark:text-white">
+                                    {formatCurrency(quote.amount, 0)}
+                                  </span>
+                                </div>
+                                <span className="text-[8px] bg-slate-50 dark:bg-white/5 px-1 rounded text-gray-500 font-bold">
+                                  {quote.probabilidad_exito}%
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -608,7 +890,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[10px] text-gray-400 font-bold">{new Date(n.date).toLocaleString()}</span>
                       <button 
-                        onClick={() => saveNotes(notes.filter(note => note.id !== n.id))} 
+                        onClick={() => deleteActivityMutation.mutate(n.id)} 
                         className="text-gray-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       >
                         <X size={12} />
@@ -689,7 +971,16 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                         <Mail size={12} className="text-dts-secondary" />
                         {e.subject}
                       </h4>
-                      <span className="text-[10px] text-gray-400 font-mono">{new Date(e.date).toLocaleDateString()}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 font-mono">{new Date(e.date).toLocaleDateString()}</span>
+                        <button 
+                          onClick={() => deleteActivityMutation.mutate(e.id)} 
+                          className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                          title="Eliminar Email"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap leading-relaxed pr-2">
                       {e.body}
@@ -735,7 +1026,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                         </span>
                       </div>
                     </div>
-                    <button onClick={() => saveEvents(events.filter(event => event.id !== ev.id))} className="text-gray-400 hover:text-rose-500">
+                    <button onClick={() => deleteActivityMutation.mutate(ev.id)} className="text-gray-400 hover:text-rose-500">
                       <X size={14} />
                     </button>
                   </div>
@@ -746,6 +1037,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         )}
 
       </div>
+    </div>
 
       {/* Task Modal */}
       {showTaskModal && (
@@ -839,6 +1131,305 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         </div>
       )}
 
+      {/* Slide-over Drawer for Quote Details & Activities */}
+      <Drawer
+        isOpen={isQuoteDrawerOpen}
+        onClose={() => setIsQuoteDrawerOpen(false)}
+        title={`Oportunidad: ${selectedQuote?.document_no || ''}`}
+        size="2xl"
+      >
+        {selectedQuote && (
+          <div className="space-y-6 pb-12">
+            <div className="bg-slate-50 dark:bg-white/2 p-4 rounded-xl border border-slate-100 dark:border-white/5 space-y-4">
+              <div>
+                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Cliente</span>
+                <span className="text-sm font-normal text-gray-900 dark:text-white block mt-0.5">{selectedQuote.customer_name}</span>
+                <span className="text-xs text-gray-500 font-mono mt-0.5 block">{selectedQuote.customer_no}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-white/5 pt-4">
+                <div>
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Importe Original</span>
+                  <span className="text-base font-black text-gray-900 dark:text-white font-mono block mt-0.5">
+                    {formatCurrency(selectedQuote.amount, 2)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Previsión Ponderada</span>
+                  <span className="text-base font-black text-dts-secondary font-mono block mt-0.5">
+                    {formatCurrency(selectedQuote.valor_oferta_ponderado, 2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Editable Fields Form */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Parámetros Comerciales</h4>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Estado de la Oferta</label>
+                  <select 
+                    value={selectedQuote.estado_oferta || ''} 
+                    onChange={(e) => handleStageChange(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  >
+                    {STAGES.map(s => (
+                      <option key={s.id} value={s.id}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Probabilidad de Éxito</label>
+                  <select 
+                    value={selectedQuote.probabilidad_exito} 
+                    onChange={(e) => handleFieldChange('probabilidad_exito', Number(e.target.value))}
+                    className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  >
+                    <option value={10}>10% - Inicial</option>
+                    <option value={25}>25% - Revisiones</option>
+                    <option value={50}>50% - Entregada Pesimista</option>
+                    <option value={75}>75% - Entregada Optimista</option>
+                    <option value={100}>100% - Pedido Confirmado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Tipo de Oferta</label>
+                  <select 
+                    value={selectedQuote.oferta_type || ''} 
+                    onChange={(e) => handleFieldChange('oferta_type', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  >
+                    <option value="proyecto">Proyecto</option>
+                    <option value="cliente nuevo">Cliente Nuevo</option>
+                    <option value="cliente existente">Cliente Existente</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Cierre Previsto</label>
+                    <input 
+                      type="date" 
+                      value={selectedQuote.cierreprev_date ? selectedQuote.cierreprev_date.split('T')[0] : ''}
+                      onChange={(e) => handleFieldChange('cierreprev_date', e.target.value || null)}
+                      className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Finalización Oferta</label>
+                    <input 
+                      type="date" 
+                      disabled
+                      value={selectedQuote.confirmacion_date ? selectedQuote.confirmacion_date.split('T')[0] : ''}
+                      className="w-full bg-slate-50/50 dark:bg-slate-800/10 border border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 text-xs rounded-lg p-2 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                {selectedQuote.estado_oferta?.toLowerCase().trim() === 'ganada' && (
+                  <div className="animate-in slide-in-from-top-2 duration-200">
+                    <label className="block text-xs font-bold text-emerald-500 uppercase mb-1">Motivo de Ganada</label>
+                    <textarea 
+                      placeholder="Indica las razones del éxito..."
+                      value={selectedQuote.motivo_ganada || ''}
+                      onChange={(e) => handleFieldChange('motivo_ganada', e.target.value)}
+                      rows={2}
+                      className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    />
+                  </div>
+                )}
+
+                {selectedQuote.estado_oferta?.toLowerCase().trim() === 'perdida' && (
+                  <div className="animate-in slide-in-from-top-2 duration-200">
+                    <label className="block text-xs font-bold text-rose-500 uppercase mb-1">Motivo de Perdida</label>
+                    <textarea 
+                      placeholder="¿Por qué se ha descartado la oferta? (Precio, Competencia, Plazo...)"
+                      value={selectedQuote.motivo_perdida || ''}
+                      onChange={(e) => handleFieldChange('motivo_perdida', e.target.value)}
+                      rows={2}
+                      className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Información del Comprador</h4>
+              <div className="space-y-3">
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <User size={14} />
+                  </span>
+                  <input 
+                    type="text" 
+                    placeholder="Nombre del contacto"
+                    value={selectedQuote.contacto_nombre || ''}
+                    onChange={(e) => handleFieldChange('contacto_nombre', e.target.value)}
+                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  />
+                </div>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Mail size={14} />
+                  </span>
+                  <input 
+                    type="email" 
+                    placeholder="Email del contacto"
+                    value={selectedQuote.contacto_email || ''}
+                    onChange={(e) => handleFieldChange('contacto_email', e.target.value)}
+                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  />
+                </div>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Phone size={14} />
+                  </span>
+                  <input 
+                    type="text" 
+                    placeholder="Teléfono del contacto"
+                    value={selectedQuote.contacto_telefono || ''}
+                    onChange={(e) => handleFieldChange('contacto_telefono', e.target.value)}
+                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Planificación de Seguimiento</h4>
+              <div className="space-y-3 bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Próxima Acción Pendiente</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. Llamar para negociar plazos de entrega..."
+                    value={selectedQuote.proxima_accion || ''}
+                    onChange={(e) => handleFieldChange('proxima_accion', e.target.value)}
+                    className="block w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Fecha Límite</label>
+                  <input 
+                    type="date" 
+                    value={selectedQuote.fecha_proxima_accion ? selectedQuote.fecha_proxima_accion.split('T')[0] : ''}
+                    onChange={(e) => handleFieldChange('fecha_proxima_accion', e.target.value || null)}
+                    className="block w-full px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Observaciones del Comercial</label>
+              <textarea 
+                placeholder="Escribe comentarios generales o notas adicionales sobre la negociación..."
+                value={selectedQuote.observaciones || ''}
+                onChange={(e) => handleFieldChange('observaciones', e.target.value)}
+                rows={3}
+                className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+              />
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-white/10">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Historial de Interacciones</h4>
+              
+              <form onSubmit={handleAddQuoteActivity} className="space-y-3 bg-slate-50 dark:bg-white/1 p-3 rounded-lg border border-gray-200/50 dark:border-white/5">
+                <div className="grid grid-cols-2 gap-2">
+                  <select 
+                    value={newQuoteActivityType} 
+                    onChange={(e) => setNewQuoteActivityType(e.target.value)}
+                    className="bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-[11px] rounded p-1.5 focus:outline-none"
+                  >
+                    <option value="Llamada">📞 Llamada</option>
+                    <option value="Email">📧 Email</option>
+                    <option value="Reunión">🤝 Reunión</option>
+                    <option value="Nota">📝 Nota</option>
+                    <option value="Tarea">✅ Tarea</option>
+                  </select>
+                  <input 
+                    type="date" 
+                    value={newQuoteActivityDate}
+                    onChange={(e) => setNewQuoteActivityDate(e.target.value)}
+                    className="bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-[11px] rounded p-1.5 focus:outline-none"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="Detalles de la interacción..."
+                    value={newQuoteActivityNotes}
+                    onChange={(e) => setNewQuoteActivityNotes(e.target.value)}
+                    className="flex-1 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-[11px] rounded p-1.5 focus:outline-none"
+                  />
+                  <button 
+                    type="submit" 
+                    className="bg-dts-secondary hover:bg-dts-secondary-dark text-white p-1.5 rounded transition-colors"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </form>
+
+              <div className="space-y-4 mt-4 relative pl-4 border-l border-gray-100 dark:border-white/10">
+                {quoteActivities.length === 0 ? (
+                  <span className="text-[10px] text-gray-400 italic block py-2">No se han registrado interacciones aún.</span>
+                ) : (
+                  quoteActivities.map((act) => (
+                    <div key={act.id} className="relative group/act text-xs">
+                      <span className="absolute -left-[21px] top-1 bg-white dark:bg-dts-primary-dark border border-dts-secondary p-0.5 rounded-full z-10">
+                        <span className="block w-1.5 h-1.5 bg-dts-secondary rounded-full" />
+                      </span>
+                      
+                      <div className="flex justify-between items-start">
+                        <span className="font-bold text-gray-800 dark:text-gray-200">
+                          {act.tipo === 'Llamada' ? '📞' : act.tipo === 'Email' ? '📧' : act.tipo === 'Reunión' ? '🤝' : act.tipo === 'Tarea' ? '✅' : '📝'} {act.tipo}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-gray-400 font-mono">
+                            {new Date(act.fecha).toLocaleDateString()}
+                          </span>
+                          <button 
+                            onClick={() => deleteQuoteActivityMutation.mutate(act.id)}
+                            className="text-gray-400 hover:text-rose-500 opacity-0 group-hover/act:opacity-100 transition-opacity"
+                            title="Eliminar interacción"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <p className="text-gray-600 dark:text-gray-400 mt-1 leading-relaxed whitespace-pre-wrap pr-4">
+                        {act.notas}
+                      </p>
+
+                      {act.tipo === 'Tarea' && (
+                        <label className="flex items-center gap-1.5 mt-1.5 cursor-pointer select-none">
+                          <input 
+                            type="checkbox" 
+                            checked={act.hecho} 
+                            onChange={(e) => updateQuoteActivityMutation.mutate({ activityId: act.id, data: { hecho: e.target.checked } })}
+                            className="rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary/50 w-3 h-3" 
+                          />
+                          <span className={`text-[10px] ${act.hecho ? 'line-through text-gray-400' : 'text-gray-500 font-medium'}`}>
+                            Completada
+                          </span>
+                        </label>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 };

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { getAllCustomers } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
   Search, Building2, Euro, 
-  Clock, AlertCircle, X, ChevronLeft, ChevronRight 
+  Clock, AlertCircle, X
 } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { getCustomerSalespersons } from '../../../api/customers';
@@ -20,15 +20,13 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = ({ onSelectCustomer }) 
   const [salespersonFilter, setSalespersonFilter] = useState('');
   const [showSyncModal, setShowSyncModal] = useState(false);
 
-  // Pagination states
-  const [page, setPage] = useState(1);
-  const itemsPerPage = 10;
+  const observerTarget = useRef<HTMLTableRowElement>(null);
+  const itemsPerPage = 50;
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
-      setPage(1); // Reset to page 1 on new search
     }, 400);
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -49,22 +47,52 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = ({ onSelectCustomer }) 
     }
   }, [isCommercial, profile]);
 
-  // Fetch customers
-  const { data: customersData, isLoading } = useQuery({
-    queryKey: ['crm-customers', debouncedSearch, salespersonFilter, page],
-    queryFn: () => getAllCustomers({
+  // Fetch customers with infinite scroll
+  const { 
+    data: customersInfiniteData, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage, 
+    isLoading 
+  } = useInfiniteQuery({
+    queryKey: ['crm-customers-infinite', debouncedSearch, salespersonFilter],
+    queryFn: ({ pageParam = 0 }) => getAllCustomers({
       take: itemsPerPage,
-      skip: (page - 1) * itemsPerPage,
+      skip: pageParam as number,
       search: debouncedSearch || undefined,
       salesperson: salespersonFilter || undefined,
       sortBy: 'name',
       sortDir: 'asc'
     }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const nextSkip = allPages.length * itemsPerPage;
+      return nextSkip < lastPage.total ? nextSkip : undefined;
+    },
   });
 
-  const customers = customersData?.data || [];
-  const totalItems = customersData?.total || 0;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  // Intersection Observer for Infinite Scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage(); },
+      { threshold: 0.1 }
+    );
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    return () => { if (observerTarget.current) observer.unobserve(observerTarget.current); };
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  const { customers, totalItems, pipelineTotal, pendingReviewCount, totalDebt } = useMemo(() => {
+    const allItems = customersInfiniteData?.pages.flatMap(page => page.data) || [];
+    const totalCount = customersInfiniteData?.pages[0]?.total || 0;
+    const summary = customersInfiniteData?.pages[0]?.summary || { totalSales: 0, newCustomersCount: 0, totalDebt: 0 };
+    return {
+      customers: allItems,
+      totalItems: totalCount,
+      pipelineTotal: summary.totalSales || 0,
+      pendingReviewCount: summary.newCustomersCount || 0,
+      totalDebt: summary.totalDebt || 0,
+    };
+  }, [customersInfiniteData]);
 
   // Reset filters
   const handleResetFilters = () => {
@@ -72,13 +100,10 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = ({ onSelectCustomer }) 
     if (!isCommercial) {
       setSalespersonFilter('');
     }
-    setPage(1);
   };
 
   // KPIs
-  const pipelineTotal = customersData?.summary?.totalSales || 0;
   const activeAccountsCount = totalItems;
-  const pendingReviewCount = customersData?.summary?.newCustomersCount || 0;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -130,7 +155,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = ({ onSelectCustomer }) 
             <Clock size={18} className="text-rose-500" />
           </div>
           <div className="text-2xl font-black font-mono text-rose-500">
-            {formatCurrency(customersData?.summary?.totalDebt || 0, 0)}
+            {formatCurrency(totalDebt, 0)}
           </div>
           <div className="text-[10px] text-gray-400 mt-1 font-medium">
             Importe total vencido por cobrar
@@ -164,7 +189,6 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = ({ onSelectCustomer }) 
                 value={salespersonFilter}
                 onChange={(e) => {
                   setSalespersonFilter(e.target.value);
-                  setPage(1);
                 }}
               >
                 <option value="">Todos</option>
@@ -260,37 +284,19 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = ({ onSelectCustomer }) 
                   );
                 })
               )}
+              <tr ref={observerTarget}>
+                <td colSpan={7} className="py-8 text-center text-gray-400 text-xs">
+                  {isFetchingNextPage ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-dts-secondary border-t-transparent rounded-full animate-spin"></div>
+                      <span>Cargando más clientes...</span>
+                    </div>
+                  ) : hasNextPage ? 'Baja para cargar más' : ''}
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
-
-        {/* Pagination Footer */}
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-gray-100 dark:border-white/5 bg-gray-50/30 dark:bg-white/1 flex items-center justify-between">
-            <span className="text-xs text-gray-400 font-medium">
-              Mostrando {(page - 1) * itemsPerPage + 1}-{Math.min(page * itemsPerPage, totalItems)} de {totalItems}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(p - 1, 1))}
-                disabled={page === 1}
-                className="p-1.5 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-40 transition-colors cursor-pointer"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="text-xs font-bold text-dts-primary dark:text-white px-2">
-                Página {page} de {totalPages}
-              </span>
-              <button
-                onClick={() => setPage(p => Math.min(p + 1, totalPages))}
-                disabled={page === totalPages}
-                className="p-1.5 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-40 transition-colors cursor-pointer"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Sync/Create Explanation Modal */}

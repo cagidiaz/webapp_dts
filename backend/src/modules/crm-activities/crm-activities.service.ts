@@ -1,0 +1,99 @@
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CrmActivityType } from '@prisma/client';
+
+@Injectable()
+export class CrmActivitiesService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Obtiene todas las actividades de un cliente comercial ordenadas por fecha.
+   */
+  async getByClient(clientId: string) {
+    try {
+      return await this.prisma.crm_activities.findMany({
+        where: { client_id: clientId },
+        orderBy: { created_at: 'desc' }
+      });
+    } catch (error) {
+      console.error('Error en CrmActivitiesService.getByClient:', error);
+      throw new InternalServerErrorException('Error al obtener las actividades del cliente');
+    }
+  }
+
+  /**
+   * Crea una nueva actividad comercial en la base de datos.
+   */
+  async create(data: {
+    clientId: string;
+    userId: string;
+    type: CrmActivityType;
+    title: string;
+    description?: string;
+    dueDate?: string;
+    timeScheduled?: string;
+  }) {
+    const { clientId, userId, type, title, description, dueDate, timeScheduled } = data;
+
+    try {
+      return await this.prisma.crm_activities.create({
+        data: {
+          client_id: clientId,
+          created_by: userId,
+          type,
+          title,
+          description: description || null,
+          due_date: dueDate ? new Date(dueDate) : null,
+          time_scheduled: timeScheduled || null
+        }
+      });
+    } catch (error) {
+      console.error('Error en CrmActivitiesService.create:', error);
+      throw new InternalServerErrorException('Error al crear la actividad comercial');
+    }
+  }
+
+  /**
+   * Actualiza una actividad existente (p. ej., marcar tarea como completada).
+   */
+  async update(id: string, data: { isCompleted?: boolean; title?: string; description?: string }) {
+    try {
+      // Verificar existencia
+      const existing = await this.prisma.crm_activities.findUnique({ where: { id } });
+      if (!existing) {
+        throw new NotFoundException('Actividad no encontrada');
+      }
+
+      return await this.prisma.crm_activities.update({
+        where: { id },
+        data: {
+          ...data,
+          updated_at: new Date()
+        }
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      console.error('Error en CrmActivitiesService.update:', error);
+      throw new InternalServerErrorException('Error al actualizar la actividad');
+    }
+  }
+
+  /**
+   * Elimina una actividad de la base de datos.
+   */
+  async delete(id: string) {
+    try {
+      const existing = await this.prisma.crm_activities.findUnique({ where: { id } });
+      if (!existing) {
+        throw new NotFoundException('Actividad no encontrada');
+      }
+
+      await this.prisma.crm_activities.delete({ where: { id } });
+      return { success: true };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      console.error('Error en CrmActivitiesService.delete:', error);
+      throw new InternalServerErrorException('Error al eliminar la actividad');
+    }
+  }
+}

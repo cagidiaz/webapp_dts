@@ -15,6 +15,7 @@ import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 import { SalesDocumentsModule } from './modules/sales-documents/sales-documents.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
+import { CrmActivitiesModule } from './modules/crm-activities/crm-activities.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ContactsModule } from './modules/contacts/contacts.module';
     SalesDocumentsModule,
     QuotesModule,
     ContactsModule,
+    CrmActivitiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

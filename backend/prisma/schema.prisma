@@ -383,6 +383,7 @@ model profiles {
   sales_reps sales_reps? @relation(fields: [code], references: [code])
   users      users       @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   roles      roles?      @relation(fields: [role_id], references: [id], onUpdate: NoAction)
+  crm_activities crm_activities[]
 
   @@index([role_id], map: "idx_profiles_role")
   @@schema("public")
@@ -549,6 +550,7 @@ model customers {
   sales_documents          sales_documents[]
   sales_quotes             sales_quotes[]
   contacts                 contacts[]
+  crm_activities           crm_activities[]
 
   @@schema("public")
 }
@@ -833,6 +835,37 @@ model contacts {
   customer          customers? @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
 
   @@index([client_id])
+  @@schema("public")
+}
+
+enum CrmActivityType {
+  NOTE
+  TASK
+  EMAIL
+  EVENT
+  CALL
+
+  @@schema("public")
+}
+
+model crm_activities {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  client_id      String          @db.VarChar(50)
+  created_by     String          @db.Uuid
+  type           CrmActivityType
+  title          String          @db.VarChar(255)
+  description    String?         @db.Text
+  due_date       DateTime?       @db.Date
+  time_scheduled String?         @db.VarChar(10)
+  is_completed   Boolean         @default(false)
+  created_at     DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime        @default(now()) @db.Timestamptz(6)
+
+  customer       customers       @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
+  creator        profiles        @relation(fields: [created_by], references: [id], onDelete: NoAction)
+
+  @@index([client_id])
+  @@index([created_by])
   @@schema("public")
 }
 
