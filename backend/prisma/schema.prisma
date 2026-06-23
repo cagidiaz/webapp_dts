@@ -548,6 +548,7 @@ model customers {
   sales_orders             sales_orders[]
   sales_documents          sales_documents[]
   sales_quotes             sales_quotes[]
+  contacts                 contacts[]
 
   @@schema("public")
 }
@@ -812,6 +813,26 @@ model sales_quote_activities {
   crm_quote    sales_quotes_crm @relation(fields: [crm_quote_id], references: [id], onDelete: Cascade)
 
   @@index([crm_quote_id], map: "idx_sales_quote_activities_crm_quote")
+  @@schema("public")
+}
+
+model contacts {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contact_no        String    @unique @db.VarChar(50)
+  client_id         String    @db.VarChar(50)
+  name              String    @db.VarChar(255)
+  job_title         String?   @db.VarChar(255)
+  org_level_code    String?   @db.VarChar(100)
+  email             String?   @db.VarChar(255)
+  phone_no          String?   @db.VarChar(50)
+  mobile_no         String?   @db.VarChar(50)
+  business_relation String    @db.VarChar(50)
+  linkedin          String?   @db.VarChar(255)
+  created_at        DateTime? @db.Timestamptz(6)
+  updated_at        DateTime  @default(now()) @db.Timestamptz(6)
+  customer          customers? @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
+
+  @@index([client_id])
   @@schema("public")
 }
 

@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { Drawer } from '../../../components/shared';
-import { type CustomerDataRow, getCustomerByClientId } from '../../../api';
+import { type CustomerDataRow, getCustomerByClientId, getContacts, updateContactLinkedin } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Phone, Mail, MapPin, Smartphone, 
   MessageCircle, ExternalLink, User,
-  Wallet, TrendingUp, Calendar, Loader2
+  Wallet, TrendingUp, Calendar, Loader2,
+  Edit2, Check, X, Linkedin
 } from 'lucide-react';
 
 interface CustomerDetailDrawerProps {
@@ -21,6 +23,11 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
   customer: propCustomer,
   customerCode
 }) => {
+  const queryClient = useQueryClient();
+  const [editingLinkedinId, setEditingLinkedinId] = useState<string | null>(null);
+  const [linkedinValue, setLinkedinValue] = useState<string>('');
+  const [isSavingLinkedin, setIsSavingLinkedin] = useState<boolean>(false);
+
   // If we have a code but no full customer object, fetch it
   const { data: fetchedCustomer, isLoading } = useQuery({
     queryKey: ['customerDetail', customerCode],
@@ -29,6 +36,25 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
   });
 
   const customer = propCustomer || fetchedCustomer;
+
+  const { data: contacts, isLoading: isLoadingContacts } = useQuery({
+    queryKey: ['customerContacts', customer?.client_id],
+    queryFn: () => customer?.client_id ? getContacts({ clientId: customer.client_id }) : Promise.resolve([]),
+    enabled: isOpen && !!customer?.client_id,
+  });
+
+  const handleSaveLinkedin = async (contactId: string) => {
+    setIsSavingLinkedin(true);
+    try {
+      await updateContactLinkedin(contactId, linkedinValue);
+      queryClient.invalidateQueries({ queryKey: ['customerContacts', customer?.client_id] });
+      setEditingLinkedinId(null);
+    } catch (error) {
+      console.error('Error saving linkedin:', error);
+    } finally {
+      setIsSavingLinkedin(false);
+    }
+  };
 
   const whatsappLink = customer?.mobile_no 
     ? `https://wa.me/${customer.mobile_no.replace(/\s+/g, '')}` 
@@ -110,6 +136,128 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                 <ExternalLink size={14} /> Ver en Google Maps
               </button>
             </div>
+          </section>
+
+          {/* Associated Contacts */}
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personas de Contacto</h3>
+            {isLoadingContacts ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-dts-secondary" />
+              </div>
+            ) : !contacts || contacts.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No hay personas de contacto registradas.</p>
+            ) : (
+              <div className="space-y-3">
+                {contacts.map((contact) => (
+                  <div key={contact.id} className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-bold text-dts-primary dark:text-white flex items-center gap-1.5">
+                          <User size={14} className="text-dts-secondary shrink-0" />
+                          {contact.name}
+                        </h4>
+                        {contact.job_title && (
+                          <span className="text-[10px] bg-dts-secondary/10 text-dts-secondary px-2 py-0.5 rounded font-bold uppercase tracking-wider mt-1 inline-block">
+                            {contact.job_title}
+                          </span>
+                        )}
+                        {contact.org_level_code && (
+                          <span className="text-[9px] text-gray-400 ml-1.5 font-mono">
+                            ({contact.org_level_code.replace(/\.+$/, '')})
+                          </span>
+                        )}
+                      </div>
+                      
+                      {editingLinkedinId === contact.id ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <input
+                            type="text"
+                            className="text-[11px] border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 px-1.5 py-0.5 rounded w-28 focus:outline-none focus:border-dts-secondary text-dts-primary dark:text-white"
+                            placeholder="linkedin.com/in/..."
+                            value={linkedinValue}
+                            onChange={(e) => setLinkedinValue(e.target.value)}
+                            disabled={isSavingLinkedin}
+                          />
+                          <button 
+                            onClick={() => handleSaveLinkedin(contact.id)}
+                            className="text-emerald-500 hover:text-emerald-600 transition-colors p-0.5"
+                            disabled={isSavingLinkedin}
+                            title="Guardar"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button 
+                            onClick={() => setEditingLinkedinId(null)}
+                            className="text-rose-500 hover:text-rose-600 transition-colors p-0.5"
+                            disabled={isSavingLinkedin}
+                            title="Cancelar"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {contact.linkedin ? (
+                            <a 
+                              href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-gray-400 hover:text-[#0077B5] transition-colors"
+                              title="Ver perfil de LinkedIn"
+                            >
+                              <Linkedin size={14} />
+                            </a>
+                          ) : (
+                            <span className="text-[10px] text-gray-400 italic">Sin LinkedIn</span>
+                          )}
+                          <button
+                            onClick={() => {
+                              setEditingLinkedinId(contact.id);
+                              setLinkedinValue(contact.linkedin || '');
+                            }}
+                            className="text-gray-400 hover:text-dts-secondary transition-colors p-0.5"
+                            title="Editar LinkedIn"
+                          >
+                            <Edit2 size={10} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col gap-1.5 pt-1 border-t border-gray-100 dark:border-white/5">
+                      {contact.email && (
+                        <a 
+                          href={`mailto:${contact.email}`} 
+                          className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 hover:text-dts-secondary transition-colors"
+                        >
+                          <Mail size={12} className="text-gray-400" />
+                          <span className="truncate">{contact.email}</span>
+                        </a>
+                      )}
+                      {contact.phone_no && (
+                        <a 
+                          href={`tel:${contact.phone_no}`} 
+                          className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 hover:text-dts-secondary transition-colors"
+                        >
+                          <Phone size={12} className="text-gray-400" />
+                          <span>{contact.phone_no}</span>
+                        </a>
+                      )}
+                      {contact.mobile_no && (
+                        <a 
+                          href={`tel:${contact.mobile_no}`} 
+                          className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 hover:text-dts-secondary transition-colors"
+                        >
+                          <Smartphone size={12} className="text-gray-400" />
+                          <span>{contact.mobile_no}</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Financial Summary */}

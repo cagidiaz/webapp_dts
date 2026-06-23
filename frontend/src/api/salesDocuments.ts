@@ -57,6 +57,8 @@ export interface SalesDocumentsResponse {
   summary: {
     totalDocuments: number;
     totalInvoicedNet: number;
+    totalVatAmount: number;
+    totalAmountInclVat: number;
     totalDiscountsLine: number;
     totalDiscountsGlobal: number;
     averageMarginPct: number;
@@ -104,9 +106,24 @@ export interface BillingHistoryDashboardItem {
   salesperson_code: string;
   salesperson_name: string;
   amount: number;
+  accounts_amount: number;
+  accounts_positive_amount?: number;
+  accounts_negative_amount?: number;
 }
 
-export const getBillingHistoryDashboard = async (): Promise<BillingHistoryDashboardItem[]> => {
+export interface BillingHistoryDashboardResponse {
+  aggregated: BillingHistoryDashboardItem[];
+  yearlyBreakdown: Record<number, Record<number, {
+    itemsTotal: number;
+    accounts: {
+      account_no: string;
+      description: string;
+      amount: number;
+    }[];
+  }>>;
+}
+
+export const getBillingHistoryDashboard = async (): Promise<BillingHistoryDashboardResponse> => {
   const { data } = await apiClient.get('/sales-documents/billing-history/dashboard');
   return data;
 };

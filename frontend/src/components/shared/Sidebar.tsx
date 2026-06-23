@@ -34,10 +34,13 @@ const navItems: NavItem[] = [
     path: '/dashboard' 
   },
   { 
-    name: 'CRM Ofertas', 
+    name: 'CRM', 
     icon: Briefcase, 
-    path: '/crm',
-    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']
+    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES'],
+    children: [
+      { name: 'Clientes', path: '/crm/customers' },
+      { name: 'Oportunidades', path: '/crm/pipeline' },
+    ]
   },
   { 
     name: 'Finanzas', 

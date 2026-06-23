@@ -6,3 +6,6 @@ export * from './salesBudget';
 export * from './salesOrders';
 export * from './salesProductBudget';
 export * from './salesDocuments';
+export * from './contacts';
+export * from './quotes';
+

@@ -4,7 +4,7 @@ import { getBillingHistoryDashboard, getAllSalesDocuments } from '../../api/sale
 import { formatCurrency } from '../../api/formatters';
 import { 
   Receipt, Loader2, ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, 
-  Package, Search, BarChart3
+  Package, Search, BarChart3, Eye, X
 } from 'lucide-react';
 import { TableSkeleton, ExportButton, SearchableSelect } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
@@ -34,14 +34,16 @@ export const SalesInvoicesPage: React.FC = () => {
   const [viewType, setViewType] = useState<'detail' | 'comparison'>('detail');
 
   // Global filters state (affecting both graphs and detailed table)
-  const [selectedYears, setSelectedYears] = useState<number[]>([2022, 2023, 2024, 2025, 2026]);
-  const [selectedMonths, setSelectedMonths] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  const [selectedYears, setSelectedYears] = useState<number[]>([new Date().getFullYear()]);
+  const [selectedMonths, setSelectedMonths] = useState<number[]>(
+    Array.from({ length: new Date().getMonth() + 1 }, (_, i) => i + 1)
+  );
 
   // Detailed list state
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [docTypeFilter, setDocTypeFilter] = useState('');
-  const [sortBy, setSortBy] = useState<string>('document_date');
+  const [sortBy, setSortBy] = useState<string>('posting_date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [expandedDocNos, setExpandedDocNos] = useState<Record<string, boolean>>({});
   const pageSize = 50;
@@ -70,11 +72,57 @@ export const SalesInvoicesPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const [selectedKpiYear, setSelectedKpiYear] = useState<number | null>(null);
+
   // Fetch Dashboard charts data
-  const { data: dashboardData = [], isLoading: isLoadingDashboard } = useQuery({
+  const { data: dashboardResult, isLoading: isLoadingDashboard } = useQuery({
     queryKey: ['billingHistoryDashboard'],
     queryFn: getBillingHistoryDashboard,
   });
+
+  const dashboardData = dashboardResult?.aggregated || [];
+  const yearlyBreakdown = dashboardResult?.yearlyBreakdown || {};
+
+  const filteredYearlyBreakdown = useMemo(() => {
+    const result: Record<number, {
+      itemsTotal: number;
+      accounts: {
+        account_no: string;
+        description: string;
+        amount: number;
+      }[];
+    }> = {};
+
+    [2022, 2023, 2024, 2025, 2026].forEach(year => {
+      let itemsTotal = 0;
+      const accountsMap: Record<string, {
+        account_no: string;
+        description: string;
+        amount: number;
+      }> = {};
+
+      selectedMonths.forEach(month => {
+        const monthData = yearlyBreakdown[year]?.[month];
+        if (monthData) {
+          itemsTotal += monthData.itemsTotal;
+          monthData.accounts.forEach(acct => {
+            if (!accountsMap[acct.account_no]) {
+              accountsMap[acct.account_no] = { ...acct };
+            } else {
+              accountsMap[acct.account_no].amount += acct.amount;
+            }
+          });
+        }
+      });
+
+      result[year] = {
+        itemsTotal,
+        accounts: Object.values(accountsMap).sort((a, b) => b.amount - a.amount)
+      };
+    });
+
+    return result;
+  }, [yearlyBreakdown, selectedMonths]);
 
   // Fetch Detailed List data (Infinite Scroll) - now filters by selectedYears and selectedMonths globally
   const { 
@@ -131,13 +179,20 @@ export const SalesInvoicesPage: React.FC = () => {
   // Dashboard Calculations (Aggregated In-Memory for the charts)
   // ----------------------------------------------------
   const dashboardCalculations = useMemo(() => {
-    // 1. Yearly totals for KPI Cards and Yearly Billing Bar Chart (Filtered by selectedMonths)
     const yearlyTotals: Record<number, number> = {
+      2022: 0, 2023: 0, 2024: 0, 2025: 0, 2026: 0
+    };
+    const yearlyAccountsPositiveTotals: Record<number, number> = {
+      2022: 0, 2023: 0, 2024: 0, 2025: 0, 2026: 0
+    };
+    const yearlyAccountsNegativeTotals: Record<number, number> = {
       2022: 0, 2023: 0, 2024: 0, 2025: 0, 2026: 0
     };
     dashboardData.forEach(item => {
       if (item.year >= 2022 && item.year <= 2026 && selectedMonths.includes(item.month)) {
         yearlyTotals[item.year] += item.amount;
+        yearlyAccountsPositiveTotals[item.year] += item.accounts_positive_amount || 0;
+        yearlyAccountsNegativeTotals[item.year] += item.accounts_negative_amount || 0;
       }
     });
 
@@ -174,6 +229,8 @@ export const SalesInvoicesPage: React.FC = () => {
 
     return {
       yearlyTotals,
+      yearlyAccountsPositiveTotals,
+      yearlyAccountsNegativeTotals,
       monthlyEvolution,
       salespersonChartData
     };
@@ -252,6 +309,36 @@ export const SalesInvoicesPage: React.FC = () => {
     return list;
   }, [comparisonData, compSortBy, compSortDir, viewType]);
 
+  // Totals calculations for detailed list (using absolute totals from backend)
+  const totals = useMemo(() => {
+    const summary = listData?.pages[0]?.summary;
+    return {
+      net: summary?.totalInvoicedNet || 0,
+      vat: summary?.totalVatAmount || 0,
+      incl: summary?.totalAmountInclVat || 0,
+      avgMargin: summary?.averageMarginPct || 0,
+    };
+  }, [listData]);
+
+  // Totals calculations for comparison view
+  const comparisonTotals = useMemo(() => {
+    let t2023 = 0;
+    let t2024 = 0;
+    let t2025 = 0;
+    let t2026 = 0;
+    let grandTotal = 0;
+
+    sortedComparisonData.forEach(row => {
+      t2023 += row[2023] || 0;
+      t2024 += row[2024] || 0;
+      t2025 += row[2025] || 0;
+      t2026 += row[2026] || 0;
+      grandTotal += row.total || 0;
+    });
+
+    return { 2023: t2023, 2024: t2024, 2025: t2025, 2026: t2026, total: grandTotal };
+  }, [sortedComparisonData]);
+
   const handleSort = (field: string) => {
     if (viewType === 'detail') {
       if (sortBy === field) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -311,68 +398,32 @@ export const SalesInvoicesPage: React.FC = () => {
       sortDir,
     });
 
-    const exportRows: any[] = [];
-    result.data.forEach(doc => {
-      if (doc.lines && doc.lines.length > 0) {
-        doc.lines.forEach(line => {
-          exportRows.push({
-            document_date: doc.document_date ? new Date(doc.document_date).toLocaleDateString('es-ES') : '---',
-            document_no: doc.document_no,
-            customer_no: doc.customer_no,
-            customer_name: doc.customer?.name || '---',
-            your_reference: doc.your_reference || '---',
-            order_no: doc.order_no || '---',
-            external_doc_no: doc.external_doc_no || '---',
-            shipment_no: doc.shipment_no || '---',
-            payment_terms_code: doc.payment_terms_code || '---',
-            payment_method_code: doc.payment_method_code || '---',
-            total_amount_excl_vat: Number(doc.total_amount_excl_vat || 0),
-            total_vat_amount: Number(doc.total_vat_amount || 0),
-            total_amount_incl_vat: Number(doc.total_amount_incl_vat || 0),
-            line_no: line.line_no !== null ? Number(line.line_no) : '---',
-            line_type: line.type || '---',
-            product_no: line.product_no || '---',
-            product_description: line.product?.description || '---',
-            quantity: Number(line.quantity || 0),
-            unit_price: Number(line.unit_price || 0),
-            line_amount: Number(line.line_amount || 0),
-            line_disc_amount: Number(line.line_disc_amount || 0),
-            line_disc_percent: Number(line.line_disc_percent || 0),
-            margen_percent_ldr: Number(line.margen_percent_ldr || 0)
-          });
-        });
-      } else {
-        exportRows.push({
-          document_date: doc.document_date ? new Date(doc.document_date).toLocaleDateString('es-ES') : '---',
-          document_no: doc.document_no,
-          customer_no: doc.customer_no,
-          customer_name: doc.customer?.name || '---',
-          your_reference: doc.your_reference || '---',
-          order_no: doc.order_no || '---',
-          external_doc_no: doc.external_doc_no || '---',
-          shipment_no: doc.shipment_no || '---',
-          payment_terms_code: doc.payment_terms_code || '---',
-          payment_method_code: doc.payment_method_code || '---',
-          total_amount_excl_vat: Number(doc.total_amount_excl_vat || 0),
-          total_vat_amount: Number(doc.total_vat_amount || 0),
-          total_amount_incl_vat: Number(doc.total_amount_incl_vat || 0),
-          line_no: '---',
-          line_type: '---',
-          product_no: '---',
-          product_description: '---',
-          quantity: 0,
-          unit_price: 0,
-          line_amount: 0,
-          line_disc_amount: 0,
-          line_disc_percent: 0,
-          margen_percent_ldr: 0
-        });
-      }
+    const exportRows = result.data.map(doc => {
+      const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB');
+      const multiplier = isAbono ? -1 : 1;
+      return {
+        posting_date: doc.posting_date ? new Date(doc.posting_date).toLocaleDateString('es-ES') : '---',
+        document_no: doc.document_no,
+        document_type: isAbono ? 'Abono' : 'Factura',
+        customer_no: doc.customer_no,
+        customer_name: doc.customer?.name || '---',
+        your_reference: doc.your_reference || '---',
+        order_no: doc.order_no || '---',
+        external_doc_no: doc.external_doc_no || '---',
+        shipment_no: doc.shipment_no || '---',
+        payment_terms_code: doc.payment_terms_code || '---',
+        payment_method_code: doc.payment_method_code || '---',
+        total_amount_excl_vat: Number(doc.total_amount_excl_vat || 0) * multiplier,
+        total_vat_amount: Number(doc.total_vat_amount || 0) * multiplier,
+        total_amount_incl_vat: Number(doc.total_amount_incl_vat || 0) * multiplier,
+        invoice_margen: Number(doc.invoice_margen || 0)
+      };
     });
 
     const columns = [
-      { key: 'document_date', label: 'Fecha Documento' },
+      { key: 'posting_date', label: 'Fecha Registro' },
       { key: 'document_no', label: 'Nº Documento' },
+      { key: 'document_type', label: 'Tipo Documento' },
       { key: 'customer_no', label: 'Cód. Cliente' },
       { key: 'customer_name', label: 'Nombre Cliente' },
       { key: 'your_reference', label: 'Referencia' },
@@ -381,22 +432,13 @@ export const SalesInvoicesPage: React.FC = () => {
       { key: 'shipment_no', label: 'Nº Albarán' },
       { key: 'payment_terms_code', label: 'Términos Pago' },
       { key: 'payment_method_code', label: 'Método Pago' },
-      { key: 'total_amount_excl_vat', label: 'Importe Neto Doc (€)' },
-      { key: 'total_vat_amount', label: 'IVA Doc (€)' },
-      { key: 'total_amount_incl_vat', label: 'Total Doc (€)' },
-      { key: 'line_no', label: 'Nº Línea' },
-      { key: 'line_type', label: 'Tipo Línea' },
-      { key: 'product_no', label: 'Producto SKU' },
-      { key: 'product_description', label: 'Descripción Producto' },
-      { key: 'quantity', label: 'Cantidad' },
-      { key: 'unit_price', label: 'Precio Unitario (€)' },
-      { key: 'line_amount', label: 'Importe Neto Línea (€)' },
-      { key: 'line_disc_amount', label: 'Descuento Línea (€)' },
-      { key: 'line_disc_percent', label: 'Descuento Línea (%)' },
-      { key: 'margen_percent_ldr', label: 'Margen Línea (%)' }
+      { key: 'total_amount_excl_vat', label: 'Importe Neto (€)' },
+      { key: 'total_vat_amount', label: 'IVA (€)' },
+      { key: 'total_amount_incl_vat', label: 'Total Documento (€)' },
+      { key: 'invoice_margen', label: 'Margen LDR (%)' }
     ];
 
-    exportToXlsx(exportRows, columns, 'historico_documentos_y_lineas_venta');
+    exportToXlsx(exportRows, columns, 'historico_facturas_venta');
   };
 
   // Recharts colors
@@ -516,11 +558,22 @@ export const SalesInvoicesPage: React.FC = () => {
                   { year: 2024, bg: 'bg-[#002D3B] text-white', label: 'Facturas 2024' },
                   { year: 2023, bg: 'bg-[#00B0B9] text-white', label: 'Facturas 2023' }
                 ].map(kpi => (
-                  <div key={kpi.year} className={`${kpi.bg} p-4 rounded-xl flex flex-col justify-center shadow-sm`}>
+                  <div 
+                    key={kpi.year} 
+                    onClick={() => setSelectedKpiYear(kpi.year)}
+                    className={`${kpi.bg} p-4 rounded-xl flex flex-col justify-center shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all group relative overflow-hidden`}
+                  >
+                    <span className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Eye size={12} className="opacity-80" />
+                    </span>
                     <span className="text-[10px] uppercase font-bold tracking-wider opacity-85">{kpi.label}</span>
                     <h3 className="text-lg font-extrabold font-mono mt-1.5 tracking-tight">
                       {formatCurrency(dashboardCalculations.yearlyTotals[kpi.year], 0)}
                     </h3>
+                    <div className="text-[9px] opacity-80 mt-1 italic font-semibold space-y-0.5">
+                      <div>Total Cuentas: {formatCurrency(dashboardCalculations.yearlyAccountsPositiveTotals[kpi.year] || 0, 0)}</div>
+                      <div>Anticipos Ventas: {formatCurrency(dashboardCalculations.yearlyAccountsNegativeTotals[kpi.year] || 0, 0)}</div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -690,7 +743,7 @@ export const SalesInvoicesPage: React.FC = () => {
                   <tr>
                     <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] w-10"></th>
                     {[
-                      { label: 'Fecha Doc', key: 'document_date' },
+                      { label: 'Fecha Reg', key: 'posting_date' },
                       { label: 'Nº Documento', key: 'document_no' },
                       { label: 'Cliente', key: 'customer_no' },
                       { label: 'Referencia', key: 'your_reference' },
@@ -730,7 +783,7 @@ export const SalesInvoicesPage: React.FC = () => {
                             </button>
                           </td>
                           <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200">
-                            {doc.document_date ? new Date(doc.document_date).toLocaleDateString('es-ES') : '---'}
+                            {doc.posting_date ? new Date(doc.posting_date).toLocaleDateString('es-ES') : '---'}
                           </td>
                           <td className="px-6 py-3 font-semibold text-dts-primary dark:text-dts-secondary">
                             <div className="flex items-center gap-2">
@@ -756,13 +809,13 @@ export const SalesInvoicesPage: React.FC = () => {
                             {doc.your_reference || '---'}
                           </td>
                           <td className={`px-6 py-3 text-right font-mono font-bold ${isAbono ? 'text-rose-500' : 'text-emerald-500'}`}>
-                            {formatCurrency(Number(doc.total_amount_excl_vat || 0), 2)}
+                            {formatCurrency(Number(doc.total_amount_excl_vat || 0) * (isAbono ? -1 : 1), 2)}
                           </td>
-                          <td className="px-6 py-3 text-right font-mono text-gray-500">
-                            {formatCurrency(Number(doc.total_vat_amount || 0), 2)}
+                          <td className={`px-6 py-3 text-right font-mono ${isAbono ? 'text-rose-500 font-medium' : 'text-gray-500'}`}>
+                            {formatCurrency(Number(doc.total_vat_amount || 0) * (isAbono ? -1 : 1), 2)}
                           </td>
-                          <td className="px-6 py-3 text-right font-mono text-gray-700 dark:text-gray-200 font-semibold">
-                            {formatCurrency(Number(doc.total_amount_incl_vat || 0), 2)}
+                          <td className={`px-6 py-3 text-right font-mono font-semibold ${isAbono ? 'text-rose-500' : 'text-gray-700 dark:text-gray-200'}`}>
+                            {formatCurrency(Number(doc.total_amount_incl_vat || 0) * (isAbono ? -1 : 1), 2)}
                           </td>
                           <td className={`px-6 py-3 text-right font-mono font-bold ${Number(doc.invoice_margen || 0) < 0 ? 'text-rose-500' : 'text-blue-500'}`}>
                             {Number(doc.invoice_margen || 0).toFixed(2)}%
@@ -814,7 +867,7 @@ export const SalesInvoicesPage: React.FC = () => {
                                           <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-200">{Number(line.quantity).toLocaleString('de-DE')} {line.unit_of_measure_code || 'UDS'}</td>
                                           <td className="px-4 py-2.5 text-right text-gray-400">{formatCurrency(Number(line.unit_price || 0), 2)}</td>
                                           <td className="px-4 py-2.5 text-right text-amber-500">{Number(line.line_disc_percent || 0)}%</td>
-                                          <td className="px-4 py-2.5 text-right font-bold text-gray-700 dark:text-gray-200">{formatCurrency(Number(line.line_amount || 0), 2)}</td>
+                                          <td className={`px-4 py-2.5 text-right font-bold ${isAbono ? 'text-rose-500' : 'text-gray-700 dark:text-gray-200'}`}>{formatCurrency(Number(line.line_amount || 0) * (isAbono ? -1 : 1), 2)}</td>
                                           <td className={`px-4 py-2.5 text-right font-bold ${Number(line.margen_percent_ldr || 0) < 0 ? 'text-rose-500' : 'text-blue-500'}`}>
                                             {Number(line.margen_percent_ldr || 0).toFixed(2)}%
                                           </td>
@@ -852,6 +905,18 @@ export const SalesInvoicesPage: React.FC = () => {
                     </td>
                   </tr>
                 </tbody>
+                {documents.length > 0 && (
+                  <tfoot className="bg-dts-primary text-white sticky bottom-0 z-20 shadow-lg font-bold text-xs uppercase">
+                    <tr className="divide-x divide-white/10">
+                      <td className="px-6 py-4"></td>
+                      <td className="px-6 py-4" colSpan={4}>TOTALES FILTRADOS</td>
+                      <td className="px-6 py-4 text-right font-mono">{formatCurrency(totals.net, 2)}</td>
+                      <td className="px-6 py-4 text-right font-mono">{formatCurrency(totals.vat, 2)}</td>
+                      <td className="px-6 py-4 text-right font-mono">{formatCurrency(totals.incl, 2)}</td>
+                      <td className={`px-6 py-4 text-right font-mono ${totals.avgMargin < 0 ? 'text-rose-400' : 'text-blue-400'}`}>{totals.avgMargin.toFixed(2)}%</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             )
           ) : (
@@ -918,10 +983,107 @@ export const SalesInvoicesPage: React.FC = () => {
                   ))
                 )}
               </tbody>
+              {sortedComparisonData.length > 0 && (
+                <tfoot className="bg-dts-primary text-white sticky bottom-0 z-20 shadow-lg font-bold text-xs uppercase">
+                  <tr className="divide-x divide-white/10">
+                    <td className="px-6 py-4"></td>
+                    <td className="px-6 py-4">TOTALES</td>
+                    <td className="px-6 py-4 text-right font-mono">{formatCurrency(comparisonTotals[2023], 0)}</td>
+                    <td className="px-6 py-4 text-right font-mono">{formatCurrency(comparisonTotals[2024], 0)}</td>
+                    <td className="px-6 py-4 text-right font-mono">{formatCurrency(comparisonTotals[2025], 0)}</td>
+                    <td className="px-6 py-4 text-right font-mono">{formatCurrency(comparisonTotals[2026], 0)}</td>
+                    <td className="px-6 py-4 text-right font-mono text-sm">{formatCurrency(comparisonTotals.total, 0)}</td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           )}
         </div>
       </div>
+      {/* Yearly Breakdown Modal */}
+      {selectedKpiYear !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-white/5">
+              <div className="flex items-center gap-2">
+                <Receipt className="text-dts-secondary" size={20} />
+                <h2 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                  Desglose Facturación {selectedKpiYear}
+                </h2>
+              </div>
+              <button 
+                onClick={() => setSelectedKpiYear(null)} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1">
+              {/* Product/Items Summary Card */}
+              <div className="bg-dts-secondary/10 dark:bg-dts-secondary/5 border border-dts-secondary/20 p-5 rounded-xl flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs uppercase font-extrabold tracking-wider text-dts-secondary-light">Total de Productos / Items</h4>
+                  <p className="text-2xl font-black font-mono text-dts-primary dark:text-white mt-1">
+                    {formatCurrency(filteredYearlyBreakdown[selectedKpiYear]?.itemsTotal || 0, 0)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-dts-secondary/20 rounded-xl flex items-center justify-center text-dts-secondary">
+                  <Package size={24} />
+                </div>
+              </div>
+
+              {/* Accounts breakdown */}
+              <div className="space-y-3">
+                <h4 className="text-xs uppercase font-extrabold tracking-wider text-gray-400">Desglose por Cuentas (G/L Accounts)</h4>
+                
+                <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-xs border-separate border-spacing-0">
+                    <thead className="bg-gray-50 dark:bg-white/5 text-gray-400 font-bold uppercase tracking-wider text-[9px]">
+                      <tr>
+                        <th className="px-4 py-3">Nº Cuenta</th>
+                        <th className="px-4 py-3">Descripción</th>
+                        <th className="px-4 py-3 text-right">Importe</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-sans text-gray-700 dark:text-gray-300">
+                      {filteredYearlyBreakdown[selectedKpiYear]?.accounts && filteredYearlyBreakdown[selectedKpiYear].accounts.length > 0 ? (
+                        filteredYearlyBreakdown[selectedKpiYear].accounts.map((acct: any) => (
+                          <tr key={acct.account_no} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors font-medium">
+                            <td className="px-4 py-3 font-mono text-dts-secondary font-bold">{acct.account_no}</td>
+                            <td className="px-4 py-3 text-xs">{acct.description}</td>
+                            <td className={`px-4 py-3 text-right font-mono font-bold ${acct.amount < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                              {formatCurrency(acct.amount, 2)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-6 text-center text-gray-400 italic">
+                            No hay registros de cuentas G/L para este año.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-end bg-gray-50/30 dark:bg-transparent">
+              <button 
+                onClick={() => setSelectedKpiYear(null)}
+                className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-card-dark text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

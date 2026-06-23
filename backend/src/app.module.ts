@@ -14,6 +14,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 import { SalesDocumentsModule } from './modules/sales-documents/sales-documents.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
+import { ContactsModule } from './modules/contacts/contacts.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { QuotesModule } from './modules/quotes/quotes.module';
     SalesOrdersModule,
     SalesDocumentsModule,
     QuotesModule,
+    ContactsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
