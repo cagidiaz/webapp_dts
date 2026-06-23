@@ -7,7 +7,7 @@ import { formatCurrency } from '../../../api/formatters';
 import { 
   ArrowLeft, Phone, Mail, MapPin, 
   Linkedin, Edit2, Check, X, Plus, Calendar as CalendarIcon, 
-  Clock, Briefcase, FileText, CheckSquare, Send, User
+  Clock, Briefcase, FileText, CheckSquare, Send, User, Activity
 } from 'lucide-react';
 
 interface CrmCustomerDetailProps {
@@ -17,7 +17,7 @@ interface CrmCustomerDetailProps {
 
 export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, onBack }) => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'info' | 'quotes' | 'tasks' | 'notes' | 'emails' | 'calendar'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'quotes' | 'tasks' | 'notes' | 'emails' | 'calendar' | 'timeline'>('info');
 
   // Inline Linkedin editing states
   const [editingLinkedinId, setEditingLinkedinId] = useState<string | null>(null);
@@ -92,6 +92,74 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
     setEvents(newEvents);
     localStorage.setItem(`crm_events_${clientId}`, JSON.stringify(newEvents));
   };
+
+  // Compile all activities for timeline
+  const timelineActivities = useMemo(() => {
+    const list: {
+      id: string;
+      type: 'note' | 'task' | 'email' | 'event';
+      title: string;
+      description?: string;
+      date: string;
+      icon: any;
+      iconBg: string;
+      iconColor: string;
+    }[] = [];
+
+    notes.forEach(n => {
+      list.push({
+        id: `note-${n.id}`,
+        type: 'note',
+        title: 'Nota Comercial Registrada',
+        description: n.text,
+        date: n.date,
+        icon: FileText,
+        iconBg: 'bg-amber-100 dark:bg-amber-955/20',
+        iconColor: 'text-amber-600 dark:text-amber-400'
+      });
+    });
+
+    tasks.forEach(t => {
+      list.push({
+        id: `task-${t.id}`,
+        type: 'task',
+        title: `Tarea comercial: ${t.title}`,
+        description: t.done ? 'Completada' : 'Pendiente',
+        date: t.date + 'T00:00:00Z',
+        icon: CheckSquare,
+        iconBg: t.done ? 'bg-emerald-100 dark:bg-emerald-955/20' : 'bg-blue-100 dark:bg-blue-955/20',
+        iconColor: t.done ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'
+      });
+    });
+
+    emails.forEach(e => {
+      list.push({
+        id: `email-${e.id}`,
+        type: 'email',
+        title: `Email Registrado: ${e.subject}`,
+        description: e.body,
+        date: e.date,
+        icon: Send,
+        iconBg: 'bg-purple-100 dark:bg-purple-955/20',
+        iconColor: 'text-purple-600 dark:text-purple-400'
+      });
+    });
+
+    events.forEach(ev => {
+      list.push({
+        id: `event-${ev.id}`,
+        type: 'event',
+        title: `Reunión / Cita: ${ev.title}`,
+        description: `Fecha: ${ev.date} a las ${ev.time}h`,
+        date: ev.date + 'T' + ev.time + ':00Z',
+        icon: CalendarIcon,
+        iconBg: 'bg-rose-100 dark:bg-rose-955/20',
+        iconColor: 'text-rose-600 dark:text-rose-400'
+      });
+    });
+
+    return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [notes, tasks, emails, events]);
 
   // Queries
   const { data: customer, isLoading: isLoadingCustomer } = useQuery({
@@ -234,7 +302,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
           { id: 'info', label: 'Información y Contactos', icon: User },
           { id: 'quotes', label: 'Oportunidades', icon: Briefcase },
           { id: 'tasks', label: 'Tareas', icon: CheckSquare },
-          { id: 'notes', label: 'Notas / Timeline', icon: FileText },
+          { id: 'notes', label: 'Notas', icon: FileText },
+          { id: 'timeline', label: 'Historial / Timeline', icon: Activity },
           { id: 'emails', label: 'Emails', icon: Send },
           { id: 'calendar', label: 'Calendario', icon: CalendarIcon }
         ].map(tab => (
@@ -518,7 +587,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
           <div className="space-y-6">
             <div className="flex justify-between items-center border-b border-gray-100 dark:border-white/5 pb-3">
               <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider">
-                Historial Comercial (Timeline)
+                Notas Comerciales
               </h3>
               <button 
                 onClick={() => setShowNoteModal(true)}
@@ -530,26 +599,63 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
 
             {notes.length === 0 ? (
               <div className="text-xs text-gray-400 italic py-10 bg-gray-50 dark:bg-white/1 border border-dashed border-gray-200 dark:border-white/5 rounded-xl text-center">
-                Aún no hay notas comerciales cargadas.
+                No hay notas registradas para este cliente.
               </div>
             ) : (
-              <div className="relative pl-4 border-l border-gray-200 dark:border-white/10 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {notes.map(n => (
-                  <div key={n.id} className="relative text-xs">
-                    <span className="absolute -left-[21px] top-1 bg-white dark:bg-surface-card-dark border border-dts-secondary p-0.5 rounded-full z-10">
-                      <span className="block w-1.5 h-1.5 bg-dts-secondary rounded-full" />
-                    </span>
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-gray-500 text-[10px]">{new Date(n.date).toLocaleString()}</span>
-                      <button onClick={() => saveNotes(notes.filter(note => note.id !== n.id))} className="text-gray-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div key={n.id} className="p-4 bg-yellow-50/30 dark:bg-yellow-950/10 border border-yellow-200/50 dark:border-yellow-900/30 rounded-xl relative group">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] text-gray-400 font-bold">{new Date(n.date).toLocaleString()}</span>
+                      <button 
+                        onClick={() => saveNotes(notes.filter(note => note.id !== n.id))} 
+                        className="text-gray-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
                         <X size={12} />
                       </button>
                     </div>
-                    <p className="text-gray-700 dark:text-gray-300 mt-1 leading-relaxed bg-gray-50 dark:bg-white/1 p-3 rounded-lg border border-gray-100 dark:border-white/5">
+                    <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                       {n.text}
                     </p>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Timeline Tab */}
+        {activeTab === 'timeline' && (
+          <div className="space-y-6">
+            <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-3">
+              Línea de Tiempo de Actividades
+            </h3>
+
+            {timelineActivities.length === 0 ? (
+              <div className="text-xs text-gray-400 italic py-10 bg-gray-50 dark:bg-white/1 border border-dashed border-gray-200 dark:border-white/5 rounded-xl text-center">
+                No hay actividades registradas en el historial.
+              </div>
+            ) : (
+              <div className="relative pl-6 border-l border-gray-200 dark:border-white/10 space-y-6 ml-2">
+                {timelineActivities.map(act => {
+                  const IconComponent = act.icon;
+                  return (
+                    <div key={act.id} className="relative text-xs">
+                      <span className={`absolute -left-[37px] top-0 p-1.5 rounded-xl ${act.iconBg} ${act.iconColor} z-10 border border-white dark:border-surface-card-dark shadow-sm`}>
+                        <IconComponent size={14} />
+                      </span>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <span className="font-bold text-gray-900 dark:text-white text-xs">{act.title}</span>
+                        <span className="font-bold text-gray-400 text-[10px]">{new Date(act.date).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      </div>
+                      {act.description && (
+                        <p className="text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed bg-gray-50 dark:bg-white/1 p-3 rounded-lg border border-gray-100/50 dark:border-white/5">
+                          {act.description}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
