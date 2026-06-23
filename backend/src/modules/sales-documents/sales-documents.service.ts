@@ -362,6 +362,12 @@ export class SalesDocumentsService {
                   desc = 'Servicios bancarios';
                 } else if (acctNo === '7050004') {
                   desc = 'Comisiones Seiko';
+                } else if (acctNo === '4380001') {
+                  desc = 'Anticipo clientes NAC';
+                } else if (acctNo === '4380002') {
+                  desc = 'Anticipos clientes UE';
+                } else if (acctNo === '4380003') {
+                  desc = 'Anticipos clientes exp.';
                 }
 
                 if (desc) {
