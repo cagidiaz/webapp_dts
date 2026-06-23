@@ -16,7 +16,7 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
   // Set Page Info in Layout
   useEffect(() => {
     setPageInfo({
-      title: 'CRM Comercial',
+      title: 'CRM - Directorio de empresas',
       subtitle: 'Gestión de cuentas comerciales, contactos y pipeline de ventas de dTS Instruments',
       icon: <Briefcase size={20} />,
       infoProps: {

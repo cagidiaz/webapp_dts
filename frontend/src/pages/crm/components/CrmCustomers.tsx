@@ -83,22 +83,6 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = ({ onSelectCustomer }) 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-dts-primary dark:text-white">Directorio de Empresas</h2>
-          <p className="text-xs text-gray-500 mt-1">
-            Gestione y rastree {totalItems} cuentas corporativas en todos los sectores.
-          </p>
-        </div>
-        <button 
-          onClick={() => setShowSyncModal(true)}
-          className="flex items-center gap-2 py-2 px-4 bg-dts-secondary hover:bg-dts-secondary-dark text-white rounded-xl font-bold text-xs transition-transform active:scale-95 shadow-md shadow-dts-secondary/10 cursor-pointer"
-        >
-          <Plus size={16} /> Nueva Entrada
-        </button>
-      </div>
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
