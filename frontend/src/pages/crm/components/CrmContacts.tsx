@@ -178,34 +178,32 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-white dark:bg-surface-card-dark p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center justify-between gap-4">
-        {/* Search */}
-        <div className="w-full sm:max-w-md relative">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            <Search size={16} />
-          </span>
-          <input 
-            type="text" 
-            placeholder="Buscar por nombre, cargo, código de cliente, email..." 
-            className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        {searchTerm && (
-          <button 
-            onClick={() => setSearchTerm('')}
-            className="text-xs font-bold text-gray-400 hover:text-dts-secondary flex items-center gap-1 cursor-pointer"
-          >
-            Limpiar búsqueda
-          </button>
-        )}
-      </div>
-
       {/* Contacts Table (Adjusted to screen viewport) */}
       <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-320px)] min-h-[400px]">
+        {/* Integrated Search Bar */}
+        <div className="p-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between gap-4 shrink-0 bg-gray-50/20 dark:bg-surface-card-dark">
+          <div className="w-full sm:max-w-md relative">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <Search size={16} />
+            </span>
+            <input 
+              type="text" 
+              placeholder="Buscar por nombre, cargo, código de cliente, email..." 
+              className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {searchTerm && (
+            <button 
+              onClick={() => setSearchTerm('')}
+              className="text-xs font-bold text-gray-400 hover:text-dts-secondary flex items-center gap-1 cursor-pointer"
+            >
+              Limpiar búsqueda
+            </button>
+          )}
+        </div>
+
         {isLoading ? (
           <div className="text-center py-20 text-xs text-gray-400 uppercase font-medium">Cargando directorio de contactos...</div>
         ) : filteredContacts.length === 0 ? (
@@ -213,7 +211,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
         ) : (
           <div className="overflow-y-auto flex-1 custom-scrollbar">
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-[#002A38] dark:bg-dts-primary-dark/80 text-white border-b border-gray-100 dark:border-white/5 sticky top-0 z-20 shadow-lg">
+              <thead className="bg-[#002A38] dark:bg-dts-primary-dark text-white border-b border-gray-100 dark:border-white/5 sticky top-0 z-20 shadow-lg">
                 <tr>
                   <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Nombre</th>
                   <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Cliente / Empresa</th>
