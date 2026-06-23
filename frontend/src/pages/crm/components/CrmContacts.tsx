@@ -15,6 +15,10 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   
+  // Infinite scroll state
+  const [visibleCount, setVisibleCount] = useState(50);
+  const observerTarget = React.useRef<HTMLTableRowElement>(null);
+
   // LinkedIn editing states
   const [editingLinkedinId, setEditingLinkedinId] = useState<string | null>(null);
   const [linkedinValue, setLinkedinValue] = useState<string>('');
@@ -27,6 +31,11 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
     }, 400);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Reset visible count when search term changes
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [debouncedSearch]);
 
   // Fetch all contacts
   const { data: allContacts = [], isLoading } = useQuery({
@@ -71,6 +80,27 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
       );
     });
   }, [allContacts, debouncedSearch]);
+
+  // Slice contacts for infinite scroll
+  const displayedContacts = useMemo(() => {
+    return filteredContacts.slice(0, visibleCount);
+  }, [filteredContacts, visibleCount]);
+
+  // Intersection Observer for client-side Infinite Scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && visibleCount < filteredContacts.length) {
+          setVisibleCount(prev => prev + 50);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    return () => {
+      if (observerTarget.current) observer.unobserve(observerTarget.current);
+    };
+  }, [visibleCount, filteredContacts.length]);
 
   // KPIs calculations
   const kpis = useMemo(() => {
@@ -174,16 +204,16 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
         )}
       </div>
 
-      {/* Contacts Table */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+      {/* Contacts Table (Adjusted to screen viewport) */}
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-320px)] min-h-[400px]">
         {isLoading ? (
           <div className="text-center py-20 text-xs text-gray-400 uppercase font-medium">Cargando directorio de contactos...</div>
         ) : filteredContacts.length === 0 ? (
           <div className="text-center py-20 text-gray-400 italic text-sm">No se encontraron contactos que coincidan con la búsqueda.</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-y-auto flex-1 custom-scrollbar">
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-[#002A38] dark:bg-dts-primary-dark/80 text-white border-b border-gray-100 dark:border-white/5">
+              <thead className="bg-[#002A38] dark:bg-dts-primary-dark/80 text-white border-b border-gray-100 dark:border-white/5 sticky top-0 z-20 shadow-lg">
                 <tr>
                   <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Nombre</th>
                   <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Cliente / Empresa</th>
@@ -195,7 +225,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                {filteredContacts.map(contact => (
+                {displayedContacts.map(contact => (
                   <tr key={contact.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4 font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       <User size={14} className="text-dts-secondary shrink-0" />
@@ -240,7 +270,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
                         <div className="flex items-center gap-2 shrink-0">
                           {contact.linkedin ? (
                             <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-dts-secondary dark:text-dts-secondary hover:brightness-110 flex items-center gap-1 font-semibold">
-                              <Linkedin size={14} className="text-dts-secondary dark:text-dts-secondary" />
+                              <Linkedin size={16} className="text-dts-secondary dark:text-dts-secondary" />
                               <span>Ver perfil</span>
                             </a>
                           ) : (
@@ -249,7 +279,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
                               className="text-gray-400 dark:text-gray-400 hover:text-dts-secondary dark:hover:text-dts-secondary flex items-center gap-1.5 font-semibold transition-colors cursor-pointer"
                               title="Añadir LinkedIn"
                             >
-                              <Linkedin size={14} className="text-dts-secondary dark:text-dts-secondary" />
+                              <Linkedin size={16} className="text-dts-secondary dark:text-dts-secondary" />
                               <span className="underline decoration-dotted">Vincular LinkedIn</span>
                             </button>
                           )}
@@ -294,6 +324,13 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
                     </td>
                   </tr>
                 ))}
+                {visibleCount < filteredContacts.length && (
+                  <tr ref={observerTarget}>
+                    <td colSpan={7} className="py-4 text-center text-xs text-gray-400 font-semibold uppercase tracking-wider bg-gray-50/10 dark:bg-white/[0.01]">
+                      Cargando más contactos...
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
