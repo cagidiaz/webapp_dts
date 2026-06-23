@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getAllCustomers } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
-  Search, Plus, Building2, Euro, 
+  Search, Building2, Euro, 
   Clock, AlertCircle, X, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
