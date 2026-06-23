@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getContacts, updateContactLinkedin, type ContactDataRow, getCustomerByClientId } from '../../../api';
+import { getContacts, updateContactLinkedin } from '../../../api';
 import { 
   Search, User, Linkedin, Edit2, Check, X, 
-  Mail, Phone, Smartphone, Users, Award, ShieldCheck, Link2
+  Mail, Phone, Smartphone, Users, Link2
 } from 'lucide-react';
 
 interface CrmContactsProps {
