@@ -695,14 +695,28 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                             <button onClick={() => setEditingLinkedinId(null)} disabled={isSavingLinkedin} className="text-rose-500"><X size={12} /></button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2 shrink-0">
                             {contact.linkedin ? (
-                              <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#0077B5]">
-                                <Linkedin size={14} />
+                              <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-dts-secondary dark:text-dts-secondary hover:brightness-110 flex items-center gap-1 text-[10px] font-semibold">
+                                <Linkedin size={16} className="text-dts-secondary dark:text-dts-secondary" />
+                                <span>Ver perfil</span>
                               </a>
-                            ) : <span className="text-[8px] text-gray-400 italic">Sin LinkedIn</span>}
-                            <button onClick={() => { setEditingLinkedinId(contact.id); setLinkedinValue(contact.linkedin || ''); }} className="text-gray-400 hover:text-dts-secondary">
-                              <Edit2 size={10} />
+                            ) : (
+                              <button 
+                                onClick={() => { setEditingLinkedinId(contact.id); setLinkedinValue(contact.linkedin || ''); }}
+                                className="text-gray-400 dark:text-gray-400 hover:text-dts-secondary dark:hover:text-dts-secondary flex items-center gap-1.5 text-[10px] font-semibold transition-colors cursor-pointer"
+                                title="Añadir LinkedIn"
+                              >
+                                <Linkedin size={16} className="text-dts-secondary dark:text-dts-secondary" />
+                                <span className="underline decoration-dotted">Vincular LinkedIn</span>
+                              </button>
+                            )}
+                            <button 
+                              onClick={() => { setEditingLinkedinId(contact.id); setLinkedinValue(contact.linkedin || ''); }} 
+                              className="text-gray-400 hover:text-dts-secondary p-1 rounded-md hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                              title="Editar LinkedIn"
+                            >
+                              <Edit2 size={12} />
                             </button>
                           </div>
                         )}
@@ -754,7 +768,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                       onDrop={(e) => handleDrop(e, stage.id)}
                       className="bg-gray-50/50 dark:bg-white/1 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col min-w-[150px] h-[380px] overflow-hidden"
                     >
-                      <div className={`p-2.5 border-t-4 ${stage.color} border-b border-b-gray-200/60 dark:border-b-white/5 bg-white dark:bg-zinc-800 flex justify-between items-center`}>
+                      <div className={`p-2.5 border-t-4 ${stage.color} border-b border-b-gray-200/60 dark:border-b-white/5 bg-white dark:bg-surface-card-dark flex justify-between items-center`}>
                         <span className="font-bold text-[9px] uppercase tracking-wider text-gray-800 dark:text-gray-200">
                           {stage.label}
                         </span>
