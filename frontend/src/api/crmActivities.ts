@@ -48,6 +48,8 @@ export const updateCrmActivity = async (
     isCompleted?: boolean;
     title?: string;
     description?: string;
+    dueDate?: string;
+    timeScheduled?: string;
   }
 ): Promise<CrmActivity> => {
   const { data } = await apiClient.patch(`/crm-activities/${id}`, payload);

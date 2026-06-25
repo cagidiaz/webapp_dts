@@ -41,6 +41,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Form states
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -51,6 +52,14 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventDate, setNewEventDate] = useState(new Date().toISOString().split('T')[0]);
   const [newEventTime, setNewEventTime] = useState('10:00');
+
+  // Edit states
+  const [editActivityId, setEditActivityId] = useState<string | null>(null);
+  const [editActivityType, setEditActivityType] = useState<'TASK' | 'NOTE' | 'EMAIL' | 'EVENT' | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editTime, setEditTime] = useState('');
 
   // Query CRM activities from Postgres database
   const { data: dbActivities = [] } = useQuery({
@@ -77,7 +86,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   });
 
   const updateActivityMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: { isCompleted?: boolean; title?: string; description?: string } }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: { isCompleted?: boolean; title?: string; description?: string; dueDate?: string; timeScheduled?: string } }) =>
       updateCrmActivity(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmActivities', clientId] });
@@ -489,6 +498,47 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
     deleteActivityMutation.mutate(id);
   };
 
+  const startEditActivity = (act: any) => {
+    const originalAct = dbActivities.find(a => a.id === act.id);
+    if (!originalAct) return;
+
+    setEditActivityId(originalAct.id);
+    setEditActivityType(originalAct.type as any);
+    setEditTitle(originalAct.title);
+    setEditDescription(originalAct.description || '');
+    setEditDate(originalAct.due_date ? originalAct.due_date.split('T')[0] : '');
+    setEditTime(originalAct.time_scheduled || '10:00');
+    setShowEditModal(true);
+  };
+
+  const handleSaveEditActivity = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editActivityId || !editActivityType) return;
+
+    const payload: any = {
+      title: editTitle,
+      description: editDescription
+    };
+
+    if (editActivityType === 'TASK' || editActivityType === 'EVENT') {
+      payload.dueDate = editDate ? new Date(editDate).toISOString() : undefined;
+    }
+    if (editActivityType === 'EVENT') {
+      payload.timeScheduled = editTime;
+    }
+
+    updateActivityMutation.mutate({
+      id: editActivityId,
+      payload
+    }, {
+      onSuccess: () => {
+        setShowEditModal(false);
+        setEditActivityId(null);
+        setEditActivityType(null);
+      }
+    });
+  };
+
   if (isLoadingCustomer) {
     return <div className="text-center py-20 text-xs text-gray-400 uppercase font-medium">Cargando ficha de cliente...</div>;
   }
@@ -873,9 +923,22 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                         </span>
                       </div>
                     </div>
-                    <button onClick={() => deleteTask(t.id)} className="text-gray-400 hover:text-rose-500">
-                      <X size={14} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => startEditActivity(t)} 
+                        className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer"
+                        title="Editar Tarea"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button 
+                        onClick={() => deleteTask(t.id)} 
+                        className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                        title="Eliminar Tarea"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -908,12 +971,22 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                   <div key={n.id} className="p-4 bg-yellow-50/30 dark:bg-yellow-950/10 border border-yellow-200/50 dark:border-yellow-900/30 rounded-xl relative group">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[10px] text-gray-400 font-bold">{new Date(n.date).toLocaleString()}</span>
-                      <button 
-                        onClick={() => deleteActivityMutation.mutate(n.id)} 
-                        className="text-gray-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      >
-                        <X size={12} />
-                      </button>
+                      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => startEditActivity(n)} 
+                          className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer"
+                          title="Editar Nota"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <button 
+                          onClick={() => deleteActivityMutation.mutate(n.id)} 
+                          className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                          title="Eliminar Nota"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                       {n.text}
@@ -937,23 +1010,44 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                 No hay actividades registradas en el historial.
               </div>
             ) : (
-              <div className="relative pl-6 border-l border-gray-200 dark:border-white/10 space-y-6 ml-2">
+              <div className="relative space-y-4">
+                {/* Vertical timeline connector line */}
+                <div className="absolute left-[16px] md:left-[144px] top-2 bottom-4 w-0.5 bg-gray-150 dark:bg-white/10"></div>
+                
                 {timelineActivities.map(act => {
                   const IconComponent = act.icon;
                   return (
-                    <div key={act.id} className="relative text-xs">
-                      <span className={`absolute -left-[37px] top-0 p-1.5 rounded-xl ${act.iconBg} ${act.iconColor} z-10 border border-white dark:border-surface-card-dark shadow-sm`}>
-                        <IconComponent size={14} />
-                      </span>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                        <span className="font-bold text-gray-900 dark:text-white text-xs">{act.title}</span>
-                        <span className="font-bold text-gray-400 text-[10px]">{new Date(act.date).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                    <div key={act.id} className="flex md:flex-row flex-col gap-2 md:gap-4 relative pl-10 md:pl-0 text-xs">
+                      
+                      {/* Left: Date section */}
+                      <div className="w-full md:w-28 shrink-0 md:text-right pt-0.5 flex md:flex-col items-center md:items-end gap-2 md:gap-0.5">
+                        <span className="font-black text-[11px] md:text-[12px] text-dts-secondary uppercase tracking-wider">
+                          {new Date(act.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                        </span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-300 font-mono font-bold">
+                          {new Date(act.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
-                      {act.description && (
-                        <p className="text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed bg-gray-50 dark:bg-white/1 p-3 rounded-lg border border-gray-100/50 dark:border-white/5">
-                          {act.description}
-                        </p>
-                      )}
+
+                      {/* Middle: Icon */}
+                      <div className="absolute left-0 md:relative md:left-auto flex flex-col items-center w-8 shrink-0">
+                        <span className={`p-1.5 rounded-xl ${act.iconBg} ${act.iconColor} z-10 border-2 border-white dark:border-surface-card-dark shadow-xs flex items-center justify-center`}>
+                          <IconComponent size={13} />
+                        </span>
+                      </div>
+
+                      {/* Right: Content details */}
+                      <div className="flex-1 pb-4">
+                        <div className="bg-gray-50/50 dark:bg-white/2 p-3.5 rounded-xl border border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35 transition-all duration-200 shadow-xs">
+                          <span className="font-bold text-gray-900 dark:text-white text-xs block mb-1">{act.title}</span>
+                          {act.description && (
+                            <p className="text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed text-[11px] whitespace-pre-wrap">
+                              {act.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
                     </div>
                   );
                 })}
@@ -992,13 +1086,22 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                       </h4>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-gray-400 font-mono">{new Date(e.date).toLocaleDateString()}</span>
-                        <button 
-                          onClick={() => deleteActivityMutation.mutate(e.id)} 
-                          className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
-                          title="Eliminar Email"
-                        >
-                          <X size={12} />
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button 
+                            onClick={() => startEditActivity(e)} 
+                            className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer"
+                            title="Editar Email"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          <button 
+                            onClick={() => deleteActivityMutation.mutate(e.id)} 
+                            className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                            title="Eliminar Email"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap leading-relaxed pr-2">
@@ -1045,9 +1148,22 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                         </span>
                       </div>
                     </div>
-                    <button onClick={() => deleteActivityMutation.mutate(ev.id)} className="text-gray-400 hover:text-rose-500">
-                      <X size={14} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => startEditActivity(ev)} 
+                        className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer"
+                        title="Editar Evento"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button 
+                        onClick={() => deleteActivityMutation.mutate(ev.id)} 
+                        className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                        title="Eliminar Evento"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1145,6 +1261,91 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setShowEventModal(false)} className="flex-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 text-gray-700 dark:text-white font-bold rounded-xl text-center">Cancelar</button>
               <button type="submit" className="flex-1 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl text-center">Agendar Evento</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Edit Activity Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <form onSubmit={handleSaveEditActivity} className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-white/5 shadow-2xl p-6 max-w-sm w-full relative space-y-4 text-xs">
+            <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider">
+              Editar {editActivityType === 'TASK' ? 'Tarea' : editActivityType === 'NOTE' ? 'Nota' : editActivityType === 'EMAIL' ? 'Email' : 'Evento'}
+            </h3>
+            
+            <div className="space-y-3">
+              {editActivityType !== 'NOTE' && (
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    {editActivityType === 'EMAIL' ? 'Asunto' : 'Título'}
+                  </label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={editTitle} 
+                    onChange={e => setEditTitle(e.target.value)} 
+                    className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" 
+                  />
+                </div>
+              )}
+
+              {editActivityType !== 'TASK' && (
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    {editActivityType === 'NOTE' ? 'Contenido' : 'Mensaje / Detalles'}
+                  </label>
+                  <textarea 
+                    required 
+                    rows={4} 
+                    value={editDescription} 
+                    onChange={e => setEditDescription(e.target.value)} 
+                    className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" 
+                  />
+                </div>
+              )}
+
+              {(editActivityType === 'TASK' || editActivityType === 'EVENT') && (
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Fecha Límite</label>
+                  <input 
+                    type="date" 
+                    required 
+                    value={editDate} 
+                    onChange={e => setEditDate(e.target.value)} 
+                    className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" 
+                  />
+                </div>
+              )}
+
+              {editActivityType === 'EVENT' && (
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Hora</label>
+                  <input 
+                    type="time" 
+                    required 
+                    value={editTime} 
+                    onChange={e => setEditTime(e.target.value)} 
+                    className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" 
+                  />
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-2 pt-2">
+              <button 
+                type="button" 
+                onClick={() => { setShowEditModal(false); setEditActivityId(null); setEditActivityType(null); }} 
+                className="flex-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 text-gray-700 dark:text-white font-bold rounded-xl text-center"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                className="flex-1 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl text-center"
+              >
+                Guardar Cambios
+              </button>
             </div>
           </form>
         </div>
