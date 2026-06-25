@@ -64,10 +64,15 @@ export class CrmActivitiesService {
         throw new NotFoundException('Actividad no encontrada');
       }
 
+      const prismaData: any = {};
+      if (data.title !== undefined) prismaData.title = data.title;
+      if (data.description !== undefined) prismaData.description = data.description;
+      if (data.isCompleted !== undefined) prismaData.is_completed = data.isCompleted;
+
       return await this.prisma.crm_activities.update({
         where: { id },
         data: {
-          ...data,
+          ...prismaData,
           updated_at: new Date()
         }
       });
