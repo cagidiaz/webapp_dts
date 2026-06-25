@@ -211,7 +211,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
         ) : (
           <div className="overflow-y-auto flex-1 custom-scrollbar">
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-[#002A38] dark:bg-dts-primary-dark text-white border-b border-gray-100 dark:border-white/5 sticky top-0 z-20 shadow-lg">
+              <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
                 <tr>
                   <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Nombre</th>
                   <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Cliente / Empresa</th>

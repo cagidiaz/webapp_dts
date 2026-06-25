@@ -971,7 +971,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                 No hay notas registradas para este cliente.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {notes.map(n => (
                   <div key={n.id} className="p-4 bg-yellow-50/30 dark:bg-yellow-950/10 border border-yellow-200/50 dark:border-yellow-900/30 rounded-xl relative group">
                     <div className="flex justify-between items-center mb-2">
@@ -1141,7 +1141,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                 No hay eventos planificados.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {events.map(ev => (
                   <div key={ev.id} className="p-4 bg-gray-50 dark:bg-white/2 rounded-xl border border-gray-200/50 dark:border-white/5 flex items-start justify-between gap-2 text-xs">
                     <div className="space-y-1.5">

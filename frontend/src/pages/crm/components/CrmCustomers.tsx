@@ -163,64 +163,63 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = ({ onSelectCustomer }) 
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-white dark:bg-surface-card-dark p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-wrap items-center justify-between gap-4">
-        {/* Search */}
-        <div className="w-full sm:max-w-xs relative">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            <Search size={16} />
-          </span>
-          <input 
-            type="text" 
-            placeholder="Buscar por cliente, código, ciudad..." 
-            className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* Combined Filters Bar & Customers Table */}
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-200/60 dark:border-white/5 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-320px)] min-h-[350px]">
+        {/* Filters Bar */}
+        <div className="p-4 border-b border-gray-150 dark:border-white/5 bg-gray-50/50 dark:bg-zinc-800/10 flex flex-wrap items-center justify-between gap-4 shrink-0">
+          {/* Search */}
+          <div className="w-full sm:max-w-xs relative">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <Search size={16} />
+            </span>
+            <input 
+              type="text" 
+              placeholder="Buscar por cliente, código, ciudad..." 
+              className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Salesperson Filter */}
+            {!isCommercial && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500 font-medium">Comercial:</span>
+                <select 
+                  className="block pl-2 pr-8 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  value={salespersonFilter}
+                  onChange={(e) => {
+                    setSalespersonFilter(e.target.value);
+                  }}
+                >
+                  <option value="">Todos</option>
+                  {salespersons?.map(sp => (
+                    <option key={sp.code} value={sp.code}>{sp.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <button
+              onClick={handleResetFilters}
+              className="text-xs font-bold text-dts-secondary hover:text-dts-secondary-dark cursor-pointer transition-colors"
+            >
+              Restablecer Filtros
+            </button>
+          </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Salesperson Filter */}
-          {!isCommercial && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-500 font-medium">Comercial:</span>
-              <select 
-                className="block pl-2 pr-8 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                value={salespersonFilter}
-                onChange={(e) => {
-                  setSalespersonFilter(e.target.value);
-                }}
-              >
-                <option value="">Todos</option>
-                {salespersons?.map(sp => (
-                  <option key={sp.code} value={sp.code}>{sp.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <button
-            onClick={handleResetFilters}
-            className="text-xs font-bold text-dts-secondary hover:text-dts-secondary-dark cursor-pointer transition-colors"
-          >
-            Restablecer Filtros
-          </button>
-        </div>
-      </div>
-
-      {/* Customers Table */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-200/60 dark:border-white/5 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-380px)] min-h-[350px]">
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left border-separate border-spacing-0">
-            <thead className="bg-gray-50 dark:bg-dts-primary-dark sticky top-0 z-20 shadow-xs">
-              <tr className="border-b border-gray-200/60 dark:border-white/5 bg-gray-50 dark:bg-dts-primary-dark text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                <th className="px-4 py-3 bg-gray-50 dark:bg-dts-primary-dark">Código</th>
-                <th className="px-4 py-3 bg-gray-50 dark:bg-dts-primary-dark">Nombre del Cliente</th>
-                <th className="px-4 py-3 bg-gray-50 dark:bg-dts-primary-dark">Ciudad</th>
-                <th className="px-4 py-3 bg-gray-50 dark:bg-dts-primary-dark">Comercial</th>
-                <th className="px-4 py-3 text-right bg-gray-50 dark:bg-dts-primary-dark">Deuda Pendiente</th>
-                <th className="px-4 py-3 text-right bg-gray-50 dark:bg-dts-primary-dark">Ventas Totales</th>
-                <th className="px-4 py-3 text-center bg-gray-50 dark:bg-dts-primary-dark">Estado</th>
+            <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
+              <tr className="text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-4 py-3">Código</th>
+                <th className="px-4 py-3">Nombre del Cliente</th>
+                <th className="px-4 py-3">Ciudad</th>
+                <th className="px-4 py-3">Comercial</th>
+                <th className="px-4 py-3 text-right">Deuda Pendiente</th>
+                <th className="px-4 py-3 text-right">Ventas Totales</th>
+                <th className="px-4 py-3 text-center">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-white/5">
