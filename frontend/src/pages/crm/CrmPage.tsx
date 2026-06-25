@@ -53,7 +53,7 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* Conditionally render mode */}
       {mode === 'customers' ? (
         <CrmCustomers onSelectCustomer={(id) => setSelectedCustomerId(id)} />

@@ -505,7 +505,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-20">
+    <div className="space-y-6 animate-in fade-in duration-500">
       
       {/* Top Header Card */}
       <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
@@ -549,7 +549,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       </div>
 
       {/* Unified panel with screen-viewport height */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-280px)] min-h-[450px]">
+      <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-340px)] min-h-[450px]">
         
         {/* Tabs Navigation */}
         <div className="flex border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-zinc-800/20 p-1 shrink-0">
@@ -761,7 +761,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                 No hay ofertas comerciales registradas en el CRM para este cliente.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pb-4 overflow-x-auto">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pb-4 overflow-x-auto flex-1 min-h-[350px]">
                 {STAGES.map(stage => {
                   const stageQuotes = filteredCrmQuotes.filter(
                     q => (q.estado_oferta || '').toLowerCase().trim() === stage.id
@@ -771,7 +771,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                       key={stage.id} 
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => handleDrop(e, stage.id)}
-                      className="bg-gray-50/50 dark:bg-white/1 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col min-w-[150px] h-[380px] overflow-hidden"
+                      className="bg-gray-50/50 dark:bg-white/1 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col min-w-[150px] h-full overflow-hidden"
                     >
                       <div className={`p-2.5 border-t-4 ${stage.color} border-b border-b-gray-200/60 dark:border-b-white/5 bg-white dark:bg-surface-card-dark flex justify-between items-center`}>
                         <span className="font-bold text-[9px] uppercase tracking-wider text-gray-800 dark:text-gray-200">

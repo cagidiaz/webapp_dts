@@ -536,7 +536,7 @@ export const CrmPipeline: React.FC = () => {
 
       {/* Kanban / Table View Conditional Rendering */}
       {viewMode === 'kanban' ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-[calc(100vh-350px)] min-h-[450px]">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-[calc(100vh-390px)] min-h-[450px]">
           {STAGES.map(stage => {
             const stageQuotes = groupedQuotes[stage.id] || [];
             
