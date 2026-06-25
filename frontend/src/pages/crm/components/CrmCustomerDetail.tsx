@@ -348,6 +348,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       icon: any;
       iconBg: string;
       iconColor: string;
+      showTime?: boolean;
     }[] = [];
 
     notes.forEach(n => {
@@ -359,7 +360,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         date: n.date,
         icon: FileText,
         iconBg: 'bg-amber-100 dark:bg-amber-955/20',
-        iconColor: 'text-amber-600 dark:text-amber-400'
+        iconColor: 'text-amber-600 dark:text-amber-400',
+        showTime: true
       });
     });
 
@@ -372,7 +374,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         date: t.date + 'T00:00:00Z',
         icon: CheckSquare,
         iconBg: t.done ? 'bg-emerald-100 dark:bg-emerald-955/20' : 'bg-blue-100 dark:bg-blue-955/20',
-        iconColor: t.done ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'
+        iconColor: t.done ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400',
+        showTime: false
       });
     });
 
@@ -385,7 +388,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         date: e.date,
         icon: Send,
         iconBg: 'bg-purple-100 dark:bg-purple-955/20',
-        iconColor: 'text-purple-600 dark:text-purple-400'
+        iconColor: 'text-purple-600 dark:text-purple-400',
+        showTime: true
       });
     });
 
@@ -398,7 +402,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         date: ev.date + 'T' + ev.time + ':00Z',
         icon: CalendarIcon,
         iconBg: 'bg-rose-100 dark:bg-rose-955/20',
-        iconColor: 'text-rose-600 dark:text-rose-400'
+        iconColor: 'text-rose-600 dark:text-rose-400',
+        showTime: true
       });
     });
 
@@ -1024,9 +1029,11 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                         <span className="font-black text-[11px] md:text-[12px] text-dts-secondary uppercase tracking-wider">
                           {new Date(act.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                         </span>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-300 font-mono font-bold">
-                          {new Date(act.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        {act.showTime && (
+                          <span className="text-[10px] text-gray-400 dark:text-gray-300 font-mono font-bold">
+                            {new Date(act.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
                       </div>
 
                       {/* Middle: Icon */}
