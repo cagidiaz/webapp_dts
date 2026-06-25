@@ -329,198 +329,199 @@ export const SalesDashboard: React.FC = () => {
         />
       </div>
 
-      {/* Agenda Semanal CRM (Timeline Style) */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 space-y-6">
-        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-          <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-dts-primary dark:text-white">
-            <Activity size={16} className="text-dts-secondary" />
-            Agenda Semanal CRM
-          </h3>
-          <span className="text-[11px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wide">
-            Semana del {monday.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} al {sunday.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-          </span>
-        </div>
-
-        {isLoadingAgenda ? (
-          <div className="space-y-4">
-            {Array.from({ length: 3 }).map((_, idx) => (
-              <div key={idx} className="h-16 animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
-            ))}
+      {/* Grid container for Agenda Semanal (Left) and Top Clients / Products (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Agenda Semanal CRM (Timeline Style) */}
+        <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 space-y-6 flex flex-col h-full min-h-[460px]">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0">
+            <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-dts-primary dark:text-white">
+              <Activity size={16} className="text-dts-secondary" />
+              Agenda Semanal CRM
+            </h3>
+            <span className="text-[11px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wide">
+              Semana del {monday.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} al {sunday.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+            </span>
           </div>
-        ) : sortedWeeklyActivities.length === 0 ? (
-          <div className="text-xs text-gray-400 dark:text-gray-500 italic py-10 bg-gray-50/50 dark:bg-white/2 border border-dashed border-gray-250 dark:border-white/5 rounded-xl text-center">
-            No hay actividades comerciales registradas para esta semana.
-          </div>
-        ) : (
-          <div className="relative space-y-4 max-h-[350px] overflow-y-auto pr-2 scrollbar-thin">
-            {/* Vertical timeline connector line */}
-            <div className="absolute left-[16px] md:left-[144px] top-2 bottom-4 w-0.5 bg-gray-150 dark:bg-white/10"></div>
-            
-            {sortedWeeklyActivities.map(act => {
-              const typeIconMap = {
-                NOTE: FileText,
-                TASK: CheckSquare,
-                EMAIL: Send,
-                EVENT: Calendar,
-                CALL: Phone,
-              };
-              const typeColors: Record<string, { bg: string, color: string }> = {
-                NOTE: { bg: 'bg-amber-100 dark:bg-amber-950/20', color: 'text-amber-600 dark:text-amber-400' },
-                TASK: act.is_completed 
-                  ? { bg: 'bg-emerald-100 dark:bg-emerald-950/20', color: 'text-emerald-600 dark:text-emerald-400' }
-                  : { bg: 'bg-blue-100 dark:bg-blue-950/20', color: 'text-blue-600 dark:text-blue-400' },
-                EMAIL: { bg: 'bg-purple-100 dark:bg-purple-950/20', color: 'text-purple-600 dark:text-purple-400' },
-                EVENT: { bg: 'bg-rose-100 dark:bg-rose-950/20', color: 'text-rose-600 dark:text-rose-400' },
-                CALL: { bg: 'bg-cyan-100 dark:bg-cyan-950/20', color: 'text-cyan-600 dark:text-cyan-400' },
-              };
-              const typeLabel = {
-                NOTE: 'Nota',
-                TASK: 'Tarea',
-                EMAIL: 'Email',
-                EVENT: 'Evento',
-                CALL: 'Llamada',
-              };
 
-              const IconComponent = typeIconMap[act.type] || FileText;
-              const style = typeColors[act.type] || { bg: 'bg-gray-100', color: 'text-gray-600' };
-              const actDateStr = act.due_date || act.created_at;
+          {isLoadingAgenda ? (
+            <div className="space-y-4 flex-1">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className="h-16 animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
+              ))}
+            </div>
+          ) : sortedWeeklyActivities.length === 0 ? (
+            <div className="text-xs text-gray-400 dark:text-gray-500 italic py-10 bg-gray-50/50 dark:bg-white/2 border border-dashed border-gray-250 dark:border-white/5 rounded-xl text-center flex-1 flex items-center justify-center">
+              No hay actividades comerciales registradas para esta semana.
+            </div>
+          ) : (
+            <div className="relative space-y-4 overflow-y-auto pr-2 scrollbar-thin flex-1 max-h-[380px]">
+              {/* Vertical timeline connector line */}
+              <div className="absolute left-[16px] md:left-[144px] top-2 bottom-4 w-0.5 bg-gray-150 dark:bg-white/10"></div>
+              
+              {sortedWeeklyActivities.map(act => {
+                const typeIconMap = {
+                  NOTE: FileText,
+                  TASK: CheckSquare,
+                  EMAIL: Send,
+                  EVENT: Calendar,
+                  CALL: Phone,
+                };
+                const typeColors: Record<string, { bg: string, color: string }> = {
+                  NOTE: { bg: 'bg-amber-100 dark:bg-amber-950/20', color: 'text-amber-600 dark:text-amber-400' },
+                  TASK: act.is_completed 
+                    ? { bg: 'bg-emerald-100 dark:bg-emerald-950/20', color: 'text-emerald-600 dark:text-emerald-400' }
+                    : { bg: 'bg-blue-100 dark:bg-blue-950/20', color: 'text-blue-600 dark:text-blue-400' },
+                  EMAIL: { bg: 'bg-purple-100 dark:bg-purple-950/20', color: 'text-purple-600 dark:text-purple-400' },
+                  EVENT: { bg: 'bg-rose-100 dark:bg-rose-950/20', color: 'text-rose-600 dark:text-rose-400' },
+                  CALL: { bg: 'bg-cyan-100 dark:bg-cyan-950/20', color: 'text-cyan-600 dark:text-cyan-400' },
+                };
+                const typeLabel = {
+                  NOTE: 'Nota',
+                  TASK: 'Tarea',
+                  EMAIL: 'Email',
+                  EVENT: 'Evento',
+                  CALL: 'Llamada',
+                };
 
-              return (
-                <div key={act.id} className="flex md:flex-row flex-col gap-2 md:gap-4 relative pl-10 md:pl-0 text-xs">
-                  
-                  {/* Left: Date section */}
-                  <div className="w-full md:w-28 shrink-0 md:text-right pt-0.5 flex md:flex-col items-center md:items-end gap-2 md:gap-0.5">
-                    <span className="font-black text-[11px] md:text-[12px] text-dts-secondary uppercase tracking-wider">
-                      {new Date(actDateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
-                    </span>
-                    {act.time_scheduled && (
-                      <span className="text-[10px] text-gray-400 dark:text-gray-400 font-mono font-bold flex items-center gap-1 justify-end">
-                        <Clock size={10} /> {act.time_scheduled.substring(0, 5)}
+                const IconComponent = typeIconMap[act.type] || FileText;
+                const style = typeColors[act.type] || { bg: 'bg-gray-100', color: 'text-gray-600' };
+                const actDateStr = act.due_date || act.created_at;
+
+                return (
+                  <div key={act.id} className="flex md:flex-row flex-col gap-2 md:gap-4 relative pl-10 md:pl-0 text-xs">
+                    <div className="w-full md:w-28 shrink-0 md:text-right pt-0.5 flex md:flex-col items-center md:items-end gap-2 md:gap-0.5">
+                      <span className="font-black text-[11px] md:text-[12px] text-dts-secondary uppercase tracking-wider">
+                        {new Date(actDateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                       </span>
-                    )}
-                  </div>
-
-                  {/* Middle: Icon */}
-                  <div className="absolute left-0 md:relative md:left-auto flex flex-col items-center w-8 shrink-0">
-                    <span className={`p-1.5 rounded-xl ${style.bg} ${style.color} z-10 border-2 border-white dark:border-surface-card-dark shadow-xs flex items-center justify-center`}>
-                      <IconComponent size={13} />
-                    </span>
-                  </div>
-
-                  {/* Right: Content details */}
-                  <div className="flex-1 pb-4">
-                    <div 
-                      onClick={() => navigate(`/crm/customers?clientId=${act.client_id}`)}
-                      className={`group/box bg-gray-50/50 dark:bg-white/2 p-3.5 rounded-xl border border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35 transition-all duration-200 shadow-xs cursor-pointer ${
-                        act.is_completed ? 'opacity-65' : ''
-                      }`}
-                    >
-                      <div className="flex justify-between items-start gap-2 mb-1">
-                        <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
-                          act.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
-                        }`}>
-                          {act.title}
+                      {act.time_scheduled && (
+                        <span className="text-[10px] text-gray-400 dark:text-gray-400 font-mono font-bold flex items-center gap-1 justify-end">
+                          <Clock size={10} /> {act.time_scheduled.substring(0, 5)}
                         </span>
-                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-white dark:bg-white/5 text-gray-400 font-bold border border-gray-100 dark:border-white/5">
-                          {typeLabel[act.type]}
-                        </span>
-                      </div>
-                      
-                      {act.description && (
-                        <p className="text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed text-[11px] whitespace-pre-wrap">
-                          {act.description}
-                        </p>
-                      )}
-
-                      {act.customer && (
-                        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-white/5 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500 font-semibold">
-                          <span>🏢</span>
-                          <span className="hover:text-dts-secondary transition-colors">
-                            {act.customer.company_name} ({act.customer.client_id})
-                          </span>
-                        </div>
                       )}
                     </div>
-                  </div>
 
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                    <div className="absolute left-0 md:relative md:left-auto flex flex-col items-center w-8 shrink-0">
+                      <span className={`p-1.5 rounded-xl ${style.bg} ${style.color} z-10 border-2 border-white dark:border-surface-card-dark shadow-xs flex items-center justify-center`}>
+                        <IconComponent size={13} />
+                      </span>
+                    </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Customers */}
-        <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6">
-          <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-800 pb-3">
-            <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-              <Users size={16} className="text-dts-secondary" />
-              Top 5 Clientes
-            </h3>
+                    <div className="flex-1 pb-4">
+                      <div 
+                        onClick={() => navigate(`/crm/customers?clientId=${act.client_id}`)}
+                        className={`group/box bg-gray-50/50 dark:bg-white/2 p-3.5 rounded-xl border border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35 transition-all duration-200 shadow-xs cursor-pointer ${
+                          act.is_completed ? 'opacity-65' : ''
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-2 mb-1">
+                          <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
+                            act.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {act.title}
+                          </span>
+                          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-white dark:bg-white/5 text-gray-400 font-bold border border-gray-100 dark:border-white/5">
+                            {typeLabel[act.type]}
+                          </span>
+                        </div>
+                        
+                        {act.description && (
+                          <p className="text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed text-[11px] whitespace-pre-wrap">
+                            {act.description}
+                          </p>
+                        )}
+
+                        {act.customer && (
+                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-white/5 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500 font-semibold">
+                            <span>🏢</span>
+                            <span className="hover:text-dts-secondary transition-colors">
+                              {act.customer.company_name} ({act.customer.client_id})
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Top Customers and Top Products stacked vertically */}
+        <div className="flex flex-col gap-6 h-full justify-between">
+          {/* Top Customers */}
+          <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex-1 flex flex-col justify-between min-h-[217px]">
+            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0">
+              <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                <Users size={16} className="text-dts-secondary" />
+                Top 5 Clientes
+              </h3>
+            </div>
+            <div className="space-y-4 flex-1 flex flex-col justify-center">
+              {isLoadingPerf ? (
+                <div className="h-28 animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
+              ) : topCustomers.length === 0 ? (
+                <p className="text-center py-4 text-gray-400 text-sm italic">Sin datos de facturación</p>
+              ) : (
+                topCustomers.map((customer, idx) => (
+                  <div 
+                    key={idx} 
+                    onClick={() => {
+                      setSelectedCustCode(customer.customerCode);
+                      setIsDrawerOpen(true);
+                    }}
+                    className="flex flex-col gap-1 border-b border-gray-50 dark:border-white/5 pb-2 last:border-0 last:pb-0 cursor-pointer group/item"
+                  >
+                    <div className="flex justify-between items-center text-dts-primary dark:text-gray-200 group-hover/item:text-dts-secondary transition-colors">
+                      <span className="text-xs font-bold truncate pr-4">{customer.customerName}</span>
+                      <span className="text-xs font-mono font-bold text-dts-secondary">{formatCurrency(customer.facturacion, 0)}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className="bg-dts-secondary h-full rounded-full transition-all duration-500" 
+                        style={{ width: `${Math.min((customer.facturacion / (topCustomers[0]?.facturacion || 1)) * 100, 100)}%` }} 
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-          <div className="space-y-4">
-            {isLoadingPerf ? (
-              <div className="h-40 animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
-            ) : topCustomers.length === 0 ? (
-              <p className="text-center py-10 text-gray-400 text-sm italic">Sin datos de facturación</p>
-            ) : (
-              topCustomers.map((customer, idx) => (
-                <div 
-                  key={idx} 
-                  onClick={() => {
-                    setSelectedCustCode(customer.customerCode);
-                    setIsDrawerOpen(true);
-                  }}
-                  className="flex flex-col gap-1 border-b border-gray-50 dark:border-white/5 pb-3 last:border-0 last:pb-0 cursor-pointer group/item"
-                >
-                  <div className="flex justify-between items-center text-dts-primary dark:text-gray-200 group-hover/item:text-dts-secondary transition-colors">
-                    <span className="text-xs font-bold truncate pr-4">{customer.customerName}</span>
-                    <span className="text-xs font-mono font-bold text-dts-secondary">{formatCurrency(customer.facturacion, 0)}</span>
+
+          {/* Top Products */}
+          <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex-1 flex flex-col justify-between min-h-[217px]">
+            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0">
+              <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                <Package size={16} className="text-dts-secondary" />
+                Top 5 Productos
+              </h3>
+            </div>
+            <div className="space-y-4 flex-1 flex flex-col justify-center">
+              {isLoadingProducts ? (
+                <div className="h-28 animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
+              ) : !topProducts || topProducts.length === 0 ? (
+                <p className="text-center py-4 text-gray-400 text-sm italic">Sin datos de productos</p>
+              ) : (
+                topProducts.map((product, idx) => (
+                  <div key={idx} className="flex flex-col gap-1 border-b border-gray-50 dark:border-white/5 pb-2 last:border-0 last:pb-0">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-dts-primary dark:text-gray-200 truncate pr-4">{product.description}</span>
+                      <span className="text-xs font-mono font-bold text-dts-secondary">{formatCurrency(product.totalSales, 0)}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className="bg-dts-secondary h-full rounded-full opacity-80" 
+                        style={{ width: `${Math.min((product.totalSales / (topProducts[0]?.totalSales || 1)) * 100, 100)}%` }} 
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden">
-                    <div 
-                      className="bg-dts-secondary h-full rounded-full transition-all duration-500" 
-                      style={{ width: `${Math.min((customer.facturacion / (topCustomers[0]?.facturacion || 1)) * 100, 100)}%` }} 
-                    />
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Top Products */}
-        <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6">
-          <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-800 pb-3">
-            <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-              <Package size={16} className="text-dts-secondary" />
-              Top 5 Productos
-            </h3>
-          </div>
-          <div className="space-y-4">
-            {isLoadingProducts ? (
-              <div className="h-40 animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
-            ) : !topProducts || topProducts.length === 0 ? (
-              <p className="text-center py-10 text-gray-400 text-sm italic">Sin datos de productos</p>
-            ) : (
-              topProducts.map((product, idx) => (
-                <div key={idx} className="flex flex-col gap-1 border-b border-gray-50 dark:border-white/5 pb-3 last:border-0 last:pb-0">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-dts-primary dark:text-gray-200 truncate pr-4">{product.description}</span>
-                    <span className="text-xs font-mono font-bold text-dts-secondary">{formatCurrency(product.totalSales, 0)}</span>
-                  </div>
-                  <div className="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden">
-                    <div 
-                      className="bg-dts-secondary h-full rounded-full opacity-80" 
-                      style={{ width: `${Math.min((product.totalSales / (topProducts[0]?.totalSales || 1)) * 100, 100)}%` }} 
-                    />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Evolution Chart */}
