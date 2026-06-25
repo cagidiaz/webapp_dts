@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { CrmActivitiesService } from './crm-activities.service';
@@ -10,6 +10,24 @@ import { CrmActivityType } from '@prisma/client';
 @Controller('crm-activities')
 export class CrmActivitiesController {
   constructor(private readonly crmActivitiesService: CrmActivitiesService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Obtener agenda de actividades comerciales' })
+  async getAgenda(
+    @Req() req: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const userId = req.user?.userId;
+    const userRole = req.user?.role?.toUpperCase();
+    const isAdminOrDireccion = userRole === 'ADMIN' || userRole === 'DIRECCION';
+
+    return this.crmActivitiesService.getAgenda({
+      userId: isAdminOrDireccion ? undefined : userId,
+      startDate,
+      endDate,
+    });
+  }
 
   @Get(':clientId')
   @ApiOperation({ summary: 'Obtener todas las actividades comerciales de un cliente' })

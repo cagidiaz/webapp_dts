@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { CrmCustomers } from './components/CrmCustomers';
 import { CrmPipeline } from './components/CrmPipeline';
@@ -12,7 +13,18 @@ interface CrmPageProps {
 
 export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
   const { setPageInfo } = useUIStore();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+
+  // Sync selectedCustomerId with URL search parameter
+  useEffect(() => {
+    const clientId = searchParams.get('clientId');
+    if (clientId) {
+      setSelectedCustomerId(clientId);
+    } else {
+      setSelectedCustomerId(null);
+    }
+  }, [searchParams]);
 
   // Set Page Info in Layout
   useEffect(() => {
@@ -39,15 +51,32 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
 
   // Reset selected customer when mode (tab) changes
   useEffect(() => {
+    if (searchParams.get('clientId')) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('clientId');
+      setSearchParams(newParams);
+    }
     setSelectedCustomerId(null);
   }, [mode]);
+
+  const handleSelectCustomer = (id: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('clientId', id);
+    setSearchParams(newParams);
+  };
+
+  const handleBack = () => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('clientId');
+    setSearchParams(newParams);
+  };
 
   // If a customer is selected, render the full screen detail view
   if (selectedCustomerId) {
     return (
       <CrmCustomerDetail 
         clientId={selectedCustomerId} 
-        onBack={() => setSelectedCustomerId(null)} 
+        onBack={handleBack} 
       />
     );
   }
@@ -56,11 +85,11 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Conditionally render mode */}
       {mode === 'customers' ? (
-        <CrmCustomers onSelectCustomer={(id) => setSelectedCustomerId(id)} />
+        <CrmCustomers onSelectCustomer={handleSelectCustomer} />
       ) : mode === 'pipeline' ? (
         <CrmPipeline />
       ) : (
-        <CrmContacts onSelectCustomer={(id) => setSelectedCustomerId(id)} />
+        <CrmContacts onSelectCustomer={handleSelectCustomer} />
       )}
     </div>
   );

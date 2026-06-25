@@ -22,6 +22,43 @@ export class CrmActivitiesService {
   }
 
   /**
+   * Obtiene las actividades comerciales (agenda) filtradas por usuario y/o rango de fechas.
+   */
+  async getAgenda(params: { userId?: string; startDate?: string; endDate?: string }) {
+    const { userId, startDate, endDate } = params;
+    const whereClause: any = {};
+
+    if (userId) {
+      whereClause.created_by = userId;
+    }
+
+    if (startDate || endDate) {
+      whereClause.due_date = {};
+      if (startDate) {
+        whereClause.due_date.gte = new Date(startDate);
+      }
+      if (endDate) {
+        whereClause.due_date.lte = new Date(endDate);
+      }
+    }
+
+    try {
+      return await this.prisma.crm_activities.findMany({
+        where: whereClause,
+        include: {
+          customer: true
+        },
+        orderBy: {
+          due_date: 'asc'
+        }
+      });
+    } catch (error) {
+      console.error('Error en CrmActivitiesService.getAgenda:', error);
+      throw new InternalServerErrorException('Error al obtener la agenda de actividades');
+    }
+  }
+
+  /**
    * Crea una nueva actividad comercial en la base de datos.
    */
   async create(data: {

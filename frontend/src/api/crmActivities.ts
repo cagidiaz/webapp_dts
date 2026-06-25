@@ -14,6 +14,13 @@ export interface CrmActivity {
   is_completed: boolean;
   created_at: string;
   updated_at: string;
+  customer?: {
+    id: string;
+    client_id: string;
+    company_name: string;
+    erp_code?: string;
+    [key: string]: any;
+  };
 }
 
 /**
@@ -21,6 +28,16 @@ export interface CrmActivity {
  */
 export const getCrmActivities = async (clientId: string): Promise<CrmActivity[]> => {
   const { data } = await apiClient.get(`/crm-activities/${clientId}`);
+  return data;
+};
+
+/**
+ * Obtiene la agenda semanal de actividades comerciales filtradas por rango de fechas
+ */
+export const getWeeklyAgenda = async (startDate?: string, endDate?: string): Promise<CrmActivity[]> => {
+  const { data } = await apiClient.get('/crm-activities', {
+    params: { startDate, endDate },
+  });
   return data;
 };
 
