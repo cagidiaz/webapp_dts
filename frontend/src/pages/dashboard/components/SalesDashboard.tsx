@@ -10,7 +10,7 @@ import {
 import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
   TrendingUp, Target, Activity, Users, Package, BarChart2,
-  TrendingDown, Euro, Calendar
+  TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
@@ -102,29 +102,15 @@ export const SalesDashboard: React.FC = () => {
     queryFn: () => getWeeklyAgenda(formatYYYYMMDD(monday), formatYYYYMMDD(sunday))
   });
 
-  const DAYS_OF_WEEK = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-
-  const daysWithActivities = React.useMemo(() => {
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      
-      const dayActivities = (agendaData || []).filter(act => {
-        if (!act.due_date) return false;
-        const actDateStr = act.due_date.substring(0, 10);
-        const dStr = formatYYYYMMDD(d);
-        return actDateStr === dStr;
+  const sortedWeeklyActivities = React.useMemo(() => {
+    return (agendaData || [])
+      .slice()
+      .sort((a, b) => {
+        const dateA = new Date(a.due_date || a.created_at).getTime();
+        const dateB = new Date(b.due_date || b.created_at).getTime();
+        return dateA - dateB;
       });
-
-      days.push({
-        name: DAYS_OF_WEEK[i],
-        date: d,
-        activities: dayActivities
-      });
-    }
-    return days;
-  }, [monday, agendaData]);
+  }, [agendaData]);
 
   React.useEffect(() => {
     setPageInfo({
@@ -343,11 +329,11 @@ export const SalesDashboard: React.FC = () => {
         />
       </div>
 
-      {/* Agenda Semanal CRM */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 space-y-4">
+      {/* Agenda Semanal CRM (Timeline Style) */}
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 space-y-6">
         <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
           <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-dts-primary dark:text-white">
-            <Calendar size={16} className="text-dts-secondary" />
+            <Activity size={16} className="text-dts-secondary" />
             Agenda Semanal CRM
           </h3>
           <span className="text-[11px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wide">
@@ -356,91 +342,107 @@ export const SalesDashboard: React.FC = () => {
         </div>
 
         {isLoadingAgenda ? (
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-            {Array.from({ length: 7 }).map((_, idx) => (
-              <div key={idx} className="h-48 animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="h-16 animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
             ))}
           </div>
+        ) : sortedWeeklyActivities.length === 0 ? (
+          <div className="text-xs text-gray-400 dark:text-gray-500 italic py-10 bg-gray-50/50 dark:bg-white/2 border border-dashed border-gray-250 dark:border-white/5 rounded-xl text-center">
+            No hay actividades comerciales registradas para esta semana.
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
-            {daysWithActivities.map((day, dayIdx) => {
-              const isToday = new Date().toDateString() === day.date.toDateString();
+          <div className="relative space-y-4 max-h-[350px] overflow-y-auto pr-2 scrollbar-thin">
+            {/* Vertical timeline connector line */}
+            <div className="absolute left-[16px] md:left-[144px] top-2 bottom-4 w-0.5 bg-gray-150 dark:bg-white/10"></div>
+            
+            {sortedWeeklyActivities.map(act => {
+              const typeIconMap = {
+                NOTE: FileText,
+                TASK: CheckSquare,
+                EMAIL: Send,
+                EVENT: Calendar,
+                CALL: Phone,
+              };
+              const typeColors: Record<string, { bg: string, color: string }> = {
+                NOTE: { bg: 'bg-amber-100 dark:bg-amber-950/20', color: 'text-amber-600 dark:text-amber-400' },
+                TASK: act.is_completed 
+                  ? { bg: 'bg-emerald-100 dark:bg-emerald-950/20', color: 'text-emerald-600 dark:text-emerald-400' }
+                  : { bg: 'bg-blue-100 dark:bg-blue-950/20', color: 'text-blue-600 dark:text-blue-400' },
+                EMAIL: { bg: 'bg-purple-100 dark:bg-purple-950/20', color: 'text-purple-600 dark:text-purple-400' },
+                EVENT: { bg: 'bg-rose-100 dark:bg-rose-950/20', color: 'text-rose-600 dark:text-rose-400' },
+                CALL: { bg: 'bg-cyan-100 dark:bg-cyan-950/20', color: 'text-cyan-600 dark:text-cyan-400' },
+              };
+              const typeLabel = {
+                NOTE: 'Nota',
+                TASK: 'Tarea',
+                EMAIL: 'Email',
+                EVENT: 'Evento',
+                CALL: 'Llamada',
+              };
+
+              const IconComponent = typeIconMap[act.type] || FileText;
+              const style = typeColors[act.type] || { bg: 'bg-gray-100', color: 'text-gray-600' };
+              const actDateStr = act.due_date || act.created_at;
+
               return (
-                <div 
-                  key={dayIdx} 
-                  className={`flex flex-col h-full min-h-[220px] rounded-lg p-3 border transition-all ${
-                    isToday 
-                      ? 'bg-dts-primary/5 dark:bg-dts-secondary/10 border-dts-secondary shadow-sm' 
-                      : 'bg-slate-50/50 dark:bg-white/2 border-gray-100 dark:border-gray-850'
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-3">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? 'text-dts-secondary font-black' : 'text-gray-500 dark:text-gray-400'}`}>
-                      {day.name}
+                <div key={act.id} className="flex md:flex-row flex-col gap-2 md:gap-4 relative pl-10 md:pl-0 text-xs">
+                  
+                  {/* Left: Date section */}
+                  <div className="w-full md:w-28 shrink-0 md:text-right pt-0.5 flex md:flex-col items-center md:items-end gap-2 md:gap-0.5">
+                    <span className="font-black text-[11px] md:text-[12px] text-dts-secondary uppercase tracking-wider">
+                      {new Date(actDateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                     </span>
-                    <span className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded-full ${
-                      isToday 
-                        ? 'bg-dts-secondary text-white' 
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
-                    }`}>
-                      {day.date.getDate()}
+                    {act.time_scheduled && (
+                      <span className="text-[10px] text-gray-400 dark:text-gray-400 font-mono font-bold flex items-center gap-1 justify-end">
+                        <Clock size={10} /> {act.time_scheduled.substring(0, 5)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Middle: Icon */}
+                  <div className="absolute left-0 md:relative md:left-auto flex flex-col items-center w-8 shrink-0">
+                    <span className={`p-1.5 rounded-xl ${style.bg} ${style.color} z-10 border-2 border-white dark:border-surface-card-dark shadow-xs flex items-center justify-center`}>
+                      <IconComponent size={13} />
                     </span>
                   </div>
 
-                  <div className="flex-1 space-y-2 overflow-y-auto max-h-[220px] scrollbar-thin">
-                    {day.activities.length === 0 ? (
-                      <div className="h-full flex items-center justify-center py-6">
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 italic">Sin actividades</span>
+                  {/* Right: Content details */}
+                  <div className="flex-1 pb-4">
+                    <div 
+                      onClick={() => navigate(`/crm/customers?clientId=${act.client_id}`)}
+                      className={`group/box bg-gray-50/50 dark:bg-white/2 p-3.5 rounded-xl border border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35 transition-all duration-200 shadow-xs cursor-pointer ${
+                        act.is_completed ? 'opacity-65' : ''
+                      }`}
+                    >
+                      <div className="flex justify-between items-start gap-2 mb-1">
+                        <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
+                          act.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {act.title}
+                        </span>
+                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-white dark:bg-white/5 text-gray-400 font-bold border border-gray-100 dark:border-white/5">
+                          {typeLabel[act.type]}
+                        </span>
                       </div>
-                    ) : (
-                      day.activities.map((act) => {
-                        const typeColors: Record<string, string> = {
-                          NOTE: 'border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/30',
-                          TASK: 'border-blue-400 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/30',
-                          EMAIL: 'border-purple-400 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30',
-                          EVENT: 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/30',
-                          CALL: 'border-cyan-400 bg-cyan-50 dark:bg-cyan-950/20 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-950/30',
-                        };
-                        const typeLabel: Record<string, string> = {
-                          NOTE: 'Nota',
-                          TASK: 'Tarea',
-                          EMAIL: 'Email',
-                          EVENT: 'Evento',
-                          CALL: 'Llamada',
-                        };
-                        return (
-                          <div
-                            key={act.id}
-                            onClick={() => navigate(`/crm/customers?clientId=${act.client_id}`)}
-                            className={`p-2 rounded border-l-2 text-left cursor-pointer transition-all hover:scale-[1.02] hover:shadow-sm ${
-                              act.is_completed 
-                                ? 'border-gray-300 bg-gray-100/50 dark:bg-white/5 opacity-60 line-through' 
-                                : typeColors[act.type] || 'border-gray-400 bg-gray-50 text-gray-700'
-                            }`}
-                          >
-                            <div className="flex justify-between items-center gap-1">
-                              <span className="text-[9px] font-black uppercase tracking-wider opacity-75">
-                                {typeLabel[act.type]}
-                              </span>
-                              {act.time_scheduled && (
-                                <span className="text-[9px] font-mono font-bold bg-white/50 dark:bg-black/20 px-1 rounded">
-                                  {act.time_scheduled.substring(0, 5)}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-[10px] font-bold line-clamp-2 mt-0.5 leading-tight">
-                              {act.title}
-                            </div>
-                            {act.customer && (
-                              <div className="text-[8px] font-medium opacity-90 mt-1 truncate max-w-full text-gray-500 dark:text-gray-400">
-                                🏢 {act.customer.company_name}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
+                      
+                      {act.description && (
+                        <p className="text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed text-[11px] whitespace-pre-wrap">
+                          {act.description}
+                        </p>
+                      )}
+
+                      {act.customer && (
+                        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-white/5 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500 font-semibold">
+                          <span>🏢</span>
+                          <span className="hover:text-dts-secondary transition-colors">
+                            {act.customer.company_name} ({act.customer.client_id})
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
                 </div>
               );
             })}
