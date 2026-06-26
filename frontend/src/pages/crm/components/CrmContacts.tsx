@@ -224,7 +224,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {displayedContacts.map(contact => (
-                  <tr key={contact.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors">
+                  <tr key={contact.id} className="hover:bg-gray-50/50 dark:hover:bg-white/2] transition-colors">
                     <td className="px-6 py-4 font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       <User size={14} className="text-dts-secondary shrink-0" />
                       {contact.name}
@@ -324,7 +324,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
                 ))}
                 {visibleCount < filteredContacts.length && (
                   <tr ref={observerTarget}>
-                    <td colSpan={7} className="py-4 text-center text-xs text-gray-400 font-semibold uppercase tracking-wider bg-gray-50/10 dark:bg-white/[0.01]">
+                    <td colSpan={7} className="py-4 text-center text-xs text-gray-400 font-semibold uppercase tracking-wider bg-gray-50/10 dark:bg-white/1">
                       Cargando más contactos...
                     </td>
                   </tr>

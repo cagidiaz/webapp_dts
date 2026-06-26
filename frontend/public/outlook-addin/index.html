@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dTS CRM Outlook Add-in</title>
+  
+  <!-- Google Fonts: Inter & Outfit -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Carlito', 'Inter', 'Outfit', 'sans-serif'],
+          },
+          colors: {
+            dts: {
+              primary: '#003E51',        // Corporate primary
+              'primary-dark': '#002A38',
+              'primary-light': '#005A75',
+              secondary: '#00B0B9',      // Corporate secondary
+              'secondary-dark': '#008E95',
+              'secondary-light': '#33C4CC',
+              light: '#F0F4F8',          // Corporate surface light
+              dark: '#001C25',           // Corporate surface dark
+              cardLight: '#FFFFFF',
+              cardDark: '#002A38'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Office.js and Supabase Client -->
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    body {
+      font-family: 'Carlito', 'Inter', 'Outfit', sans-serif;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 176, 185, 0.3);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 176, 185, 0.5);
+    }
+  </style>
+</head>
+<body class="bg-dts-light dark:bg-dts-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col text-xs antialiased transition-colors duration-300">
+  
+  <!-- Header -->
+  <header class="bg-dts-primary-dark text-white p-4 shadow-md flex justify-between items-center shrink-0 border-b border-dts-secondary/20">
+    <div class="flex items-center gap-2">
+      <img src="./Logodts_white.svg" alt="dTS Logo" class="h-6 w-auto" />
+      <div class="h-4 w-px bg-white/20 mx-1"></div>
+      <div>
+        <h1 class="font-extrabold text-sm tracking-wider">CRM Outlook</h1>
+        <p class="text-[9px] text-slate-400 font-medium">Sincronización rápida</p>
+      </div>
+    </div>
+    <div id="logoutBtnContainer" class="hidden">
+      <button onclick="handleLogout()" class="text-[10px] bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1">
+        Cerrar Sesión
+      </button>
+    </div>
+  </header>
+
+  <!-- Content Containers -->
+  <main class="flex-1 overflow-y-auto p-4 flex flex-col">
+    
+    <!-- Loader State -->
+    <div id="loaderState" class="flex-1 flex flex-col items-center justify-center space-y-3 py-10">
+      <div class="w-8 h-8 border-3 border-dts-secondary border-t-transparent rounded-full animate-spin"></div>
+      <p class="text-slate-400 font-medium animate-pulse">Iniciando complemento...</p>
+    </div>
+
+    <!-- Auth / Login State -->
+    <div id="loginState" class="hidden flex-1 flex flex-col justify-center max-w-sm mx-auto w-full py-6 space-y-6">
+      <div class="text-center space-y-2">
+        <img src="./LogodTS.svg" alt="dTS Instruments" class="h-10 mx-auto dark:hidden" />
+        <img src="./Logodts_white.svg" alt="dTS Instruments" class="h-10 mx-auto hidden dark:block" />
+        <h2 class="text-lg font-black text-dts-primary dark:text-white uppercase tracking-wider mt-2">Iniciar Sesión</h2>
+        <p class="text-slate-500 dark:text-slate-400 text-[11px]">Identifícate con tus credenciales de dTS Instruments para acceder al CRM.</p>
+      </div>
+      
+      <form id="loginForm" class="space-y-4" onsubmit="handleLogin(event)">
+        <div class="space-y-1">
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Correo Electrónico</label>
+          <input type="email" id="loginEmail" required placeholder="correo@dtsinstruments.com" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 text-xs">
+        </div>
+        <div class="space-y-1">
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contraseña</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 text-xs">
+        </div>
+        <div id="loginError" class="hidden text-rose-500 font-semibold text-[11px] bg-rose-50 dark:bg-rose-950/20 p-2.5 rounded-xl border border-rose-100 dark:border-rose-900/30 text-center"></div>
+        <button type="submit" class="w-full py-2.5 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-md">
+          Acceder al CRM
+        </button>
+      </form>
+    </div>
+
+    <!-- Active email context details & client sync state -->
+    <div id="mainState" class="hidden flex-1 flex flex-col space-y-4">
+      
+      <!-- Outlook Email Info Card -->
+      <div class="bg-white dark:bg-dts-cardDark p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm space-y-2">
+        <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Correo Seleccionado</span>
+        <div class="space-y-1">
+          <h3 id="mailSubject" class="font-bold text-slate-900 dark:text-white text-xs truncate">...</h3>
+          <p id="mailSender" class="text-slate-500 dark:text-slate-400 text-[10px] font-medium">...</p>
+        </div>
+      </div>
+
+      <!-- CRM Customer Status -->
+      <div id="crmStatusContainer" class="flex-1 flex flex-col space-y-4">
+        
+        <!-- Searching state -->
+        <div id="crmSearching" class="flex-1 flex flex-col items-center justify-center space-y-2 py-8">
+          <div class="w-5 h-5 border-2 border-dts-secondary border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-slate-400 font-medium italic">Buscando cuenta en dTS CRM...</p>
+        </div>
+
+        <!-- Not Found View -->
+        <div id="crmNotFound" class="hidden flex-1 flex flex-col justify-center space-y-4 py-4 text-center">
+          <div class="w-10 h-10 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+            ⚠
+          </div>
+          <div class="space-y-1">
+            <h4 class="font-bold text-slate-900 dark:text-white">Cuenta no identificada</h4>
+            <p class="text-slate-400 text-[10px] px-4">El remitente del correo no está registrado como contacto ni cliente principal en dTS CRM.</p>
+          </div>
+          
+          <div class="space-y-3 bg-white dark:bg-dts-cardDark p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm text-left">
+            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vincular a cliente existente manualmente</label>
+            
+            <select id="customerSelect" class="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-dts-secondary text-xs">
+              <option value="">Cargando clientes...</option>
+            </select>
+            <button onclick="handleLinkToSelected()" id="linkManualBtn" disabled class="w-full py-2 bg-dts-secondary disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white font-bold rounded-xl transition-all text-xs mt-2">
+              Vincular a esta empresa
+            </button>
+          </div>
+        </div>
+
+        <!-- Found Customer View -->
+        <div id="crmFound" class="hidden flex-1 flex flex-col space-y-4">
+          <div class="bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-250/50 dark:border-emerald-900/30 p-4 rounded-2xl space-y-2">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">Cliente Vinculado</span>
+                <h4 id="clientName" class="font-black text-slate-900 dark:text-white text-xs mt-0.5">...</h4>
+                <p id="clientIdBadge" class="text-[10px] font-mono font-bold text-slate-400">...</p>
+              </div>
+              <div id="contactMatchBadge" class="hidden px-2 py-0.5 rounded-full text-[9px] font-bold bg-dts-secondary/15 text-dts-secondary border border-dts-secondary/20">
+                Contacto: <span id="contactName">...</span>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 border-t border-slate-200/50 dark:border-slate-800/50 pt-2 text-[10px] text-slate-500">
+              <div>
+                <span class="block text-[8px] uppercase font-bold text-slate-400">Ventas Totales</span>
+                <span id="clientSales" class="font-bold font-mono text-slate-950 dark:text-white">...</span>
+              </div>
+              <div>
+                <span class="block text-[8px] uppercase font-bold text-slate-400">Comercial Asignado</span>
+                <span id="clientSalesperson" class="font-bold text-slate-950 dark:text-white">...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="space-y-3 flex-1 flex flex-col justify-end pb-4">
+            <div id="statusMessage" class="hidden text-center font-bold text-[10px] p-2.5 rounded-xl border"></div>
+            <button onclick="handleLinkEmail()" id="actionLinkBtn" class="w-full py-3 bg-dts-secondary hover:brightness-110 text-white font-extrabold rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 text-xs">
+              📥 Registrar Email en dTS CRM
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="p-3 bg-dts-light dark:bg-dts-primary-dark/40 text-center text-[9px] text-slate-400 border-t border-slate-200/30 shrink-0">
+    dTS Instruments S.A. &copy; 2026
+  </footer>
+
+  <script>
+    // Supabase configurations
+    const SUPABASE_URL = "https://db.dtsinstruments.com";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzM3MzIxMTksImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.YKEmC5AlCIPP-gnXh3x3Hc5ShyVW6HKVtrkPoJQqj6M";
+    const API_BASE_URL = 'https://api.dtsinstruments.com/api';
+
+    let supabaseClient = null;
+    let activeCustomer = null;
+    let activeContact = null;
+    let emailSenderAddress = "";
+    let emailSubject = "";
+    let areHandlersRegistered = false;
+    
+    // Initialize OfficeJS
+    Office.onReady((info) => {
+      if (info.host === Office.HostType.Outlook) {
+        initApp();
+      } else {
+        // Fallback for browser direct testing
+        initApp();
+      }
+    });
+
+    async function initApp() {
+      // Initialize Supabase
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      
+      // Check auth status
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        showState('loginState');
+        return;
+      }
+
+      showState('mainState');
+      loadOutlookContext();
+    }
+
+    function showState(stateId) {
+      document.getElementById('loaderState').classList.add('hidden');
+      document.getElementById('loginState').classList.add('hidden');
+      document.getElementById('mainState').classList.add('hidden');
+      document.getElementById('logoutBtnContainer').classList.add('hidden');
+
+      document.getElementById(stateId).classList.remove('hidden');
+      if (stateId === 'mainState') {
+        document.getElementById('logoutBtnContainer').classList.remove('hidden');
+      }
+    }
+
+    // Handles user Login
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errorDiv = document.getElementById('loginError');
+      errorDiv.classList.add('hidden');
+
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        
+        if (data && data.session) {
+          localStorage.setItem('access_token', data.session.access_token);
+          showState('mainState');
+          loadOutlookContext();
+        }
+      } catch (err) {
+        errorDiv.innerText = err.message || "Error al iniciar sesión";
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('access_token');
+      showState('loginState');
+    }
+
+    // Read details of the active email in Outlook
+    function loadOutlookContext() {
+      if (typeof Office !== 'undefined' && Office.context && Office.context.mailbox && Office.context.mailbox.item) {
+        const item = Office.context.mailbox.item;
+        
+        // Check if we are in Compose mode first (subject is an object with getAsync in Compose mode)
+        if (item.subject && typeof item.subject.getAsync === 'function') {
+          // Compose mode (Redacción)
+          document.getElementById('mailSender').innerText = "Destinatario: Cargando...";
+          document.getElementById('mailSubject').innerText = "Asunto: Cargando...";
+
+          // Fetch recipients asynchronously
+          if (item.to && typeof item.to.getAsync === 'function') {
+            item.to.getAsync((asyncResult) => {
+              if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                const recipients = asyncResult.value;
+                if (recipients && recipients.length > 0) {
+                  emailSenderAddress = recipients[0].emailAddress;
+                  const displayName = recipients[0].displayName || emailSenderAddress;
+                  document.getElementById('mailSender').innerText = `Para: ${displayName} <${emailSenderAddress}>`;
+                  searchCustomerInCRM(emailSenderAddress);
+                } else {
+                  emailSenderAddress = "";
+                  document.getElementById('mailSender').innerText = "Para: (Sin destinatario)";
+                  showCrmState('crmNotFound');
+                  loadCustomerSelector();
+                }
+              } else {
+                emailSenderAddress = "";
+                document.getElementById('mailSender').innerText = "Para: (Error al leer destinatario)";
+              }
+            });
+          }
+
+          // Fetch subject asynchronously
+          item.subject.getAsync((asyncResult) => {
+            if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+              emailSubject = asyncResult.value || "(Sin Asunto)";
+              document.getElementById('mailSubject').innerText = emailSubject;
+            } else {
+              emailSubject = "(Sin Asunto)";
+              document.getElementById('mailSubject').innerText = emailSubject;
+            }
+          });
+
+          // Register handlers to auto-update when user changes recipients or subject in compose mode (only once)
+          if (!areHandlersRegistered) {
+            if (typeof item.addHandlerAsync === 'function') {
+              // Register recipients changed event directly on the item
+              item.addHandlerAsync(Office.EventType.RecipientsChanged, () => {
+                loadOutlookContext();
+              });
+              // Register subject changed event directly on the item
+              item.addHandlerAsync(Office.EventType.SubjectChanged, () => {
+                item.subject.getAsync((asyncResult) => {
+                  if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                    emailSubject = asyncResult.value || "(Sin Asunto)";
+                    document.getElementById('mailSubject').innerText = emailSubject;
+                  }
+                });
+              });
+            }
+            areHandlersRegistered = true;
+          }
+        } else if (item.from) {
+          // Read mode (Lectura)
+          emailSubject = item.subject || "(Sin Asunto)";
+          emailSenderAddress = item.from.emailAddress;
+          document.getElementById('mailSender').innerText = `${item.from.displayName} <${emailSenderAddress}>`;
+          document.getElementById('mailSubject').innerText = emailSubject;
+          searchCustomerInCRM(emailSenderAddress);
+        } else {
+          emailSenderAddress = "";
+          document.getElementById('mailSender').innerText = "Borrador o destinatario desconocido";
+          document.getElementById('mailSubject').innerText = "(Sin Asunto)";
+          showCrmState('crmNotFound');
+          loadCustomerSelector();
+        }
+      } else {
+        // Mock context for local testing outside of Outlook
+        emailSubject = "Consulta de Equipamiento para Laboratorio";
+        emailSenderAddress = "contacto@cliente-ejemplo.com";
+        document.getElementById('mailSubject').innerText = emailSubject;
+        document.getElementById('mailSender').innerText = `Juan Pérez <${emailSenderAddress}>`;
+        searchCustomerInCRM(emailSenderAddress);
+      }
+    }
+
+    // Query backend to resolve the customer details by email
+    async function searchCustomerInCRM(email) {
+      if (!email) {
+        showCrmState('crmNotFound');
+        loadCustomerSelector();
+        return;
+      }
+
+      showCrmState('crmSearching');
+      const token = localStorage.getItem('access_token');
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/customers/by-email/${encodeURIComponent(email)}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!res.ok) {
+          throw new Error("No encontrado");
+        }
+
+        const data = await res.json();
+        activeCustomer = data.customer;
+        activeContact = data.contact;
+
+        // Display customer info
+        document.getElementById('clientName').innerText = activeCustomer.name;
+        document.getElementById('clientIdBadge').innerText = `Código ERP: ${activeCustomer.client_id} | Ciudad: ${activeCustomer.city || '---'}`;
+        document.getElementById('clientSalesperson').innerText = activeCustomer.salesperson_code || 'No asignado';
+        
+        // Format Currency
+        const formatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+        document.getElementById('clientSales').innerText = formatter.format(activeCustomer.total_sales || 0);
+
+        if (activeContact) {
+          document.getElementById('contactName').innerText = activeContact.name;
+          document.getElementById('contactMatchBadge').classList.remove('hidden');
+        } else {
+          document.getElementById('contactMatchBadge').classList.add('hidden');
+        }
+
+        showCrmState('crmFound');
+      } catch (err) {
+        showCrmState('crmNotFound');
+        loadCustomerSelector();
+      }
+    }
+
+    function showCrmState(stateId) {
+      document.getElementById('crmSearching').classList.add('hidden');
+      document.getElementById('crmNotFound').classList.add('hidden');
+      document.getElementById('crmFound').classList.add('hidden');
+      document.getElementById(stateId).classList.remove('hidden');
+    }
+
+    let searchTimeout = null;
+
+    function debounceSearch() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const query = document.getElementById('customerSearchInput').value.trim();
+        loadCustomerSelector(query);
+      }, 400);
+    }
+
+    // Populate dropdown with customers (supports query searching)
+    async function loadCustomerSelector(searchQuery = '') {
+      const token = localStorage.getItem('access_token');
+      const select = document.getElementById('customerSelect');
+      select.innerHTML = '<option value="">Buscando empresas...</option>';
+      document.getElementById('linkManualBtn').disabled = true;
+
+      try {
+        let url = `${API_BASE_URL}/customers?take=50`;
+        if (searchQuery) {
+          url += `&search=${encodeURIComponent(searchQuery)}`;
+        }
+
+        const res = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const result = await res.json();
+        
+        select.innerHTML = '';
+        if (result && result.data && result.data.length > 0) {
+          const defaultOpt = document.createElement('option');
+          defaultOpt.value = "";
+          defaultOpt.innerText = "Selecciona una empresa...";
+          select.appendChild(defaultOpt);
+
+          result.data.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify(c);
+            opt.innerText = `${c.name} (${c.client_id})`;
+            select.appendChild(opt);
+          });
+          
+          document.getElementById('linkManualBtn').disabled = !select.value;
+          select.onchange = (e) => {
+            document.getElementById('linkManualBtn').disabled = !e.target.value;
+          };
+        } else {
+          select.innerHTML = '<option value="">No se encontraron resultados</option>';
+        }
+      } catch (err) {
+        select.innerHTML = '<option value="">Error al cargar clientes</option>';
+      }
+    }
+
+    function handleLinkToSelected() {
+      const select = document.getElementById('customerSelect');
+      if (!select.value) return;
+
+      activeCustomer = JSON.parse(select.value);
+      activeContact = null;
+
+      // Show found UI with manually selected customer
+      document.getElementById('clientName').innerText = activeCustomer.name;
+      document.getElementById('clientIdBadge').innerText = `Código ERP: ${activeCustomer.client_id} | Ciudad: ${activeCustomer.city || '---'}`;
+      document.getElementById('clientSalesperson').innerText = activeCustomer.salesperson_code || 'No asignado';
+      
+      const formatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+      document.getElementById('clientSales').innerText = formatter.format(activeCustomer.total_sales || 0);
+      document.getElementById('contactMatchBadge').classList.add('hidden');
+
+      showCrmState('crmFound');
+    }
+
+    // Link/Sync email into the CRM database
+    function handleLinkEmail() {
+      const actionBtn = document.getElementById('actionLinkBtn');
+      const statusDiv = document.getElementById('statusMessage');
+      actionBtn.disabled = true;
+      actionBtn.innerText = "Registrando...";
+
+      if (typeof Office !== 'undefined' && Office.context && Office.context.mailbox && Office.context.mailbox.item) {
+        const item = Office.context.mailbox.item;
+        
+        const proceedWithPost = (subject, body) => {
+          emailSubject = subject || "(Sin Asunto)";
+          postEmailToCRM(body);
+        };
+
+        // If Compose mode, fetch subject dynamically to ensure we get the latest edits
+        if (item.subject && typeof item.subject.getAsync === 'function') {
+          item.subject.getAsync((subjResult) => {
+            const currentSubj = subjResult.status === Office.AsyncResultStatus.Succeeded ? subjResult.value : emailSubject;
+            item.body.getAsync(Office.CoercionType.Text, (bodyResult) => {
+              const currentBody = bodyResult.status === Office.AsyncResultStatus.Succeeded ? bodyResult.value : "Cuerpo de correo electrónico no accesible.";
+              proceedWithPost(currentSubj, currentBody);
+            });
+          });
+        } else {
+          // Read mode
+          item.body.getAsync(Office.CoercionType.Text, (bodyResult) => {
+            const currentBody = bodyResult.status === Office.AsyncResultStatus.Succeeded ? bodyResult.value : "Cuerpo de correo electrónico no accesible.";
+            proceedWithPost(item.subject, currentBody);
+          });
+        }
+      } else {
+        // Mock email body for browser testing
+        postEmailToCRM("Buenos días,\n\nSolicitamos cotización para 3 calibradores de temperatura modelo dTS-T500.\n\nSaludos cordiales,\nJuan Pérez.");
+      }
+    }
+
+    async function postEmailToCRM(bodyContent) {
+      const token = localStorage.getItem('access_token');
+      const statusDiv = document.getElementById('statusMessage');
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/crm-activities`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            clientId: activeCustomer.client_id,
+            type: 'EMAIL',
+            title: emailSubject,
+            description: bodyContent
+          })
+        });
+
+        if (res.ok) {
+          statusDiv.innerText = "✓ Correo registrado correctamente en el CRM";
+          statusDiv.className = "text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 p-2.5 rounded-xl font-bold text-[10px] text-center";
+          statusDiv.classList.remove('hidden');
+          document.getElementById('actionLinkBtn').classList.add('hidden');
+        } else {
+          throw new Error("Error en servidor");
+        }
+      } catch (err) {
+        statusDiv.innerText = "✗ Error al registrar el correo en el CRM";
+        statusDiv.className = "text-rose-700 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 p-2.5 rounded-xl font-bold text-[10px] text-center";
+        statusDiv.classList.remove('hidden');
+        document.getElementById('actionLinkBtn').disabled = false;
+        document.getElementById('actionLinkBtn').innerText = "📥 Registrar Email en dTS CRM";
+      }
+    }
+  </script>
+</body>
+</html>

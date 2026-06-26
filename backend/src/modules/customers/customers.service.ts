@@ -160,4 +160,56 @@ export class CustomersService {
       throw new InternalServerErrorException(error.message);
     }
   }
+
+  /**
+   * Obtiene un cliente por una dirección de correo, buscando primero en sus personas de contacto
+   * y luego en el correo principal del cliente.
+   */
+  async getByEmail(email: string) {
+    try {
+      if (!email || !email.trim()) {
+        throw new NotFoundException('Email no válido');
+      }
+
+      const emailTrimmed = email.trim().toLowerCase();
+
+      // 1. Buscar en contactos
+      const contact = await this.prisma.contacts.findFirst({
+        where: {
+          email: {
+            equals: emailTrimmed,
+            mode: 'insensitive'
+          }
+        }
+      });
+
+      if (contact && contact.client_id) {
+        const customer = await this.prisma.customers.findUnique({
+          where: { client_id: contact.client_id }
+        });
+        if (customer) {
+          return { customer, contact };
+        }
+      }
+
+      // 2. Si no se encontró en contactos, buscar en la tabla de clientes directamente
+      const customer = await this.prisma.customers.findFirst({
+        where: {
+          email: {
+            equals: emailTrimmed,
+            mode: 'insensitive'
+          }
+        }
+      });
+
+      if (customer) {
+        return { customer, contact: null };
+      }
+
+      throw new NotFoundException(`No se encontró ningún cliente o contacto con el email ${email}`);
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException(error.message);
+    }
+  }
 }

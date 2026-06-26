@@ -45,6 +45,12 @@ export class CustomersController {
     return this.customersService.getSalespersons();
   }
 
+  @Get('by-email/:email')
+  @ApiOperation({ summary: 'Obtener cliente por dirección de email (del cliente o de sus contactos)' })
+  async getByEmail(@Param('email') email: string) {
+    return this.customersService.getByEmail(email);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un cliente por ID (UUID)' })
   async getById(@Param('id') id: string) {
