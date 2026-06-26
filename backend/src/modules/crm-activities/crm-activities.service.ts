@@ -69,8 +69,9 @@ export class CrmActivitiesService {
     description?: string;
     dueDate?: string;
     timeScheduled?: string;
+    email?: string;
   }) {
-    const { clientId, userId, type, title, description, dueDate, timeScheduled } = data;
+    const { clientId, userId, type, title, description, dueDate, timeScheduled, email } = data;
 
     try {
       return await this.prisma.crm_activities.create({
@@ -81,7 +82,8 @@ export class CrmActivitiesService {
           title,
           description: description || null,
           due_date: dueDate ? new Date(dueDate) : null,
-          time_scheduled: timeScheduled || null
+          time_scheduled: timeScheduled || null,
+          email: email || null
         }
       });
     } catch (error) {

@@ -12,6 +12,7 @@ export interface CrmActivity {
   due_date: string | null;
   time_scheduled: string | null;
   is_completed: boolean;
+  email?: string;
   created_at: string;
   updated_at: string;
   customer?: {
@@ -51,6 +52,7 @@ export const createCrmActivity = async (payload: {
   description?: string;
   dueDate?: string;
   timeScheduled?: string;
+  email?: string;
 }): Promise<CrmActivity> => {
   const { data } = await apiClient.post('/crm-activities', payload);
   return data;

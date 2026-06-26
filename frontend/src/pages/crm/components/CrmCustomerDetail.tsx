@@ -49,6 +49,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const [newNoteText, setNewNoteText] = useState('');
   const [newEmailSubject, setNewEmailSubject] = useState('');
   const [newEmailBody, setNewEmailBody] = useState('');
+  const [newEmailAddress, setNewEmailAddress] = useState('');
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventDate, setNewEventDate] = useState(new Date().toISOString().split('T')[0]);
   const [newEventTime, setNewEventTime] = useState('10:00');
@@ -322,7 +323,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         id: act.id,
         subject: act.title,
         body: act.description || '',
-        date: act.created_at
+        date: act.created_at,
+        email: act.email
       }));
   }, [dbActivities]);
 
@@ -349,6 +351,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       iconBg: string;
       iconColor: string;
       showTime?: boolean;
+      email?: string;
     }[] = [];
 
     notes.forEach(n => {
@@ -389,7 +392,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         icon: Send,
         iconBg: 'bg-purple-100 dark:bg-purple-955/20',
         iconColor: 'text-purple-600 dark:text-purple-400',
-        showTime: true
+        showTime: true,
+        email: e.email
       });
     });
 
@@ -468,10 +472,12 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       clientId,
       type: 'EMAIL',
       title: newEmailSubject,
-      description: newEmailBody
+      description: newEmailBody,
+      email: newEmailAddress
     });
     setNewEmailSubject('');
     setNewEmailBody('');
+    setNewEmailAddress('');
     setShowEmailModal(false);
   };
 
@@ -1047,6 +1053,11 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                       <div className="flex-1 pb-4">
                         <div className="bg-gray-50/50 dark:bg-white/2 p-3.5 rounded-xl border border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35 transition-all duration-200 shadow-xs">
                           <span className="font-bold text-gray-900 dark:text-white text-xs block mb-1">{act.title}</span>
+                          {act.type === 'email' && act.email && (
+                            <span className="inline-block text-[10px] bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded font-bold border border-purple-100 dark:border-purple-900/30 mb-1">
+                              Para/De: {act.email}
+                            </span>
+                          )}
                           {act.description && (
                             <p className="text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed text-[11px] whitespace-pre-wrap">
                               {act.description}
@@ -1071,7 +1082,10 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                 Seguimiento de Correspondencia
               </h3>
               <button 
-                onClick={() => setShowEmailModal(true)}
+                onClick={() => {
+                  setNewEmailAddress(customer?.email || '');
+                  setShowEmailModal(true);
+                }}
                 className="flex items-center gap-1.5 py-1 px-3 bg-dts-primary hover:brightness-110 text-white rounded-lg font-bold text-xs cursor-pointer"
               >
                 <Plus size={14} /> Registrar Email
@@ -1087,10 +1101,17 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                 {emails.map(e => (
                   <div key={e.id} className="p-4 bg-gray-50 dark:bg-white/2 rounded-xl border border-gray-200/50 dark:border-white/5 text-xs space-y-2">
                     <div className="flex justify-between items-center">
-                      <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                        <Mail size={12} className="text-dts-secondary" />
-                        {e.subject}
-                      </h4>
+                      <div className="space-y-0.5">
+                        <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                          <Mail size={12} className="text-dts-secondary" />
+                          {e.subject}
+                        </h4>
+                        {e.email && (
+                          <span className="inline-block text-[10px] text-purple-600 dark:text-purple-400 font-bold">
+                            Enviado a/recibido de: {e.email}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-gray-400 font-mono">{new Date(e.date).toLocaleDateString()}</span>
                         <div className="flex items-center gap-1.5">
@@ -1227,6 +1248,10 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
           <form onSubmit={handleCreateEmail} className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-white/5 shadow-2xl p-6 max-w-md w-full relative space-y-4 text-xs">
             <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider">Registrar Email de Seguimiento</h3>
             <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Destinatario / Remitente (Email)</label>
+                <input type="email" required value={newEmailAddress} onChange={e => setNewEmailAddress(e.target.value)} placeholder="Ej: cliente@correo.com" className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" />
+              </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Asunto</label>
                 <input type="text" required value={newEmailSubject} onChange={e => setNewEmailSubject(e.target.value)} placeholder="Ej: Confirmación de propuesta técnica dTS..." className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" />
