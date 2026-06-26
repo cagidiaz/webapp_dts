@@ -390,8 +390,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         description: e.body,
         date: e.date,
         icon: Send,
-        iconBg: 'bg-purple-100 dark:bg-purple-955/20',
-        iconColor: 'text-purple-600 dark:text-purple-400',
+        iconBg: 'bg-dts-secondary/15 dark:bg-dts-secondary/5',
+        iconColor: 'text-dts-secondary',
         showTime: true,
         email: e.email
       });
@@ -1054,7 +1054,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                         <div className="bg-gray-50/50 dark:bg-white/2 p-3.5 rounded-xl border border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35 transition-all duration-200 shadow-xs">
                           <span className="font-bold text-gray-900 dark:text-white text-xs block mb-1">{act.title}</span>
                           {act.type === 'email' && act.email && (
-                            <span className="inline-block text-[10px] bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded font-bold border border-purple-100 dark:border-purple-900/30 mb-1">
+                            <span className="inline-block text-[10px] bg-dts-secondary/10 dark:bg-dts-secondary/5 text-dts-secondary px-1.5 py-0.5 rounded font-bold border border-dts-secondary/20 mb-1">
                               Para/De: {act.email}
                             </span>
                           )}
@@ -1107,7 +1107,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                           {e.subject}
                         </h4>
                         {e.email && (
-                          <span className="inline-block text-[10px] text-purple-600 dark:text-purple-400 font-bold">
+                          <span className="inline-block text-[10px] text-dts-secondary font-bold">
                             Enviado a/recibido de: {e.email}
                           </span>
                         )}
