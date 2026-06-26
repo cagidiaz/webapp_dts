@@ -390,8 +390,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         description: e.body,
         date: e.date,
         icon: Send,
-        iconBg: 'bg-dts-secondary/15 dark:bg-dts-secondary/5',
-        iconColor: 'text-dts-secondary',
+        iconBg: 'bg-purple-100 dark:bg-purple-955/20',
+        iconColor: 'text-purple-600 dark:text-purple-400',
         showTime: true,
         email: e.email
       });
