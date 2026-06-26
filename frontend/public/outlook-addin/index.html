@@ -330,23 +330,31 @@
             }
           });
 
-          // Register handlers to auto-update when user changes recipients or subject in compose mode (only once)
+          // Register handlers to auto-update when user changes recipients in compose mode (only once)
           if (!areHandlersRegistered) {
             if (typeof item.addHandlerAsync === 'function') {
               // Register recipients changed event directly on the item
               item.addHandlerAsync(Office.EventType.RecipientsChanged, () => {
                 loadOutlookContext();
               });
-              // Register subject changed event directly on the item
-              item.addHandlerAsync(Office.EventType.SubjectChanged, () => {
+            }
+
+            // Start a polling interval (every 2 seconds) to dynamically update the subject in the UI,
+            // since OfficeJS does not have a native 'SubjectChanged' event type.
+            setInterval(() => {
+              if (item.subject && typeof item.subject.getAsync === 'function') {
                 item.subject.getAsync((asyncResult) => {
                   if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-                    emailSubject = asyncResult.value || "(Sin Asunto)";
-                    document.getElementById('mailSubject').innerText = emailSubject;
+                    const currentSubj = asyncResult.value || "(Sin Asunto)";
+                    if (emailSubject !== currentSubj) {
+                      emailSubject = currentSubj;
+                      document.getElementById('mailSubject').innerText = emailSubject;
+                    }
                   }
                 });
-              });
-            }
+              }
+            }, 2000);
+
             areHandlersRegistered = true;
           }
         } else if (item.from) {
