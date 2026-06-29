@@ -609,7 +609,14 @@
         }
       });
       
-      return body.substring(0, minIndex).trim();
+      let cleaned = body.substring(0, minIndex).trim();
+      
+      // Limitar a un máximo de 500 caracteres
+      if (cleaned.length > 500) {
+        cleaned = cleaned.substring(0, 500) + "...";
+      }
+      
+      return cleaned;
     }
 
     async function postEmailToCRM(bodyContent) {
