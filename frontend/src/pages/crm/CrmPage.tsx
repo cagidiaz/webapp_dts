@@ -41,9 +41,9 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
       icon: <Briefcase size={20} />,
       infoProps: {
         title: 'CRM Comercial',
-        description: 'Permite a los comerciales dar seguimiento a sus cuentas asignadas, personas de contacto, tareas comerciales, notas, emails y oportunidades.',
-        objective: 'Centralizar la relación con los clientes para maximizar las oportunidades de venta y retención.',
-        source: 'Sincronizado con Navision y enriquecido con metadatos CRM locales.'
+        description: 'Permite a los comerciales dar seguimiento a sus cuentas asignadas, personas de contacto, tareas comerciales, notas, emails y oportunidades. Soporta vinculación directa de correos electrónicos desde Outlook mediante el complemento oficial.',
+        objective: 'Centralizar la relación con los clientes para maximizar las oportunidades de venta y retención, facilitando la integración con la bandeja de correo.',
+        source: 'Sincronizado con Navision y enriquecido con metadatos CRM locales y actividades registradas desde el complemento de Outlook.'
       }
     });
     return () => setPageInfo({ title: '', subtitle: '', icon: null });

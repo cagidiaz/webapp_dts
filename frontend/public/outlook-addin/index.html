@@ -151,6 +151,9 @@
               <div class="space-y-3 bg-white dark:bg-dts-cardDark p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm text-left">
                 <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vincular a cliente existente manualmente</label>
                 
+                <!-- Buscador de empresas -->
+                <input type="text" id="customerSearchInput" oninput="debounceSearch()" placeholder="Buscar empresa por nombre o código..." class="w-full px-2.5 py-1.5 mb-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-dts-secondary text-xs">
+                
                 <select id="customerSelect" class="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-dts-secondary text-xs">
                   <option value="">Cargando clientes...</option>
                 </select>
@@ -332,26 +335,37 @@
 
           // Register handlers to auto-update when user changes recipients in compose mode (only once)
           if (!areHandlersRegistered) {
-            if (typeof item.addHandlerAsync === 'function') {
-              // Register recipients changed event directly on the item
-              item.addHandlerAsync(Office.EventType.RecipientsChanged, () => {
-                loadOutlookContext();
-              });
+            try {
+              if (typeof item.addHandlerAsync === 'function' && 
+                  Office.EventType && 
+                  Office.EventType.RecipientsChanged && 
+                  Office.context.requirements.isSetSupported('Mailbox', '1.7')) {
+                // Register recipients changed event directly on the item
+                item.addHandlerAsync(Office.EventType.RecipientsChanged, () => {
+                  loadOutlookContext();
+                });
+              }
+            } catch (err) {
+              console.error("Error al registrar el controlador RecipientsChanged:", err);
             }
 
             // Start a polling interval (every 2 seconds) to dynamically update the subject in the UI,
             // since OfficeJS does not have a native 'SubjectChanged' event type.
             setInterval(() => {
-              if (item.subject && typeof item.subject.getAsync === 'function') {
-                item.subject.getAsync((asyncResult) => {
-                  if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-                    const currentSubj = asyncResult.value || "(Sin Asunto)";
-                    if (emailSubject !== currentSubj) {
-                      emailSubject = currentSubj;
-                      document.getElementById('mailSubject').innerText = emailSubject;
+              try {
+                if (item.subject && typeof item.subject.getAsync === 'function') {
+                  item.subject.getAsync((asyncResult) => {
+                    if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                      const currentSubj = asyncResult.value || "(Sin Asunto)";
+                      if (emailSubject !== currentSubj) {
+                        emailSubject = currentSubj;
+                        document.getElementById('mailSubject').innerText = emailSubject;
+                      }
                     }
-                  }
-                });
+                  });
+                }
+              } catch (err) {
+                console.error("Error en el intervalo de actualización de asunto:", err);
               }
             }, 2000);
 
@@ -398,6 +412,11 @@
             'Authorization': `Bearer ${token}`
           }
         });
+
+        if (res.status === 401) {
+          handleLogout();
+          return;
+        }
 
         if (!res.ok) {
           throw new Error("No encontrado");
@@ -451,6 +470,13 @@
     async function loadCustomerSelector(searchQuery = '') {
       const token = localStorage.getItem('access_token');
       const select = document.getElementById('customerSelect');
+      
+      // Limpiar input si no hay query de búsqueda activa
+      const searchInput = document.getElementById('customerSearchInput');
+      if (searchInput && !searchQuery) {
+        searchInput.value = '';
+      }
+      
       select.innerHTML = '<option value="">Buscando empresas...</option>';
       document.getElementById('linkManualBtn').disabled = true;
 
@@ -465,6 +491,12 @@
             'Authorization': `Bearer ${token}`
           }
         });
+
+        if (res.status === 401) {
+          handleLogout();
+          return;
+        }
+
         const result = await res.json();
         
         select.innerHTML = '';
@@ -568,6 +600,11 @@
             email: emailSenderAddress
           })
         });
+
+        if (res.status === 401) {
+          handleLogout();
+          return;
+        }
 
         if (res.ok) {
           statusDiv.innerText = "✓ Correo registrado correctamente en el CRM";

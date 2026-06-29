@@ -55,5 +55,15 @@ El módulo CRM de Ofertas permite centralizar, gestionar y dar seguimiento a las
   - Registrar notas y justificaciones de éxito o pérdida.
   - Registrar bitácoras de actividades (Llamadas, Visitas, Correos, Tareas, etc.) marcándolas como completadas o pendientes.
 
+## 7. Complemento de Outlook (Add-in dTS CRM)
+El Complemento de Outlook centraliza la correspondencia comercial vinculando correos directamente en el CRM de dTS Instruments desde la interfaz de Outlook (tanto en versión Web como de Escritorio).
+- **Activación en Lectura (Read Mode)**: Al abrir el panel del complemento visualizando un correo recibido, este detecta la dirección de email del remitente y busca coincidencias en la base de datos de clientes y contactos. Si encuentra una coincidencia, muestra la información del cliente, vendedor asignado y ventas totales.
+- **Activación en Redacción (Compose Mode)**: Al abrir el panel al redactar un correo nuevo o responder, detecta automáticamente la dirección del primer destinatario (campo *Para*) y busca coincidencias en el CRM.
+- **Buscador y Vinculación Manual**: Si un correo no coincide con ningún cliente o contacto registrado en el CRM, se activa la sección "Cuenta no identificada". Esta sección dispone de:
+  - **Buscador de Empresas**: Un campo de texto interactivo con búsqueda predictiva (`customerSearchInput`) que consulta la base de datos de empresas del CRM en tiempo real a medida que el usuario escribe.
+  - **Menú de Selección**: Un desplegable con las empresas coincidentes. Una vez seleccionada una empresa, el comercial puede pulsar "Vincular a esta empresa" para asociarla al contexto actual de correo.
+- **Sincronización Directa**: Al pulsar el botón "Registrar Email en dTS CRM", el complemento extrae el asunto, cuerpo del mensaje y dirección de correo del contacto para guardarlo como una nueva actividad de tipo `EMAIL` en el historial del cliente seleccionado.
+- **Seguridad y Control de Sesión**: El complemento detecta la expiración de la sesión (respuestas `401 Unauthorized` de la API). Si el token del usuario ha expirado, cierra la sesión automáticamente en el complemento y redirige al usuario al panel de inicio de sesión de forma segura.
+
 ---
-*Manual de dTS Instruments v5.1 — Actualizado a 16 de junio 2026.*
+*Manual de dTS Instruments v5.2 — Actualizado a 29 de junio 2026.*
