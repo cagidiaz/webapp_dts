@@ -62,7 +62,7 @@ El Complemento de Outlook centraliza la correspondencia comercial vinculando cor
 - **Buscador y Vinculación Manual**: Si un correo no coincide con ningún cliente o contacto registrado en el CRM, se activa la sección "Cuenta no identificada". Esta sección dispone de:
   - **Buscador de Empresas**: Un campo de texto interactivo con búsqueda predictiva (`customerSearchInput`) que consulta la base de datos de empresas del CRM en tiempo real a medida que el usuario escribe.
   - **Menú de Selección**: Un desplegable con las empresas coincidentes. Una vez seleccionada una empresa, el comercial puede pulsar "Vincular a esta empresa" para asociarla al contexto actual de correo.
-- **Sincronización Directa**: Al pulsar el botón "Registrar Email en dTS CRM", el complemento extrae el asunto, cuerpo del mensaje y dirección de correo del contacto para guardarlo como una nueva actividad de tipo `EMAIL` en el historial del cliente seleccionado.
+- **Sincronización Directa y Limpieza**: Al pulsar el botón "Registrar Email en dTS CRM", el complemento extrae el asunto, la dirección de correo y el cuerpo del mensaje. El sistema limpia de forma automática el contenido del mensaje detectando y recortando firmas, bloques de descargo de responsabilidad y el hilo de correos anteriores para guardar una nota de actividad de tipo `EMAIL` limpia y legible en la ficha del cliente en el CRM.
 - **Seguridad y Control de Sesión**: El complemento detecta la expiración de la sesión (respuestas `401 Unauthorized` de la API). Si el token del usuario ha expirado, cierra la sesión automáticamente en el complemento y redirige al usuario al panel de inicio de sesión de forma segura.
 
 ---

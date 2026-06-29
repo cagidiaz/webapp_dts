@@ -577,11 +577,43 @@
         }
       } else {
         // Mock email body for browser testing
-        postEmailToCRM("Buenos días,\n\nSolicitamos cotización para 3 calibradores de temperatura modelo dTS-T500.\n\nSaludos cordiales,\nJuan Pérez.");
+        postEmailToCRM("Buenos días,\n\nSolicitamos cotización para 3 calibradores de temperatura modelo dTS-T500.\n\n-- \nJuan Pérez\nDirector de Ventas\n\n________________________________\nDe: cliente@dts.com...");
       }
     }
 
+    function cleanEmailBody(body) {
+      if (!body) return "";
+      
+      const separators = [
+        "\n-- \n",
+        "\n-- \r\n",
+        "\n--\n",
+        "\n--\r\n",
+        "\n__________",
+        "\nDe: ",
+        "\nde: ",
+        "\nFrom: ",
+        "\nfrom: ",
+        "\nEnviado el:",
+        "\nenviado el:",
+        "\nSent:",
+        "\nsent:"
+      ];
+      
+      let minIndex = body.length;
+      
+      separators.forEach(sep => {
+        const idx = body.indexOf(sep);
+        if (idx !== -1 && idx < minIndex) {
+          minIndex = idx;
+        }
+      });
+      
+      return body.substring(0, minIndex).trim();
+    }
+
     async function postEmailToCRM(bodyContent) {
+      const cleanedBody = cleanEmailBody(bodyContent);
       const token = localStorage.getItem('access_token');
       const statusDiv = document.getElementById('statusMessage');
 
@@ -596,7 +628,7 @@
             clientId: activeCustomer.client_id,
             type: 'EMAIL',
             title: emailSubject,
-            description: bodyContent,
+            description: cleanedBody,
             email: emailSenderAddress
           })
         });

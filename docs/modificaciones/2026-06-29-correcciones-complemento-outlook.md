@@ -14,9 +14,10 @@ Corregir los fallos de visualización de empresas y de estabilidad en el modo de
 *   **Registro Seguro de Evento `RecipientsChanged`:** El registro del controlador de eventos de Outlook en modo de redacción se ha encapsulado en un bloque `try/catch` y se ha condicionado a que el host sea compatible con la API de **Mailbox 1.7** (`Office.context.requirements.isSetSupported('Mailbox', '1.7')`). Esto evita un error crítico (TypeError) que bloqueaba la carga de la página del complemento (dejándolo "pensando" indefinidamente en el spinner de carga inicial) en clientes de Outlook más antiguos.
 *   **Seguridad del Intervalo de Asunto:** El bucle periódico (`setInterval`) de sincronización del asunto del correo también ha sido envuelto en un `try/catch` para evitar fallos si el correo en redacción es cerrado o cambiado de contexto.
 *   **Gestión de Expiración de Sesión (401):** Se ha interceptado el código de estado HTTP `401` en las peticiones al backend (`searchCustomerInCRM`, `loadCustomerSelector` y `postEmailToCRM`) para realizar un logout y redireccionar automáticamente al usuario al formulario de login del complemento.
+*   **Limpieza Automática de Firmas e Hilos de Correo (`cleanEmailBody`):** Se ha diseñado e integrado la función `cleanEmailBody` que intercepta el cuerpo del correo antes de enviarlo al CRM. La función recorta el texto a partir del primer delimitador común detectado (`-- `, `De: `, `From: `, `Enviado el:`, `Sent:`, etc.). Esto evita el almacenamiento de hilos duplicados pesados y bloques de firmas con logotipos o texto de descargo de responsabilidad en la base de datos del CRM.
 
 ### 2. Manual de Usuario (`docs/manual-usuario.md`)
-*   Se ha añadido la **Sección 7 (Complemento de Outlook)** detallando el funcionamiento del complemento, la detección en modo lectura y redacción, el buscador manual de empresas y el control de sesiones expiradas.
+*   Se ha añadido la **Sección 7 (Complemento de Outlook)** detallando el funcionamiento del complemento, la detección en modo lectura y redacción, el buscador manual de empresas, el sistema de limpieza de firmas y el control de sesiones expiradas.
 *   Actualización de la versión del manual a **v5.2**.
 
 ### 3. Ayuda Contextual en App (`frontend/src/pages/crm/CrmPage.tsx`)
