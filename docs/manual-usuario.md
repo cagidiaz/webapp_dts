@@ -68,5 +68,16 @@ El Complemento de Outlook centraliza la correspondencia comercial vinculando cor
 - **Sincronización Directa y Limpieza**: Al registrar, el sistema limpia de forma automática firmas, bloques legales de descargo y el hilo de correos anteriores, acotando el cuerpo del mensaje a un máximo de 500 caracteres para guardar notas ligeras.
 - **Seguridad y Control de Sesión**: Cierre de sesión automático si la llamada al API devuelve un error `401 Unauthorized`.
 
+## 8. Pestaña de Emails y Redactor Mailto Inteligente
+La pestaña **Emails** en la ficha del cliente centraliza el histórico de comunicaciones por correo electrónico y permite redactar nuevos emails de manera ágil:
+- **Procedencia Clara (Badges)**: Los correos se catalogan visualmente en el historial:
+  - **Outlook**: Correos sincronizados de forma externa usando el Complemento oficial de Outlook.
+  - **Enviado desde CRM**: Correos iniciados y registrados directamente desde la WebApp del CRM.
+- **Redactor Comercial con Plantillas**: En lugar de registro manual estático, el botón "Redactar Email" abre un asistente de correspondencia interactivo:
+  - **Selección de Destinatario**: Menú desplegable para elegir rápidamente entre el correo principal de la empresa o cualquiera de sus personas de contacto.
+  - **Plantillas Predefinidas**: Selección de plantillas para *Presentación comercial dTS*, *Seguimiento de oferta* o *Agradecimiento de reunión*.
+  - **Tokenización Automática**: El sistema autocompleta los campos de asunto y cuerpo reemplazando dinámicamente variables del cliente (`[Nombre Empresa]`), contacto (`[Contacto]`) y el comercial actual (`[Vendedor]`).
+- **Envío vía Outlook**: Al pulsar "Abrir en Outlook y Registrar", el sistema guarda la actividad `EMAIL` en el CRM y ejecuta un enlace `mailto` que abre el cliente de correo local del usuario (como Outlook) con toda la información ya pre-rellenada para proceder a su envío final.
+
 ---
-*Manual de dTS Instruments v5.3 — Actualizado a 30 de junio 2026.*
+*Manual de dTS Instruments v5.4 — Actualizado a 30 de junio 2026.*

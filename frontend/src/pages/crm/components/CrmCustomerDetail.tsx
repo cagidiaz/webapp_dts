@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '../../../store/authStore';
 import { 
   getCustomerByClientId, getContacts, updateContactLinkedin,
   getCrmActivities, createCrmActivity, updateCrmActivity, deleteCrmActivity,
@@ -22,6 +23,33 @@ const STAGES = [
   { id: 'perdida', label: 'Perdida', color: 'border-t-rose-400 bg-rose-500/5' }
 ];
 
+const EMAIL_TEMPLATES = [
+  {
+    id: 'free',
+    label: 'Texto libre (sin plantilla)',
+    subject: '',
+    body: ''
+  },
+  {
+    id: 'presentation',
+    label: 'Presentación comercial dTS',
+    subject: 'Presentación de dTS Instruments — [Nombre Empresa]',
+    body: 'Estimado/a [Contacto],\n\nLe escribo de dTS Instruments. Nos especializamos en la comercialización de equipamiento de laboratorio y soluciones analíticas de alta precisión.\n\nAdjunto a este correo nuestro catálogo general de soluciones. Estaremos encantados de poder colaborar con ustedes y asesorarles en sus futuros proyectos.\n\nQuedo a su entera disposición para agendar una breve llamada de presentación.\n\nAtentamente,\n[Vendedor]\ndTS Instruments'
+  },
+  {
+    id: 'followup',
+    label: 'Seguimiento de oferta pendiente',
+    subject: 'Seguimiento de propuesta comercial — dTS Instruments',
+    body: 'Estimado/a [Contacto],\n\nEspero que se encuentre muy bien.\n\nLe escribo para hacer seguimiento a la propuesta comercial que le enviamos recientemente. ¿Ha tenido oportunidad de revisarla con su equipo? Si tiene cualquier duda técnica o comercial, estaré encantado de resolverla.\n\nQuedamos a su disposición para comentar los detalles cuando le sea conveniente.\n\nAtentamente,\n[Vendedor]\ndTS Instruments'
+  },
+  {
+    id: 'thankyou',
+    label: 'Agradecimiento por su tiempo (Reunión)',
+    subject: 'Agradecimiento por su tiempo — dTS Instruments',
+    body: 'Estimado/a [Contacto],\n\nHa sido un placer conversar con usted el día de hoy.\n\nLe agradezco mucho el tiempo dedicado a nuestra reunión para comentar sus necesidades de equipamiento de laboratorio. Ya estamos trabajando en las propuestas analizadas y esperamos enviárselas a la brevedad.\n\nQuedo a su disposición para lo que necesite.\n\nAtentamente,\n[Vendedor]\ndTS Instruments'
+  }
+];
+
 interface CrmCustomerDetailProps {
   clientId: string;
   onBack: () => void;
@@ -29,6 +57,7 @@ interface CrmCustomerDetailProps {
 
 export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, onBack }) => {
   const queryClient = useQueryClient();
+  const { profile } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'info' | 'quotes' | 'tasks' | 'notes' | 'emails' | 'calendar' | 'timeline'>('info');
 
   // Inline Linkedin editing states
@@ -49,6 +78,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const [newEmailSubject, setNewEmailSubject] = useState('');
   const [newEmailBody, setNewEmailBody] = useState('');
   const [newEmailAddress, setNewEmailAddress] = useState('');
+  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState('');
+  const [isManualEmail, setIsManualEmail] = useState(false);
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventDate, setNewEventDate] = useState(new Date().toISOString().split('T')[0]);
   const [newEventTime, setNewEventTime] = useState('10:00');
@@ -772,20 +803,55 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
     setShowNoteModal(false);
   };
 
+  const applyTemplateBody = (templateId: string, contactName: string) => {
+    if (!templateId || templateId === 'free') {
+      setNewEmailSubject('');
+      setNewEmailBody('');
+      return;
+    }
+    const template = EMAIL_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+
+    const salespersonName = profile ? `${profile.firstName} ${profile.lastName}`.trim() : 'Comercial dTS';
+    const clientName = customer?.name || '';
+
+    const subject = template.subject.replace('[Nombre Empresa]', clientName);
+    const body = template.body
+      .replace('[Contacto]', contactName)
+      .replace('[Vendedor]', salespersonName);
+
+    setNewEmailSubject(subject);
+    setNewEmailBody(body);
+  };
+
   const handleCreateEmail = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmailSubject.trim() || !newEmailBody.trim()) return;
+
+    // Guardar en CRM con prefijo de procedencia [CRM Web]
+    const fullSubject = `[CRM Web] ${newEmailSubject}`;
+
     createActivityMutation.mutate({
       clientId,
       type: 'EMAIL',
-      title: newEmailSubject,
+      title: fullSubject,
       description: newEmailBody,
       email: newEmailAddress
+    }, {
+      onSuccess: () => {
+        // Ejecutar mailto para abrir el cliente local de correo
+        const mailtoUrl = `mailto:${newEmailAddress}?subject=${encodeURIComponent(newEmailSubject)}&body=${encodeURIComponent(newEmailBody)}`;
+        window.location.href = mailtoUrl;
+
+        // Resetear estados locales
+        setNewEmailSubject('');
+        setNewEmailBody('');
+        setNewEmailAddress('');
+        setSelectedEmailTemplate('');
+        setIsManualEmail(false);
+        setShowEmailModal(false);
+      }
     });
-    setNewEmailSubject('');
-    setNewEmailBody('');
-    setNewEmailAddress('');
-    setShowEmailModal(false);
   };
 
   const handleCreateEvent = (e: React.FormEvent) => {
@@ -1233,23 +1299,23 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                 )}
 
                 {/* Quick stats list */}
-                <div className="p-4 bg-gray-50 dark:bg-white/1 rounded-xl border border-gray-100 dark:border-white/5 text-xs space-y-2.5">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Ofertas Ganadas:</span>
-                    <span className="font-bold text-emerald-500">
+                <div className="p-4 bg-gray-50 dark:bg-white/1 rounded-xl border border-gray-100 dark:border-white/5 space-y-2.5">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-semibold text-emerald-500">Ofertas Ganadas:</span>
+                    <span className="font-black text-emerald-500">
                       {filteredCrmQuotes.filter(q => q.estado_oferta?.toLowerCase() === 'ganada').length}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Ofertas Perdidas:</span>
-                    <span className="font-bold text-rose-500">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-semibold text-rose-500">Ofertas Perdidas:</span>
+                    <span className="font-black text-rose-500">
                       {filteredCrmQuotes.filter(q => q.estado_oferta?.toLowerCase() === 'perdida').length}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Total en Negociación:</span>
-                    <span className="font-bold text-amber-500">
-                      {filteredCrmQuotes.filter(q => q.estado_oferta?.toLowerCase() === 'en negociación').length}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-semibold text-dts-secondary">Ofertas activas:</span>
+                    <span className="font-black text-dts-secondary">
+                      {filteredCrmQuotes.filter(q => q.estado_oferta?.toLowerCase() !== 'ganada' && q.estado_oferta?.toLowerCase() !== 'perdida').length}
                     </span>
                   </div>
                 </div>
@@ -1522,7 +1588,22 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                       <div className="flex-1 pb-4">
                         <div className="bg-gray-50/50 dark:bg-white/2 p-3.5 rounded-xl border border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35 transition-all duration-200 shadow-xs">
                           <div className="flex justify-between items-start flex-wrap gap-2 mb-1">
-                            <span className="font-bold text-gray-900 dark:text-white text-xs">{act.title}</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-gray-900 dark:text-white text-xs">
+                                {act.type === 'email' ? act.title.replace(/^Email Registrado:\s*/, '').replace(/^\[CRM Web\]\s*/, '') : act.title}
+                              </span>
+                              {act.type === 'email' && (
+                                act.title.includes('[CRM Web]') ? (
+                                  <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider select-none">
+                                    Enviado desde CRM
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] bg-blue-50 dark:bg-blue-955/35 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-0.5 select-none">
+                                    Outlook
+                                  </span>
+                                )
+                              )}
+                            </div>
                             {act.quoteNo && act.quoteObj && (
                               <button
                                 onClick={() => {
@@ -1566,11 +1647,13 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
               <button 
                 onClick={() => {
                   setNewEmailAddress(customer?.email || '');
+                  setSelectedEmailTemplate('');
+                  setIsManualEmail(false);
                   setShowEmailModal(true);
                 }}
                 className="flex items-center gap-1.5 py-1 px-3 bg-dts-primary hover:brightness-110 text-white rounded-lg font-bold text-xs cursor-pointer"
               >
-                <Plus size={14} /> Registrar Email
+                <Plus size={14} /> Redactar Email
               </button>
             </div>
 
@@ -1584,9 +1667,18 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                   <div key={e.id} className="p-4 bg-gray-50 dark:bg-white/2 rounded-xl border border-gray-200/50 dark:border-white/5 text-xs space-y-2">
                     <div className="flex justify-between items-center">
                       <div className="space-y-0.5">
-                        <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                          <Mail size={12} className="text-dts-secondary" />
-                          {e.subject}
+                        <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                          <Mail size={12} className="text-dts-secondary shrink-0" />
+                          <span>{e.subject.replace(/^\[CRM Web\]\s*/, '')}</span>
+                          {e.subject.startsWith('[CRM Web]') ? (
+                            <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider select-none">
+                              Enviado desde CRM
+                            </span>
+                          ) : (
+                            <span className="text-[9px] bg-blue-50 dark:bg-blue-955/35 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-0.5 select-none">
+                              Outlook
+                            </span>
+                          )}
                         </h4>
                         {e.email && (
                           <span className="inline-block text-[10px] text-dts-secondary font-bold">
@@ -1727,25 +1819,131 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       {/* Email Modal */}
       {showEmailModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <form onSubmit={handleCreateEmail} className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-white/5 shadow-2xl p-6 max-w-md w-full relative space-y-4 text-xs">
-            <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider">Registrar Email de Seguimiento</h3>
+          <form onSubmit={handleCreateEmail} className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-white/5 shadow-2xl p-6 max-w-2xl w-full relative space-y-4 text-xs">
+            <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider">Redactar Correo Comercial</h3>
             <div className="space-y-3">
+              {/* Recipient Selector */}
               <div>
-                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Destinatario / Remitente (Email)</label>
-                <input type="email" required value={newEmailAddress} onChange={e => setNewEmailAddress(e.target.value)} placeholder="Ej: cliente@correo.com" className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" />
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Destinatario</label>
+                {!isManualEmail ? (
+                  <select
+                    value={newEmailAddress || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'manual') {
+                        setIsManualEmail(true);
+                        setNewEmailAddress('');
+                        applyTemplateBody(selectedEmailTemplate, 'Cliente');
+                      } else {
+                        setNewEmailAddress(val);
+                        const contact = contacts?.find(c => c.email === val);
+                        const name = contact ? contact.name : 'Cliente';
+                        applyTemplateBody(selectedEmailTemplate, name);
+                      }
+                    }}
+                    className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  >
+                    <option value="">-- Seleccionar destinatario --</option>
+                    {customer?.email && (
+                      <option value={customer.email || ''}>
+                        Empresa: {customer.email}
+                      </option>
+                    )}
+                    {contacts?.filter(c => c.email).map(c => (
+                      <option key={c.id} value={c.email || ''}>
+                        {c.name} ({c.email})
+                      </option>
+                    ))}
+                    <option value="manual">✏️ Escribir correo manualmente...</option>
+                  </select>
+                ) : (
+                  <div className="flex gap-2">
+                    <input 
+                      type="email" 
+                      required 
+                      value={newEmailAddress || ''} 
+                      onChange={e => setNewEmailAddress(e.target.value)} 
+                      placeholder="Ej: cliente@correo.com" 
+                      className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs focus:outline-none focus:ring-1 focus:ring-dts-secondary" 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsManualEmail(false);
+                        setNewEmailAddress(customer?.email || '');
+                        applyTemplateBody(selectedEmailTemplate, 'Cliente');
+                      }}
+                      className="text-[10px] text-dts-secondary hover:underline whitespace-nowrap shrink-0 cursor-pointer"
+                    >
+                      Usar selector
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {/* Template Selector */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Plantilla Comercial</label>
+                <select
+                  value={selectedEmailTemplate}
+                  onChange={(e) => {
+                    const templateId = e.target.value;
+                    const contact = contacts?.find(c => c.email === newEmailAddress);
+                    const name = contact ? contact.name : 'Cliente';
+                    setSelectedEmailTemplate(templateId);
+                    applyTemplateBody(templateId, name);
+                  }}
+                  className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                >
+                  {EMAIL_TEMPLATES.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subject */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Asunto</label>
-                <input type="text" required value={newEmailSubject} onChange={e => setNewEmailSubject(e.target.value)} placeholder="Ej: Confirmación de propuesta técnica dTS..." className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" />
+                <input 
+                  type="text" 
+                  required 
+                  value={newEmailSubject} 
+                  onChange={e => setNewEmailSubject(e.target.value)} 
+                  placeholder="Ej: Presentación de soluciones dTS..." 
+                  className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs focus:outline-none focus:ring-1 focus:ring-dts-secondary" 
+                />
               </div>
+
+              {/* Body */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cuerpo del Mensaje</label>
-                <textarea required rows={5} value={newEmailBody} onChange={e => setNewEmailBody(e.target.value)} placeholder="Escribe el contenido del correo electrónico enviado..." className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" />
+                <textarea 
+                  required 
+                  rows={12} 
+                  value={newEmailBody} 
+                  onChange={e => setNewEmailBody(e.target.value)} 
+                  placeholder="Escribe el contenido del correo..." 
+                  className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs focus:outline-none focus:ring-1 focus:ring-dts-secondary font-sans leading-relaxed" 
+                />
               </div>
             </div>
+
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowEmailModal(false)} className="flex-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 text-gray-700 dark:text-white font-bold rounded-xl text-center">Cancelar</button>
-              <button type="submit" className="flex-1 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl text-center">Registrar Email</button>
+              <button 
+                type="button" 
+                onClick={() => setShowEmailModal(false)} 
+                className="flex-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 text-gray-700 dark:text-white font-bold rounded-xl text-center cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                className="flex-1 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl text-center cursor-pointer"
+              >
+                Abrir en Outlook y Registrar
+              </button>
             </div>
           </form>
         </div>
