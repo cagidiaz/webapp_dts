@@ -43,27 +43,30 @@ Vista unificada para consultar facturas y abonos de venta con soporte para filtr
 ## 6. CRM de Ofertas (Seguimiento del Pipeline Comercial)
 El módulo CRM de Ofertas permite centralizar, gestionar y dar seguimiento a las oportunidades comerciales y cotizaciones emitidas de manera interactiva.
 - **Vista Tablero (Kanban)**: Permite visualizar las ofertas agrupadas en columnas según su estado comercial actual: *Borrador*, *Enviada*, *En Negociación*, *Ganada* o *Perdida*. Facilita el avance del embudo mediante arrastrar y soltar (Drag & Drop) tarjetas entre columnas.
-- **Vista de Tabla**: Presentación tabular compacta y detallada de todas las ofertas que facilita búsquedas globales, filtros simultáneos por año, comercial asignado o tipo de oferta (Proyecto, Cliente Nuevo, Cliente Existente) y ordenamiento ágil de datos.
+- **Vista de Tabla**: Presentación tabular compacta y detallada de todas las ofertas que facilita búsquedas globales, filtros simultáneos por año, comercial asignado o tipo de oferta (Proyecto, Comercial Nuevo, Comercial Existente) y ordenamiento ágil de datos.
 - **Panel de KPIs Superiores**: Indicadores clave de rendimiento calculados reactivamente:
   - **Pipeline Activo**: Sumatorio total del importe de ofertas en estados abiertos.
   - **Previsión Ponderada**: Estimación probabilística de facturación calculada como `Sumatorio(Importe * Probabilidad / 100)`.
   - **Tasa de Cierre**: Porcentaje de éxito basado en ofertas Ganadas frente al total de cerradas.
   - **Seguimiento Vencido**: Cantidad de oportunidades activas cuya fecha de próxima acción programada es anterior a la fecha de hoy.
+- **Resumen de Pipeline y Acción Crítica Unificada (Pestaña Información)**:
+  - Muestra el sumatorio financiero del pipeline abierto y ponderado de la empresa.
+  - **Próxima Acción Crítica**: Muestra la acción pendiente más urgente de toda la empresa (unificando tareas generales de cliente, tareas específicas de ofertas y reuniones programadas en el calendario).
 - **Drawer de Detalles y Registro de Actividades**: Al hacer clic en cualquier oferta se despliega un panel lateral para:
-  - Cambiar manualmente el estado, la probabilidad de éxito (con preajustes por estado) o el tipo de oferta.
-  - Asignar fechas de cierre previsto o de seguimiento.
-  - Registrar notas y justificaciones de éxito o pérdida.
-  - Registrar bitácoras de actividades (Llamadas, Visitas, Correos, Tareas, etc.) marcándolas como completadas o pendientes.
+  - **Parámetros en una Línea**: El Estado de la oferta, la Probabilidad de éxito y el Tipo de oferta se encuentran distribuidos horizontalmente en una misma fila para optimizar el espacio.
+  - **Formulario de Planificación Local**: Los campos de "Próxima Acción", "Fecha Límite" y "Observaciones del Comercial" están agrupados en un formulario unificado que maneja estado local de React, evitando peticiones instantáneas en red al escribir, y dispone de un botón explícito de **"Guardar"**.
+  - **Sincronización Bidireccional de Tareas**: Guardar una próxima acción crea o actualiza la tarea comercial de la oferta. Completar la tarea comercial desde el Timeline o la pestaña de Tareas limpia la próxima acción de la oferta automáticamente.
 
 ## 7. Complemento de Outlook (Add-in dTS CRM)
 El Complemento de Outlook centraliza la correspondencia comercial vinculando correos directamente en el CRM de dTS Instruments desde la interfaz de Outlook (tanto en versión Web como de Escritorio).
 - **Activación en Lectura (Read Mode)**: Al abrir el panel del complemento visualizando un correo recibido, este detecta la dirección de email del remitente y busca coincidencias en la base de datos de clientes y contactos. Si encuentra una coincidencia, muestra la información del cliente, vendedor asignado y ventas totales.
 - **Activación en Redacción (Compose Mode)**: Al abrir el panel al redactar un correo nuevo o responder, detecta automáticamente la dirección del primer destinatario (campo *Para*) y busca coincidencias en el CRM.
-- **Buscador y Vinculación Manual**: Si un correo no coincide con ningún cliente o contacto registrado en el CRM, se activa la sección "Cuenta no identificada". Esta sección dispone de:
-  - **Buscador de Empresas**: Un campo de texto interactivo con búsqueda predictiva (`customerSearchInput`) que consulta la base de datos de empresas del CRM en tiempo real a medida que el usuario escribe.
-  - **Menú de Selección**: Un desplegable con las empresas coincidentes. Una vez seleccionada una empresa, el comercial puede pulsar "Vincular a esta empresa" para asociarla al contexto actual de correo.
-- **Sincronización Directa y Limpieza**: Al pulsar el botón "Registrar Email en dTS CRM", el complemento extrae el asunto, la dirección de correo y el cuerpo del mensaje. El sistema limpia de forma automática el contenido del mensaje detectando y recortando firmas, bloques de descargo de responsabilidad y el hilo de correos anteriores, y limitando el texto a un máximo de 500 caracteres (con puntos suspensivos si se excede) para guardar una nota de actividad de tipo `EMAIL` limpia, concisa y ligera en la ficha del cliente en el CRM.
-- **Seguridad y Control de Sesión**: El complemento detecta la expiración de la sesión (respuestas `401 Unauthorized` de la API). Si el token del usuario ha expirado, cierra la sesión automáticamente en el complemento y redirige al usuario al panel de inicio de sesión de forma segura.
+- **Buscador y Vinculación Manual**: Si un correo no coincide con ningún cliente o contacto registrado en el CRM, se activa la sección "Cuenta no identificada". Esta sección dispone de un buscador de empresas predictivo y un desplegable para su vinculación manual.
+- **Visualización y Conservación de la Fecha de Outlook**:
+  - **Ficha Informativa**: El complemento lee de forma nativa la fecha y hora de recepción original del correo en Outlook y la muestra en la cabecera informativa de la tarjeta del correo.
+  - **Sincronización Histórica**: Al pulsar "Registrar Email en dTS CRM", la fecha original del correo (`dateTimeCreated`) se envía al backend y se almacena en la columna `created_at` de la actividad del CRM. Esto asegura que el Timeline del cliente mantenga la cronología histórica exacta en que ocurrió el intercambio de correos, en lugar del momento de su registro manual.
+- **Sincronización Directa y Limpieza**: Al registrar, el sistema limpia de forma automática firmas, bloques legales de descargo y el hilo de correos anteriores, acotando el cuerpo del mensaje a un máximo de 500 caracteres para guardar notas ligeras.
+- **Seguridad y Control de Sesión**: Cierre de sesión automático si la llamada al API devuelve un error `401 Unauthorized`.
 
 ---
-*Manual de dTS Instruments v5.2 — Actualizado a 29 de junio 2026.*
+*Manual de dTS Instruments v5.3 — Actualizado a 30 de junio 2026.*
