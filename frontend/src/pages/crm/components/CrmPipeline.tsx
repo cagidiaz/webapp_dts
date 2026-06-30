@@ -9,6 +9,7 @@ import {
   deleteQuoteActivity, 
   type CRMQuote
 } from '../../../api/quotes';
+import { getContacts } from '../../../api/contacts';
 import { getCustomerSalespersons } from '../../../api/customers';
 import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
@@ -106,6 +107,25 @@ export const CrmPipeline: React.FC = () => {
     queryFn: () => getQuoteActivities(selectedQuote!.id),
     enabled: !!selectedQuote,
   });
+
+  const [isManualContact, setIsManualContact] = useState(false);
+
+  // Fetch contacts for the selected quote's customer
+  const { data: contacts = [] } = useQuery({
+    queryKey: ['quoteCustomerContacts', selectedQuote?.customer_no],
+    queryFn: () => getContacts({ clientId: selectedQuote!.customer_no }),
+    enabled: !!selectedQuote?.customer_no,
+  });
+
+  // Synchronize isManualContact when contacts are loaded or selectedQuote changes
+  useEffect(() => {
+    if (selectedQuote && contacts) {
+      const hasMatchingContact = contacts.some(c => c.name === selectedQuote.contacto_nombre);
+      setIsManualContact(!!selectedQuote.contacto_nombre && !hasMatchingContact);
+    } else {
+      setIsManualContact(false);
+    }
+  }, [contacts, selectedQuote]);
 
   // Mutación: Actualizar metadatos de oferta
   const updateQuoteMutation = useMutation({
@@ -338,12 +358,16 @@ export const CrmPipeline: React.FC = () => {
     });
   };
 
-  const handleFieldChange = (fieldName: string, value: any) => {
+  const handleFieldsChange = (fields: Record<string, any>) => {
     if (!selectedQuote) return;
     updateQuoteMutation.mutate({
       id: selectedQuote.id,
-      data: { [fieldName]: value }
+      data: fields
     });
+  };
+
+  const handleFieldChange = (fieldName: string, value: any) => {
+    handleFieldsChange({ [fieldName]: value });
   };
 
   const handleAddActivity = (e: React.FormEvent) => {
@@ -864,20 +888,85 @@ export const CrmPipeline: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Información del Comprador</h4>
-              <div className="space-y-3">
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <User size={14} />
+              <div className="flex justify-between items-center border-b border-gray-100 dark:border-white/10 pb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary">Información del Comprador</h4>
+                {!isManualContact && contacts && contacts.length > 0 && selectedQuote.contacto_nombre && (
+                  <span className="text-[9px] bg-emerald-100 dark:bg-emerald-955/35 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
+                    Contacto vinculado
                   </span>
-                  <input 
-                    type="text" 
-                    placeholder="Nombre del contacto"
-                    value={selectedQuote.contacto_nombre || ''}
-                    onChange={(e) => handleFieldChange('contacto_nombre', e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-                  />
-                </div>
+                )}
+              </div>
+              <div className="space-y-3">
+                {!isManualContact && contacts && contacts.length > 0 ? (
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <User size={14} />
+                    </span>
+                    <select
+                      value={contacts.find(c => c.name === selectedQuote.contacto_nombre)?.id || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'manual') {
+                          setIsManualContact(true);
+                        } else {
+                          const selectedC = contacts.find(c => c.id === val);
+                          if (selectedC) {
+                            handleFieldsChange({
+                              contacto_nombre: selectedC.name,
+                              contacto_email: selectedC.email || '',
+                              contacto_telefono: selectedC.phone_no || selectedC.mobile_no || ''
+                            });
+                          } else {
+                            handleFieldsChange({
+                              contacto_nombre: null,
+                              contacto_email: null,
+                              contacto_telefono: null
+                            });
+                          }
+                        }
+                      }}
+                      className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    >
+                      <option value="">-- Seleccionar contacto --</option>
+                      {contacts.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} {c.job_title ? `(${c.job_title})` : ''}
+                        </option>
+                      ))}
+                      <option value="manual">✏️ Escribir manualmente...</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="relative flex gap-2 items-center">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <User size={14} />
+                    </span>
+                    <input 
+                      type="text" 
+                      placeholder="Nombre del contacto"
+                      value={selectedQuote.contacto_nombre || ''}
+                      onChange={(e) => handleFieldChange('contacto_nombre', e.target.value)}
+                      className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    />
+                    {contacts && contacts.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsManualContact(false);
+                          handleFieldsChange({
+                            contacto_nombre: null,
+                            contacto_email: null,
+                            contacto_telefono: null
+                          });
+                        }}
+                        className="text-[10px] text-dts-secondary hover:underline whitespace-nowrap shrink-0 cursor-pointer"
+                      >
+                        Usar selector
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                     <Mail size={14} />
@@ -887,7 +976,8 @@ export const CrmPipeline: React.FC = () => {
                     placeholder="Email del contacto"
                     value={selectedQuote.contacto_email || ''}
                     onChange={(e) => handleFieldChange('contacto_email', e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    readOnly={!isManualContact && contacts && contacts.length > 0 && !!selectedQuote.contacto_nombre}
+                    className={`block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary ${(!isManualContact && contacts && contacts.length > 0 && !!selectedQuote.contacto_nombre) ? 'opacity-70 cursor-not-allowed select-none' : ''}`}
                   />
                 </div>
                 <div className="relative">
@@ -899,7 +989,8 @@ export const CrmPipeline: React.FC = () => {
                     placeholder="Teléfono del contacto"
                     value={selectedQuote.contacto_telefono || ''}
                     onChange={(e) => handleFieldChange('contacto_telefono', e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    readOnly={!isManualContact && contacts && contacts.length > 0 && !!selectedQuote.contacto_nombre}
+                    className={`block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary ${(!isManualContact && contacts && contacts.length > 0 && !!selectedQuote.contacto_nombre) ? 'opacity-70 cursor-not-allowed select-none' : ''}`}
                   />
                 </div>
               </div>

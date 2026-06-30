@@ -192,6 +192,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const [formFechaProximaAccion, setFormFechaProximaAccion] = useState('');
   const [formObservaciones, setFormObservaciones] = useState('');
   const [isSavingPlanning, setIsSavingPlanning] = useState(false);
+  const [isManualContact, setIsManualContact] = useState(false);
 
   const isFormPlanningDirty = useMemo(() => {
     if (!selectedQuote) return false;
@@ -298,6 +299,11 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
     setFormProximaAccion(quote.proxima_accion || '');
     setFormFechaProximaAccion(quote.fecha_proxima_accion ? quote.fecha_proxima_accion.split('T')[0] : '');
     setFormObservaciones(quote.observaciones || '');
+    
+    // Check if the contact matches any existing contact name
+    const hasMatchingContact = contacts?.some(c => c.name === quote.contacto_nombre);
+    setIsManualContact(!!quote.contacto_nombre && !hasMatchingContact);
+    
     setIsQuoteDrawerOpen(true);
   };
 
@@ -384,19 +390,25 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
     });
   };
 
+  const handleFieldsChange = (fields: Record<string, any>) => {
+    if (!selectedQuote) return;
+
+    updateFieldMutation.mutate({
+      id: selectedQuote.id,
+      data: fields
+    }, {
+      onSuccess: () => {
+        setSelectedQuote(prev => prev ? { ...prev, ...fields } : null);
+        queryClient.invalidateQueries({ queryKey: ['customerCrmQuotes', clientId] });
+      }
+    });
+  };
+
   const handleFieldChange = (fieldName: string, value: any) => {
     if (!selectedQuote) return;
 
     // 1. Guardar en la base de datos de la oferta
-    updateFieldMutation.mutate({
-      id: selectedQuote.id,
-      data: { [fieldName]: value }
-    }, {
-      onSuccess: () => {
-        setSelectedQuote(prev => prev ? { ...prev, [fieldName]: value } : null);
-        queryClient.invalidateQueries({ queryKey: ['customerCrmQuotes', clientId] });
-      }
-    });
+    handleFieldsChange({ [fieldName]: value });
 
     // 2. Sincronizar con actividades de la oferta (tipo Tarea)
     if (fieldName === 'proxima_accion' || fieldName === 'fecha_proxima_accion') {
@@ -1983,20 +1995,85 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Información del Comprador</h4>
-              <div className="space-y-3">
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <User size={14} />
+              <div className="flex justify-between items-center border-b border-gray-100 dark:border-white/10 pb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary">Información del Comprador</h4>
+                {!isManualContact && contacts && contacts.length > 0 && selectedQuote.contacto_nombre && (
+                  <span className="text-[9px] bg-emerald-100 dark:bg-emerald-955/35 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
+                    Contacto vinculado
                   </span>
-                  <input 
-                    type="text" 
-                    placeholder="Nombre del contacto"
-                    value={selectedQuote.contacto_nombre || ''}
-                    onChange={(e) => handleFieldChange('contacto_nombre', e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-                  />
-                </div>
+                )}
+              </div>
+              <div className="space-y-3">
+                {!isManualContact && contacts && contacts.length > 0 ? (
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <User size={14} />
+                    </span>
+                    <select
+                      value={contacts.find(c => c.name === selectedQuote.contacto_nombre)?.id || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'manual') {
+                          setIsManualContact(true);
+                        } else {
+                          const selectedC = contacts.find(c => c.id === val);
+                          if (selectedC) {
+                            handleFieldsChange({
+                              contacto_nombre: selectedC.name,
+                              contacto_email: selectedC.email || '',
+                              contacto_telefono: selectedC.phone_no || selectedC.mobile_no || ''
+                            });
+                          } else {
+                            handleFieldsChange({
+                              contacto_nombre: null,
+                              contacto_email: null,
+                              contacto_telefono: null
+                            });
+                          }
+                        }
+                      }}
+                      className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    >
+                      <option value="">-- Seleccionar contacto --</option>
+                      {contacts.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} {c.job_title ? `(${c.job_title})` : ''}
+                        </option>
+                      ))}
+                      <option value="manual">✏️ Escribir manualmente...</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="relative flex gap-2 items-center">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <User size={14} />
+                    </span>
+                    <input 
+                      type="text" 
+                      placeholder="Nombre del contacto"
+                      value={selectedQuote.contacto_nombre || ''}
+                      onChange={(e) => handleFieldChange('contacto_nombre', e.target.value)}
+                      className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    />
+                    {contacts && contacts.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsManualContact(false);
+                          handleFieldsChange({
+                            contacto_nombre: null,
+                            contacto_email: null,
+                            contacto_telefono: null
+                          });
+                        }}
+                        className="text-[10px] text-dts-secondary hover:underline whitespace-nowrap shrink-0 cursor-pointer"
+                      >
+                        Usar selector
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                     <Mail size={14} />
@@ -2006,7 +2083,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                     placeholder="Email del contacto"
                     value={selectedQuote.contacto_email || ''}
                     onChange={(e) => handleFieldChange('contacto_email', e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    readOnly={!isManualContact && contacts && contacts.length > 0 && !!selectedQuote.contacto_nombre}
+                    className={`block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary ${(!isManualContact && contacts && contacts.length > 0 && !!selectedQuote.contacto_nombre) ? 'opacity-70 cursor-not-allowed select-none' : ''}`}
                   />
                 </div>
                 <div className="relative">
@@ -2018,7 +2096,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                     placeholder="Teléfono del contacto"
                     value={selectedQuote.contacto_telefono || ''}
                     onChange={(e) => handleFieldChange('contacto_telefono', e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    readOnly={!isManualContact && contacts && contacts.length > 0 && !!selectedQuote.contacto_nombre}
+                    className={`block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary ${(!isManualContact && contacts && contacts.length > 0 && !!selectedQuote.contacto_nombre) ? 'opacity-70 cursor-not-allowed select-none' : ''}`}
                   />
                 </div>
               </div>
