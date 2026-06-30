@@ -70,9 +70,11 @@ export class CrmActivitiesService {
     dueDate?: string;
     timeScheduled?: string;
     email?: string;
+    createdAt?: string;
   }) {
-    const { clientId, userId, type, title, description, dueDate, timeScheduled, email } = data;
+    const { clientId, userId, type, title, description, dueDate, timeScheduled, email, createdAt } = data;
 
+    console.log(`[CRM Service] Creando actividad con tipo=${type}, title="${title}", createdAt=${createdAt || 'now()'}`);
     try {
       return await this.prisma.crm_activities.create({
         data: {
@@ -83,7 +85,8 @@ export class CrmActivitiesService {
           description: description || null,
           due_date: dueDate ? new Date(dueDate) : null,
           time_scheduled: timeScheduled || null,
-          email: email || null
+          email: email || null,
+          created_at: createdAt ? new Date(createdAt) : undefined
         }
       });
     } catch (error) {

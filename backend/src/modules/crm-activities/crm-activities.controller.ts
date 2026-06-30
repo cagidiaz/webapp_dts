@@ -46,6 +46,7 @@ export class CrmActivitiesController {
     @Body('dueDate') dueDate?: string,
     @Body('timeScheduled') timeScheduled?: string,
     @Body('email') email?: string,
+    @Body('createdAt') createdAt?: string,
   ) {
     const userId = req.user?.userId;
     return this.crmActivitiesService.create({
@@ -56,7 +57,8 @@ export class CrmActivitiesController {
       description,
       dueDate,
       timeScheduled,
-      email
+      email,
+      createdAt
     });
   }
 

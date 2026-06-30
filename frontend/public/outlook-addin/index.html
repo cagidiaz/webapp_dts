@@ -125,6 +125,7 @@
           <div class="space-y-1">
             <h3 id="mailSubject" class="font-bold text-slate-900 dark:text-white text-xs truncate">...</h3>
             <p id="mailSender" class="text-slate-500 dark:text-slate-400 text-[10px] font-medium">...</p>
+            <p id="mailDate" class="text-slate-400 dark:text-slate-500 text-[9px] font-medium mt-1">...</p>
           </div>
         </div>
 
@@ -221,6 +222,7 @@
     let activeContact = null;
     let emailSenderAddress = "";
     let emailSubject = "";
+    let emailDateTime = null;
     let areHandlersRegistered = false;
     
     // Initialize OfficeJS
@@ -296,8 +298,10 @@
         // Check if we are in Compose mode first (subject is an object with getAsync in Compose mode)
         if (item.subject && typeof item.subject.getAsync === 'function') {
           // Compose mode (Redacción)
+          emailDateTime = new Date().toISOString();
           document.getElementById('mailSender').innerText = "Destinatario: Cargando...";
           document.getElementById('mailSubject').innerText = "Asunto: Cargando...";
+          document.getElementById('mailDate').innerText = "Fecha: (Se enviará ahora)";
 
           // Fetch recipients asynchronously
           if (item.to && typeof item.to.getAsync === 'function') {
@@ -375,13 +379,24 @@
           // Read mode (Lectura)
           emailSubject = item.subject || "(Sin Asunto)";
           emailSenderAddress = item.from.emailAddress;
+          emailDateTime = item.dateTimeCreated ? new Date(item.dateTimeCreated).toISOString() : new Date().toISOString();
+          const formattedDate = new Date(emailDateTime).toLocaleString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
           document.getElementById('mailSender').innerText = `${item.from.displayName} <${emailSenderAddress}>`;
           document.getElementById('mailSubject').innerText = emailSubject;
+          document.getElementById('mailDate').innerText = `Fecha original: ${formattedDate}`;
           searchCustomerInCRM(emailSenderAddress);
         } else {
           emailSenderAddress = "";
+          emailDateTime = new Date().toISOString();
           document.getElementById('mailSender').innerText = "Borrador o destinatario desconocido";
           document.getElementById('mailSubject').innerText = "(Sin Asunto)";
+          document.getElementById('mailDate').innerText = "Fecha: ---";
           showCrmState('crmNotFound');
           loadCustomerSelector();
         }
@@ -389,8 +404,17 @@
         // Mock context for local testing outside of Outlook
         emailSubject = "Consulta de Equipamiento para Laboratorio";
         emailSenderAddress = "contacto@cliente-ejemplo.com";
+        emailDateTime = new Date().toISOString();
+        const formattedDate = new Date(emailDateTime).toLocaleString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
         document.getElementById('mailSubject').innerText = emailSubject;
         document.getElementById('mailSender').innerText = `Juan Pérez <${emailSenderAddress}>`;
+        document.getElementById('mailDate').innerText = `Fecha original: ${formattedDate}`;
         searchCustomerInCRM(emailSenderAddress);
       }
     }
@@ -636,7 +660,8 @@
             type: 'EMAIL',
             title: emailSubject,
             description: cleanedBody,
-            email: emailSenderAddress
+            email: emailSenderAddress,
+            createdAt: emailDateTime
           })
         });
 
