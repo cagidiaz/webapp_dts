@@ -35,7 +35,6 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const [editingLinkedinId, setEditingLinkedinId] = useState<string | null>(null);
   const [linkedinValue, setLinkedinValue] = useState<string>('');
   const [isSavingLinkedin, setIsSavingLinkedin] = useState<boolean>(false);
-
   // Modal show states
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -187,6 +186,23 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   // Estados para el Drawer de detalle de Oferta CRM
   const [selectedQuote, setSelectedQuote] = useState<CRMQuote | null>(null);
   const [isQuoteDrawerOpen, setIsQuoteDrawerOpen] = useState(false);
+
+  // Local state variables for Quote Drawer follow-up planning and observations (local inputs)
+  const [formProximaAccion, setFormProximaAccion] = useState('');
+  const [formFechaProximaAccion, setFormFechaProximaAccion] = useState('');
+  const [formObservaciones, setFormObservaciones] = useState('');
+  const [isSavingPlanning, setIsSavingPlanning] = useState(false);
+
+  const isFormPlanningDirty = useMemo(() => {
+    if (!selectedQuote) return false;
+    const currentAcc = selectedQuote.proxima_accion || '';
+    const currentDate = selectedQuote.fecha_proxima_accion ? selectedQuote.fecha_proxima_accion.split('T')[0] : '';
+    const currentObs = selectedQuote.observaciones || '';
+    
+    return formProximaAccion !== currentAcc ||
+           formFechaProximaAccion !== currentDate ||
+           formObservaciones !== currentObs;
+  }, [selectedQuote, formProximaAccion, formFechaProximaAccion, formObservaciones]);
   const [newQuoteActivityType, setNewQuoteActivityType] = useState('Llamada');
   const [newQuoteActivityDate, setNewQuoteActivityDate] = useState(new Date().toISOString().split('T')[0]);
   const [newQuoteActivityNotes, setNewQuoteActivityNotes] = useState('');
@@ -209,8 +225,31 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   // Mutación para añadir interacciones a la oferta
   const addQuoteActivityMutation = useMutation({
     mutationFn: (actData: any) => addQuoteActivity(selectedQuote!.id, actData),
-    onSuccess: () => {
+    onSuccess: (newAct) => {
       queryClient.invalidateQueries({ queryKey: ['crm-quote-activities', selectedQuote?.id] });
+      queryClient.invalidateQueries({ queryKey: ['customerCrmQuotes', clientId] });
+
+      // Si es una tarea comercial y no hay una acción de seguimiento asignada o la nueva es más urgente, actualizarla
+      if (selectedQuote && newAct.tipo === 'Tarea' && !newAct.hecho) {
+        const currentNextDate = selectedQuote.fecha_proxima_accion;
+        if (!selectedQuote.proxima_accion || !currentNextDate || new Date(newAct.fecha) < new Date(currentNextDate)) {
+          updateFieldMutation.mutate({
+            id: selectedQuote.id,
+            data: {
+              proxima_accion: newAct.notas,
+              fecha_proxima_accion: newAct.fecha
+            }
+          }, {
+            onSuccess: () => {
+              setSelectedQuote(prev => prev ? {
+                ...prev,
+                proxima_accion: newAct.notas,
+                fecha_proxima_accion: newAct.fecha
+              } : null);
+            }
+          });
+        }
+      }
     }
   });
 
@@ -219,21 +258,100 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
     mutationFn: deleteQuoteActivity,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm-quote-activities', selectedQuote?.id] });
+      queryClient.invalidateQueries({ queryKey: ['customerCrmQuotes', clientId] });
     }
   });
 
   // Mutación para alternar estado de tareas de la oferta
   const updateQuoteActivityMutation = useMutation({
     mutationFn: ({ activityId, data }: { activityId: string; data: any }) => updateQuoteActivity(activityId, data),
-    onSuccess: () => {
+    onSuccess: (updatedAct) => {
       queryClient.invalidateQueries({ queryKey: ['crm-quote-activities', selectedQuote?.id] });
+      queryClient.invalidateQueries({ queryKey: ['customerCrmQuotes', clientId] });
+      
+      // Si la tarea se marcó como completada, y coincide con la acción de seguimiento actual, limpiamos o actualizamos la acción de seguimiento de la oferta
+      if (selectedQuote && updatedAct.tipo === 'Tarea' && updatedAct.hecho) {
+        const remainingPending = quoteActivities.find((act: any) => act.tipo === 'Tarea' && !act.hecho && act.id !== updatedAct.id);
+        
+        updateFieldMutation.mutate({
+          id: selectedQuote.id,
+          data: {
+            proxima_accion: remainingPending ? remainingPending.notas : null,
+            fecha_proxima_accion: remainingPending ? remainingPending.fecha : null
+          }
+        }, {
+          onSuccess: () => {
+            setSelectedQuote(prev => prev ? {
+              ...prev,
+              proxima_accion: remainingPending ? remainingPending.notas : null,
+              fecha_proxima_accion: remainingPending ? remainingPending.fecha : null
+            } : null);
+          }
+        });
+      }
     }
   });
 
   // Handlers para el Drawer
   const openQuoteDrawer = (quote: CRMQuote) => {
     setSelectedQuote(quote);
+    setFormProximaAccion(quote.proxima_accion || '');
+    setFormFechaProximaAccion(quote.fecha_proxima_accion ? quote.fecha_proxima_accion.split('T')[0] : '');
+    setFormObservaciones(quote.observaciones || '');
     setIsQuoteDrawerOpen(true);
+  };
+
+  const handleSavePlanning = () => {
+    if (!selectedQuote) return;
+    setIsSavingPlanning(true);
+
+    // 1. Guardar en la base de datos de la oferta
+    updateFieldMutation.mutate({
+      id: selectedQuote.id,
+      data: {
+        proxima_accion: formProximaAccion,
+        fecha_proxima_accion: formFechaProximaAccion || null,
+        observaciones: formObservaciones
+      }
+    }, {
+      onSuccess: () => {
+        setSelectedQuote(prev => prev ? {
+          ...prev,
+          proxima_accion: formProximaAccion,
+          fecha_proxima_accion: formFechaProximaAccion || null,
+          observaciones: formObservaciones
+        } : null);
+        queryClient.invalidateQueries({ queryKey: ['customerCrmQuotes', clientId] });
+        setIsSavingPlanning(false);
+      },
+      onError: () => {
+        setIsSavingPlanning(false);
+      }
+    });
+
+    // 2. Sincronizar con actividades de la oferta (tipo Tarea)
+    const pendingTask = quoteActivities.find((act: any) => act.tipo === 'Tarea' && !act.hecho);
+
+    if (pendingTask) {
+      if (!formProximaAccion || !formProximaAccion.trim()) {
+        deleteQuoteActivityMutation.mutate(pendingTask.id);
+      } else {
+        updateQuoteActivityMutation.mutate({
+          activityId: pendingTask.id,
+          data: {
+            notas: formProximaAccion,
+            fecha: formFechaProximaAccion ? new Date(formFechaProximaAccion).toISOString() : new Date().toISOString()
+          }
+        });
+      }
+    } else if (formProximaAccion && formProximaAccion.trim()) {
+      addQuoteActivityMutation.mutate({
+        tipo: 'Tarea',
+        notas: formProximaAccion,
+        fecha: formFechaProximaAccion ? new Date(formFechaProximaAccion).toISOString() : new Date().toISOString(),
+        hecho: false
+      });
+    }
   };
 
   const handleStageChange = (newStage: string) => {
@@ -268,14 +386,46 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
 
   const handleFieldChange = (fieldName: string, value: any) => {
     if (!selectedQuote) return;
+
+    // 1. Guardar en la base de datos de la oferta
     updateFieldMutation.mutate({
       id: selectedQuote.id,
       data: { [fieldName]: value }
     }, {
       onSuccess: () => {
         setSelectedQuote(prev => prev ? { ...prev, [fieldName]: value } : null);
+        queryClient.invalidateQueries({ queryKey: ['customerCrmQuotes', clientId] });
       }
     });
+
+    // 2. Sincronizar con actividades de la oferta (tipo Tarea)
+    if (fieldName === 'proxima_accion' || fieldName === 'fecha_proxima_accion') {
+      const nextAccText = fieldName === 'proxima_accion' ? value : (selectedQuote.proxima_accion || '');
+      const nextAccDate = fieldName === 'fecha_proxima_accion' ? value : (selectedQuote.fecha_proxima_accion || '');
+
+      const pendingTask = quoteActivities.find((act: any) => act.tipo === 'Tarea' && !act.hecho);
+
+      if (pendingTask) {
+        if (!nextAccText || !nextAccText.trim()) {
+          deleteQuoteActivityMutation.mutate(pendingTask.id);
+        } else {
+          updateQuoteActivityMutation.mutate({
+            activityId: pendingTask.id,
+            data: {
+              notas: nextAccText,
+              fecha: nextAccDate ? new Date(nextAccDate).toISOString() : new Date().toISOString()
+            }
+          });
+        }
+      } else if (nextAccText && nextAccText.trim()) {
+        addQuoteActivityMutation.mutate({
+          tipo: 'Tarea',
+          notas: nextAccText,
+          fecha: nextAccDate ? new Date(nextAccDate).toISOString() : new Date().toISOString(),
+          hecho: false
+        });
+      }
+    }
   };
 
   const handleAddQuoteActivity = (e: React.FormEvent) => {
@@ -296,15 +446,52 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
 
   // Derived tasks, notes, emails, and events lists to maintain UI compatibility
   const tasks = useMemo(() => {
-    return dbActivities
+    const list: {
+      id: string;
+      title: string;
+      date: string;
+      done: boolean;
+      isQuoteTask?: boolean;
+      quoteNo?: string;
+      quoteId?: string;
+      activityId?: string;
+      quoteObj?: CRMQuote;
+    }[] = [];
+
+    // General tasks
+    dbActivities
       .filter(act => act.type === 'TASK')
-      .map(act => ({
-        id: act.id,
-        title: act.title,
-        date: act.due_date ? act.due_date.split('T')[0] : '',
-        done: act.is_completed
-      }));
-  }, [dbActivities]);
+      .forEach(act => {
+        list.push({
+          id: act.id,
+          title: act.title,
+          date: act.due_date ? act.due_date.split('T')[0] : '',
+          done: act.is_completed,
+          isQuoteTask: false
+        });
+      });
+
+    // Quote tasks
+    filteredCrmQuotes.forEach(quote => {
+      (quote.activities || [])
+        .filter(act => (act.tipo || '').toLowerCase() === 'tarea')
+        .forEach(act => {
+          list.push({
+            id: `quote-task-${act.id}`,
+            title: act.notas,
+            date: act.fecha ? act.fecha.split('T')[0] : '',
+            done: act.hecho,
+            isQuoteTask: true,
+            quoteNo: quote.document_no,
+            quoteId: quote.id,
+            activityId: act.id,
+            quoteObj: quote
+          });
+        });
+    });
+
+    return list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [dbActivities, filteredCrmQuotes]);
 
   const notes = useMemo(() => {
     return dbActivities
@@ -352,6 +539,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       iconColor: string;
       showTime?: boolean;
       email?: string;
+      quoteNo?: string;
+      quoteObj?: CRMQuote;
     }[] = [];
 
     notes.forEach(n => {
@@ -368,7 +557,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       });
     });
 
-    tasks.forEach(t => {
+    tasks.filter(t => !t.isQuoteTask).forEach(t => {
       list.push({
         id: `task-${t.id}`,
         type: 'task',
@@ -411,8 +600,114 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       });
     });
 
+    // Add quote-specific activities
+    filteredCrmQuotes.forEach(quote => {
+      (quote.activities || []).forEach(act => {
+        let typeVal: 'note' | 'task' | 'email' | 'event' = 'note';
+        let IconComponent: any = FileText;
+        let bg = 'bg-amber-100 dark:bg-amber-955/20';
+        let color = 'text-amber-600 dark:text-amber-400';
+        
+        const actType = (act.tipo || '').toLowerCase();
+        if (actType === 'llamada') {
+          IconComponent = Phone;
+          bg = 'bg-cyan-100 dark:bg-cyan-955/20';
+          color = 'text-cyan-600 dark:text-cyan-400';
+        } else if (actType === 'email') {
+          typeVal = 'email';
+          IconComponent = Send;
+          bg = 'bg-purple-100 dark:bg-purple-955/20';
+          color = 'text-purple-600 dark:text-purple-400';
+        } else if (actType === 'reunión') {
+          typeVal = 'event';
+          IconComponent = CalendarIcon;
+          bg = 'bg-rose-100 dark:bg-rose-955/20';
+          color = 'text-rose-600 dark:text-rose-400';
+        } else if (actType === 'tarea') {
+          typeVal = 'task';
+          IconComponent = CheckSquare;
+          bg = act.hecho ? 'bg-emerald-100 dark:bg-emerald-955/20' : 'bg-blue-100 dark:bg-blue-955/20';
+          color = act.hecho ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400';
+        }
+
+        list.push({
+          id: `quote-activity-${act.id}`,
+          type: typeVal,
+          title: `[Oferta ${quote.document_no}] - ${act.tipo}`,
+          description: act.notas,
+          date: act.fecha,
+          icon: IconComponent,
+          iconBg: bg,
+          iconColor: color,
+          showTime: actType !== 'tarea',
+          quoteNo: quote.document_no,
+          quoteObj: quote
+        });
+      });
+    });
+
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [notes, tasks, emails, events]);
+  }, [notes, tasks, emails, events, filteredCrmQuotes]);
+
+  // Compute aggregated commercial pipeline statistics (Idea 5)
+  const pipelineStats = useMemo(() => {
+    const openQuotes = filteredCrmQuotes.filter(
+      q => {
+        const est = (q.estado_oferta || '').toLowerCase().trim();
+        return est !== 'ganada' && est !== 'perdida';
+      }
+    );
+
+    const pipelineTotal = openQuotes.reduce((acc, q) => acc + Number(q.amount || 0), 0);
+    const weightedTotal = openQuotes.reduce((acc, q) => acc + Number(q.valor_oferta_ponderado || 0), 0);
+
+    // Consolidated list of all pending / upcoming actions
+    const upcomingActions: {
+      title: string;
+      date: string;
+      type: 'general_task' | 'quote_task' | 'event';
+      quoteNo?: string;
+      quoteObj?: any;
+    }[] = [];
+
+    // 1. Pending tasks (both general tasks and quote tasks)
+    tasks.filter(t => !t.done).forEach(t => {
+      upcomingActions.push({
+        title: t.isQuoteTask ? `Tarea: ${t.title}` : `Tarea general: ${t.title}`,
+        date: t.date ? `${t.date}T00:00:00Z` : '',
+        type: t.isQuoteTask ? 'quote_task' : 'general_task',
+        quoteNo: t.quoteNo,
+        quoteObj: t.quoteObj
+      });
+    });
+
+    // 2. Upcoming events / meetings
+    events.forEach(ev => {
+      const evDateStr = ev.date + 'T' + ev.time + ':00';
+      upcomingActions.push({
+        title: `Reunión: ${ev.title}`,
+        date: evDateStr,
+        type: 'event'
+      });
+    });
+
+    // Sort by date ascending (closest first)
+    const sortedActions = upcomingActions
+      .filter(a => a.date)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const nextActionObj = sortedActions[0] || null;
+
+    return {
+      openCount: openQuotes.length,
+      pipelineTotal,
+      weightedTotal,
+      nextAction: nextActionObj ? nextActionObj.title : null,
+      nextActionDate: nextActionObj ? nextActionObj.date : null,
+      nextActionQuote: nextActionObj && nextActionObj.quoteObj ? nextActionObj.quoteObj : null,
+      nextActionType: nextActionObj ? nextActionObj.type : null
+    };
+  }, [filteredCrmQuotes, tasks, events]);
 
   // Queries
   const { data: customer, isLoading: isLoadingCustomer } = useQuery({
@@ -496,17 +791,42 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   };
 
   const toggleTask = (id: string) => {
-    const task = dbActivities.find(act => act.id === id);
-    if (task) {
-      updateActivityMutation.mutate({
-        id,
-        payload: { isCompleted: !task.is_completed }
+    if (id.startsWith('quote-task-')) {
+      const actId = id.replace('quote-task-', '');
+      let foundAct: any = null;
+      let quoteId: string = '';
+      filteredCrmQuotes.forEach(q => {
+        const act = (q.activities || []).find(a => a.id === actId);
+        if (act) {
+          foundAct = act;
+          quoteId = q.id;
+        }
       });
+
+      if (foundAct && quoteId) {
+        updateQuoteActivityMutation.mutate({
+          activityId: actId,
+          data: { hecho: !foundAct.hecho }
+        });
+      }
+    } else {
+      const task = dbActivities.find(act => act.id === id);
+      if (task) {
+        updateActivityMutation.mutate({
+          id,
+          payload: { isCompleted: !task.is_completed }
+        });
+      }
     }
   };
 
   const deleteTask = (id: string) => {
-    deleteActivityMutation.mutate(id);
+    if (id.startsWith('quote-task-')) {
+      const actId = id.replace('quote-task-', '');
+      deleteQuoteActivityMutation.mutate(actId);
+    } else {
+      deleteActivityMutation.mutate(id);
+    }
   };
 
   const startEditActivity = (act: any) => {
@@ -643,7 +963,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         
         {/* Info Tab */}
         {activeTab === 'info' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* General Info */}
             <div className="space-y-6">
               <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-2">
@@ -805,6 +1125,125 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                 </div>
               )}
             </div>
+
+            {/* Resumen del Pipeline Comercial - Idea 5 */}
+            <div className="space-y-6 lg:col-span-1">
+              <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-2 flex justify-between items-center">
+                <span>Pipeline Comercial</span>
+                <button
+                  onClick={() => setActiveTab('quotes')}
+                  className="text-[10px] font-bold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  Ver Embudo
+                </button>
+              </h3>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 dark:bg-white/1 rounded-xl border border-gray-100 dark:border-white/5">
+                    <span className="text-[9px] text-gray-400 font-bold uppercase block">Pipeline Abierto</span>
+                    <span className="text-xs font-black font-mono text-gray-900 dark:text-white block mt-1">
+                      {formatCurrency(pipelineStats.pipelineTotal, 0)}
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-medium block mt-0.5">
+                      {pipelineStats.openCount} {pipelineStats.openCount === 1 ? 'oferta' : 'ofertas'}
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-dts-secondary/5 rounded-xl border border-dts-secondary/10">
+                    <span className="text-[9px] text-dts-secondary font-bold uppercase block">Previsión Ponderada</span>
+                    <span className="text-xs font-black font-mono text-dts-secondary block mt-1">
+                      {formatCurrency(pipelineStats.weightedTotal, 0)}
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-medium block mt-0.5">
+                      Ponderado
+                    </span>
+                  </div>
+                </div>
+
+                {pipelineStats.nextAction ? (
+                  <div className="p-4 bg-amber-500/5 rounded-xl border border-amber-500/10 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <span className="text-[9px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-wider block">
+                        Próxima Acción Crítica
+                      </span>
+                      <span className="text-[9px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded font-mono font-bold">
+                        {new Date(pipelineStats.nextActionDate!).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                      {pipelineStats.nextAction}
+                    </p>
+                    <div className="flex justify-between items-center pt-1.5 border-t border-amber-500/10 text-[10px]">
+                      <span className="text-gray-400">
+                        {pipelineStats.nextActionQuote ? (
+                          <>Oferta: <span className="font-mono font-semibold text-gray-500">{pipelineStats.nextActionQuote?.document_no}</span></>
+                        ) : (
+                          <span className="italic text-[9px] font-bold text-slate-500 uppercase">
+                            Acción general
+                          </span>
+                        )}
+                      </span>
+                      {pipelineStats.nextActionQuote ? (
+                        <button
+                          onClick={() => {
+                            setActiveTab('quotes');
+                            if (pipelineStats.nextActionQuote) {
+                              openQuoteDrawer(pipelineStats.nextActionQuote);
+                            }
+                          }}
+                          className="text-dts-secondary font-bold hover:underline cursor-pointer"
+                        >
+                          Gestionar
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setActiveTab(pipelineStats.nextActionType === 'event' ? 'calendar' : 'tasks');
+                          }}
+                          className="text-dts-secondary font-bold hover:underline cursor-pointer"
+                        >
+                          Ver en {pipelineStats.nextActionType === 'event' ? 'Calendario' : 'Tareas'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-gray-50 dark:bg-white/1 border border-dashed border-gray-200 dark:border-white/5 rounded-xl text-center py-6">
+                    <span className="text-xs text-gray-400 italic block">No hay acciones de seguimiento pendientes</span>
+                    <button
+                      onClick={() => setActiveTab('quotes')}
+                      className="mt-2 text-[10px] font-bold text-dts-secondary hover:underline cursor-pointer"
+                    >
+                      Planificar una en el embudo
+                    </button>
+                  </div>
+                )}
+
+                {/* Quick stats list */}
+                <div className="p-4 bg-gray-50 dark:bg-white/1 rounded-xl border border-gray-100 dark:border-white/5 text-xs space-y-2.5">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Ofertas Ganadas:</span>
+                    <span className="font-bold text-emerald-500">
+                      {filteredCrmQuotes.filter(q => q.estado_oferta?.toLowerCase() === 'ganada').length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Ofertas Perdidas:</span>
+                    <span className="font-bold text-rose-500">
+                      {filteredCrmQuotes.filter(q => q.estado_oferta?.toLowerCase() === 'perdida').length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Total en Negociación:</span>
+                    <span className="font-bold text-amber-500">
+                      {filteredCrmQuotes.filter(q => q.estado_oferta?.toLowerCase() === 'en negociación').length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -924,8 +1363,13 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                         className="rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary/50 w-4 h-4" 
                       />
                       <div>
-                        <p className={`font-semibold ${t.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>
-                          {t.title}
+                        <p className={`font-semibold ${t.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'} flex items-center gap-2 flex-wrap`}>
+                          <span>{t.title}</span>
+                          {t.isQuoteTask && t.quoteNo && (
+                            <span className="text-[9px] font-black uppercase bg-dts-secondary/15 text-dts-secondary px-1.5 py-0.2 rounded-md">
+                              Oferta #{t.quoteNo}
+                            </span>
+                          )}
                         </p>
                         <span className={`text-[10px] flex items-center gap-1 mt-0.5 ${
                           !t.done && new Date(t.date) < new Date() ? 'text-rose-500 font-bold' : 'text-gray-400'
@@ -935,13 +1379,26 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => startEditActivity(t)} 
-                        className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer"
-                        title="Editar Tarea"
-                      >
-                        <Edit2 size={13} />
-                      </button>
+                      {t.isQuoteTask ? (
+                        <button 
+                          onClick={() => {
+                            setActiveTab('quotes');
+                            if (t.quoteObj) openQuoteDrawer(t.quoteObj);
+                          }} 
+                          className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+                          title="Gestionar en Oferta"
+                        >
+                          <Edit2 size={13} /> <span className="hidden sm:inline">Ver Oferta</span>
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => startEditActivity(t)} 
+                          className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer"
+                          title="Editar Tarea"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                      )}
                       <button 
                         onClick={() => deleteTask(t.id)} 
                         className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
@@ -1052,7 +1509,20 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                       {/* Right: Content details */}
                       <div className="flex-1 pb-4">
                         <div className="bg-gray-50/50 dark:bg-white/2 p-3.5 rounded-xl border border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35 transition-all duration-200 shadow-xs">
-                          <span className="font-bold text-gray-900 dark:text-white text-xs block mb-1">{act.title}</span>
+                          <div className="flex justify-between items-start flex-wrap gap-2 mb-1">
+                            <span className="font-bold text-gray-900 dark:text-white text-xs">{act.title}</span>
+                            {act.quoteNo && act.quoteObj && (
+                              <button
+                                onClick={() => {
+                                  setActiveTab('quotes');
+                                  openQuoteDrawer(act.quoteObj!);
+                                }}
+                                className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider bg-dts-secondary/10 hover:bg-dts-secondary/20 text-dts-secondary px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                              >
+                                Ver Oferta
+                              </button>
+                            )}
+                          </div>
                           {act.type === 'email' && act.email && (
                             <span className="inline-block text-[10px] bg-dts-secondary/10 dark:bg-dts-secondary/5 text-dts-secondary px-1.5 py-0.5 rounded font-bold border border-dts-secondary/20 mb-1">
                               Para/De: {act.email}
@@ -1420,6 +1890,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
               <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Parámetros Comerciales</h4>
               
               <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Estado de la Oferta</label>
                   <select 
@@ -1460,6 +1931,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                     <option value="cliente existente">Cliente Existente</option>
                   </select>
                 </div>
+              </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1552,40 +2024,61 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Planificación de Seguimiento</h4>
-              <div className="space-y-3 bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">
+            {/* Planificación de Seguimiento y Observaciones - Formulario Unificado con Guardar */}
+            <div className="space-y-4 bg-slate-50 dark:bg-white/2 p-4 rounded-xl border border-slate-100 dark:border-white/5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary pb-1 flex justify-between items-center">
+                <span>Planificación y Observaciones</span>
+                {isFormPlanningDirty && (
+                  <span className="text-[9px] bg-amber-100 dark:bg-amber-955/35 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Cambios sin guardar
+                  </span>
+                )}
+              </h4>
+              
+              <div className="space-y-3 pt-2">
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Próxima Acción Pendiente</label>
                   <input 
                     type="text" 
                     placeholder="Ej. Llamar para negociar plazos de entrega..."
-                    value={selectedQuote.proxima_accion || ''}
-                    onChange={(e) => handleFieldChange('proxima_accion', e.target.value)}
-                    className="block w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    value={formProximaAccion}
+                    onChange={(e) => setFormProximaAccion(e.target.value)}
+                    className="block w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Fecha Límite</label>
                   <input 
                     type="date" 
-                    value={selectedQuote.fecha_proxima_accion ? selectedQuote.fecha_proxima_accion.split('T')[0] : ''}
-                    onChange={(e) => handleFieldChange('fecha_proxima_accion', e.target.value || null)}
-                    className="block w-full px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    value={formFechaProximaAccion}
+                    onChange={(e) => setFormFechaProximaAccion(e.target.value)}
+                    className="block w-full px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
                   />
                 </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Observaciones del Comercial</label>
+                  <textarea 
+                    placeholder="Escribe comentarios generales o notas adicionales sobre la negociación..."
+                    value={formObservaciones}
+                    onChange={(e) => setFormObservaciones(e.target.value)}
+                    rows={3}
+                    className="w-full bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  />
+                </div>
+                
+                <button
+                  type="button"
+                  disabled={!isFormPlanningDirty || isSavingPlanning}
+                  onClick={handleSavePlanning}
+                  className={`w-full py-2 rounded-lg font-bold text-xs cursor-pointer transition-all ${
+                    isFormPlanningDirty && !isSavingPlanning
+                      ? 'bg-dts-secondary hover:brightness-110 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-white/5 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {isSavingPlanning ? 'Guardando...' : 'Guardar'}
+                </button>
               </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Observaciones del Comercial</label>
-              <textarea 
-                placeholder="Escribe comentarios generales o notas adicionales sobre la negociación..."
-                value={selectedQuote.observaciones || ''}
-                onChange={(e) => handleFieldChange('observaciones', e.target.value)}
-                rows={3}
-                className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-              />
             </div>
 
             <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-white/10">
