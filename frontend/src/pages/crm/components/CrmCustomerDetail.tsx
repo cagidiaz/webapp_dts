@@ -120,7 +120,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   });
 
   const updateActivityMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: { isCompleted?: boolean; title?: string; description?: string; dueDate?: string; timeScheduled?: string } }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: { isCompleted?: boolean; title?: string; description?: string; dueDate?: string; timeScheduled?: string; conclusions?: string | null } }) =>
       updateCrmActivity(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmActivities', clientId] });
@@ -502,6 +502,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       quoteId?: string;
       activityId?: string;
       quoteObj?: CRMQuote;
+      conclusions?: string | null;
     }[] = [];
 
     // General tasks
