@@ -32,6 +32,8 @@ export const SalesInvoicesPage: React.FC = () => {
   const { setPageInfo } = useUIStore();
   const [showCharts, setShowCharts] = useState(true);
   const [viewType, setViewType] = useState<'detail' | 'comparison'>('detail');
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Global filters state (affecting both graphs and detailed table)
   const [selectedYears, setSelectedYears] = useState<number[]>([new Date().getFullYear()]);
@@ -387,58 +389,165 @@ export const SalesInvoicesPage: React.FC = () => {
       return;
     }
 
-    const result = await getAllSalesDocuments({
-      take: 99999,
-      skip: 0,
-      search: debouncedSearch,
-      type: docTypeFilter || undefined,
-      years: selectedYears,
-      months: selectedMonths,
-      sortBy,
-      sortDir,
-    });
+    // Para la vista detallada, abrimos el modal de selección de exportación
+    setShowExportModal(true);
+  };
 
-    const exportRows = result.data.map(doc => {
-      const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB');
-      const multiplier = isAbono ? -1 : 1;
-      return {
-        posting_date: doc.posting_date ? new Date(doc.posting_date).toLocaleDateString('es-ES') : '---',
-        document_no: doc.document_no,
-        document_type: isAbono ? 'Abono' : 'Factura',
-        customer_no: doc.customer_no,
-        customer_name: doc.customer?.name || '---',
-        your_reference: doc.your_reference || '---',
-        order_no: doc.order_no || '---',
-        external_doc_no: doc.external_doc_no || '---',
-        shipment_no: doc.shipment_no || '---',
-        payment_terms_code: doc.payment_terms_code || '---',
-        payment_method_code: doc.payment_method_code || '---',
-        total_amount_excl_vat: Number(doc.total_amount_excl_vat || 0) * multiplier,
-        total_vat_amount: Number(doc.total_vat_amount || 0) * multiplier,
-        total_amount_incl_vat: Number(doc.total_amount_incl_vat || 0) * multiplier,
-        invoice_margen: Number(doc.invoice_margen || 0)
-      };
-    });
+  const exportHeaders = async () => {
+    setIsExporting(true);
+    try {
+      const result = await getAllSalesDocuments({
+        take: 99999,
+        skip: 0,
+        search: debouncedSearch,
+        type: docTypeFilter || undefined,
+        years: selectedYears,
+        months: selectedMonths,
+        sortBy,
+        sortDir,
+      });
 
-    const columns = [
-      { key: 'posting_date', label: 'Fecha Registro' },
-      { key: 'document_no', label: 'Nº Documento' },
-      { key: 'document_type', label: 'Tipo Documento' },
-      { key: 'customer_no', label: 'Cód. Cliente' },
-      { key: 'customer_name', label: 'Nombre Cliente' },
-      { key: 'your_reference', label: 'Referencia' },
-      { key: 'order_no', label: 'Pedido Origen' },
-      { key: 'external_doc_no', label: 'Doc. Externo Cliente' },
-      { key: 'shipment_no', label: 'Nº Albarán' },
-      { key: 'payment_terms_code', label: 'Términos Pago' },
-      { key: 'payment_method_code', label: 'Método Pago' },
-      { key: 'total_amount_excl_vat', label: 'Importe Neto (€)' },
-      { key: 'total_vat_amount', label: 'IVA (€)' },
-      { key: 'total_amount_incl_vat', label: 'Total Documento (€)' },
-      { key: 'invoice_margen', label: 'Margen LDR (%)' }
-    ];
+      const exportRows = result.data.map(doc => {
+        const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB');
+        const multiplier = isAbono ? -1 : 1;
+        return {
+          posting_date: doc.posting_date ? new Date(doc.posting_date).toLocaleDateString('es-ES') : '---',
+          document_no: doc.document_no,
+          document_type: isAbono ? 'Abono' : 'Factura',
+          customer_no: doc.customer_no,
+          customer_name: doc.customer?.name || '---',
+          your_reference: doc.your_reference || '---',
+          order_no: doc.order_no || '---',
+          external_doc_no: doc.external_doc_no || '---',
+          shipment_no: doc.shipment_no || '---',
+          payment_terms_code: doc.payment_terms_code || '---',
+          payment_method_code: doc.payment_method_code || '---',
+          total_amount_excl_vat: Number(doc.total_amount_excl_vat || 0) * multiplier,
+          total_vat_amount: Number(doc.total_vat_amount || 0) * multiplier,
+          total_amount_incl_vat: Number(doc.total_amount_incl_vat || 0) * multiplier,
+          invoice_margen: Number(doc.invoice_margen || 0)
+        };
+      });
 
-    exportToXlsx(exportRows, columns, 'historico_facturas_venta');
+      const columns = [
+        { key: 'posting_date', label: 'Fecha Registro' },
+        { key: 'document_no', label: 'Nº Documento' },
+        { key: 'document_type', label: 'Tipo Documento' },
+        { key: 'customer_no', label: 'Cód. Cliente' },
+        { key: 'customer_name', label: 'Nombre Cliente' },
+        { key: 'your_reference', label: 'Referencia' },
+        { key: 'order_no', label: 'Pedido Origen' },
+        { key: 'external_doc_no', label: 'Doc. Externo Cliente' },
+        { key: 'shipment_no', label: 'Nº Albarán' },
+        { key: 'payment_terms_code', label: 'Términos Pago' },
+        { key: 'payment_method_code', label: 'Método Pago' },
+        { key: 'total_amount_excl_vat', label: 'Importe Neto (€)' },
+        { key: 'total_vat_amount', label: 'IVA (€)' },
+        { key: 'total_amount_incl_vat', label: 'Total Documento (€)' },
+        { key: 'invoice_margen', label: 'Margen LDR (%)' }
+      ];
+
+      exportToXlsx(exportRows, columns, 'historico_facturas_venta');
+      setShowExportModal(false);
+    } catch (error) {
+      console.error('Error al exportar cabeceras:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const exportLines = async () => {
+    setIsExporting(true);
+    try {
+      const result = await getAllSalesDocuments({
+        take: 99999,
+        skip: 0,
+        search: debouncedSearch,
+        type: docTypeFilter || undefined,
+        years: selectedYears,
+        months: selectedMonths,
+        sortBy,
+        sortDir,
+      });
+
+      const exportRows: any[] = [];
+      result.data.forEach(doc => {
+        const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB');
+        const multiplier = isAbono ? -1 : 1;
+
+        if (doc.lines && doc.lines.length > 0) {
+          doc.lines.forEach(line => {
+            const qty = Number(line.quantity || 0) * multiplier;
+            const lineAmt = Number(line.line_amount || 0) * multiplier;
+            const lineDisc = Number(line.line_disc_amount || 0) * multiplier;
+
+            exportRows.push({
+              posting_date: doc.posting_date ? new Date(doc.posting_date).toLocaleDateString('es-ES') : '---',
+              document_no: doc.document_no,
+              document_type: isAbono ? 'Abono' : 'Factura',
+              customer_no: doc.customer_no,
+              customer_name: doc.customer?.name || '---',
+              your_reference: doc.your_reference || '---',
+              line_no: line.line_no || '---',
+              type: line.type || '---',
+              product_no: line.product_no || '---',
+              description: line.product?.description || '---',
+              quantity: qty,
+              unit_price: Number(line.unit_price || 0),
+              line_disc_percent: Number(line.line_disc_percent || 0),
+              line_disc_amount: lineDisc,
+              line_amount: lineAmt,
+              margen_percent_ldr: Number(line.margen_percent_ldr || 0)
+            });
+          });
+        } else {
+          exportRows.push({
+            posting_date: doc.posting_date ? new Date(doc.posting_date).toLocaleDateString('es-ES') : '---',
+            document_no: doc.document_no,
+            document_type: isAbono ? 'Abono' : 'Factura',
+            customer_no: doc.customer_no,
+            customer_name: doc.customer?.name || '---',
+            your_reference: doc.your_reference || '---',
+            line_no: '---',
+            type: '---',
+            product_no: '---',
+            description: 'Sin líneas detalladas',
+            quantity: 0,
+            unit_price: 0,
+            line_disc_percent: 0,
+            line_disc_amount: 0,
+            line_amount: Number(doc.total_amount_excl_vat || 0) * multiplier,
+            margen_percent_ldr: Number(doc.invoice_margen || 0)
+          });
+        }
+      });
+
+      const columns = [
+        { key: 'posting_date', label: 'Fecha Registro' },
+        { key: 'document_no', label: 'Nº Documento' },
+        { key: 'document_type', label: 'Tipo Documento' },
+        { key: 'customer_no', label: 'Cód. Cliente' },
+        { key: 'customer_name', label: 'Nombre Cliente' },
+        { key: 'your_reference', label: 'Referencia' },
+        { key: 'line_no', label: 'Nº Línea' },
+        { key: 'type', label: 'Tipo Línea' },
+        { key: 'product_no', label: 'Cód. Producto/Cuenta' },
+        { key: 'description', label: 'Descripción' },
+        { key: 'quantity', label: 'Cantidad' },
+        { key: 'unit_price', label: 'Precio Unitario (€)' },
+        { key: 'line_disc_percent', label: 'Descuento Línea (%)' },
+        { key: 'line_disc_amount', label: 'Descuento Línea (€)' },
+        { key: 'line_amount', label: 'Importe Línea Neto (€)' },
+        { key: 'margen_percent_ldr', label: 'Margen Línea LDR (%)' }
+      ];
+
+      exportToXlsx(exportRows, columns, 'historico_lineas_factura_venta');
+      setShowExportModal(false);
+    } catch (error) {
+      console.error('Error al exportar líneas:', error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Recharts colors
@@ -1079,6 +1188,88 @@ export const SalesInvoicesPage: React.FC = () => {
                 className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-card-dark text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
               >
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Exportación */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-300">
+          <div 
+            className="bg-white dark:bg-[#121c24] rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-800 transform scale-100 transition-transform duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Receipt size={18} className="text-dts-secondary" />
+                <h3 className="text-sm font-extrabold uppercase tracking-wider text-dts-primary dark:text-white">
+                  Opciones de Exportación
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowExportModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                disabled={isExporting}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Selecciona cómo deseas exportar los datos del histórico de facturación actual a un archivo Excel (.xlsx):
+              </p>
+
+              <div className="grid grid-cols-1 gap-3">
+                {/* Opción Cabeceras */}
+                <button
+                  onClick={exportHeaders}
+                  disabled={isExporting}
+                  className="flex flex-col items-start p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 hover:bg-dts-secondary/5 hover:border-dts-secondary dark:bg-white/5 dark:hover:bg-white/10 text-left transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="text-xs font-bold text-dts-primary dark:text-white group-hover:text-dts-secondary transition-colors">
+                    Exportar Facturas (Cabeceras)
+                  </span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                    Crea un registro consolidado por cada factura o abono. Incluye importes netos globales, impuestos y totales.
+                  </span>
+                </button>
+
+                {/* Opción Líneas */}
+                <button
+                  onClick={exportLines}
+                  disabled={isExporting}
+                  className="flex flex-col items-start p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 hover:bg-dts-secondary/5 hover:border-dts-secondary dark:bg-white/5 dark:hover:bg-white/10 text-left transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="text-xs font-bold text-dts-primary dark:text-white group-hover:text-dts-secondary transition-colors">
+                    Exportar Líneas de Facturas
+                  </span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                    Crea una fila detallada por cada artículo o cuenta contable facturada. Permite auditar descripciones y precios unitarios.
+                  </span>
+                </button>
+              </div>
+
+              {isExporting && (
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <Loader2 className="animate-spin text-dts-secondary" size={16} />
+                  <span className="text-xs text-dts-secondary font-semibold">Generando archivo Excel...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-end bg-gray-50/30 dark:bg-transparent">
+              <button 
+                onClick={() => setShowExportModal(false)}
+                disabled={isExporting}
+                className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-card-dark text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all disabled:opacity-50"
+              >
+                Cancelar
               </button>
             </div>
           </div>

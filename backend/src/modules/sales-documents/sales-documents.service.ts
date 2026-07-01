@@ -346,43 +346,47 @@ export class SalesDocumentsService {
             if (typeLower === 'item') {
               yearlyBreakdown[year][month].itemsTotal += lineAmt;
             } else if (typeLower === 'g/l account') {
-              if (!isPrepay) {
-                accountsAmount += lineAmt;
-                if (lineAmt > 0) {
-                  accountsPositiveAmount += lineAmt;
-                } else {
-                  accountsNegativeAmount += lineAmt;
-                }
-
-                const acctNo = line.product_no || 'Sin cuenta';
-                let desc = line.product?.description || 'Sin descripción';
-                if (acctNo === '6240001') {
-                  desc = 'Embalaje y transporte';
-                } else if (acctNo === '6260001') {
-                  desc = 'Servicios bancarios';
-                } else if (acctNo === '7050004') {
-                  desc = 'Comisiones Seiko';
-                } else if (acctNo === '4380001') {
-                  desc = 'Anticipo clientes NAC';
-                } else if (acctNo === '4380002') {
-                  desc = 'Anticipos clientes UE';
-                } else if (acctNo === '4380003') {
-                  desc = 'Anticipos clientes exp.';
-                }
-
-                if (desc) {
-                  desc = desc.charAt(0).toUpperCase() + desc.slice(1);
-                }
-
-                if (!yearlyBreakdown[year][month].accounts[acctNo]) {
-                  yearlyBreakdown[year][month].accounts[acctNo] = {
-                    account_no: acctNo,
-                    description: desc,
-                    amount: 0
-                  };
-                }
-                yearlyBreakdown[year][month].accounts[acctNo].amount += lineAmt;
+              accountsAmount += lineAmt;
+              if (lineAmt > 0) {
+                accountsPositiveAmount += lineAmt;
+              } else {
+                accountsNegativeAmount += lineAmt;
               }
+
+              const acctNo = line.product_no || 'Sin cuenta';
+              let desc = line.product?.description || 'Sin descripción';
+              if (acctNo === '6240001') {
+                desc = 'Embalaje y transporte';
+              } else if (acctNo === '6260001') {
+                desc = 'Servicios bancarios';
+              } else if (acctNo === '7050004') {
+                desc = 'Comisiones Seiko';
+              } else if (acctNo === '4380001') {
+                desc = 'Anticipo clientes NAC';
+              } else if (acctNo === '4380002') {
+                desc = 'Anticipos clientes UE';
+              } else if (acctNo === '4380003') {
+                desc = 'Anticipos clientes exp.';
+              } else if (acctNo === '7050013') {
+                desc = 'Colaboración Expoquimia';
+              } else if (acctNo === '6290032') {
+                desc = 'Comisiones a clientes';
+              } else if (acctNo === '6000001') {
+                desc = 'Compras nacional';
+              }
+
+              if (desc) {
+                desc = desc.charAt(0).toUpperCase() + desc.slice(1);
+              }
+
+              if (!yearlyBreakdown[year][month].accounts[acctNo]) {
+                yearlyBreakdown[year][month].accounts[acctNo] = {
+                  account_no: acctNo,
+                  description: desc,
+                  amount: 0
+                };
+              }
+              yearlyBreakdown[year][month].accounts[acctNo].amount += lineAmt;
             }
           });
         }
