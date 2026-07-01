@@ -83,6 +83,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventDate, setNewEventDate] = useState(new Date().toISOString().split('T')[0]);
   const [newEventTime, setNewEventTime] = useState('10:00');
+  const [newEventDescription, setNewEventDescription] = useState('');
 
   // Edit states
   const [editActivityId, setEditActivityId] = useState<string | null>(null);
@@ -91,6 +92,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const [editDescription, setEditDescription] = useState('');
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('');
+  const [editConclusions, setEditConclusions] = useState('');
+  const [inlineConclusions, setInlineConclusions] = useState<{ [key: string]: string }>({});
 
   // Query CRM activities from Postgres database
   const { data: dbActivities = [] } = useQuery({
@@ -510,7 +513,8 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
           title: act.title,
           date: act.due_date ? act.due_date.split('T')[0] : '',
           done: act.is_completed,
-          isQuoteTask: false
+          isQuoteTask: false,
+          conclusions: act.conclusions
         });
       });
 
@@ -561,12 +565,26 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
   const events = useMemo(() => {
     return dbActivities
       .filter(act => act.type === 'EVENT')
-      .map(act => ({
-        id: act.id,
-        title: act.title,
-        date: act.due_date ? act.due_date.split('T')[0] : '',
-        time: act.time_scheduled || '10:00'
-      }));
+      .map(act => {
+        const evDate = act.due_date ? act.due_date.split('T')[0] : '';
+        const evTime = act.time_scheduled || '10:00';
+        let isPassed = false;
+        if (evDate) {
+          const now = new Date();
+          const eventDateTime = new Date(`${evDate}T${evTime}`);
+          isPassed = eventDateTime < now;
+        }
+        return {
+          id: act.id,
+          title: act.title,
+          description: act.description,
+          date: evDate,
+          time: evTime,
+          done: act.is_completed,
+          conclusions: act.conclusions,
+          isPassed
+        };
+      });
   }, [dbActivities]);
 
   // Compile all activities for timeline
@@ -584,6 +602,9 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       email?: string;
       quoteNo?: string;
       quoteObj?: CRMQuote;
+      conclusions?: string | null;
+      done?: boolean;
+      isPassed?: boolean;
     }[] = [];
 
     notes.forEach(n => {
@@ -610,7 +631,10 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         icon: CheckSquare,
         iconBg: t.done ? 'bg-emerald-100 dark:bg-emerald-955/20' : 'bg-blue-100 dark:bg-blue-955/20',
         iconColor: t.done ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400',
-        showTime: false
+        showTime: false,
+        conclusions: t.conclusions,
+        done: t.done,
+        isPassed: !t.done && t.date ? new Date(t.date) < new Date() : false
       });
     });
 
@@ -639,7 +663,10 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
         icon: CalendarIcon,
         iconBg: 'bg-rose-100 dark:bg-rose-955/20',
         iconColor: 'text-rose-600 dark:text-rose-400',
-        showTime: true
+        showTime: true,
+        conclusions: ev.conclusions,
+        done: ev.done,
+        isPassed: ev.isPassed
       });
     });
 
@@ -861,10 +888,12 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
       clientId,
       type: 'EVENT',
       title: newEventTitle,
+      description: newEventDescription,
       dueDate: newEventDate,
       timeScheduled: newEventTime
     });
     setNewEventTitle('');
+    setNewEventDescription('');
     setShowEventModal(false);
   };
 
@@ -917,6 +946,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
     setEditDescription(originalAct.description || '');
     setEditDate(originalAct.due_date ? originalAct.due_date.split('T')[0] : '');
     setEditTime(originalAct.time_scheduled || '10:00');
+    setEditConclusions(originalAct.conclusions || '');
     setShowEditModal(true);
   };
 
@@ -931,6 +961,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
 
     if (editActivityType === 'TASK' || editActivityType === 'EVENT') {
       payload.dueDate = editDate ? new Date(editDate).toISOString() : undefined;
+      payload.conclusions = editConclusions;
     }
     if (editActivityType === 'EVENT') {
       payload.timeScheduled = editTime;
@@ -1019,7 +1050,7 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
             { id: 'tasks', label: 'Tareas', icon: CheckSquare },
             { id: 'notes', label: 'Notas', icon: FileText },
             { id: 'emails', label: 'Emails', icon: Send },
-            { id: 'calendar', label: 'Calendario', icon: CalendarIcon }
+            { id: 'calendar', label: 'Eventos', icon: CalendarIcon }
           ].map(tab => (
             <button
               key={tab.id}
@@ -1432,59 +1463,109 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
             ) : (
               <div className="space-y-3">
                 {tasks.map(t => (
-                  <div key={t.id} className="p-3 bg-gray-50 dark:bg-white/2 rounded-xl border border-gray-200/50 dark:border-white/5 flex items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center gap-3">
-                      <input 
-                        type="checkbox" 
-                        checked={t.done} 
-                        onChange={() => toggleTask(t.id)}
-                        className="rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary/50 w-4 h-4" 
-                      />
-                      <div>
-                        <p className={`font-semibold ${t.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'} flex items-center gap-2 flex-wrap`}>
-                          <span>{t.title}</span>
-                          {t.isQuoteTask && t.quoteNo && (
-                            <span className="text-[9px] font-black uppercase bg-dts-secondary/15 text-dts-secondary px-1.5 py-0.2 rounded-md">
-                              Oferta #{t.quoteNo}
-                            </span>
-                          )}
-                        </p>
-                        <span className={`text-[10px] flex items-center gap-1 mt-0.5 ${
-                          !t.done && new Date(t.date) < new Date() ? 'text-rose-500 font-bold' : 'text-gray-400'
-                        }`}>
-                          <CalendarIcon size={10} /> Límite: {new Date(t.date).toLocaleDateString()}
-                        </span>
+                  <div key={t.id} className="p-3.5 bg-gray-50 dark:bg-white/2 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col gap-3 text-xs">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <input 
+                          type="checkbox" 
+                          checked={t.done} 
+                          onChange={() => toggleTask(t.id)}
+                          className="rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary/50 w-4 h-4 cursor-pointer" 
+                        />
+                        <div>
+                          <p className={`font-semibold ${t.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'} flex items-center gap-2 flex-wrap`}>
+                            <span>{t.title}</span>
+                            {t.isQuoteTask && t.quoteNo && (
+                              <span className="text-[9px] font-black uppercase bg-dts-secondary/15 text-dts-secondary px-1.5 py-0.2 rounded-md">
+                                Oferta #{t.quoteNo}
+                              </span>
+                            )}
+                          </p>
+                          <span className={`text-[10px] flex items-center gap-1 mt-0.5 ${
+                            !t.done && new Date(t.date) < new Date() ? 'text-rose-500 font-bold' : 'text-gray-400'
+                          }`}>
+                            <CalendarIcon size={10} /> Límite: {new Date(t.date).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {t.isQuoteTask ? (
+                          <button 
+                            onClick={() => {
+                              setActiveTab('quotes');
+                              if (t.quoteObj) openQuoteDrawer(t.quoteObj);
+                            }} 
+                            className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+                            title="Gestionar en Oferta"
+                          >
+                            <Edit2 size={13} /> <span className="hidden sm:inline">Ver Oferta</span>
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => startEditActivity(t)} 
+                            className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer"
+                            title="Editar Tarea"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => deleteTask(t.id)} 
+                          className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                          title="Eliminar Tarea"
+                        >
+                          <X size={14} />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {t.isQuoteTask ? (
-                        <button 
-                          onClick={() => {
-                            setActiveTab('quotes');
-                            if (t.quoteObj) openQuoteDrawer(t.quoteObj);
-                          }} 
-                          className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-bold"
-                          title="Gestionar en Oferta"
-                        >
-                          <Edit2 size={13} /> <span className="hidden sm:inline">Ver Oferta</span>
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={() => startEditActivity(t)} 
-                          className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer"
-                          title="Editar Tarea"
-                        >
-                          <Edit2 size={13} />
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => deleteTask(t.id)} 
-                        className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
-                        title="Eliminar Tarea"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
+
+                    {/* Conclusions Section for Completed Tasks */}
+                    {t.done && !t.isQuoteTask && (
+                      <div className="border-t border-gray-100 dark:border-white/5 pt-2.5">
+                        {t.conclusions ? (
+                          <div className="bg-emerald-50/30 dark:bg-emerald-950/5 p-2 rounded-lg border border-emerald-100/30 dark:border-emerald-900/10 flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block mb-0.5">Conclusiones:</span>
+                              <p className="text-gray-700 dark:text-gray-300 italic text-[11px]">"{t.conclusions}"</p>
+                            </div>
+                            <button 
+                              onClick={() => startEditActivity(t)}
+                              className="text-gray-400 hover:text-dts-secondary shrink-0"
+                              title="Editar conclusiones"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 bg-amber-50/20 dark:bg-amber-955/5 p-2.5 rounded-lg border border-amber-100/30 dark:border-amber-900/10">
+                            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-[10px]">
+                              <span>⚠️ Tarea completada sin conclusiones</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <input 
+                                type="text"
+                                placeholder="Escribe las conclusiones de esta tarea..."
+                                value={inlineConclusions[t.id] || ''}
+                                onChange={(e) => setInlineConclusions({ ...inlineConclusions, [t.id]: e.target.value })}
+                                className="flex-1 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                              />
+                              <button 
+                                onClick={() => {
+                                  if (!inlineConclusions[t.id]?.trim()) return;
+                                  updateActivityMutation.mutate({
+                                    id: t.id,
+                                    payload: { conclusions: inlineConclusions[t.id] }
+                                  });
+                                }}
+                                className="px-3 py-1 bg-dts-secondary hover:brightness-110 text-white rounded-lg font-bold text-[11px] transition-all cursor-pointer shrink-0"
+                              >
+                                Guardar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1626,6 +1707,44 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                               {act.description}
                             </p>
                           )}
+                          {act.conclusions ? (
+                            <div className="mt-2.5 p-2.5 bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100/30 dark:border-emerald-900/20 rounded-lg">
+                              <span className="text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block mb-0.5">Conclusiones:</span>
+                              <p className="text-gray-700 dark:text-gray-300 text-[11px] whitespace-pre-wrap leading-relaxed italic">
+                                "{act.conclusions}"
+                              </p>
+                            </div>
+                          ) : (
+                            (act.type === 'task' || act.type === 'event') && (act.done || act.isPassed) && (
+                              <div className="mt-2.5 space-y-2 bg-amber-50/20 dark:bg-amber-955/5 p-2.5 rounded-lg border border-amber-100/30 dark:border-amber-900/10">
+                                <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-[10px]">
+                                  <span>⚠️ {act.type === 'task' ? 'Tarea' : 'Evento'} finalizado o vencido sin conclusiones</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <input 
+                                    type="text"
+                                    placeholder="Escribe las conclusiones..."
+                                    value={inlineConclusions[act.id.replace('task-', '').replace('event-', '')] || ''}
+                                    onChange={(e) => setInlineConclusions({ ...inlineConclusions, [act.id.replace('task-', '').replace('event-', '')]: e.target.value })}
+                                    className="flex-1 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                                  />
+                                  <button 
+                                    onClick={() => {
+                                      const rawId = act.id.replace('task-', '').replace('event-', '');
+                                      if (!inlineConclusions[rawId]?.trim()) return;
+                                      updateActivityMutation.mutate({
+                                        id: rawId,
+                                        payload: { conclusions: inlineConclusions[rawId] }
+                                      });
+                                    }}
+                                    className="px-3 py-1 bg-dts-secondary hover:brightness-110 text-white rounded-lg font-bold text-[11px] transition-all cursor-pointer shrink-0"
+                                  >
+                                    Guardar
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          )}
                         </div>
                       </div>
 
@@ -1738,34 +1857,92 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
             ) : (
               <div className="space-y-4">
                 {events.map(ev => (
-                  <div key={ev.id} className="p-4 bg-gray-50 dark:bg-white/2 rounded-xl border border-gray-200/50 dark:border-white/5 flex items-start justify-between gap-2 text-xs">
-                    <div className="space-y-1.5">
-                      <h4 className="font-bold text-dts-primary dark:text-white">{ev.title}</h4>
-                      <div className="flex flex-wrap gap-2 text-[10px] text-gray-400">
-                        <span className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
-                          <CalendarIcon size={10} /> {new Date(ev.date).toLocaleDateString()}
-                        </span>
-                        <span className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
-                          <Clock size={10} /> {ev.time}h
-                        </span>
+                  <div key={ev.id} className="p-4 bg-gray-50 dark:bg-white/2 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col gap-3 text-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <input 
+                          type="checkbox" 
+                          checked={ev.done} 
+                          onChange={() => toggleTask(ev.id)}
+                          className="rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary/50 w-4 h-4 cursor-pointer" 
+                        />
+                        <div>
+                          <h4 className={`font-bold ${ev.done ? 'line-through text-gray-400' : 'text-dts-primary dark:text-white'}`}>{ev.title}</h4>
+                          <div className="flex flex-wrap gap-2 text-[10px] text-gray-400 mt-1">
+                            <span className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
+                              <CalendarIcon size={10} /> {new Date(ev.date).toLocaleDateString()}
+                            </span>
+                            <span className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
+                              <Clock size={10} /> {ev.time}h
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => startEditActivity(ev)} 
+                          className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer"
+                          title="Editar Evento"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button 
+                          onClick={() => deleteActivityMutation.mutate(ev.id)} 
+                          className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                          title="Eliminar Evento"
+                        >
+                          <X size={14} />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => startEditActivity(ev)} 
-                        className="text-gray-400 hover:text-dts-secondary transition-colors cursor-pointer"
-                        title="Editar Evento"
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button 
-                        onClick={() => deleteActivityMutation.mutate(ev.id)} 
-                        className="text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
-                        title="Eliminar Evento"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
+
+                    {/* Conclusions Section for Completed/Passed Events */}
+                    {(ev.done || ev.isPassed) && (
+                      <div className="border-t border-gray-100 dark:border-white/5 pt-2.5">
+                        {ev.conclusions ? (
+                          <div className="bg-emerald-50/30 dark:bg-emerald-955/5 p-2.5 rounded-lg border border-emerald-100/30 dark:border-emerald-900/10 flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-[9px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block mb-0.5">Conclusiones:</span>
+                              <p className="text-gray-700 dark:text-gray-300 italic text-[11px]">"{ev.conclusions}"</p>
+                            </div>
+                            <button 
+                              onClick={() => startEditActivity(ev)}
+                              className="text-gray-400 hover:text-dts-secondary shrink-0"
+                              title="Editar conclusiones"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 bg-amber-50/20 dark:bg-amber-955/5 p-2.5 rounded-lg border border-amber-100/30 dark:border-amber-900/10">
+                            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-[10px]">
+                              <span>⚠️ Evento finalizado o pasado sin conclusiones</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <input 
+                                type="text"
+                                placeholder="Escribe las conclusiones de este evento..."
+                                value={inlineConclusions[ev.id] || ''}
+                                onChange={(e) => setInlineConclusions({ ...inlineConclusions, [ev.id]: e.target.value })}
+                                className="flex-1 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                              />
+                              <button 
+                                onClick={() => {
+                                  if (!inlineConclusions[ev.id]?.trim()) return;
+                                  updateActivityMutation.mutate({
+                                    id: ev.id,
+                                    payload: { conclusions: inlineConclusions[ev.id] }
+                                  });
+                                }}
+                                className="px-3 py-1 bg-dts-secondary hover:brightness-110 text-white rounded-lg font-bold text-[11px] transition-all cursor-pointer shrink-0"
+                              >
+                                Guardar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1959,19 +2136,27 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Título del Evento</label>
                 <input type="text" required value={newEventTitle} onChange={e => setNewEventTitle(e.target.value)} placeholder="Ej: Demostración técnica de equipos dTS..." className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Fecha</label>
-                  <input type="date" required value={newEventDate} onChange={e => setNewEventDate(e.target.value)} className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Hora</label>
-                  <input type="time" required value={newEventTime} onChange={e => setNewEventTime(e.target.value)} className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" />
-                </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Detalles / Mensaje</label>
+                <textarea 
+                  rows={3} 
+                  value={newEventDescription} 
+                  onChange={e => setNewEventDescription(e.target.value)} 
+                  placeholder="Detalles del evento o reunión..." 
+                  className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs focus:outline-none focus:ring-1 focus:ring-dts-secondary" 
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Fecha</label>
+                <input type="date" required value={newEventDate} onChange={e => setNewEventDate(e.target.value)} className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Hora</label>
+                <input type="time" required value={newEventTime} onChange={e => setNewEventTime(e.target.value)} className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" />
               </div>
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowEventModal(false)} className="flex-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 text-gray-700 dark:text-white font-bold rounded-xl text-center">Cancelar</button>
+              <button type="button" onClick={() => { setShowEventModal(false); setNewEventDescription(''); }} className="flex-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 text-gray-700 dark:text-white font-bold rounded-xl text-center">Cancelar</button>
               <button type="submit" className="flex-1 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl text-center">Agendar Evento</button>
             </div>
           </form>
@@ -2019,7 +2204,9 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
 
               {(editActivityType === 'TASK' || editActivityType === 'EVENT') && (
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Fecha Límite</label>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    {editActivityType === 'TASK' ? 'Fecha Límite' : 'Fecha'}
+                  </label>
                   <input 
                     type="date" 
                     required 
@@ -2038,6 +2225,19 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
                     required 
                     value={editTime} 
                     onChange={e => setEditTime(e.target.value)} 
+                    className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" 
+                  />
+                </div>
+              )}
+
+              {(editActivityType === 'TASK' || editActivityType === 'EVENT') && (
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Conclusiones</label>
+                  <textarea 
+                    rows={3} 
+                    value={editConclusions} 
+                    onChange={e => setEditConclusions(e.target.value)} 
+                    placeholder="Conclusiones o comentarios del resultado..."
                     className="block w-full border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-slate-50 dark:bg-dts-primary-dark text-gray-955 dark:text-white text-xs" 
                   />
                 </div>

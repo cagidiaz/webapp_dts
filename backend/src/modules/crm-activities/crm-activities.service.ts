@@ -71,8 +71,9 @@ export class CrmActivitiesService {
     timeScheduled?: string;
     email?: string;
     createdAt?: string;
+    conclusions?: string;
   }) {
-    const { clientId, userId, type, title, description, dueDate, timeScheduled, email, createdAt } = data;
+    const { clientId, userId, type, title, description, dueDate, timeScheduled, email, createdAt, conclusions } = data;
 
     console.log(`[CRM Service] Creando actividad con tipo=${type}, title="${title}", createdAt=${createdAt || 'now()'}`);
     try {
@@ -86,6 +87,7 @@ export class CrmActivitiesService {
           due_date: dueDate ? new Date(dueDate) : null,
           time_scheduled: timeScheduled || null,
           email: email || null,
+          conclusions: conclusions || null,
           created_at: createdAt ? new Date(createdAt) : undefined
         }
       });
@@ -98,7 +100,7 @@ export class CrmActivitiesService {
   /**
    * Actualiza una actividad existente (p. ej., marcar tarea como completada).
    */
-  async update(id: string, data: { isCompleted?: boolean; title?: string; description?: string; dueDate?: string; timeScheduled?: string }) {
+  async update(id: string, data: { isCompleted?: boolean; title?: string; description?: string; dueDate?: string; timeScheduled?: string; conclusions?: string }) {
     try {
       // Verificar existencia
       const existing = await this.prisma.crm_activities.findUnique({ where: { id } });
@@ -112,6 +114,7 @@ export class CrmActivitiesService {
       if (data.isCompleted !== undefined) prismaData.is_completed = data.isCompleted;
       if (data.dueDate !== undefined) prismaData.due_date = data.dueDate ? new Date(data.dueDate) : null;
       if (data.timeScheduled !== undefined) prismaData.time_scheduled = data.timeScheduled || null;
+      if (data.conclusions !== undefined) prismaData.conclusions = data.conclusions || null;
 
       return await this.prisma.crm_activities.update({
         where: { id },
