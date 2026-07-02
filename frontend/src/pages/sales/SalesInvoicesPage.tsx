@@ -680,8 +680,7 @@ export const SalesInvoicesPage: React.FC = () => {
                       {formatCurrency(dashboardCalculations.yearlyTotals[kpi.year], 0)}
                     </h3>
                     <div className="text-[9px] opacity-80 mt-1 italic font-semibold space-y-0.5">
-                      <div>Total Cuentas: {formatCurrency(dashboardCalculations.yearlyAccountsPositiveTotals[kpi.year] || 0, 0)}</div>
-                      <div>Anticipos Ventas: {formatCurrency(dashboardCalculations.yearlyAccountsNegativeTotals[kpi.year] || 0, 0)}</div>
+                      <div>Total Cuentas: {formatCurrency((dashboardCalculations.yearlyAccountsPositiveTotals[kpi.year] || 0) + (dashboardCalculations.yearlyAccountsNegativeTotals[kpi.year] || 0), 0)}</div>
                     </div>
                   </div>
                 ))}
