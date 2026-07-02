@@ -146,3 +146,11 @@ tbody tr:hover {
 [title], [aria-label] {
   font-weight: 400; /* Standard browser tooltips can't be styled, but this is a reminder */
 }
+
+/* =============================================
+   Global Table Row Height Reduction
+   ============================================= */
+table th, table td {
+  padding-top: 0.45rem !important; /* py-1.5 / py-2 compact */
+  padding-bottom: 0.45rem !important;
+}
