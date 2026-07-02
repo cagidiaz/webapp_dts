@@ -159,17 +159,40 @@ export const ProductBudgetPage: React.FC = () => {
   const [subfamilyFilter, setSubfamilyFilter] = useState<string>('');
   const [salespersonFilter, setSalespersonFilter] = useState<string>('');
   const [pmFilter, setPmFilter] = useState<string>('');
+  const [productCodeFilter, setProductCodeFilter] = useState<string>('');
+  const [debouncedProductCode, setDebouncedProductCode] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('facturacion');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const [sidebarHeight, setSidebarHeight] = useState<number>(600);
+
+  useEffect(() => {
+    if (!sidebarRef.current) return;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target) {
+          setSidebarHeight(entry.target.clientHeight);
+        }
+      }
+    });
+    resizeObserver.observe(sidebarRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
 
   useEffect(() => {
     const timer = setTimeout(() => { setDebouncedSearch(searchTerm); }, 400);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => { setDebouncedProductCode(productCodeFilter); }, 400);
+    return () => clearTimeout(timer);
+  }, [productCodeFilter]);
 
   useEffect(() => {
     setPageInfo({
@@ -211,13 +234,14 @@ export const ProductBudgetPage: React.FC = () => {
   const {
     data: infiniteData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading: isLoadingPerf
   } = useInfiniteQuery({
-    queryKey: ['productBudgetPerf', year, selectedMonths, salespersonFilter, effectivePmCode, debouncedSearch, familyFilter, subfamilyFilter, sortBy, sortDir],
+    queryKey: ['productBudgetPerf', year, selectedMonths, salespersonFilter, effectivePmCode, debouncedSearch, familyFilter, subfamilyFilter, debouncedProductCode, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getProductBudgetPerformance({
       year, months: selectedMonths,
       salespersonCode: salespersonFilter || undefined,
       pmCode: effectivePmCode,
       search: debouncedSearch || undefined,
       familyCode: familyFilter || undefined, subfamilyCode: subfamilyFilter || undefined,
+      productCode: debouncedProductCode || undefined,
       sortBy, sortDir, take: pageSize, skip: pageParam as number
     }),
     initialPageParam: 0,
@@ -228,12 +252,13 @@ export const ProductBudgetPage: React.FC = () => {
   });
 
   const { data: evolutionData } = useQuery({
-    queryKey: ['productBudgetEvol', year, familyFilter, subfamilyFilter, salespersonFilter, effectivePmCode, debouncedSearch],
+    queryKey: ['productBudgetEvol', year, familyFilter, subfamilyFilter, salespersonFilter, effectivePmCode, debouncedSearch, debouncedProductCode],
     queryFn: () => getProductBudgetEvolution({
       year, 
       familyCode: familyFilter || undefined, subfamilyCode: subfamilyFilter || undefined,
       salespersonCode: salespersonFilter || undefined,
       pmCode: effectivePmCode,
+      productCode: debouncedProductCode || undefined,
       search: debouncedSearch || undefined
     }),
   });
@@ -285,6 +310,7 @@ export const ProductBudgetPage: React.FC = () => {
     setSelectedMonths([]); setFamilyFilter(''); setSubfamilyFilter(''); setSalespersonFilter('');
     if (!isProductManager) setPmFilter('');
     setSearchTerm(''); setYear(new Date().getFullYear());
+    setProductCodeFilter('');
   };
 
   const handleSort = (key: string) => {
@@ -315,6 +341,7 @@ export const ProductBudgetPage: React.FC = () => {
       search: debouncedSearch || undefined,
       familyCode: familyFilter || undefined,
       subfamilyCode: subfamilyFilter || undefined,
+      productCode: debouncedProductCode || undefined,
       sortBy, sortDir,
     });
 
@@ -361,7 +388,7 @@ export const ProductBudgetPage: React.FC = () => {
     exportToXlsx(flatRows, columns, `ppto_producto_${year}`, totalsRow);
   };
 
-  const hasActiveFilters = selectedMonths.length > 0 || familyFilter || subfamilyFilter || salespersonFilter || (!isProductManager && pmFilter) || searchTerm;
+  const hasActiveFilters = selectedMonths.length > 0 || familyFilter || subfamilyFilter || salespersonFilter || (!isProductManager && pmFilter) || searchTerm || productCodeFilter;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -379,7 +406,7 @@ export const ProductBudgetPage: React.FC = () => {
       {/* Main Analysis Section */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Filters Sidebar */}
-        <div className="lg:col-span-1 bg-white dark:bg-surface-card-dark border border-gray-100 dark:border-gray-800 rounded-xl p-5 h-fit shadow-card space-y-6 text-sm">
+        <div ref={sidebarRef} className="lg:col-span-1 bg-white dark:bg-surface-card-dark border border-gray-100 dark:border-gray-800 rounded-xl p-5 h-fit shadow-card space-y-6 text-sm">
           <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
              <div className="flex items-center gap-2">
                <Filter size={16} className="text-gray-400" />
@@ -436,11 +463,24 @@ export const ProductBudgetPage: React.FC = () => {
             <div><span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Vendedor</span><SearchableSelect options={salespersonOptions} value={salespersonFilter} onChange={setSalespersonFilter} placeholder="Todos..." /></div>
             <div><span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Familia</span><SearchableSelect options={familyOptions} value={familyFilter} onChange={setFamilyFilter} placeholder="Todas..." /></div>
             <div><span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Subfamilia</span><SearchableSelect options={subfamilyOptions} value={subfamilyFilter} onChange={setSubfamilyFilter} placeholder="Todas..." /></div>
+            <div>
+              <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Código Producto</span>
+              <input
+                type="text"
+                value={productCodeFilter}
+                onChange={(e) => setProductCodeFilter(e.target.value)}
+                placeholder="Filtrar por SKU/Código..."
+                className="block w-full px-3 py-1.5 text-xs text-gray-900 dark:text-gray-200 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-dts-secondary focus:border-dts-secondary transition-all outline-none"
+              />
+            </div>
           </div>
         </div>
 
         {/* Performance Table */}
-        <div className="lg:col-span-4 bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-320px)] min-h-[500px]">
+        <div 
+          className="lg:col-span-4 bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col"
+          style={{ height: `${sidebarHeight}px` }}
+        >
           {/* Toolbar */}
           <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

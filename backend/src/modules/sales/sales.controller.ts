@@ -136,6 +136,7 @@ export class SalesController {
     @Query('pmCode') pmCode?: string,
     @Query('familyCode') familyCode?: string,
     @Query('subfamilyCode') subfamilyCode?: string,
+    @Query('productCode') productCode?: string,
     @Query('search') search?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortDir') sortDir?: 'asc' | 'desc',
@@ -158,6 +159,7 @@ export class SalesController {
       pmCode,
       familyCode,
       subfamilyCode,
+      productCode,
       search,
       sortBy,
       sortDir,
@@ -176,6 +178,7 @@ export class SalesController {
     @Query('pmCode') pmCode?: string,
     @Query('familyCode') familyCode?: string,
     @Query('subfamilyCode') subfamilyCode?: string,
+    @Query('productCode') productCode?: string,
     @Query('search') search?: string,
   ) {
     const targetYear = year ? Number(year) : new Date().getFullYear();
@@ -187,6 +190,7 @@ export class SalesController {
       pmCode,
       familyCode,
       subfamilyCode,
+      productCode,
       search,
     });
   }

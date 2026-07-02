@@ -189,6 +189,7 @@ export class SalesService {
     const customerIds = new Set<string>();
     salesRaw.forEach(s => s.source_no && customerIds.add(s.source_no));
     budgetsRaw.forEach(b => b.customer_code && customerIds.add(b.customer_code));
+    prevYearSalesRaw.forEach(s => s.source_no && customerIds.add(s.source_no));
 
     let customersDict: Record<string, { name: string; since: Date | null }> = {};
     if (customerIds.size > 0) {
@@ -635,6 +636,7 @@ export class SalesService {
     pmCode?: string;
     familyCode?: string;
     subfamilyCode?: string;
+    productCode?: string;
     search?: string;
     sortBy?: string;
     sortDir?: 'asc' | 'desc';
@@ -644,29 +646,40 @@ export class SalesService {
   }) {
     const {
       year, months, salespersonCode, pmCode, familyCode, subfamilyCode,
-      search, sortBy, sortDir, take, skip, limitToToday
+      productCode, search, sortBy, sortDir, take, skip, limitToToday
     } = filters;
 
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-    // 1. Resolver item_nos según filtros de PM / familia / subfamilia
+    // 1. Resolver item_nos según filtros de PM / familia / subfamilia / código producto
     let itemNos: string[] | null = null;
 
-    if (pmCode || familyCode || subfamilyCode) {
+    if (pmCode || familyCode || subfamilyCode || productCode) {
       const catWhere: any = {};
       if (pmCode) catWhere.pm_code = pmCode;
       if (familyCode) catWhere.family_code = familyCode;
       if (subfamilyCode) catWhere.subfamily_code = subfamilyCode;
 
-      const matchingCategories = await this.prisma.product_categories.findMany({
-        where: catWhere,
-        select: { subfamily_code: true }
-      });
-      const subfamilyCodes = matchingCategories.map(c => c.subfamily_code);
+      let matchingSubfamilies: string[] | undefined = undefined;
+      if (pmCode || familyCode || subfamilyCode) {
+        const matchingCategories = await this.prisma.product_categories.findMany({
+          where: catWhere,
+          select: { subfamily_code: true }
+        });
+        matchingSubfamilies = matchingCategories.map(c => c.subfamily_code).filter(Boolean) as string[];
+      }
+
+      const prodWhere: any = {};
+      if (matchingSubfamilies) {
+        prodWhere.subfamily_code = { in: matchingSubfamilies };
+      }
+      if (productCode) {
+        prodWhere.item_no = { contains: productCode, mode: 'insensitive' };
+      }
 
       const matchingProducts = await this.prisma.products.findMany({
-        where: { subfamily_code: { in: subfamilyCodes } },
+        where: prodWhere,
         select: { item_no: true }
       });
       itemNos = matchingProducts.map(p => p.item_no);
@@ -730,6 +743,10 @@ export class SalesService {
     budgetsRaw.forEach(b => {
       if (b.customer_code) customerIds.add(b.customer_code);
       if (b.item_no) productIds.add(b.item_no);
+    });
+    prevYearSalesRaw.forEach(s => {
+      if (s.source_no) customerIds.add(s.source_no);
+      if (s.item_no) productIds.add(s.item_no);
     });
 
     // 6. Obtener nombres
@@ -951,28 +968,41 @@ export class SalesService {
     pmCode?: string;
     familyCode?: string;
     subfamilyCode?: string;
+    productCode?: string;
     search?: string;
   }) {
-    const { year, salespersonCode, pmCode, familyCode, subfamilyCode, search } = filters;
+    const { year, salespersonCode, pmCode, familyCode, subfamilyCode, productCode, search } = filters;
 
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
     // Resolver item_nos
     let itemNos: string[] | null = null;
-    if (pmCode || familyCode || subfamilyCode) {
+    if (pmCode || familyCode || subfamilyCode || productCode) {
       const catWhere: any = {};
       if (pmCode) catWhere.pm_code = pmCode;
       if (familyCode) catWhere.family_code = familyCode;
       if (subfamilyCode) catWhere.subfamily_code = subfamilyCode;
 
-      const matchingCategories = await this.prisma.product_categories.findMany({
-        where: catWhere,
-        select: { subfamily_code: true }
-      });
-      const subfamilyCodes = matchingCategories.map(c => c.subfamily_code);
+      let matchingSubfamilies: string[] | undefined = undefined;
+      if (pmCode || familyCode || subfamilyCode) {
+        const matchingCategories = await this.prisma.product_categories.findMany({
+          where: catWhere,
+          select: { subfamily_code: true }
+        });
+        matchingSubfamilies = matchingCategories.map(c => c.subfamily_code).filter(Boolean) as string[];
+      }
+
+      const prodWhere: any = {};
+      if (matchingSubfamilies) {
+        prodWhere.subfamily_code = { in: matchingSubfamilies };
+      }
+      if (productCode) {
+        prodWhere.item_no = { contains: productCode, mode: 'insensitive' };
+      }
+
       const matchingProducts = await this.prisma.products.findMany({
-        where: { subfamily_code: { in: subfamilyCodes } },
+        where: prodWhere,
         select: { item_no: true }
       });
       itemNos = matchingProducts.map(p => p.item_no);

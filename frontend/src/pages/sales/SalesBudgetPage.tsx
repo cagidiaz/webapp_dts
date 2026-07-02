@@ -163,6 +163,22 @@ export const SalesBudgetPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('facturacion');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const [sidebarHeight, setSidebarHeight] = useState<number>(600);
+
+  useEffect(() => {
+    if (!sidebarRef.current) return;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target) {
+          setSidebarHeight(entry.target.clientHeight);
+        }
+      }
+    });
+    resizeObserver.observe(sidebarRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   const isSalesperson = Boolean(profile?.code);
 
   useEffect(() => {
@@ -335,7 +351,7 @@ export const SalesBudgetPage: React.FC = () => {
       {/* Main Analysis Section */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Filters Sidebar */}
-        <div className="lg:col-span-1 bg-white dark:bg-surface-card-dark border border-gray-100 dark:border-gray-800 rounded-xl p-5 h-fit shadow-card space-y-6 text-sm">
+        <div ref={sidebarRef} className="lg:col-span-1 bg-white dark:bg-surface-card-dark border border-gray-100 dark:border-gray-800 rounded-xl p-5 h-fit shadow-card space-y-6 text-sm">
           <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
              <div className="flex items-center gap-2">
                <Filter size={16} className="text-gray-400" />
@@ -372,7 +388,10 @@ export const SalesBudgetPage: React.FC = () => {
         </div>
 
         {/* Performance Table */}
-        <div className="lg:col-span-4 bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-320px)] min-h-[500px]">
+        <div 
+          className="lg:col-span-4 bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col"
+          style={{ height: `${sidebarHeight}px` }}
+        >
           {/* Table Toolbar - Joined */}
           <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

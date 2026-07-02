@@ -199,8 +199,31 @@ export class SalesDocumentsService {
       const totalMarginAmount = totalFacturadoNeto - totalCoste;
       const margenMedioPct = totalFacturadoNeto > 0 ? (totalMarginAmount / totalFacturadoNeto) * 100 : 0;
 
+      const mappedData = data.map(doc => {
+        if (doc.lines) {
+          doc.lines = doc.lines.map(line => {
+            if (line.type?.toLowerCase() === 'g/l account') {
+              const accountNo = line.product_no || '';
+              const defaultDesc = line.product?.description || '';
+              const mappedDesc = this.getGLAccountDescription(accountNo, defaultDesc);
+              return {
+                ...line,
+                product: line.product ? {
+                  ...line.product,
+                  description: mappedDesc
+                } : {
+                  description: mappedDesc
+                } as any
+              };
+            }
+            return line;
+          });
+        }
+        return doc;
+      });
+
       return {
-        data,
+        data: mappedData,
         total,
         summary: {
           totalDocuments: allRelevantDocuments.length,
@@ -238,6 +261,27 @@ export class SalesDocumentsService {
         },
       });
       if (!document) throw new NotFoundException('Documento no encontrado');
+      
+      if (document.lines) {
+        document.lines = document.lines.map(line => {
+          if (line.type?.toLowerCase() === 'g/l account') {
+            const accountNo = line.product_no || '';
+            const defaultDesc = line.product?.description || '';
+            const mappedDesc = this.getGLAccountDescription(accountNo, defaultDesc);
+            return {
+              ...line,
+              product: line.product ? {
+                ...line.product,
+                description: mappedDesc
+              } : {
+                description: mappedDesc
+              } as any
+            };
+          }
+          return line;
+        });
+      }
+      
       return document;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -347,37 +391,14 @@ export class SalesDocumentsService {
               yearlyBreakdown[year][month].itemsTotal += lineAmt;
             } else if (typeLower === 'g/l account') {
               accountsAmount += lineAmt;
-              if (lineAmt > 0) {
-                accountsPositiveAmount += lineAmt;
-              } else {
-                accountsNegativeAmount += lineAmt;
-              }
-
               const acctNo = line.product_no || 'Sin cuenta';
-              let desc = line.product?.description || 'Sin descripción';
-              if (acctNo === '6240001') {
-                desc = 'Embalaje y transporte';
-              } else if (acctNo === '6260001') {
-                desc = 'Servicios bancarios';
-              } else if (acctNo === '7050004') {
-                desc = 'Comisiones Seiko';
-              } else if (acctNo === '4380001') {
-                desc = 'Anticipo clientes NAC';
-              } else if (acctNo === '4380002') {
-                desc = 'Anticipos clientes UE';
-              } else if (acctNo === '4380003') {
-                desc = 'Anticipos clientes exp.';
-              } else if (acctNo === '7050013') {
-                desc = 'Colaboración Expoquimia';
-              } else if (acctNo === '6290032') {
-                desc = 'Comisiones a clientes';
-              } else if (acctNo === '6000001') {
-                desc = 'Compras nacional';
+              if (acctNo.startsWith('438')) {
+                accountsNegativeAmount += lineAmt;
+              } else {
+                accountsPositiveAmount += lineAmt;
               }
 
-              if (desc) {
-                desc = desc.charAt(0).toUpperCase() + desc.slice(1);
-              }
+              const desc = this.getGLAccountDescription(acctNo, line.product?.description);
 
               if (!yearlyBreakdown[year][month].accounts[acctNo]) {
                 yearlyBreakdown[year][month].accounts[acctNo] = {
@@ -444,5 +465,33 @@ export class SalesDocumentsService {
     } catch (error) {
       throw new InternalServerErrorException(error.message);
     }
+  }
+
+  private getGLAccountDescription(accountNo: string, defaultDescription: string | null | undefined): string {
+    let desc = defaultDescription || 'Sin descripción';
+    if (accountNo === '6240001') {
+      desc = 'Embalaje y transporte';
+    } else if (accountNo === '6260001') {
+      desc = 'Servicios bancarios';
+    } else if (accountNo === '7050004') {
+      desc = 'Comisiones Seiko';
+    } else if (accountNo === '4380001') {
+      desc = 'Anticipo clientes NAC';
+    } else if (accountNo === '4380002') {
+      desc = 'Anticipos clientes UE';
+    } else if (accountNo === '4380003') {
+      desc = 'Anticipos clientes exp.';
+    } else if (accountNo === '7050013') {
+      desc = 'Colaboración Expoquimia';
+    } else if (accountNo === '6290032') {
+      desc = 'Comisiones a clientes';
+    } else if (accountNo === '6000001') {
+      desc = 'Compras nacional';
+    }
+
+    if (desc) {
+      desc = desc.charAt(0).toUpperCase() + desc.slice(1);
+    }
+    return desc;
   }
 }

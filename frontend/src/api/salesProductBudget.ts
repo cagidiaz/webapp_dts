@@ -9,6 +9,7 @@ export interface ProductBudgetFilters {
   pmCode?: string;
   familyCode?: string;
   subfamilyCode?: string;
+  productCode?: string;
   search?: string;
   sortBy?: string;
   sortDir?: 'asc' | 'desc';
@@ -72,7 +73,7 @@ export const getProductBudgetPerformance = async (
 ): Promise<ProductBudgetResponse> => {
   const {
     year, months, salespersonCode, pmCode, familyCode, subfamilyCode,
-    search, take, skip, sortBy, sortDir
+    productCode, search, take, skip, sortBy, sortDir
   } = filters;
 
   const params = new URLSearchParams();
@@ -82,6 +83,7 @@ export const getProductBudgetPerformance = async (
   if (pmCode) params.append('pmCode', pmCode);
   if (familyCode) params.append('familyCode', familyCode);
   if (subfamilyCode) params.append('subfamilyCode', subfamilyCode);
+  if (productCode) params.append('productCode', productCode);
   if (search) params.append('search', search);
   if (take !== undefined) params.append('take', String(take));
   if (skip !== undefined) params.append('skip', String(skip));
@@ -95,7 +97,7 @@ export const getProductBudgetPerformance = async (
 export const getProductBudgetEvolution = async (
   filters: Omit<ProductBudgetFilters, 'months' | 'take' | 'skip' | 'sortBy' | 'sortDir'>
 ): Promise<ProductBudgetEvolutionRow[]> => {
-  const { year, salespersonCode, pmCode, familyCode, subfamilyCode, search } = filters;
+  const { year, salespersonCode, pmCode, familyCode, subfamilyCode, productCode, search } = filters;
 
   const params = new URLSearchParams();
   params.append('year', String(year));
@@ -103,6 +105,7 @@ export const getProductBudgetEvolution = async (
   if (pmCode) params.append('pmCode', pmCode);
   if (familyCode) params.append('familyCode', familyCode);
   if (subfamilyCode) params.append('subfamilyCode', subfamilyCode);
+  if (productCode) params.append('productCode', productCode);
   if (search) params.append('search', search);
 
   const response = await apiClient.get<ProductBudgetEvolutionRow[]>(`/sales/product-budget-evolution?${params.toString()}`);
