@@ -1,14 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { 
   getSalesBudgetPerformance, 
-  getSalesBudgetEvolution 
+  getSalesBudgetEvolution,
+  getSalesReps
 } from '../../../api/salesBudget';
 import { formatCurrency } from '../../../api/formatters';
 import { 
   TrendingUp, TrendingDown, BarChart2,
-  Package, Euro, AlertCircle, CheckCircle2, UserPlus 
+  Package, Euro, AlertCircle, CheckCircle2, UserPlus, Target
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui/InfoPopover';
 import { useUIStore } from '../../../store/uiStore';
@@ -20,6 +21,7 @@ import {
 export const FinancialDashboard: React.FC = () => {
   const { setPageInfo } = useUIStore();
   const currentYear = new Date().getFullYear();
+  const [selectedSalesperson, setSelectedSalesperson] = useState<string | null>(null);
 
   // 1. Fetch Finance Data (for EBITDA)
 
@@ -40,6 +42,23 @@ export const FinancialDashboard: React.FC = () => {
   const { data: evolution, isLoading: eLoading } = useQuery({
     queryKey: ['salesEvolution', currentYear],
     queryFn: () => getSalesBudgetEvolution({ year: currentYear })
+  });
+
+  // Fetch Sales reps list
+  const { data: salespersons = [] } = useQuery({
+    queryKey: ['salesRepsList'],
+    queryFn: getSalesReps
+  });
+
+  // Fetch budget performance data filtered by selected salesperson
+  const { data: salespersonPerf, isLoading: spLoading } = useQuery({
+    queryKey: ['salespersonBudgetPerf', currentYear, currentMonths, selectedSalesperson],
+    queryFn: () => getSalesBudgetPerformance({
+      year: currentYear,
+      months: currentMonths,
+      salespersonCode: selectedSalesperson || undefined,
+      limitToToday: true
+    })
   });
 
   React.useEffect(() => {
@@ -200,6 +219,113 @@ export const FinancialDashboard: React.FC = () => {
         />
       </div>
 
+      {/* Salesperson Budget KPIs & Filters Section - Just below main KPIs block */}
+      <div className="bg-white dark:bg-surface-card-dark border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 border-b border-gray-150 dark:border-gray-850 pb-3">
+          <div>
+            <h3 className="text-md font-bold text-dts-primary dark:text-white flex items-center gap-2">
+              <BarChart2 size={18} className="text-dts-secondary" />
+              Facturación y Presupuestos
+            </h3>
+            <p className="text-[11px] text-gray-400 mt-0.5 uppercase tracking-wider font-medium">Filtro rápido y KPIs de rendimiento YTD</p>
+          </div>
+          
+          {/* Botones de vendedor en horizontal y más pequeños */}
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-2">Vendedor:</span>
+            <button
+              onClick={() => setSelectedSalesperson(null)}
+              className={`py-1 px-2 text-[10px] font-bold rounded-md transition-all ${
+                selectedSalesperson === null
+                  ? 'bg-dts-secondary text-white shadow-sm'
+                  : 'bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'
+              }`}
+            >
+              TODOS
+            </button>
+            {salespersons.map((sp) => (
+              <button
+                key={sp.code}
+                onClick={() => setSelectedSalesperson(sp.code)}
+                className={`py-1 px-2 text-[10px] font-mono font-bold rounded-md transition-all uppercase ${
+                  selectedSalesperson === sp.code
+                    ? 'bg-dts-secondary text-white shadow-sm'
+                    : 'bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'
+                }`}
+                title={sp.name}
+              >
+                {sp.code}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 4 KPI Cards inside the same window box */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <KPICard
+            title="Facturación YTD"
+            type="currency"
+            icon={TrendingUp}
+            color="blue"
+            variant="comparison"
+            label1="FACT:"
+            label2="DESV:"
+            isLoading={spLoading}
+            infoProps={{
+              description: "Facturación real acumulada en el ejercicio actual frente al objetivo presupuestado.",
+              formulas: "Facturación Real YTD vs Desviación Nominal (€)"
+            }}
+            value={salespersonPerf?.kpis?.ventas || 0}
+            subValue={salespersonPerf?.kpis?.desviacionEur || 0}
+          />
+
+          <KPICard
+            title="Objetivo YTD"
+            icon={Target}
+            color="indigo"
+            variant="comparison"
+            label1="OBJETIVO:"
+            label2="CUMPLIM:"
+            isLoading={spLoading}
+            infoProps={{
+              description: "Presupuesto asignado al vendedor para el periodo acumulado y porcentaje de consecución del mismo.",
+              formulas: "Objetivo YTD vs % Cumplimiento"
+            }}
+            value={salespersonPerf?.kpis?.objetivo || 0}
+            subValue={salespersonPerf?.kpis?.desviacionPct || 0}
+            type="currency"
+          />
+
+          <KPICard
+            title="Cartera Pedidos"
+            value={salespersonPerf?.kpis?.carteraVentas || 0}
+            accountValue={salespersonPerf?.kpis?.carteraVentasAccounts}
+            type="currency"
+            icon={Package}
+            color="emerald"
+            isLoading={spLoading}
+            infoProps={{
+              description: "Importe total de pedidos de venta abiertos de este vendedor.",
+              formulas: "Suma de pedidos abiertos"
+            }}
+          />
+
+          <KPICard
+            title="Pend. Facturar"
+            value={salespersonPerf?.kpis?.enviadosFacturar || 0}
+            accountValue={salespersonPerf?.kpis?.enviadosFacturarAccounts}
+            type="currency"
+            icon={Euro}
+            color="amber"
+            isLoading={spLoading}
+            infoProps={{
+              description: "Importe de la mercancía ya enviada pero pendiente de emitir la factura.",
+              formulas: "Enviado no facturado"
+            }}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Chart */}
         <div className="lg:col-span-2 bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
@@ -343,21 +469,21 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
   const formattedSubValue = type === 'currency' ? formatCurrency(subValue, 0) : subValue;
 
   return (
-    <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
-      <div className="flex justify-between items-start mb-4">
+    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm transition-all hover:shadow-card-hover group">
+      <div className="flex justify-between items-start mb-2">
         <div className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
           <span className="text-[10px] font-bold uppercase tracking-wider">{title}</span>
           {infoProps && <InfoPopover title={title} {...infoProps} iconSize={12} />}
         </div>
-        <div className={`p-2 rounded-xl transition-transform group-hover:scale-110 duration-300 ${colorMap[color] || colorMap.blue}`}>
-          <Icon size={18} />
+        <div className={`p-1.5 rounded-xl transition-transform group-hover:scale-110 duration-300 ${colorMap[color] || colorMap.blue}`}>
+          <Icon size={16} />
         </div>
       </div>
       
       {variant === 'comparison' ? (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 w-12">{label1}</span>
+            <span className="text-[10px] font-bold text-gray-400 w-16">{label1}</span>
             <div className="flex flex-col">
               <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">
                 {formattedValue}
@@ -370,10 +496,20 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 w-12">{label2}</span>
+            <span className="text-[10px] font-bold text-gray-400 w-16">{label2}</span>
             <div className="flex flex-col">
-              <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">
-                {label2 === 'TOTAL:' || label2 === 'CANT:' ? `${subValue}${suffix}` : formattedSubValue}
+              <div className={`text-lg font-light tracking-tight ${
+                label2 === 'DESV:' 
+                  ? (subValue >= 0 ? 'text-emerald-500' : 'text-red-500')
+                  : label2 === 'CUMPLIM:' 
+                    ? (subValue >= 100 ? 'text-emerald-500' : 'text-red-500')
+                    : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                {label2 === 'TOTAL:' || label2 === 'CANT:' 
+                  ? `${subValue}${suffix}` 
+                  : label2 === 'CUMPLIM:'
+                    ? `${Number(subValue).toFixed(1)}%`
+                    : formattedSubValue}
               </div>
               {accountSubValue !== undefined && accountSubValue > 0 && (
                 <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
@@ -392,7 +528,14 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
           )}
           </div>
       ) : (
-        <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+        <div className="flex flex-col">
+          <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+          {accountValue !== undefined && accountValue > 0 && (
+            <div className="text-[10px] text-gray-400 mt-1 italic font-normal">
+              ({formatCurrency(accountValue, 0)})
+            </div>
+          )}
+        </div>
       )}
       
       {/* Deviation and Footer */}
