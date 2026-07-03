@@ -3,6 +3,22 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class SalesDocumentsService {
+  private cacheHistory: {
+    aggregated: any[];
+    yearlyBreakdown: Record<number, Record<number, {
+      itemsTotal: number;
+      accounts: {
+        account_no: string;
+        description: string;
+        amount: number;
+      }[]
+    }>>;
+    lastFetched: number;
+  } | null = null;
+
+  // Cache validity duration: 2 hours (in milliseconds)
+  private readonly CACHE_DURATION = 2 * 60 * 60 * 1000;
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -298,10 +314,82 @@ export class SalesDocumentsService {
 
   /**
    * Obtiene datos agregados de facturación para el dashboard histórico de facturación.
+   * Optimizado con caché en memoria para los datos cerrados de años anteriores (2022-2025).
    */
   async getBillingHistoryDashboard() {
     try {
-      const documents = await this.prisma.sales_documents.findMany({
+      const currentYear = new Date().getFullYear();
+      const now = Date.now();
+
+      // Check if cache for previous years is loaded and still valid
+      const isCacheValid = this.cacheHistory && (now - this.cacheHistory.lastFetched < this.CACHE_DURATION);
+      
+      let historicalAggregated: any[] = [];
+      let historicalYearlyBreakdown: Record<number, Record<number, {
+        itemsTotal: number;
+        accounts: {
+          account_no: string;
+          description: string;
+          amount: number;
+        }[]
+      }>> = {};
+
+      if (isCacheValid && this.cacheHistory) {
+        historicalAggregated = this.cacheHistory.aggregated;
+        historicalYearlyBreakdown = this.cacheHistory.yearlyBreakdown;
+      } else {
+        // Fetch and process historical years (2022 up to previous year)
+        const historicalDocs = await this.prisma.sales_documents.findMany({
+          where: {
+            posting_date: {
+              gte: new Date(Date.UTC(2022, 0, 1)),
+              lt: new Date(Date.UTC(currentYear, 0, 1))
+            }
+          },
+          select: {
+            document_no: true,
+            document_type: true,
+            total_amount_excl_vat: true,
+            posting_date: true,
+            customer_no: true,
+            customer: {
+              select: {
+                name: true,
+                salesperson_code: true,
+                sales_rep: { select: { name: true } }
+              }
+            },
+            lines: {
+              select: {
+                type: true,
+                line_amount: true,
+                product_no: true,
+                product: { select: { description: true } }
+              }
+            }
+          }
+        });
+
+        const { aggregated: histAgg, yearlyBreakdown: histBreak } = this.processDocuments(historicalDocs);
+        
+        // Cache historical data
+        this.cacheHistory = {
+          aggregated: histAgg,
+          yearlyBreakdown: histBreak,
+          lastFetched: now
+        };
+        historicalAggregated = histAgg;
+        historicalYearlyBreakdown = histBreak;
+      }
+
+      // Fetch and process current year data (Always real-time live data)
+      const currentYearDocs = await this.prisma.sales_documents.findMany({
+        where: {
+          posting_date: {
+            gte: new Date(Date.UTC(currentYear, 0, 1)),
+            lt: new Date(Date.UTC(currentYear + 1, 0, 1))
+          }
+        },
         select: {
           document_no: true,
           document_type: true,
@@ -312,11 +400,7 @@ export class SalesDocumentsService {
             select: {
               name: true,
               salesperson_code: true,
-              sales_rep: {
-                select: {
-                  name: true
-                }
-              }
+              sales_rep: { select: { name: true } }
             }
           },
           lines: {
@@ -324,147 +408,162 @@ export class SalesDocumentsService {
               type: true,
               line_amount: true,
               product_no: true,
-              product: {
-                select: {
-                  description: true
-                }
-              }
+              product: { select: { description: true } }
             }
           }
         }
       });
 
-      const aggregated: Record<string, {
-        customer_no: string;
-        customer_name: string;
-        year: number;
-        month: number;
-        salesperson_code: string;
-        salesperson_name: string;
-        amount: number;
-        accounts_amount: number;
-        accounts_positive_amount: number;
-        accounts_negative_amount: number;
-      }> = {};
+      const { aggregated: currentAgg, yearlyBreakdown: currentBreak } = this.processDocuments(currentYearDocs);
 
-      const yearlyBreakdown: Record<number, Record<number, {
-        itemsTotal: number;
-        accounts: Record<string, {
-          account_no: string;
-          description: string;
-          amount: number;
-        }>;
-      }>> = {};
-
-      documents.forEach(doc => {
-        const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB');
-        const multiplier = isAbono ? -1 : 1;
-        const amount = Number(doc.total_amount_excl_vat || 0) * multiplier;
-        
-        let accountsAmount = 0;
-        let accountsPositiveAmount = 0;
-        let accountsNegativeAmount = 0;
-        const isPrepay = doc.document_no?.toUpperCase().includes('PFV') || doc.document_no?.toUpperCase().includes('PFC');
-        
-        const date = doc.posting_date ? new Date(doc.posting_date) : null;
-        if (!date) return;
-        
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-
-        if (!yearlyBreakdown[year]) {
-          yearlyBreakdown[year] = {};
-        }
-        if (!yearlyBreakdown[year][month]) {
-          yearlyBreakdown[year][month] = {
-            itemsTotal: 0,
-            accounts: {}
-          };
-        }
-
-        if (doc.lines) {
-          doc.lines.forEach(line => {
-            const lineAmt = Number(line.line_amount || 0) * multiplier;
-            const typeLower = line.type?.toLowerCase();
-
-            if (typeLower === 'item') {
-              yearlyBreakdown[year][month].itemsTotal += lineAmt;
-            } else if (typeLower === 'g/l account') {
-              accountsAmount += lineAmt;
-              const acctNo = line.product_no || 'Sin cuenta';
-              if (acctNo.startsWith('438')) {
-                accountsNegativeAmount += lineAmt;
-              } else {
-                accountsPositiveAmount += lineAmt;
-              }
-
-              const desc = this.getGLAccountDescription(acctNo, line.product?.description);
-
-              if (!yearlyBreakdown[year][month].accounts[acctNo]) {
-                yearlyBreakdown[year][month].accounts[acctNo] = {
-                  account_no: acctNo,
-                  description: desc,
-                  amount: 0
-                };
-              }
-              yearlyBreakdown[year][month].accounts[acctNo].amount += lineAmt;
-            }
-          });
-        }
-
-        const customer_no = doc.customer_no;
-        const customer_name = doc.customer?.name || 'Desconocido';
-        const salesperson_code = doc.customer?.salesperson_code || 'En blanco';
-        const salesperson_name = doc.customer?.sales_rep?.name || 'En blanco';
-
-        const key = `${customer_no}_${year}_${month}`;
-        if (!aggregated[key]) {
-          aggregated[key] = {
-            customer_no,
-            customer_name,
-            year,
-            month,
-            salesperson_code,
-            salesperson_name,
-            amount: 0,
-            accounts_amount: 0,
-            accounts_positive_amount: 0,
-            accounts_negative_amount: 0
-          };
-        }
-        aggregated[key].amount += amount;
-        aggregated[key].accounts_amount += accountsAmount;
-        aggregated[key].accounts_positive_amount += accountsPositiveAmount;
-        aggregated[key].accounts_negative_amount += accountsNegativeAmount;
-      });
-
-      const finalYearlyBreakdown: Record<number, Record<number, {
-        itemsTotal: number;
-        accounts: {
-          account_no: string;
-          description: string;
-          amount: number;
-        }[]
-      }>> = {};
-
-      Object.entries(yearlyBreakdown).forEach(([yr, monthsData]) => {
-        const yrNum = Number(yr);
-        finalYearlyBreakdown[yrNum] = {};
-        Object.entries(monthsData).forEach(([m, data]) => {
-          finalYearlyBreakdown[yrNum][Number(m)] = {
-            itemsTotal: data.itemsTotal,
-            accounts: Object.values(data.accounts).sort((a, b) => b.amount - a.amount)
-          };
-        });
-      });
+      // Merge historical cache with current year live data
+      const mergedAggregated = [...historicalAggregated, ...currentAgg];
+      const mergedYearlyBreakdown = {
+        ...historicalYearlyBreakdown,
+        ...currentBreak
+      };
 
       return {
-        aggregated: Object.values(aggregated),
-        yearlyBreakdown: finalYearlyBreakdown
+        aggregated: mergedAggregated,
+        yearlyBreakdown: mergedYearlyBreakdown
       };
     } catch (error) {
       throw new InternalServerErrorException(error.message);
     }
+  }
+
+  /**
+   * Helper function to process and aggregate document arrays
+   */
+  private processDocuments(documents: any[]) {
+    const aggregated: Record<string, {
+      customer_no: string;
+      customer_name: string;
+      year: number;
+      month: number;
+      salesperson_code: string;
+      salesperson_name: string;
+      amount: number;
+      accounts_amount: number;
+      accounts_positive_amount: number;
+      accounts_negative_amount: number;
+    }> = {};
+
+    const yearlyBreakdown: Record<number, Record<number, {
+      itemsTotal: number;
+      accounts: Record<string, {
+        account_no: string;
+        description: string;
+        amount: number;
+      }>;
+    }>> = {};
+
+    documents.forEach(doc => {
+      const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB');
+      const multiplier = isAbono ? -1 : 1;
+      const amount = Number(doc.total_amount_excl_vat || 0) * multiplier;
+      
+      let accountsAmount = 0;
+      let accountsPositiveAmount = 0;
+      let accountsNegativeAmount = 0;
+      
+      const date = doc.posting_date ? new Date(doc.posting_date) : null;
+      if (!date) return;
+      
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+
+      if (!yearlyBreakdown[year]) {
+        yearlyBreakdown[year] = {};
+      }
+      if (!yearlyBreakdown[year][month]) {
+        yearlyBreakdown[year][month] = {
+          itemsTotal: 0,
+          accounts: {}
+        };
+      }
+
+      if (doc.lines) {
+        doc.lines.forEach((line: any) => {
+          const lineAmt = Number(line.line_amount || 0) * multiplier;
+          const typeLower = line.type?.toLowerCase();
+
+          if (typeLower === 'item') {
+            yearlyBreakdown[year][month].itemsTotal += lineAmt;
+          } else if (typeLower === 'g/l account') {
+            accountsAmount += lineAmt;
+            const acctNo = line.product_no || 'Sin cuenta';
+            if (acctNo.startsWith('438')) {
+              accountsNegativeAmount += lineAmt;
+            } else {
+              accountsPositiveAmount += lineAmt;
+            }
+
+            const desc = this.getGLAccountDescription(acctNo, line.product?.description);
+
+            if (!yearlyBreakdown[year][month].accounts[acctNo]) {
+              yearlyBreakdown[year][month].accounts[acctNo] = {
+                account_no: acctNo,
+                description: desc,
+                amount: 0
+              };
+            }
+            yearlyBreakdown[year][month].accounts[acctNo].amount += lineAmt;
+          }
+        });
+      }
+
+      const customer_no = doc.customer_no;
+      const customer_name = doc.customer?.name || 'Desconocido';
+      const salesperson_code = doc.customer?.salesperson_code || 'En blanco';
+      const salesperson_name = doc.customer?.sales_rep?.name || 'En blanco';
+
+      const key = `${customer_no}_${year}_${month}`;
+      if (!aggregated[key]) {
+        aggregated[key] = {
+          customer_no,
+          customer_name,
+          year,
+          month,
+          salesperson_code,
+          salesperson_name,
+          amount: 0,
+          accounts_amount: 0,
+          aggregated_positive_amount: 0, // renamed to avoid overlap errors if any
+          accounts_positive_amount: 0,
+          accounts_negative_amount: 0
+        } as any;
+      }
+      aggregated[key].amount += amount;
+      aggregated[key].accounts_amount += accountsAmount;
+      aggregated[key].accounts_positive_amount += accountsPositiveAmount;
+      aggregated[key].accounts_negative_amount += accountsNegativeAmount;
+    });
+
+    const finalYearlyBreakdown: Record<number, Record<number, {
+      itemsTotal: number;
+      accounts: {
+        account_no: string;
+        description: string;
+        amount: number;
+      }[]
+    }>> = {};
+
+    Object.entries(yearlyBreakdown).forEach(([yr, monthsData]) => {
+      const yrNum = Number(yr);
+      finalYearlyBreakdown[yrNum] = {};
+      Object.entries(monthsData).forEach(([m, data]) => {
+        finalYearlyBreakdown[yrNum][Number(m)] = {
+          itemsTotal: data.itemsTotal,
+          accounts: Object.values(data.accounts).sort((a, b) => b.amount - a.amount)
+        };
+      });
+    });
+
+    return {
+      aggregated: Object.values(aggregated),
+      yearlyBreakdown: finalYearlyBreakdown
+    };
   }
 
   private getGLAccountDescription(accountNo: string, defaultDescription: string | null | undefined): string {
