@@ -93,12 +93,27 @@ export class ProductsService {
         }),
       ]);
 
+      // Calculate total inventory value in € (Sum of inventory_qty * unit_cost) for current filtered references
+      // To be accurate and performant, we can run a quick select on the filtered query
+      const stockProducts = await this.prisma.products.findMany({
+        where: { ...where, inventory_qty: { gt: 0 } },
+        select: {
+          inventory_qty: true,
+          unit_cost: true
+        }
+      });
+
+      const totalValuation = stockProducts.reduce((acc, p) => {
+        return acc + (p.inventory_qty * Number(p.unit_cost || 0));
+      }, 0);
+
       return { 
         data, 
         total,
         summary: {
           totalStock: aggregation._sum.inventory_qty || 0,
           avgPrice: aggregation._avg.unit_price || 0,
+          totalValuation: totalValuation
         }
       };
     } catch (error) {
@@ -163,5 +178,65 @@ export class ProductsService {
     return this.prisma.products.delete({
       where: { id },
     });
+  }
+
+  /**
+   * Obtiene datos comparativos de la valoración del inventario para el año actual y años anteriores.
+   * Utiliza la tabla value_entries sumando los importes de coste históricos hasta el fin de cada año.
+   */
+  async getInventoryDashboard() {
+    try {
+      const currentYear = new Date().getFullYear();
+      
+      // Calculate current valuation from products table (live snapshot)
+      const currentProducts = await this.prisma.products.findMany({
+        where: { inventory_qty: { gt: 0 } },
+        select: { inventory_qty: true, unit_cost: true }
+      });
+      const currentValuation = currentProducts.reduce((acc, p) => {
+        return acc + (p.inventory_qty * Number(p.unit_cost || 0));
+      }, 0);
+
+      // We will pull the cumulative historical valuation at the end of each year from value_entries.
+      // The cumulative inventory value at date T is the sum of cost_amount (or cost expected/actual) of all value entries up to T.
+      // Let's retrieve cumulative cost_amount sums for 2023, 2024, 2025.
+      const years = [2023, 2024, 2025];
+      const historicalData: { year: number; valuation: number }[] = [];
+
+      for (const y of years) {
+        const endDate = new Date(Date.UTC(y, 11, 31, 23, 59, 59));
+        
+        // Sum all cost_amount up to y-12-31.
+        // In Business Central, the sum of "Cost Amount (Actual)" + "Cost Amount (Expected)" gives the inventory value.
+        // In our value_entries schema, we have cost_amount.
+        const aggregation = await this.prisma.value_entries.aggregate({
+          where: {
+            reg_date: {
+              lte: endDate
+            }
+          },
+          _sum: {
+            cost_amount: true
+          }
+        });
+        
+        // The cost_amount of inventory entries is stored as negative for sales (outflows) and positive for purchases/adjustments (inflows).
+        // The sum represents the remaining asset cost.
+        historicalData.push({
+          year: y,
+          valuation: Math.max(0, Number(aggregation._sum.cost_amount || 0))
+        });
+      }
+
+      // Add the current year live snapshot
+      historicalData.push({
+        year: currentYear,
+        valuation: currentValuation
+      });
+
+      return historicalData.sort((a, b) => a.year - b.year);
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
   }
 }

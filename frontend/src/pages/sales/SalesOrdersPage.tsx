@@ -175,7 +175,7 @@ export const SalesOrdersPage: React.FC = () => {
   };
 
 
-  if (isLoading) return (
+  if (isLoading && !data) return (
     <div className="space-y-8 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><KPISkeleton /><KPISkeleton /><KPISkeleton /></div>

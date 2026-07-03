@@ -338,11 +338,12 @@ export class SalesDocumentsService {
         historicalAggregated = this.cacheHistory.aggregated;
         historicalYearlyBreakdown = this.cacheHistory.yearlyBreakdown;
       } else {
-        // Fetch and process historical years (2022 up to previous year)
+        // Fetch and process historical years (Exactly last 4 years before currentYear)
+        const startHistoricalYear = currentYear - 4; // For 2026, start at 2022
         const historicalDocs = await this.prisma.sales_documents.findMany({
           where: {
             posting_date: {
-              gte: new Date(Date.UTC(2022, 0, 1)),
+              gte: new Date(Date.UTC(startHistoricalYear, 0, 1)),
               lt: new Date(Date.UTC(currentYear, 0, 1))
             }
           },

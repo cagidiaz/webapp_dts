@@ -57,6 +57,12 @@ export class ProductsController {
     return this.productsService.getVendors();
   }
 
+  @Get('inventory/dashboard')
+  @ApiOperation({ summary: 'Obtener valoración de inventario actual y comparativa histórica' })
+  async getInventoryDashboard() {
+    return this.productsService.getInventoryDashboard();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un producto por ID (UUID)' })
   async getById(@Param('id') id: string) {

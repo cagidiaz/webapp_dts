@@ -3,16 +3,18 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { 
   getAllProducts, 
   getProductFamilies, 
-  getProductVendors 
+  getProductVendors,
+  getInventoryDashboard
 } from '../../api';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
   Search, Package, Boxes, TrendingUp, Filter,
-  Loader2, ArrowUpDown, ChevronUp, ChevronDown
+  Loader2, ArrowUpDown, ChevronUp, ChevronDown, Coins
 } from 'lucide-react';
 import { InfoPopover, KPISkeleton, TableSkeleton, SearchableSelect, ExportButton } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
 import { exportToXlsx } from '../../utils/exportToXlsx';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from 'recharts';
 
 export const ProductsPage: React.FC = () => {
   const { setPageInfo } = useUIStore();
@@ -63,6 +65,10 @@ export const ProductsPage: React.FC = () => {
 
   const { data: families = [] } = useQuery({ queryKey: ['productFamilies'], queryFn: getProductFamilies });
   const { data: vendors = [] } = useQuery({ queryKey: ['productVendors'], queryFn: getProductVendors });
+  const { data: inventoryHistory = [], isLoading: isLoadingHistory } = useQuery({ 
+    queryKey: ['inventoryDashboard'], 
+    queryFn: getInventoryDashboard 
+  });
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -73,11 +79,17 @@ export const ProductsPage: React.FC = () => {
     return () => { if (observerTarget.current) observer.unobserve(observerTarget.current); };
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-  const { products, totalProducts, globalStock, globalAvgPrice } = useMemo(() => {
+  const { products, totalProducts, globalStock, globalAvgPrice, globalValuation } = useMemo(() => {
     const allItems = data?.pages.flatMap(page => page.data) || [];
     const totalCount = data?.pages[0]?.total || 0;
-    const summary = data?.pages[0]?.summary || { totalStock: 0, avgPrice: 0 };
-    return { products: allItems, totalProducts: totalCount, globalStock: summary.totalStock, globalAvgPrice: summary.avgPrice };
+    const summary = data?.pages[0]?.summary || { totalStock: 0, avgPrice: 0, totalValuation: 0 };
+    return { 
+      products: allItems, 
+      totalProducts: totalCount, 
+      globalStock: summary.totalStock, 
+      globalAvgPrice: summary.avgPrice,
+      globalValuation: summary.totalValuation
+    };
   }, [data]);
 
   const familyOptions = useMemo(() => families.map(f => ({ value: f.subfamily_code || '', label: f.subfamily_name || f.subfamily_code || '' })), [families]);
@@ -122,10 +134,17 @@ export const ProductsPage: React.FC = () => {
     exportToXlsx(result.data, columns, 'catalogo_productos');
   };
 
-  if (isLoading) return (
+  const chartTheme = {
+    textColor: '#94a3b8',
+    gridColor: 'rgba(148, 163, 184, 0.1)',
+    tooltipBg: '#0f172a',
+    tooltipBorder: '#1e293b'
+  };
+
+  if (isLoading && !data) return (
     <div className="space-y-8 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><KPISkeleton /><KPISkeleton /><KPISkeleton /></div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6"><KPISkeleton /><KPISkeleton /><KPISkeleton /><KPISkeleton /></div>
       <div className="bg-white dark:bg-surface-card-dark rounded-xl h-[550px]"><TableSkeleton rows={15} columns={9} /></div>
     </div>
   );
@@ -133,66 +152,123 @@ export const ProductsPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <KPICard 
-          title="Total Referencias" 
-          value={totalProducts} 
-          type="number" 
-          icon={Package} 
-          isLoading={isLoading} 
-          infoProps={{
-            description: "Número total de productos únicos en el catálogo según filtros."
-          }}
-        />
-        <KPICard 
-          title="Stock Total" 
-          value={globalStock} 
-          type="number" 
-          icon={Boxes} 
-          status={globalStock > 0 ? 'success' : 'danger'} 
-          isLoading={isLoading} 
-          infoProps={{
-            description: "Sumatorio de las existencias físicas de todos los productos en todos los almacenes."
-          }}
-        />
-        <KPICard 
-          title="PVP Medio" 
-          value={globalAvgPrice} 
-          type="currency" 
-          icon={TrendingUp} 
-          isLoading={isLoading} 
-          decimals={2}
-          infoProps={{
-            description: "Precio de Venta al Público promedio promedio de las referencias mostradas.",
-            formulas: "Sum(Precio) / Total Referencias"
-          }}
-        />
+      {/* KPI Cards & Inventory Valuation Chart Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left: 4 KPIs in 2 Columns */}
+        <div className="lg:col-span-6 grid grid-cols-2 gap-4">
+          <KPICard 
+            title="Total Referencias" 
+            value={totalProducts} 
+            type="number" 
+            icon={Package} 
+            isLoading={isLoading} 
+            infoProps={{
+              description: "Número total de productos únicos en el catálogo según filtros."
+            }}
+          />
+          <KPICard 
+            title="Stock Total" 
+            value={globalStock} 
+            type="number" 
+            icon={Boxes} 
+            status={globalStock > 0 ? 'success' : 'danger'} 
+            isLoading={isLoading} 
+            infoProps={{
+              description: "Sumatorio de las existencias físicas de todos los productos en todos los almacenes."
+            }}
+          />
+          <KPICard 
+            title="Valor Inventario" 
+            value={globalValuation} 
+            type="currency" 
+            icon={Coins} 
+            status="success"
+            isLoading={isLoading} 
+            infoProps={{
+              description: "Valoración económica total de las existencias físicas en el almacén basada en el Coste Unitario.",
+              formulas: "Sum(Stock * Coste Unitario)"
+            }}
+          />
+          <KPICard 
+            title="PVP Medio" 
+            value={globalAvgPrice} 
+            type="currency" 
+            icon={TrendingUp} 
+            isLoading={isLoading} 
+            decimals={2}
+            infoProps={{
+              description: "Precio de Venta al Público promedio de las referencias mostradas.",
+              formulas: "Sum(Precio) / Total Referencias"
+            }}
+          />
+        </div>
+
+        {/* Right: Evolution Chart */}
+        <div className="lg:col-span-6 bg-white dark:bg-surface-card-dark rounded-xl border border-gray-100 dark:border-gray-800 p-4 shadow-sm flex flex-col justify-between">
+          <h3 className="text-[10px] font-bold text-dts-primary dark:text-white uppercase tracking-wider mb-2">Evolución Histórica de Valoración de Inventario</h3>
+          {isLoadingHistory ? (
+            <div className="h-28 flex items-center justify-center">
+              <Loader2 className="animate-spin text-dts-primary mr-2" size={16} />
+              <span className="text-xs text-gray-500">Cargando histórico...</span>
+            </div>
+          ) : (
+            <div className="h-28 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={inventoryHistory} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} />
+                  <XAxis dataKey="year" stroke={chartTheme.textColor} tick={{ fontSize: 9 }} />
+                  <YAxis stroke={chartTheme.textColor} tick={{ fontSize: 9 }} tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    cursor={false}
+                    contentStyle={{ backgroundColor: chartTheme.tooltipBg, borderColor: chartTheme.tooltipBorder, borderRadius: '6px', color: '#fff', fontSize: '9px' }}
+                    formatter={(val) => [formatCurrency(Number(val), 0), 'Valoración']}
+                  />
+                  <Bar dataKey="valuation" fill="#00B0B9" radius={[3, 3, 0, 0]} maxBarSize={40}>
+                    {inventoryHistory.map((entry, idx) => (
+                      <Cell key={`cell-${idx}`} fill={entry.year === new Date().getFullYear() ? '#002D3B' : '#00B0B9'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
       </div>
 
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-320px)] min-h-[500px]">
-        <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent space-y-4">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="w-full lg:max-w-md relative group">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Search className="h-4 w-4" /></div>
-              <input type="text" className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-sm" placeholder="Buscar producto..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-410px)] min-h-[400px]">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
+          <div className="flex flex-wrap items-center gap-4 justify-between">
+            {/* Left side: Search & Filter elements in one continuous row */}
+            <div className="flex flex-wrap items-center gap-4 flex-1">
+              <div className="w-full sm:max-w-xs relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Search className="h-4 w-4" /></div>
+                <input type="text" className="block w-full pl-10 pr-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-xs" placeholder="Buscar producto..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Filter size={12} className="text-gray-400" />
+                <SearchableSelect options={familyOptions} value={familyFilter} onChange={setFamilyFilter} placeholder="Familias" />
+                <SearchableSelect options={vendorOptions} value={vendorFilter} onChange={setVendorFilter} placeholder="Proveedores" />
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-1.5 cursor-pointer group">
+                  <input type="checkbox" checked={showOnlyWithStock} onChange={(e) => setShowOnlyWithStock(e.target.checked)} className="rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary" />
+                  <span className="text-[9px] font-bold text-gray-500 uppercase group-hover:text-dts-primary transition-colors">Con Stock</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer group">
+                  <input type="checkbox" checked={hideBlocked} onChange={(e) => setHideBlocked(e.target.checked)} className="rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary" />
+                  <span className="text-[9px] font-bold text-gray-500 uppercase group-hover:text-dts-primary transition-colors">Ocultar Bloq.</span>
+                </label>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <Filter size={14} className="text-gray-400" /><span className="text-[10px] font-bold text-gray-400 uppercase">Filtros:</span>
-            <SearchableSelect options={familyOptions} value={familyFilter} onChange={setFamilyFilter} placeholder="Familias" />
-            <SearchableSelect options={vendorOptions} value={vendorFilter} onChange={setVendorFilter} placeholder="Proveedores" />
-            
-            <div className="flex items-center gap-4 ml-2">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input type="checkbox" checked={showOnlyWithStock} onChange={(e) => setShowOnlyWithStock(e.target.checked)} className="rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary" />
-                <span className="text-[10px] font-bold text-gray-500 uppercase group-hover:text-dts-primary transition-colors">Con Stock</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input type="checkbox" checked={hideBlocked} onChange={(e) => setHideBlocked(e.target.checked)} className="rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary" />
-                <span className="text-[10px] font-bold text-gray-500 uppercase group-hover:text-dts-primary transition-colors">Ocultar Bloq.</span>
-              </label>
+
+            {/* Right side: Exporter */}
+            <div className="flex items-center">
+              <ExportButton onExport={handleExport} />
             </div>
-            <ExportButton onExport={handleExport} />
           </div>
         </div>
 

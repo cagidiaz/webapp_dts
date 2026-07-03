@@ -40,7 +40,13 @@ export interface ProductsResponse {
   summary: {
     totalStock: number;
     avgPrice: number;
+    totalValuation: number;
   };
+}
+
+export interface InventoryDashboardRow {
+  year: number;
+  valuation: number;
 }
 
 export const getAllProducts = async (params: { 
@@ -65,6 +71,11 @@ export const getProductFamilies = async (): Promise<ProductCategory[]> => {
 
 export const getProductVendors = async (): Promise<string[]> => {
   const { data } = await apiClient.get('/products/vendors');
+  return data;
+};
+
+export const getInventoryDashboard = async (): Promise<InventoryDashboardRow[]> => {
+  const { data } = await apiClient.get('/products/inventory/dashboard');
   return data;
 };
 

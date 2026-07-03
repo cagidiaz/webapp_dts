@@ -262,7 +262,7 @@ export const QuotesPage: React.FC = () => {
     return 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30';
   };
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
       <div className="space-y-6 pb-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

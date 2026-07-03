@@ -104,7 +104,7 @@ export const ValueEntriesPage: React.FC = () => {
     exportToXlsx(result.rows, columns, 'historico_ventas_value_entries');
   };
 
-  if (isLoading) return (
+  if (isLoading && !data) return (
     <div className="space-y-8 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
       <div className="bg-white dark:bg-surface-card-dark rounded-xl h-[550px]"><TableSkeleton rows={15} columns={8} /></div>

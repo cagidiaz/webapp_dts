@@ -843,7 +843,7 @@ export const SalesInvoicesPage: React.FC = () => {
         {/* Table container */}
         <div className="flex-1 overflow-auto custom-scrollbar">
           {viewType === 'detail' ? (
-            isLoadingList ? (
+            isLoadingList && !listData ? (
               <TableSkeleton rows={15} columns={9} />
             ) : (
               <table className="w-full text-left text-sm border-separate border-spacing-0">
