@@ -781,7 +781,7 @@ model sales_quotes {
 model sales_quotes_crm {
   id                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   document_no           String                   @unique @db.VarChar(50)
-  contact_id            String?                  @db.Uuid
+  contacto_id           String?                  @db.Uuid
   estado_oferta         String                   @default("borrador") @db.VarChar(50)
   probabilidad_exito    Decimal?                 @default(10.0) @db.Decimal(5, 2)
   oferta_type           String                   @default("proyecto") @db.VarChar(50)
@@ -799,10 +799,10 @@ model sales_quotes_crm {
   updated_at            DateTime?                @default(now()) @db.Timestamptz(6)
 
   sales_quote           sales_quotes             @relation(fields: [document_no], references: [document_no], onDelete: Cascade)
-  contact               contacts?                @relation(fields: [contact_id], references: [id], onDelete: SetNull)
+  contact               contacts?                @relation(fields: [contacto_id], references: [id], onDelete: SetNull)
   activities            sales_quote_activities[]
 
-  @@index([contact_id])
+  @@index([contacto_id])
   @@schema("public")
 }
 

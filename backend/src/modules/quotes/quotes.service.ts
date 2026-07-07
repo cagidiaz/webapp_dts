@@ -360,7 +360,7 @@ export class QuotesService {
       if (params.contactId) {
         and.push({
           sales_quotes_crm: {
-            contact_id: params.contactId
+            contacto_id: params.contactId
           }
         });
       }
@@ -547,7 +547,7 @@ export class QuotesService {
         motivo_ganada: payload.motivo_ganada,
         motivo_perdida: payload.motivo_perdida,
         observaciones: payload.observaciones,
-        contact_id: payload.contact_id || undefined,
+        contacto_id: payload.contacto_id || undefined,
         contacto_nombre: payload.contacto_nombre,
         contacto_email: payload.contacto_email,
         contacto_telefono: payload.contacto_telefono,
@@ -576,7 +576,7 @@ export class QuotesService {
             motivo_ganada: payload.motivo_ganada || quote.motivo_ganada || null,
             motivo_perdida: payload.motivo_perdida || quote.motivo_perdida || null,
             observaciones: payload.observaciones || quote.observaciones || null,
-            contact_id: payload.contact_id || null,
+            contacto_id: payload.contacto_id || null,
             contacto_nombre: payload.contacto_nombre || null,
             contacto_email: payload.contacto_email || null,
             contacto_telefono: payload.contacto_telefono || null,

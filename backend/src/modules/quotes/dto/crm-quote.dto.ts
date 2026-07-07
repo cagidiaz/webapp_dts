@@ -38,7 +38,7 @@ export class UpdateCrmQuoteDto {
 
   @IsUUID()
   @IsOptional()
-  contact_id?: string;
+  contacto_id?: string;
 
   @IsString()
   @IsOptional()
