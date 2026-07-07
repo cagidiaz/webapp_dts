@@ -127,6 +127,7 @@ export interface CRMQuote {
   contacto_nombre: string | null;
   contacto_email: string | null;
   contacto_telefono: string | null;
+  contact_id?: string | null; // ← NUEVO
   proxima_accion: string | null;
   fecha_proxima_accion: string | null;
   valor_oferta_ponderado: number;
@@ -141,6 +142,7 @@ export const getAllCrmQuotes = async (params?: {
   ofertaType?: string;
   search?: string;
   year?: number | string;
+  contactId?: string; // ← NUEVO
 }): Promise<CRMQuote[]> => {
   const { data } = await apiClient.get('/quotes/crm', { params });
   return data;

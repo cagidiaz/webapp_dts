@@ -6,10 +6,10 @@ export class ContactsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Obtiene todos los contactos, permitiendo filtrar por client_id o relación comercial.
+   * Obtiene todos los contactos, permitiendo filtrar por client_id, relación comercial o búsqueda de texto.
    */
-  async getAll(params: { clientId?: string; relation?: string } = {}) {
-    const { clientId, relation } = params;
+  async getAll(params: { clientId?: string; relation?: string; search?: string } = {}) {
+    const { clientId, relation, search } = params;
     const where: any = {};
 
     if (clientId) {
@@ -23,9 +23,26 @@ export class ContactsService {
       };
     }
 
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { client_id: { contains: search, mode: 'insensitive' } },
+        { job_title: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     try {
       return await this.prisma.contacts.findMany({
         where,
+        include: {
+          customer: {
+            select: {
+              name: true,
+              client_id: true,
+            }
+          }
+        },
         orderBy: { name: 'asc' },
       });
     } catch (error) {
@@ -35,12 +52,15 @@ export class ContactsService {
   }
 
   /**
-   * Obtiene un contacto por su ID único (UUID).
+   * Obtiene un contacto por su ID único (UUID), enriquecido con la información de su empresa padre.
    */
   async getById(id: string) {
     try {
       const contact = await this.prisma.contacts.findUnique({
         where: { id },
+        include: {
+          customer: true
+        }
       });
       if (!contact) {
         throw new NotFoundException(`Contacto con ID ${id} no encontrado`);

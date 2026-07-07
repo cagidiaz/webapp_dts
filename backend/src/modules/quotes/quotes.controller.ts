@@ -61,6 +61,7 @@ export class QuotesController {
   @ApiQuery({ name: 'ofertaType', required: false, type: String })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'year', required: false, type: Number })
+  @ApiQuery({ name: 'contactId', required: false, type: String })
   async getAllCrm(
     @Req() req: any,
     @Query('salespersonCode') salespersonCode?: string,
@@ -69,6 +70,7 @@ export class QuotesController {
     @Query('ofertaType') ofertaType?: string,
     @Query('search') search?: string,
     @Query('year') year?: number,
+    @Query('contactId') contactId?: string,
   ) {
     const userId = req.user?.userId;
     return this.quotesService.getAllCrm({
@@ -77,7 +79,8 @@ export class QuotesController {
       probabilidadExito,
       ofertaType,
       search,
-      year: year ? Number(year) : undefined
+      year: year ? Number(year) : undefined,
+      contactId
     }, userId);
   }
 

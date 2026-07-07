@@ -129,13 +129,13 @@
           </div>
         </div>
 
-        <!-- CRM Customer Status -->
+        <!-- CRM Contact Status -->
         <div id="crmStatusContainer" class="flex-1 flex flex-col space-y-4">
           
           <!-- Searching state -->
           <div id="crmSearching" class="flex-1 flex flex-col items-center justify-center space-y-2 py-8">
             <div class="w-5 h-5 border-2 border-dts-secondary border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-slate-400 font-medium italic">Buscando cuenta en dTS CRM...</p>
+            <p class="text-slate-400 font-medium italic">Buscando contacto en dTS CRM...</p>
           </div>
 
           <!-- Not Found View -->
@@ -145,49 +145,46 @@
                 ⚠
               </div>
               <div class="space-y-1">
-                <h4 class="font-bold text-slate-900 dark:text-white">Cuenta no identificada</h4>
-                <p class="text-slate-400 text-[10px] px-4">El remitente del correo no está registrado como contacto ni cliente principal en dTS CRM.</p>
+                <h4 class="font-bold text-slate-900 dark:text-white">Contacto no identificado</h4>
+                <p class="text-slate-400 text-[10px] px-4">El remitente del correo no está registrado como contacto en dTS CRM.</p>
               </div>
               
               <div class="space-y-3 bg-white dark:bg-dts-cardDark p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm text-left">
-                <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vincular a cliente existente manualmente</label>
+                <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vincular a contacto existente manualmente</label>
                 
-                <!-- Buscador de empresas -->
-                <input type="text" id="customerSearchInput" oninput="debounceSearch()" placeholder="Buscar empresa por nombre o código..." class="w-full px-2.5 py-1.5 mb-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-dts-secondary text-xs">
+                <!-- Buscador de contactos -->
+                <input type="text" id="contactSearchInput" oninput="debounceSearch()" placeholder="Buscar contacto por nombre o cargo..." class="w-full px-2.5 py-1.5 mb-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-dts-secondary text-xs">
                 
-                <select id="customerSelect" class="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-dts-secondary text-xs">
-                  <option value="">Cargando clientes...</option>
+                <select id="contactSelect" class="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-dts-secondary text-xs">
+                  <option value="">Cargando contactos...</option>
                 </select>
                 <button onclick="handleLinkToSelected()" id="linkManualBtn" disabled class="w-full py-2 bg-dts-secondary disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white font-bold rounded-xl transition-all text-xs mt-2">
-                  Vincular a esta empresa
+                  Vincular a este contacto
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- Found Customer View -->
+          <!-- Found Contact View -->
           <div id="crmFound" class="hidden">
             <div class="flex-1 flex flex-col space-y-4">
               <div class="bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-250/50 dark:border-emerald-900/30 p-4 rounded-2xl space-y-2">
                 <div class="flex justify-between items-start">
                   <div>
-                    <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">Cliente Vinculado</span>
-                    <h4 id="clientName" class="font-black text-slate-900 dark:text-white text-xs mt-0.5">...</h4>
-                    <p id="clientIdBadge" class="text-[10px] font-mono font-bold text-slate-400">...</p>
-                  </div>
-                  <div id="contactMatchBadge" class="hidden px-2 py-0.5 rounded-full text-[9px] font-bold bg-dts-secondary/15 text-dts-secondary border border-dts-secondary/20">
-                    Contacto: <span id="contactName">...</span>
+                    <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">Contacto Vinculado</span>
+                    <h4 id="contactNameDisplay" class="font-black text-slate-900 dark:text-white text-xs mt-0.5">...</h4>
+                    <p id="contactJobBadge" class="text-[10px] font-bold text-slate-400">...</p>
                   </div>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4 border-t border-slate-200/50 dark:border-slate-800/50 pt-2 text-[10px] text-slate-500">
                   <div>
-                    <span class="block text-[8px] uppercase font-bold text-slate-400">Ventas Totales</span>
-                    <span id="clientSales" class="font-bold font-mono text-slate-950 dark:text-white">...</span>
+                    <span class="block text-[8px] uppercase font-bold text-slate-400">Empresa</span>
+                    <span id="companyNameDisplay" class="font-bold text-slate-950 dark:text-white">...</span>
                   </div>
                   <div>
-                    <span class="block text-[8px] uppercase font-bold text-slate-400">Comercial Asignado</span>
-                    <span id="clientSalesperson" class="font-bold text-slate-950 dark:text-white">...</span>
+                    <span class="block text-[8px] uppercase font-bold text-slate-400">Código Cliente</span>
+                    <span id="clientIdDisplay" class="font-bold font-mono text-slate-950 dark:text-white">...</span>
                   </div>
                 </div>
               </div>
@@ -208,16 +205,7 @@
   </main>
 
   <footer class="p-3 bg-dts-light dark:bg-dts-primary-dark/40 text-center text-[9px] text-slate-400 border-t border-slate-200/30 shrink-0">
-    dTS Instruments S.A. &copy; 2026
-  </footer>
-
-  <script>
-    // Supabase configurations
-    const SUPABASE_URL = "https://db.dtsinstruments.com";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzM3MzIxMTksImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.YKEmC5AlCIPP-gnXh3x3Hc5ShyVW6HKVtrkPoJQqj6M";
-    const API_BASE_URL = 'https://app.dtsinstruments.com/api';
-
-    let supabaseClient = null;
+    dTS Instruments S.A. &copy; 202    let supabaseClient = null;
     let activeCustomer = null;
     let activeContact = null;
     let emailSenderAddress = "";
@@ -312,12 +300,12 @@
                   emailSenderAddress = recipients[0].emailAddress;
                   const displayName = recipients[0].displayName || emailSenderAddress;
                   document.getElementById('mailSender').innerText = `Para: ${displayName} <${emailSenderAddress}>`;
-                  searchCustomerInCRM(emailSenderAddress);
+                  searchContactInCRM(emailSenderAddress);
                 } else {
                   emailSenderAddress = "";
                   document.getElementById('mailSender').innerText = "Para: (Sin destinatario)";
                   showCrmState('crmNotFound');
-                  loadCustomerSelector();
+                  loadContactSelector();
                 }
               } else {
                 emailSenderAddress = "";
@@ -353,8 +341,7 @@
               console.error("Error al registrar el controlador RecipientsChanged:", err);
             }
 
-            // Start a polling interval (every 2 seconds) to dynamically update the subject in the UI,
-            // since OfficeJS does not have a native 'SubjectChanged' event type.
+            // Start a polling interval (every 2 seconds) to dynamically update the subject in the UI
             setInterval(() => {
               try {
                 if (item.subject && typeof item.subject.getAsync === 'function') {
@@ -390,7 +377,7 @@
           document.getElementById('mailSender').innerText = `${item.from.displayName} <${emailSenderAddress}>`;
           document.getElementById('mailSubject').innerText = emailSubject;
           document.getElementById('mailDate').innerText = `Fecha original: ${formattedDate}`;
-          searchCustomerInCRM(emailSenderAddress);
+          searchContactInCRM(emailSenderAddress);
         } else {
           emailSenderAddress = "";
           emailDateTime = new Date().toISOString();
@@ -398,12 +385,12 @@
           document.getElementById('mailSubject').innerText = "(Sin Asunto)";
           document.getElementById('mailDate').innerText = "Fecha: ---";
           showCrmState('crmNotFound');
-          loadCustomerSelector();
+          loadContactSelector();
         }
       } else {
         // Mock context for local testing outside of Outlook
         emailSubject = "Consulta de Equipamiento para Laboratorio";
-        emailSenderAddress = "contacto@cliente-ejemplo.com";
+        emailSenderAddress = "juan.lopez@cliente-ejemplo.com";
         emailDateTime = new Date().toISOString();
         const formattedDate = new Date(emailDateTime).toLocaleString('es-ES', {
           day: '2-digit',
@@ -413,17 +400,17 @@
           minute: '2-digit'
         });
         document.getElementById('mailSubject').innerText = emailSubject;
-        document.getElementById('mailSender').innerText = `Juan Pérez <${emailSenderAddress}>`;
+        document.getElementById('mailSender').innerText = `Juan López <${emailSenderAddress}>`;
         document.getElementById('mailDate').innerText = `Fecha original: ${formattedDate}`;
-        searchCustomerInCRM(emailSenderAddress);
+        searchContactInCRM(emailSenderAddress);
       }
     }
 
-    // Query backend to resolve the customer details by email
-    async function searchCustomerInCRM(email) {
+    // Query backend to resolve the contact details by email
+    async function searchContactInCRM(email) {
       if (!email) {
         showCrmState('crmNotFound');
-        loadCustomerSelector();
+        loadContactSelector();
         return;
       }
 
@@ -431,7 +418,8 @@
       const token = localStorage.getItem('access_token');
 
       try {
-        const res = await fetch(`${API_BASE_URL}/customers/by-email/${encodeURIComponent(email)}`, {
+        // We call GET /contacts?search=:email to find the contact first
+        const res = await fetch(`${API_BASE_URL}/contacts?search=${encodeURIComponent(email)}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -442,34 +430,27 @@
           return;
         }
 
-        if (!res.ok) {
-          throw new Error("No encontrado");
-        }
-
         const data = await res.json();
-        activeCustomer = data.customer;
-        activeContact = data.contact;
-
-        // Display customer info
-        document.getElementById('clientName').innerText = activeCustomer.name;
-        document.getElementById('clientIdBadge').innerText = `Código ERP: ${activeCustomer.client_id} | Ciudad: ${activeCustomer.city || '---'}`;
-        document.getElementById('clientSalesperson').innerText = activeCustomer.salesperson_code || 'No asignado';
         
-        // Format Currency
-        const formatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-        document.getElementById('clientSales').innerText = formatter.format(activeCustomer.total_sales || 0);
-
-        if (activeContact) {
-          document.getElementById('contactName').innerText = activeContact.name;
-          document.getElementById('contactMatchBadge').classList.remove('hidden');
-        } else {
-          document.getElementById('contactMatchBadge').classList.add('hidden');
+        // Find exact match by email
+        const match = data.find(c => (c.email || '').toLowerCase() === email.toLowerCase());
+        if (!match) {
+          throw new Error("Contacto no encontrado");
         }
+
+        activeContact = match;
+        activeCustomer = match.customer || { client_id: match.client_id, name: 'Empresa asociada' };
+
+        // Display contact info
+        document.getElementById('contactNameDisplay').innerText = activeContact.name;
+        document.getElementById('contactJobBadge').innerText = activeContact.job_title || 'Contacto Comercial';
+        document.getElementById('companyNameDisplay').innerText = activeCustomer.name || '---';
+        document.getElementById('clientIdDisplay').innerText = activeContact.client_id;
 
         showCrmState('crmFound');
       } catch (err) {
         showCrmState('crmNotFound');
-        loadCustomerSelector();
+        loadContactSelector();
       }
     }
 
@@ -485,29 +466,28 @@
     function debounceSearch() {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => {
-        const query = document.getElementById('customerSearchInput').value.trim();
-        loadCustomerSelector(query);
+        const query = document.getElementById('contactSearchInput').value.trim();
+        loadContactSelector(query);
       }, 400);
     }
 
-    // Populate dropdown with customers (supports query searching)
-    async function loadCustomerSelector(searchQuery = '') {
+    // Populate dropdown with contacts
+    async function loadContactSelector(searchQuery = '') {
       const token = localStorage.getItem('access_token');
-      const select = document.getElementById('customerSelect');
+      const select = document.getElementById('contactSelect');
       
-      // Limpiar input si no hay query de búsqueda activa
-      const searchInput = document.getElementById('customerSearchInput');
+      const searchInput = document.getElementById('contactSearchInput');
       if (searchInput && !searchQuery) {
         searchInput.value = '';
       }
       
-      select.innerHTML = '<option value="">Buscando empresas...</option>';
+      select.innerHTML = '<option value="">Buscando contactos...</option>';
       document.getElementById('linkManualBtn').disabled = true;
 
       try {
-        let url = `${API_BASE_URL}/customers?take=50`;
+        let url = `${API_BASE_URL}/contacts`;
         if (searchQuery) {
-          url += `&search=${encodeURIComponent(searchQuery)}`;
+          url += `?search=${encodeURIComponent(searchQuery)}`;
         }
 
         const res = await fetch(url, {
@@ -524,16 +504,17 @@
         const result = await res.json();
         
         select.innerHTML = '';
-        if (result && result.data && result.data.length > 0) {
+        if (result && result.length > 0) {
           const defaultOpt = document.createElement('option');
           defaultOpt.value = "";
-          defaultOpt.innerText = "Selecciona una empresa...";
+          defaultOpt.innerText = "Selecciona un contacto...";
           select.appendChild(defaultOpt);
 
-          result.data.forEach(c => {
+          result.forEach(c => {
             const opt = document.createElement('option');
             opt.value = JSON.stringify(c);
-            opt.innerText = `${c.name} (${c.client_id})`;
+            const compName = c.customer ? c.customer.name : c.client_id;
+            opt.innerText = `${c.name} — ${compName}`;
             select.appendChild(opt);
           });
           
@@ -545,25 +526,21 @@
           select.innerHTML = '<option value="">No se encontraron resultados</option>';
         }
       } catch (err) {
-        select.innerHTML = '<option value="">Error al cargar clientes</option>';
+        select.innerHTML = '<option value="">Error al cargar contactos</option>';
       }
     }
 
     function handleLinkToSelected() {
-      const select = document.getElementById('customerSelect');
+      const select = document.getElementById('contactSelect');
       if (!select.value) return;
 
-      activeCustomer = JSON.parse(select.value);
-      activeContact = null;
+      activeContact = JSON.parse(select.value);
+      activeCustomer = activeContact.customer || { client_id: activeContact.client_id, name: 'Empresa asociada' };
 
-      // Show found UI with manually selected customer
-      document.getElementById('clientName').innerText = activeCustomer.name;
-      document.getElementById('clientIdBadge').innerText = `Código ERP: ${activeCustomer.client_id} | Ciudad: ${activeCustomer.city || '---'}`;
-      document.getElementById('clientSalesperson').innerText = activeCustomer.salesperson_code || 'No asignado';
-      
-      const formatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-      document.getElementById('clientSales').innerText = formatter.format(activeCustomer.total_sales || 0);
-      document.getElementById('contactMatchBadge').classList.add('hidden');
+      document.getElementById('contactNameDisplay').innerText = activeContact.name;
+      document.getElementById('contactJobBadge').innerText = activeContact.job_title || 'Contacto Comercial';
+      document.getElementById('companyNameDisplay').innerText = activeCustomer.name || '---';
+      document.getElementById('clientIdDisplay').innerText = activeContact.client_id;
 
       showCrmState('crmFound');
     }
@@ -583,7 +560,6 @@
           postEmailToCRM(body);
         };
 
-        // If Compose mode, fetch subject dynamically to ensure we get the latest edits
         if (item.subject && typeof item.subject.getAsync === 'function') {
           item.subject.getAsync((subjResult) => {
             const currentSubj = subjResult.status === Office.AsyncResultStatus.Succeeded ? subjResult.value : emailSubject;
@@ -593,14 +569,12 @@
             });
           });
         } else {
-          // Read mode
           item.body.getAsync(Office.CoercionType.Text, (bodyResult) => {
             const currentBody = bodyResult.status === Office.AsyncResultStatus.Succeeded ? bodyResult.value : "Cuerpo de correo electrónico no accesible.";
             proceedWithPost(item.subject, currentBody);
           });
         }
       } else {
-        // Mock email body for browser testing
         postEmailToCRM("Buenos días,\n\nSolicitamos cotización para 3 calibradores de temperatura modelo dTS-T500.\n\n-- \nJuan Pérez\nDirector de Ventas\n\n________________________________\nDe: cliente@dts.com...");
       }
     }
@@ -635,7 +609,6 @@
       
       let cleaned = body.substring(0, minIndex).trim();
       
-      // Limitar a un máximo de 500 caracteres
       if (cleaned.length > 500) {
         cleaned = cleaned.substring(0, 500) + "...";
       }
@@ -656,7 +629,8 @@
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            clientId: activeCustomer.client_id,
+            clientId: activeContact.client_id,
+            contactId: activeContact.id, // ← NUEVO
             type: 'EMAIL',
             title: emailSubject,
             description: cleanedBody,

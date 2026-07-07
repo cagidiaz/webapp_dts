@@ -11,14 +11,16 @@ export class ContactsController {
   constructor(private readonly contactsService: ContactsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Obtener todos los contactos (admite filtros por cliente y tipo de relación)' })
+  @ApiOperation({ summary: 'Obtener todos los contactos (admite filtros por cliente, tipo de relación y búsqueda)' })
   @ApiQuery({ name: 'clientId', required: false, type: String, description: 'Filtrar por código de cliente o proveedor' })
   @ApiQuery({ name: 'relation', required: false, type: String, description: 'Filtrar por tipo de relación (ej. Customer, Vendor)' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Búsqueda por texto (nombre, cargo, email, client_id)' })
   async getAll(
     @Query('clientId') clientId?: string,
     @Query('relation') relation?: string,
+    @Query('search') search?: string,
   ) {
-    return this.contactsService.getAll({ clientId, relation });
+    return this.contactsService.getAll({ clientId, relation, search });
   }
 
   @Get(':id')

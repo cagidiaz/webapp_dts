@@ -1,10 +1,11 @@
 import apiClient from './apiClient';
 
-export type CrmActivityType = 'NOTE' | 'TASK' | 'EMAIL' | 'EVENT' | 'CALL';
+export type CrmActivityType = 'NOTE' | 'TASK' | 'EMAIL' | 'EVENT' | 'CALL' | 'REUNION' | 'VIDEOLLAMADA' | 'VISITA';
 
 export interface CrmActivity {
   id: string;
   client_id: string;
+  contact_id?: string | null;
   created_by: string;
   type: CrmActivityType;
   title: string;
@@ -34,6 +35,14 @@ export const getCrmActivities = async (clientId: string): Promise<CrmActivity[]>
 };
 
 /**
+ * Obtiene todas las actividades de un contacto
+ */
+export const getCrmActivitiesByContact = async (contactId: string): Promise<CrmActivity[]> => {
+  const { data } = await apiClient.get(`/crm-activities/contact/${contactId}`);
+  return data;
+};
+
+/**
  * Obtiene la agenda semanal de actividades comerciales filtradas por rango de fechas
  */
 export const getWeeklyAgenda = async (startDate?: string, endDate?: string): Promise<CrmActivity[]> => {
@@ -47,7 +56,8 @@ export const getWeeklyAgenda = async (startDate?: string, endDate?: string): Pro
  * Crea una nueva actividad comercial en la base de datos
  */
 export const createCrmActivity = async (payload: {
-  clientId: string;
+  clientId?: string;
+  contactId?: string; // ← NUEVO
   type: CrmActivityType;
   title: string;
   description?: string;

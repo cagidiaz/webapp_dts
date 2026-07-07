@@ -29,6 +29,12 @@ export class CrmActivitiesController {
     });
   }
 
+  @Get('contact/:contactId')
+  @ApiOperation({ summary: 'Obtener todas las actividades comerciales de un contacto' })
+  async getByContact(@Param('contactId') contactId: string) {
+    return this.crmActivitiesService.getByContact(contactId);
+  }
+
   @Get(':clientId')
   @ApiOperation({ summary: 'Obtener todas las actividades comerciales de un cliente' })
   async getByClient(@Param('clientId') clientId: string) {
@@ -39,9 +45,10 @@ export class CrmActivitiesController {
   @ApiOperation({ summary: 'Crear una nueva actividad comercial' })
   async create(
     @Req() req: any,
-    @Body('clientId') clientId: string,
-    @Body('type') type: CrmActivityType,
-    @Body('title') title: string,
+    @Body('clientId') clientId?: string,
+    @Body('contactId') contactId?: string,
+    @Body('type') type?: CrmActivityType,
+    @Body('title') title?: string,
     @Body('description') description?: string,
     @Body('dueDate') dueDate?: string,
     @Body('timeScheduled') timeScheduled?: string,
@@ -52,9 +59,10 @@ export class CrmActivitiesController {
     const userId = req.user?.userId;
     return this.crmActivitiesService.create({
       clientId,
+      contactId,
       userId,
-      type,
-      title,
+      type: type!,
+      title: title!,
       description,
       dueDate,
       timeScheduled,

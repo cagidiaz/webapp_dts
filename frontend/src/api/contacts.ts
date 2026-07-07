@@ -14,14 +14,25 @@ export interface ContactDataRow {
   linkedin: string | null;
   created_at: string | null;
   updated_at: string;
+  customer?: {
+    name: string;
+    client_id: string;
+    total_sales?: number;
+    balance_due_lcy?: number;
+    salesperson_code?: string;
+    phone_no?: string;
+    email?: string;
+    city?: string;
+  };
 }
 
 /**
- * Obtiene todos los contactos, permitiendo filtrar por cliente (clientId) o tipo de relación (relation).
+ * Obtiene todos los contactos, permitiendo filtrar por cliente (clientId), tipo de relación (relation) o búsqueda de texto (search).
  */
 export const getContacts = async (params: { 
   clientId?: string; 
   relation?: string; 
+  search?: string; // ← NUEVO
 } = {}): Promise<ContactDataRow[]> => {
   const { data } = await apiClient.get('/contacts', { params });
   return data;

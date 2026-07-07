@@ -322,6 +322,7 @@ export class QuotesService {
     ofertaType?: string;
     search?: string;
     year?: number;
+    contactId?: string; // ← NUEVO
   }, userId: string) {
     try {
       // 1. Obtener perfil del usuario para validar permisos
@@ -353,6 +354,14 @@ export class QuotesService {
             gte: new Date(`${params.year}-01-01`),
             lte: new Date(`${params.year}-12-31`),
           },
+        });
+      }
+
+      if (params.contactId) {
+        and.push({
+          sales_quotes_crm: {
+            contact_id: params.contactId
+          }
         });
       }
 
@@ -538,6 +547,7 @@ export class QuotesService {
         motivo_ganada: payload.motivo_ganada,
         motivo_perdida: payload.motivo_perdida,
         observaciones: payload.observaciones,
+        contact_id: payload.contact_id || undefined,
         contacto_nombre: payload.contacto_nombre,
         contacto_email: payload.contacto_email,
         contacto_telefono: payload.contacto_telefono,
@@ -566,6 +576,7 @@ export class QuotesService {
             motivo_ganada: payload.motivo_ganada || quote.motivo_ganada || null,
             motivo_perdida: payload.motivo_perdida || quote.motivo_perdida || null,
             observaciones: payload.observaciones || quote.observaciones || null,
+            contact_id: payload.contact_id || null,
             contacto_nombre: payload.contacto_nombre || null,
             contacto_email: payload.contacto_email || null,
             contacto_telefono: payload.contacto_telefono || null,

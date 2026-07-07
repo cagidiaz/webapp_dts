@@ -10,7 +10,7 @@ import {
 import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
   TrendingUp, Target, Activity, Users, Package, BarChart2,
-  TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock
+  TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock, MapPin, Video
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
@@ -366,6 +366,9 @@ export const SalesDashboard: React.FC = () => {
                   EMAIL: Send,
                   EVENT: Calendar,
                   CALL: Phone,
+                  REUNION: Users,
+                  VIDEOLLAMADA: Video,
+                  VISITA: MapPin
                 };
                 const typeColors: Record<string, { bg: string, color: string }> = {
                   NOTE: { bg: 'bg-amber-100 dark:bg-amber-950/20', color: 'text-amber-600 dark:text-amber-400' },
@@ -375,6 +378,9 @@ export const SalesDashboard: React.FC = () => {
                   EMAIL: { bg: 'bg-purple-100 dark:bg-purple-950/20', color: 'text-purple-600 dark:text-purple-400' },
                   EVENT: { bg: 'bg-rose-100 dark:bg-rose-950/20', color: 'text-rose-600 dark:text-rose-400' },
                   CALL: { bg: 'bg-cyan-100 dark:bg-cyan-950/20', color: 'text-cyan-600 dark:text-cyan-400' },
+                  REUNION: { bg: 'bg-teal-100 dark:bg-teal-950/20', color: 'text-teal-600 dark:text-teal-400' },
+                  VIDEOLLAMADA: { bg: 'bg-indigo-100 dark:bg-indigo-950/20', color: 'text-indigo-600 dark:text-indigo-400' },
+                  VISITA: { bg: 'bg-orange-100 dark:bg-orange-950/20', color: 'text-orange-600 dark:text-orange-400' }
                 };
                 const typeLabel = {
                   NOTE: 'Nota',
@@ -382,6 +388,9 @@ export const SalesDashboard: React.FC = () => {
                   EMAIL: 'Email',
                   EVENT: 'Evento',
                   CALL: 'Llamada',
+                  REUNION: 'Reunión',
+                  VIDEOLLAMADA: 'Videollamada',
+                  VISITA: 'Visita'
                 };
 
                 const IconComponent = typeIconMap[act.type] || FileText;

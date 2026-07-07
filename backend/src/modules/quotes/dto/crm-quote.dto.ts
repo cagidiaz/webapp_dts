@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, IsDateString, IsIn } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, IsDateString, IsIn, IsUUID } from 'class-validator';
 
 export class UpdateCrmQuoteDto {
   @IsString()
@@ -35,6 +35,10 @@ export class UpdateCrmQuoteDto {
   @IsString()
   @IsOptional()
   observaciones?: string;
+
+  @IsUUID()
+  @IsOptional()
+  contact_id?: string;
 
   @IsString()
   @IsOptional()

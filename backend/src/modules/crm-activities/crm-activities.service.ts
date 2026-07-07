@@ -13,11 +13,32 @@ export class CrmActivitiesService {
     try {
       return await this.prisma.crm_activities.findMany({
         where: { client_id: clientId },
+        include: {
+          contact: true
+        },
         orderBy: { created_at: 'desc' }
       });
     } catch (error) {
       console.error('Error en CrmActivitiesService.getByClient:', error);
       throw new InternalServerErrorException('Error al obtener las actividades del cliente');
+    }
+  }
+
+  /**
+   * Obtiene todas las actividades de un contacto comercial ordenadas por fecha.
+   */
+  async getByContact(contactId: string) {
+    try {
+      return await this.prisma.crm_activities.findMany({
+        where: { contact_id: contactId },
+        include: {
+          customer: true
+        },
+        orderBy: { created_at: 'desc' }
+      });
+    } catch (error) {
+      console.error('Error en CrmActivitiesService.getByContact:', error);
+      throw new InternalServerErrorException('Error al obtener las actividades del contacto');
     }
   }
 
@@ -46,7 +67,8 @@ export class CrmActivitiesService {
       return await this.prisma.crm_activities.findMany({
         where: whereClause,
         include: {
-          customer: true
+          customer: true,
+          contact: true
         },
         orderBy: {
           due_date: 'asc'
@@ -62,7 +84,8 @@ export class CrmActivitiesService {
    * Crea una nueva actividad comercial en la base de datos.
    */
   async create(data: {
-    clientId: string;
+    clientId?: string;
+    contactId?: string;
     userId: string;
     type: CrmActivityType;
     title: string;
@@ -73,13 +96,30 @@ export class CrmActivitiesService {
     createdAt?: string;
     conclusions?: string;
   }) {
-    const { clientId, userId, type, title, description, dueDate, timeScheduled, email, createdAt, conclusions } = data;
+    const { clientId, contactId, userId, type, title, description, dueDate, timeScheduled, email, createdAt, conclusions } = data;
+    
+    let resolvedClientId = clientId;
 
-    console.log(`[CRM Service] Creando actividad con tipo=${type}, title="${title}", createdAt=${createdAt || 'now()'}`);
+    // Si viene contactId, buscar el contacto para inferir automáticamente el client_id
+    if (contactId) {
+      const contactObj = await this.prisma.contacts.findUnique({
+        where: { id: contactId }
+      });
+      if (contactObj) {
+        resolvedClientId = contactObj.client_id;
+      }
+    }
+
+    if (!resolvedClientId) {
+      throw new NotFoundException('client_id no pudo ser determinado para la actividad');
+    }
+
+    console.log(`[CRM Service] Creando actividad con tipo=${type}, title="${title}", contactId=${contactId || 'null'}, resolvedClientId=${resolvedClientId}`);
     try {
       return await this.prisma.crm_activities.create({
         data: {
-          client_id: clientId,
+          client_id: resolvedClientId,
+          contact_id: contactId || null,
           created_by: userId,
           type,
           title,

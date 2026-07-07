@@ -1081,43 +1081,45 @@ export const CrmCustomerDetail: React.FC<CrmCustomerDetailProps> = ({ clientId, 
               </h3>
               
               <div className="space-y-4">
-                <div className="flex gap-3">
-                  <MapPin className="text-dts-secondary shrink-0" size={18} />
-                  <div>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase block">Localización</span>
-                    <p className="text-sm text-gray-900 dark:text-gray-200 mt-0.5">{customer.address}</p>
-                    {customer.address_2 && <p className="text-sm text-gray-600 dark:text-gray-400">{customer.address_2}</p>}
-                    <p className="text-sm text-gray-700 dark:text-gray-300 font-bold">{customer.post_code} {customer.city}</p>
-                    <p className="text-[9px] text-gray-400 uppercase tracking-wider font-bold mt-0.5">{customer.county}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-400">
-                      <Mail size={16} />
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex gap-3">
+                    <MapPin className="text-dts-secondary shrink-0" size={18} />
                     <div>
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block">Email Principal</span>
-                      {customer.email ? (
-                        <a href={`mailto:${customer.email}`} className="text-xs font-semibold text-dts-primary dark:text-dts-secondary hover:underline">
-                          {customer.email}
-                        </a>
-                      ) : <span className="text-xs text-gray-400 italic">No disponible</span>}
+                      <span className="text-[10px] text-gray-400 font-bold uppercase block">Localización</span>
+                      <p className="text-sm text-gray-900 dark:text-gray-200 mt-0.5">{customer.address}</p>
+                      {customer.address_2 && <p className="text-sm text-gray-600 dark:text-gray-400">{customer.address_2}</p>}
+                      <p className="text-sm text-gray-700 dark:text-gray-300 font-bold">{customer.post_code} {customer.city}</p>
+                      <p className="text-[9px] text-gray-400 uppercase tracking-wider font-bold mt-0.5">{customer.county}</p>
                     </div>
                   </div>
 
-                  <div className="flex gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-400">
-                      <Phone size={16} />
+                  <div className="space-y-3">
+                    <div className="flex gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-400 shrink-0">
+                        <Mail size={16} />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Email Principal</span>
+                        {customer.email ? (
+                          <a href={`mailto:${customer.email}`} className="text-xs font-semibold text-dts-primary dark:text-dts-secondary hover:underline break-all">
+                            {customer.email}
+                          </a>
+                        ) : <span className="text-xs text-gray-400 italic">No disponible</span>}
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block">Teléfono Fijo</span>
-                      {customer.phone_no ? (
-                        <a href={`tel:${customer.phone_no}`} className="text-xs font-semibold text-dts-primary dark:text-dts-secondary hover:underline">
-                          {customer.phone_no}
-                        </a>
-                      ) : <span className="text-xs text-gray-400 italic">No disponible</span>}
+
+                    <div className="flex gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-400 shrink-0">
+                        <Phone size={16} />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Teléfono Fijo</span>
+                        {customer.phone_no ? (
+                          <a href={`tel:${customer.phone_no}`} className="text-xs font-semibold text-dts-primary dark:text-dts-secondary hover:underline">
+                            {customer.phone_no}
+                          </a>
+                        ) : <span className="text-xs text-gray-400 italic">No disponible</span>}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -781,6 +781,7 @@ model sales_quotes {
 model sales_quotes_crm {
   id                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   document_no           String                   @unique @db.VarChar(50)
+  contact_id            String?                  @db.Uuid
   estado_oferta         String                   @default("borrador") @db.VarChar(50)
   probabilidad_exito    Decimal?                 @default(10.0) @db.Decimal(5, 2)
   oferta_type           String                   @default("proyecto") @db.VarChar(50)
@@ -798,8 +799,10 @@ model sales_quotes_crm {
   updated_at            DateTime?                @default(now()) @db.Timestamptz(6)
 
   sales_quote           sales_quotes             @relation(fields: [document_no], references: [document_no], onDelete: Cascade)
+  contact               contacts?                @relation(fields: [contact_id], references: [id], onDelete: SetNull)
   activities            sales_quote_activities[]
 
+  @@index([contact_id])
   @@schema("public")
 }
 
@@ -833,6 +836,8 @@ model contacts {
   created_at        DateTime? @db.Timestamptz(6)
   updated_at        DateTime  @default(now()) @db.Timestamptz(6)
   customer          customers? @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
+  crm_activities    crm_activities[]
+  sales_quotes_crm  sales_quotes_crm[]
 
   @@index([client_id])
   @@schema("public")
@@ -844,6 +849,9 @@ enum CrmActivityType {
   EMAIL
   EVENT
   CALL
+  REUNION
+  VIDEOLLAMADA
+  VISITA
 
   @@schema("public")
 }
@@ -851,6 +859,7 @@ enum CrmActivityType {
 model crm_activities {
   id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   client_id      String          @db.VarChar(50)
+  contact_id     String?         @db.Uuid
   created_by     String          @db.Uuid
   type           CrmActivityType
   title          String          @db.VarChar(255)
@@ -864,9 +873,11 @@ model crm_activities {
   updated_at     DateTime        @default(now()) @db.Timestamptz(6)
 
   customer       customers       @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
+  contact        contacts?       @relation(fields: [contact_id], references: [id], onDelete: SetNull)
   creator        profiles        @relation(fields: [created_by], references: [id], onDelete: NoAction)
 
   @@index([client_id])
+  @@index([contact_id])
   @@index([created_by])
   @@schema("public")
 }

@@ -8,9 +8,10 @@ import {
 
 interface CrmContactsProps {
   onSelectCustomer: (clientId: string) => void;
+  onSelectContact?: (contactId: string) => void;
 }
 
-export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) => {
+export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer, onSelectContact }) => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -224,19 +225,33 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer }) =>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {displayedContacts.map(contact => (
-                  <tr key={contact.id} className="hover:bg-gray-50/50 dark:hover:bg-white/2] transition-colors">
+                  <tr 
+                    key={contact.id} 
+                    onClick={() => onSelectContact && onSelectContact(contact.id)}
+                    className="hover:bg-gray-50/50 dark:hover:bg-white/2 transition-colors cursor-pointer"
+                  >
                     <td className="px-6 py-4 font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       <User size={14} className="text-dts-secondary shrink-0" />
                       {contact.name}
                     </td>
-                    <td className="px-6 py-4">
-                      <button 
-                        onClick={() => onSelectCustomer(contact.client_id)}
-                        className="text-dts-secondary hover:underline font-bold text-left cursor-pointer flex items-center gap-1"
-                      >
-                        <Link2 size={12} />
-                        {contact.client_id}
-                      </button>
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-col space-y-0.5">
+                        <button 
+                          onClick={() => onSelectCustomer(contact.client_id)}
+                          className="text-dts-secondary hover:underline font-bold text-left cursor-pointer flex items-center gap-1 w-fit"
+                        >
+                          <Link2 size={12} className="shrink-0" />
+                          {contact.client_id}
+                        </button>
+                        {contact.customer?.name && (
+                          <span 
+                            className="text-[12px] text-gray-500 dark:text-gray-400 font-medium truncate max-w-[180px] block" 
+                            title={contact.customer.name}
+                          >
+                            {contact.customer.name}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       {contact.job_title ? (
