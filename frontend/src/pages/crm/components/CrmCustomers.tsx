@@ -9,11 +9,9 @@ import {
 import { useAuthStore } from '../../../store/authStore';
 import { getCustomerSalespersons } from '../../../api/customers';
 
-interface CrmCustomersProps {
-  onSelectCustomer: (clientId: string) => void;
-}
+interface CrmCustomersProps {}
 
-export const CrmCustomers: React.FC<CrmCustomersProps> = ({ onSelectCustomer }) => {
+export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
   const { profile } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -241,8 +239,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = ({ onSelectCustomer }) 
                   return (
                     <tr 
                       key={c.id}
-                      onClick={() => onSelectCustomer(c.client_id)}
-                      className="hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer transition-colors"
+                      className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                     >
                       <td className="px-4 py-3 font-bold font-mono text-xs text-dts-primary dark:text-dts-secondary whitespace-nowrap">
                         {c.client_id}

@@ -358,11 +358,26 @@ export class QuotesService {
       }
 
       if (params.contactId) {
-        and.push({
-          sales_quotes_crm: {
-            contacto_id: params.contactId
-          }
+        const contactObj = await this.prisma.contacts.findUnique({
+          where: { id: params.contactId }
         });
+        if (contactObj) {
+          and.push({
+            sales_quotes_crm: {
+              OR: [
+                { contacto_id: contactObj.contact_no },
+                { contacto_id: params.contactId },
+                { contacto_nombre: contactObj.name }
+              ]
+            }
+          });
+        } else {
+          and.push({
+            sales_quotes_crm: {
+              contacto_id: params.contactId
+            }
+          });
+        }
       }
 
       if (params.search) {
@@ -488,6 +503,7 @@ export class QuotesService {
           motivo_ganada: crm?.motivo_ganada || q.motivo_ganada || null,
           motivo_perdida: crm?.motivo_perdida || q.motivo_perdida || null,
           observaciones: crm?.observaciones || q.observaciones || null,
+          contacto_id: crm?.contacto_id || null,
           contacto_nombre: crm?.contacto_nombre || null,
           contacto_email: crm?.contacto_email || null,
           contacto_telefono: crm?.contacto_telefono || null,

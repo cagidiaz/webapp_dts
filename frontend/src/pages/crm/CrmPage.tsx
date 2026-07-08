@@ -4,9 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { CrmCustomers } from './components/CrmCustomers';
 import { CrmPipeline } from './components/CrmPipeline';
-import { CrmCustomerDetail } from './components/CrmCustomerDetail';
 import { CrmContacts } from './components/CrmContacts';
-import { CrmContactDetail } from './components/CrmContactDetail'; // ← NUEVO
+import { CrmContactDetail } from './components/CrmContactDetail';
 
 interface CrmPageProps {
   mode: 'customers' | 'pipeline' | 'contacts';
@@ -15,22 +14,15 @@ interface CrmPageProps {
 export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
   const { setPageInfo } = useUIStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null); // ← NUEVO
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
 
   // Sync state with URL search parameters
   useEffect(() => {
-    const clientId = searchParams.get('clientId');
     const contactId = searchParams.get('contactId');
 
-    if (clientId) {
-      setSelectedCustomerId(clientId);
-      setSelectedContactId(null);
-    } else if (contactId) {
+    if (contactId) {
       setSelectedContactId(contactId);
-      setSelectedCustomerId(null);
     } else {
-      setSelectedCustomerId(null);
       setSelectedContactId(null);
     }
   }, [searchParams]);
@@ -58,35 +50,24 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
     return () => setPageInfo({ title: '', subtitle: '', icon: null });
   }, [setPageInfo, mode]);
 
-  // Reset selected customer/contact when mode (tab) changes
+  // Reset selected contact when mode (tab) changes
   useEffect(() => {
-    if (searchParams.get('clientId') || searchParams.get('contactId')) {
+    if (searchParams.get('contactId')) {
       const newParams = new URLSearchParams(searchParams);
-      newParams.delete('clientId');
       newParams.delete('contactId');
       setSearchParams(newParams);
     }
-    setSelectedCustomerId(null);
     setSelectedContactId(null);
   }, [mode]);
-
-  const handleSelectCustomer = (id: string) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set('clientId', id);
-    newParams.delete('contactId');
-    setSearchParams(newParams);
-  };
 
   const handleSelectContact = (id: string) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set('contactId', id);
-    newParams.delete('clientId');
     setSearchParams(newParams);
   };
 
   const handleBack = () => {
     const newParams = new URLSearchParams(searchParams);
-    newParams.delete('clientId');
     newParams.delete('contactId');
     setSearchParams(newParams);
   };
@@ -101,26 +82,15 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
     );
   }
 
-  // If a customer is selected, render the customer detail view
-  if (selectedCustomerId) {
-    return (
-      <CrmCustomerDetail 
-        clientId={selectedCustomerId} 
-        onBack={handleBack} 
-      />
-    );
-  }
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Conditionally render mode */}
       {mode === 'customers' ? (
-        <CrmCustomers onSelectCustomer={handleSelectCustomer} />
+        <CrmCustomers />
       ) : mode === 'pipeline' ? (
         <CrmPipeline />
       ) : (
         <CrmContacts 
-          onSelectCustomer={handleSelectCustomer} 
           onSelectContact={handleSelectContact} 
         />
       )}

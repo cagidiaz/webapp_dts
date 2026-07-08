@@ -3,15 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getContacts, updateContactLinkedin } from '../../../api';
 import { 
   Search, User, Linkedin, Edit2, Check, X, 
-  Mail, Phone, Smartphone, Users, Link2
+  Mail, Phone, Smartphone, Users
 } from 'lucide-react';
 
 interface CrmContactsProps {
-  onSelectCustomer: (clientId: string) => void;
   onSelectContact?: (contactId: string) => void;
 }
 
-export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer, onSelectContact }) => {
+export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact }) => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -236,13 +235,9 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectCustomer, onSe
                     </td>
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-col space-y-0.5">
-                        <button 
-                          onClick={() => onSelectCustomer(contact.client_id)}
-                          className="text-dts-secondary hover:underline font-bold text-left cursor-pointer flex items-center gap-1 w-fit"
-                        >
-                          <Link2 size={12} className="shrink-0" />
+                        <span className="font-bold text-gray-600 dark:text-gray-300">
                           {contact.client_id}
-                        </button>
+                        </span>
                         {contact.customer?.name && (
                           <span 
                             className="text-[12px] text-gray-500 dark:text-gray-400 font-medium truncate max-w-[180px] block" 

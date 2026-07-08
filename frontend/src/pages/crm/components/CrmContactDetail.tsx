@@ -10,7 +10,7 @@ import {
 import { formatCurrency } from '../../../api/formatters';
 import { 
   ArrowLeft, Phone, Mail, MapPin, Smartphone,
-  Linkedin, Edit2, Check, X, Plus, Calendar as CalendarIcon, 
+  Linkedin, Edit2, Check, X, Plus, Calendar, Clock, Percent,
   Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
@@ -375,37 +375,37 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     }[] = [];
 
     dbActivities.forEach(act => {
-      let icon = CalendarIcon;
+      let icon = Calendar;
       let iconBg = 'bg-indigo-500';
       let type: any = 'event';
 
       if (act.type === 'NOTE') {
         icon = FileText;
-        iconBg = 'bg-amber-500';
-        type = 'note';
+        iconBg = 'bg-amber-500 dark:bg-amber-600/90';
+        type = 'nota';
       } else if (act.type === 'TASK') {
         icon = CheckSquare;
-        iconBg = 'bg-blue-500';
-        type = 'task';
+        iconBg = 'bg-blue-500 dark:bg-blue-600/90';
+        type = 'tarea';
       } else if (act.type === 'EMAIL') {
-        icon = Send;
-        iconBg = 'bg-indigo-500';
+        icon = Mail;
+        iconBg = 'bg-indigo-500 dark:bg-indigo-600/90';
         type = 'email';
       } else if (act.type === 'CALL') {
         icon = Phone;
-        iconBg = 'bg-cyan-500';
-        type = 'call';
+        iconBg = 'bg-emerald-500 dark:bg-emerald-600/90';
+        type = 'llamada';
       } else if (act.type === 'REUNION') {
         icon = Users;
-        iconBg = 'bg-emerald-500';
-        type = 'reunion';
+        iconBg = 'bg-purple-500 dark:bg-purple-600/90';
+        type = 'reunión';
       } else if (act.type === 'VIDEOLLAMADA') {
         icon = Video;
-        iconBg = 'bg-violet-500';
+        iconBg = 'bg-cyan-500 dark:bg-cyan-600/90';
         type = 'videollamada';
       } else if (act.type === 'VISITA') {
         icon = MapPin;
-        iconBg = 'bg-rose-500';
+        iconBg = 'bg-rose-500 dark:bg-rose-600/90';
         type = 'visita';
       }
 
@@ -426,6 +426,48 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [dbActivities]);
+
+  // KPIs de ofertas para este contacto específico
+  const contactQuoteKpis = useMemo(() => {
+    const totalCount = crmQuotes.length;
+    let totalAmount = 0;
+    let wonCount = 0;
+    let wonAmount = 0;
+    let activeCount = 0;
+    let activeAmount = 0;
+    let closedCount = 0;
+
+    crmQuotes.forEach(q => {
+      const state = (q.estado_oferta || '').toLowerCase().trim();
+      const amt = Number(q.amount || 0);
+      totalAmount += amt;
+
+      if (state === 'ganada') {
+        wonCount++;
+        wonAmount += amt;
+        closedCount++;
+      } else if (state === 'perdida') {
+        closedCount++;
+      } else {
+        activeCount++;
+        activeAmount += amt;
+      }
+    });
+
+    const successRate = closedCount > 0 
+      ? Math.round((wonCount / closedCount) * 100) 
+      : 0;
+
+    return {
+      totalCount,
+      totalAmount,
+      wonCount,
+      wonAmount,
+      activeCount,
+      activeAmount,
+      successRate
+    };
+  }, [crmQuotes]);
 
   // List of events (unifying tasks, notes, meetings, calls, events)
   const filteredEventsList = useMemo(() => {
@@ -678,7 +720,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
             { id: 'info', label: 'Información', icon: User },
             { id: 'timeline', label: 'Timeline', icon: Activity },
             { id: 'ofertas', label: 'Ofertas', icon: Briefcase },
-            { id: 'eventos', label: 'Eventos', icon: CalendarIcon },
+            { id: 'eventos', label: 'Eventos', icon: Calendar },
             { id: 'emails', label: 'Emails', icon: Send }
           ].map(tab => (
             <button
@@ -829,89 +871,137 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 )}
               </div>
 
-              {/* CRM Quotes Pipeline embedded right inside the Info Tab */}
-              <div className="flex flex-col h-full border-l border-gray-100 dark:border-white/5 pl-0 lg:pl-8 space-y-4">
-                <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-2">
-                  Pipeline de Ofertas
-                </h3>
-                {isLoadingQuotes ? (
-                  <div className="text-center py-10 text-xs text-gray-400 uppercase font-medium">Cargando pipeline...</div>
-                ) : crmQuotes.length === 0 ? (
-                  <div className="text-center py-10 text-gray-400 italic text-xs">No hay ofertas CRM asociadas a este contacto.</div>
-                ) : (
-                  <div className="grid grid-cols-5 gap-2 h-full overflow-y-auto max-h-[380px] min-h-[300px]">
-                    {STAGES.map(stage => {
-                      const stageQuotes = crmQuotes.filter(q => (q.estado_oferta || 'borrador').toLowerCase() === stage.id);
-                      return (
-                        <div 
-                          key={stage.id}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => handleDrop(e, stage.id)}
-                          className={`rounded-lg border p-1.5 flex flex-col space-y-2 bg-gray-50/20 dark:bg-zinc-800/5 transition-all ${stage.color} border-t-2 ${
-                            draggingId ? 'border-dashed border-dts-secondary/50 bg-dts-secondary/5' : 'border-gray-100 dark:border-gray-800/40'
-                          }`}
-                        >
-                          <div className="flex justify-between items-center pb-0.5 border-b border-gray-100 dark:border-white/5">
-                            <span className="text-[7.5px] font-extrabold text-gray-500 uppercase tracking-tight truncate" title={stage.label}>{stage.label}</span>
-                            <span className="text-[8px] font-bold font-mono px-1 rounded bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400">
-                              {stageQuotes.length}
-                            </span>
+              {/* Resumen Comercial (KPIs y Actividades Recientes) */}
+              <div className="flex flex-col h-full border-l border-gray-100 dark:border-white/5 pl-0 lg:pl-8 space-y-6">
+                {/* KPIs de Ofertas */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-2">
+                    Resumen de Ofertas
+                  </h3>
+                  {isLoadingQuotes ? (
+                    <div className="text-center py-4 text-xs text-gray-400 uppercase font-medium">Cargando KPIs...</div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-xl border border-gray-100 dark:border-white/5">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Valor Total Ofertas</span>
+                        <span className="text-sm font-black font-mono text-dts-primary dark:text-white mt-1 block">
+                          {formatCurrency(contactQuoteKpis.totalAmount, 0)}
+                        </span>
+                        <span className="text-[9px] text-gray-400 mt-0.5 block">{contactQuoteKpis.totalCount} ofertas emitidas</span>
+                      </div>
+
+                      <div className="bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-xl border border-gray-100 dark:border-white/5">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Cartera en Curso</span>
+                        <span className="text-sm font-black font-mono text-dts-secondary mt-1 block">
+                          {formatCurrency(contactQuoteKpis.activeAmount, 0)}
+                        </span>
+                        <span className="text-[9px] text-gray-400 mt-0.5 block">{contactQuoteKpis.activeCount} ofertas activas</span>
+                      </div>
+
+                      <div className="bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-xl border border-gray-100 dark:border-white/5">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Ofertas Ganadas</span>
+                        <span className="text-sm font-black font-mono text-emerald-500 mt-1 block">
+                          {formatCurrency(contactQuoteKpis.wonAmount, 0)}
+                        </span>
+                        <span className="text-[9px] text-gray-400 mt-0.5 block">{contactQuoteKpis.wonCount} ofertas cerradas con éxito</span>
+                      </div>
+
+                      <div className="bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-xl border border-gray-100 dark:border-white/5">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Tasa de Éxito</span>
+                        <span className="text-sm font-black font-mono text-indigo-500 mt-1 block">
+                          {contactQuoteKpis.successRate}%
+                        </span>
+                        <span className="text-[9px] text-gray-400 mt-0.5 block">Ganadas / Cerradas</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Timeline de Actividades Recientes */}
+                <div className="flex-1 flex flex-col min-h-0 space-y-3">
+                  <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-2">
+                    Últimas Actividades
+                  </h3>
+                  {isLoadingActivities ? (
+                    <div className="text-center py-4 text-xs text-gray-400 uppercase font-medium">Cargando actividades...</div>
+                  ) : timelineActivities.length === 0 ? (
+                    <div className="text-center py-6 text-gray-400 italic text-xs">No hay actividades registradas.</div>
+                  ) : (
+                    <div className="relative pl-6 ml-2.5 space-y-4 overflow-y-auto max-h-[190px] pr-1 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-gray-150 dark:before:bg-zinc-800/60">
+                      {timelineActivities.slice(0, 3).map(act => (
+                        <div key={act.id} className="relative animate-in slide-in-from-left duration-300">
+                          {/* Icon Outside Card */}
+                          <div className={`absolute -left-[24px] top-1.5 w-4.5 h-4.5 rounded-full ${act.iconBg} text-white flex items-center justify-center border border-white dark:border-zinc-900 shadow-sm`} title={act.type}>
+                            <act.icon size={9} />
                           </div>
-                          <div className="flex-1 overflow-y-auto space-y-1.5 scrollbar-thin pr-0.5">
-                            {stageQuotes.map(quote => (
-                              <div 
-                                key={quote.id}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, quote.id)}
-                                onDragEnd={handleDragEnd}
-                                onClick={() => openQuoteDrawer(quote)}
-                                className="bg-white dark:bg-surface-card-dark p-2 rounded-md border border-gray-150 dark:border-gray-800 shadow-[0_1px_2px_rgba(0,0,0,0.03)] cursor-pointer hover:border-dts-secondary/55 transition-all text-[10px]"
-                              >
-                                <div className="flex justify-between items-center gap-1 mb-0.5">
-                                  <span className="text-[8px] font-bold font-mono text-dts-secondary truncate w-14">{quote.document_no}</span>
-                                  <span className="text-[8px] font-bold font-mono text-emerald-500">{quote.probabilidad_exito}%</span>
-                                </div>
-                                <div className="font-bold text-gray-800 dark:text-white truncate text-[9px] mb-0.5">{quote.customer_name}</div>
-                                <div className="font-mono text-gray-900 dark:text-white font-black text-[9.5px]">{formatCurrency(quote.amount, 0)}</div>
-                              </div>
-                            ))}
+                          
+                          {/* Card */}
+                          <div className="p-2.5 rounded-xl border border-gray-100 dark:border-white/5 bg-gray-50/20 dark:bg-zinc-800/5 hover:border-dts-secondary/30 transition-all duration-150 flex flex-col space-y-1.5">
+                            <div className="flex justify-between items-center gap-2">
+                              <span className="font-bold text-gray-900 dark:text-zinc-100 truncate text-[10px]">{act.title}</span>
+                              <span className="text-[8px] text-gray-400 dark:text-zinc-400 font-mono shrink-0">{new Date(act.date).toLocaleDateString('es-ES')}</span>
+                            </div>
+                            {act.description && (
+                              <p className="text-[9.5px] text-gray-450 dark:text-zinc-300 line-clamp-2 leading-relaxed">{act.description}</p>
+                            )}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
           {/* Timeline Tab */}
           {activeTab === 'timeline' && (
-            <div className="relative border-l border-gray-100 dark:border-white/5 ml-3 space-y-6">
+            <div className="relative ml-3 space-y-6 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-gray-150 dark:before:bg-zinc-800">
               {timelineActivities.length === 0 ? (
-                <p className="text-xs text-gray-400 italic pl-4">No hay historial registrado para este contacto.</p>
+                <p className="text-xs text-gray-400 italic pl-2">No hay historial registrado para este contacto.</p>
               ) : (
                 timelineActivities.map(act => (
-                  <div key={act.id} className="relative pl-6 animate-in slide-in-from-left duration-300">
-                    <div className={`absolute -left-3 top-1.5 w-6 h-6 rounded-full ${act.iconBg} text-white flex items-center justify-center`}>
-                      <act.icon size={12} />
+                  <div key={act.id} className="relative pl-8 animate-in slide-in-from-left duration-300">
+                    {/* Activity Icon Indicator on Timeline */}
+                    <div className={`absolute -left-4 top-1.5 w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900 ${act.iconBg} flex items-center justify-center shadow-md text-white transition-transform hover:scale-110 duration-200`}>
+                      <act.icon size={13} />
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center gap-4">
-                        <span className="text-xs font-bold text-gray-900 dark:text-white">{act.title}</span>
-                        <span className="text-[10px] text-gray-400 font-mono">
-                          {new Date(act.date).toLocaleDateString('es-ES')} {act.time || ''}
-                        </span>
+                    
+                    {/* Activity Card */}
+                    <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-white/5 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-dts-secondary/40 transition-all duration-200 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-50 dark:border-white/5 pb-2">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold text-gray-900 dark:text-zinc-100">{act.title}</h4>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[9.5px] text-gray-400 dark:text-zinc-400 font-mono">
+                          <Calendar size={11} className="text-gray-400 dark:text-zinc-450" />
+                          <span>{new Date(act.date).toLocaleDateString('es-ES')}</span>
+                          {act.time && (
+                            <>
+                              <Clock size={11} className="text-gray-400 dark:text-zinc-450 ml-1" />
+                              <span>{act.time}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
+
                       {act.email && (
-                        <span className="text-[10px] text-gray-400 block font-mono">Para/De: {act.email}</span>
+                        <div className="text-[10px] text-gray-450 dark:text-zinc-400 flex items-center gap-1.5 font-mono pl-0.5">
+                          <Mail size={10} className="text-gray-400 dark:text-zinc-450" />
+                          <span>Para/De: {act.email}</span>
+                        </div>
                       )}
+
                       {act.description && (
-                        <p className="text-xs text-gray-500 leading-relaxed bg-gray-50/50 dark:bg-zinc-800/10 p-2 rounded-lg border border-gray-100/50 dark:border-white/5 w-full whitespace-pre-wrap">{act.description}</p>
+                        <div className="text-xs text-gray-600 dark:text-zinc-200 leading-relaxed bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-lg border border-gray-100/50 dark:border-white/5 w-full whitespace-pre-wrap font-sans">
+                          {act.description}
+                        </div>
                       )}
+
                       {act.conclusions && (
-                        <div className="text-[11px] border-l-2 border-emerald-500 pl-2 bg-emerald-50/20 dark:bg-emerald-950/5 py-1 text-emerald-700 dark:text-emerald-300">
-                          <strong>Conclusiones:</strong> {act.conclusions}
+                        <div className="text-[11px] border-l-2 border-emerald-500 pl-3 bg-emerald-50/15 dark:bg-emerald-950/20 py-1.5 text-emerald-700 dark:text-emerald-300 rounded-r-md">
+                          <strong className="block text-[9px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-bold mb-0.5">Conclusiones</strong>
+                          {act.conclusions}
                         </div>
                       )}
                     </div>
@@ -937,8 +1027,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                         key={stage.id}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => handleDrop(e, stage.id)}
-                        className={`rounded-xl border p-3 flex flex-col space-y-3 h-full bg-gray-50/30 dark:bg-zinc-800/5 transition-all ${stage.color} border-t-2 ${
-                          draggingId ? 'border-dashed border-dts-secondary/60 bg-dts-secondary/5' : 'border-gray-100 dark:border-gray-800/55'
+                        className={`rounded-xl border-l border-r border-b border-gray-100 dark:border-white/5 border-t-4 p-3 flex flex-col space-y-3 h-full bg-gray-50/30 dark:bg-zinc-800/5 transition-all ${stage.color} ${
+                          draggingId ? 'border-dashed border-dts-secondary/60 bg-dts-secondary/5' : ''
                         }`}
                       >
                         <div className="flex justify-between items-center pb-1">
@@ -947,29 +1037,72 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                             {stageQuotes.length}
                           </span>
                         </div>
-                        <div className="flex-1 overflow-y-auto space-y-2 max-h-[400px]">
-                          {stageQuotes.map(quote => (
-                            <div 
-                              key={quote.id}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, quote.id)}
-                              onDragEnd={handleDragEnd}
-                              onClick={() => openQuoteDrawer(quote)}
-                              className="bg-white dark:bg-surface-card-dark p-3 rounded-lg border border-gray-100 dark:border-gray-800 shadow-xs cursor-pointer hover:border-dts-secondary/50 hover:shadow-xs transition-all active:scale-[0.98]"
-                            >
-                              <div className="flex justify-between items-start mb-1.5">
-                                <span className="text-[10px] font-bold font-mono text-dts-secondary">{quote.document_no}</span>
-                                <span className="text-[9px] font-bold font-mono text-emerald-500">{quote.probabilidad_exito}%</span>
-                              </div>
-                              <h4 className="text-xs font-bold text-gray-800 dark:text-white truncate mb-1">{quote.customer_name}</h4>
-                              <p className="text-[11px] font-mono text-gray-900 dark:text-white font-black">{formatCurrency(quote.amount, 0)}</p>
-                              {quote.proxima_accion && (
-                                <div className="mt-2 text-[9px] border-t border-gray-50 dark:border-white/5 pt-1.5 text-amber-600 dark:text-amber-400 font-semibold truncate" title={quote.proxima_accion}>
-                                  ➔ {quote.proxima_accion}
+                        <div className="flex-1 overflow-y-auto space-y-2 max-h-[400px] pr-1">
+                          {stageQuotes.map(quote => {
+                            const isTaskOverdue = quote.fecha_proxima_accion 
+                              ? new Date(quote.fecha_proxima_accion).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) 
+                              : false;
+
+                            return (
+                              <div 
+                                key={quote.id}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, quote.id)}
+                                onDragEnd={handleDragEnd}
+                                onClick={() => openQuoteDrawer(quote)}
+                                className={`bg-white dark:bg-surface-card-dark p-4 rounded-xl border border-gray-150 dark:border-white/5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:shadow-md hover:border-dts-secondary/50 dark:hover:border-dts-secondary/40 cursor-pointer transition-all duration-200 relative group ${
+                                  draggingId === quote.id ? 'opacity-30 border-dashed scale-95' : 'opacity-100'
+                                }`}
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                  <span className="text-[10px] font-bold font-mono text-dts-primary dark:text-dts-secondary">
+                                    {quote.document_no}
+                                  </span>
+                                  <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 font-bold">
+                                    {quote.oferta_type}
+                                  </span>
                                 </div>
-                              )}
-                            </div>
-                          ))}
+
+                                <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate mb-4">
+                                  {quote.customer_name}
+                                </h4>
+
+                                <div className="flex justify-between items-end border-t border-gray-50 dark:border-white/5 pt-3">
+                                  <div>
+                                    <span className="text-[9px] text-gray-450 dark:text-zinc-400 font-medium block">Importe</span>
+                                    <span className="text-xs font-mono font-black text-gray-900 dark:text-white">
+                                      {formatCurrency(quote.amount, 0)}
+                                    </span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-[9px] text-gray-450 dark:text-zinc-400 font-medium block">Ponderado</span>
+                                    <span className="text-xs font-mono font-black text-dts-secondary">
+                                      {formatCurrency(quote.valor_oferta_ponderado, 0)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-gray-50 dark:border-white/5 text-[9px] font-medium text-gray-500">
+                                  <span className="flex items-center gap-1 bg-slate-50 dark:bg-white/5 px-1.5 py-0.5 rounded dark:text-zinc-300">
+                                    <Percent size={8} /> {quote.probabilidad_exito}%
+                                  </span>
+
+                                  {quote.fecha_proxima_accion ? (
+                                    <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                                      isTaskOverdue 
+                                        ? 'bg-rose-500/10 text-rose-500 font-bold animate-pulse' 
+                                        : 'bg-amber-500/10 text-amber-500'
+                                    }`}>
+                                      <Calendar size={8} />
+                                      {new Date(quote.fecha_proxima_accion).toLocaleDateString(undefined, {month: 'numeric', day: 'numeric'})}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 dark:text-gray-600">Sin seguimiento</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     );
@@ -1497,6 +1630,56 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     {s.label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Información del Comprador */}
+            <div className="space-y-3 border-t border-gray-100 dark:border-white/5 pt-4">
+              <div className="flex justify-between items-center pb-1">
+                <h5 className="font-bold text-dts-primary dark:text-white uppercase tracking-wider">Información del Comprador</h5>
+                <span className="text-[9px] bg-emerald-100 dark:bg-emerald-955/35 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
+                  Contacto vinculado
+                </span>
+              </div>
+              <div className="space-y-2">
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <User size={14} />
+                  </span>
+                  <input 
+                    type="text" 
+                    placeholder="Nombre del contacto"
+                    value={contact.name || ''}
+                    readOnly
+                    className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none opacity-80 cursor-not-allowed select-none"
+                  />
+                </div>
+
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Mail size={14} />
+                  </span>
+                  <input 
+                    type="email" 
+                    placeholder="Email del contacto"
+                    value={contact.email || ''}
+                    readOnly
+                    className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none opacity-80 cursor-not-allowed select-none"
+                  />
+                </div>
+                
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Phone size={14} />
+                  </span>
+                  <input 
+                    type="text" 
+                    placeholder="Teléfono del contacto"
+                    value={contact.phone_no || contact.mobile_no || ''}
+                    readOnly
+                    className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none opacity-80 cursor-not-allowed select-none"
+                  />
+                </div>
               </div>
             </div>
 
