@@ -262,7 +262,7 @@ export const SalesDashboard: React.FC = () => {
             }}
           />
 
-          <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-gray-850 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group min-h-[160px]">
+          <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group min-h-[160px]">
             {isLoadingGlobalPerf || isLoadingGlobalEvol ? (
               <div className="w-full h-full animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
             ) : (
@@ -639,7 +639,7 @@ const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status,
 };
 
 const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "", isLoading }: any) => {
-  if (isLoading) return <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-40 animate-pulse" />;
+  if (isLoading) return <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 h-40 animate-pulse" />;
 
   const colorMap: any = {
     blue: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
@@ -652,7 +652,7 @@ const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accou
   const formattedSubValue = type === 'currency' ? formatCurrency(subValue, 0) : subValue;
 
   return (
-    <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-gray-800/50 shadow-sm transition-all hover:shadow-card-hover group">
+    <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-card-hover group">
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
           <span className="text-[10px] font-bold uppercase tracking-wider">{title}</span>
