@@ -207,7 +207,7 @@ export const SalesDashboard: React.FC = () => {
       <div className="bg-white dark:bg-surface-card-dark p-8 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
 
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <GlobalKPICard 
             title="Ventas TTD vs Ppto YTD (Global)" 
             value={globalPerf?.kpis?.ventas || 0} 
@@ -243,7 +243,26 @@ export const SalesDashboard: React.FC = () => {
             }}
           />
           
-          <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-gray-800/50 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group min-h-[160px]">
+          <GlobalKPICard 
+            title="CARTERA DE PEDIDOS" 
+            value={globalPerf?.kpis?.carteraVentas || 0} 
+            subValue={globalPerf?.kpis?.enviadosFacturar || 0}
+            accountValue={globalPerf?.kpis?.carteraVentasAccounts}
+            accountSubValue={globalPerf?.kpis?.enviadosFacturarAccounts}
+            type="currency" 
+            icon={Package} 
+            color="emerald"
+            variant="comparison"
+            label1="CARTE:"
+            label2="PEND:"
+            isLoading={isLoadingGlobalPerf}
+            infoProps={{
+              description: "Resumen de cartera (pedidos abiertos) y mercancía enviada no facturada (Pendientes) a nivel global de la compañía. Valoración basada en precio neto efectivo (incluye descuentos) y excluyendo líneas a cero. El valor entre paréntesis indica el total correspondiente a líneas de cuentas contables.",
+              formulas: "Suma(Cantidad * (Importe Neto / Cantidad Total))"
+            }}
+          />
+
+          <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-gray-850 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group min-h-[160px]">
             {isLoadingGlobalPerf || isLoadingGlobalEvol ? (
               <div className="w-full h-full animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
             ) : (

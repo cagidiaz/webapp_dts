@@ -9,7 +9,7 @@ import {
 import { formatCurrency } from '../../../api/formatters';
 import { 
   TrendingUp, TrendingDown, BarChart2,
-  Package, Euro, AlertCircle, CheckCircle2, UserPlus, Target
+  Package, Euro, AlertCircle, CheckCircle2, UserPlus
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui/InfoPopover';
 import { useUIStore } from '../../../store/uiStore';
@@ -61,6 +61,16 @@ export const FinancialDashboard: React.FC = () => {
     })
   });
 
+  // Fetch salesperson evolution for the Gauge if a salesperson is selected
+  const { data: salespersonEvolution } = useQuery({
+    queryKey: ['salespersonEvolution', currentYear, selectedSalesperson],
+    queryFn: () => getSalesBudgetEvolution({ 
+      year: currentYear,
+      salespersonCode: selectedSalesperson || undefined
+    }),
+    enabled: !!selectedSalesperson
+  });
+
   React.useEffect(() => {
     setPageInfo({
       title: 'Panel de Mando Ejecutivo',
@@ -104,13 +114,17 @@ export const FinancialDashboard: React.FC = () => {
   }, [evolution]);
 
   const annualStats = useMemo(() => {
-    if (!chartData || chartData.length === 0) return { totalAnnualBudget: 0, pctAchievement: 0 };
-    const lastItem = chartData[chartData.length - 1];
-    const totalAnnualBudget = lastItem.Objetivo;
-    const currentSales = salesPerf?.kpis?.ventas || 0;
+    const activeEvolution = selectedSalesperson ? salespersonEvolution : evolution;
+    const activeSalesPerf = selectedSalesperson ? salespersonPerf : salesPerf;
+
+    if (!activeEvolution || activeEvolution.length === 0) return { totalAnnualBudget: 0, pctAchievement: 0 };
+    
+    // Sumamos el presupuesto objetivo anual de los 12 meses
+    const totalAnnualBudget = activeEvolution.reduce((sum, item) => sum + item.objetivo, 0);
+    const currentSales = activeSalesPerf?.kpis?.ventas || 0;
     const pctAchievement = totalAnnualBudget > 0 ? (currentSales / totalAnnualBudget) * 100 : 0;
     return { totalAnnualBudget, pctAchievement };
-  }, [chartData, salesPerf]);
+  }, [evolution, salespersonEvolution, salesPerf, salespersonPerf, selectedSalesperson]);
 
   const isLoading = pLoading || eLoading;
 
@@ -123,105 +137,17 @@ export const FinancialDashboard: React.FC = () => {
     </div>
   );
 
+  const activeKPIs = selectedSalesperson ? salespersonPerf?.kpis : salesPerf?.kpis;
+  const isKpisLoading = selectedSalesperson ? spLoading : pLoading;
   const kpis = salesPerf?.kpis;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
       
-      {/* Top KPIs Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        <KPICard 
-          title="Ventas YTD vs Ppto YTD" 
-          value={kpis?.ventas || 0} 
-          subValue={kpis?.objetivo || 0}
-          deviation={kpis?.desviacionPct || 0}
-          type="currency" 
-          icon={Euro} 
-          color="blue"
-          variant="comparison"
-          infoProps={{
-            description: "Comparativa de facturación real acumulada frente al presupuesto acumulado a fecha de hoy.",
-            formulas: "Ventas YTD vs Presupuesto YTD"
-          }}
-        />
-        <KPICard 
-          title="VENTAS YTD VS VENTAS LYTD" 
-          value={kpis?.ventas || 0} 
-          subValue={kpis?.facturacionAnioAnterior || 0}
-          deviation={kpis?.facturacionAnioAnterior && kpis.facturacionAnioAnterior > 0 
-            ? ((kpis.ventas - kpis.facturacionAnioAnterior) / kpis.facturacionAnioAnterior) * 100 
-            : 0}
-          type="currency" 
-          icon={BarChart2} 
-          color="indigo"
-          variant="comparison"
-          label1="2026:"
-          label2="2025:"
-          infoProps={{
-            description: "Facturación total del ejercicio actual comparada con el mismo periodo del año anterior (comparativa día a día).",
-            formulas: "Ventas Actuales vs Ventas Año Anterior (Hasta hoy)"
-          }}
-        />
-        
-        {/* Speedometer KPI */}
-        <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
-          <div className="absolute top-4 left-6 flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Facturación Anual</span>
-            <InfoPopover 
-              title="Objetivo Facturación Anual" 
-              description="Porcentaje de consecución del presupuesto total de ventas fijado para el ejercicio completo."
-              formulas="(Ventas Actuales / Presupuesto Anual) * 100"
-              iconSize={12} 
-            />
-          </div>
-          <div className="w-full h-24 mt-4">
-            <GaugeChart value={annualStats.pctAchievement} />
-          </div>
-          <div className="text-center mt-2">
-            <span className="text-2xl font-light text-dts-primary dark:text-white">{annualStats.pctAchievement.toFixed(1)}%</span>
-          </div>
-        </div>
-
-        <KPICard 
-          title="CARTERA DE PEDIDOS" 
-          value={kpis?.carteraVentas || 0} 
-          subValue={kpis?.enviadosFacturar || 0}
-          accountValue={kpis?.carteraVentasAccounts}
-          accountSubValue={kpis?.enviadosFacturarAccounts}
-          type="currency" 
-          icon={Package} 
-          color="emerald"
-          variant="comparison"
-          label1="CARTE:"
-          label2="PEND:"
-          infoProps={{
-            description: "Resumen de cartera (pedidos abiertos) y mercancía enviada no facturada (Pendientes). Valoración basada en precio neto efectivo (incluye descuentos) y excluyendo líneas a cero. El valor entre paréntesis indica el total correspondiente a líneas de cuentas contables.",
-            formulas: "Suma(Cantidad * (Importe Neto / Cantidad Total))"
-          }}
-        />
-        <KPICard 
-          title="CLIENTES NUEVOS" 
-          value={kpis?.facturacionNuevos || 0} 
-          subValue={kpis?.countNuevos || 0}
-          extraValue={kpis?.countNuevosSinVenta || 0}
-          suffix=" clientes"
-          type="currency" 
-          icon={UserPlus} 
-          color="indigo"
-          variant="comparison"
-          label1="FACT:"
-          label2="TOTAL:"
-          label3="S/VTA:"
-          infoProps={{
-            description: "Facturación acumulada de clientes creados en el ejercicio actual, número total de dichos clientes y cuántos de ellos aún no han realizado compras.",
-            formulas: "Suma(Ventas Clientes Nuevos) | Contar(Clientes Nuevos) | Clientes sin Venta"
-          }}
-        />
-      </div>
-
-      {/* Salesperson Budget KPIs & Filters Section - Just below main KPIs block */}
-      <div className="bg-white dark:bg-surface-card-dark border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 border-b border-gray-150 dark:border-gray-850 pb-3">
+      {/* Sección Agrupada: Facturación y Presupuestos */}
+      <div className="bg-white dark:bg-surface-card-dark border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-6">
+        {/* Cabecera con Título, Subtítulo y Filtro de Comercial */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-150 dark:border-gray-850 pb-3">
           <div>
             <h3 className="text-md font-bold text-dts-primary dark:text-white flex items-center gap-2">
               <BarChart2 size={18} className="text-dts-secondary" />
@@ -230,7 +156,7 @@ export const FinancialDashboard: React.FC = () => {
             <p className="text-[11px] text-gray-400 mt-0.5 uppercase tracking-wider font-medium">Filtro rápido y KPIs de rendimiento YTD</p>
           </div>
           
-          {/* Botones de vendedor en horizontal y más pequeños */}
+          {/* Selector de comercial (afecta a la fila de KPIs) */}
           <div className="flex flex-wrap gap-1.5 items-center">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-2">Vendedor:</span>
             <button
@@ -260,67 +186,97 @@ export const FinancialDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* 4 KPI Cards inside the same window box */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <KPICard
-            title="Facturación YTD"
-            type="currency"
-            icon={TrendingUp}
+        {/* Fila única de KPIs (Filtrada por el Comercial seleccionado) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          <KPICard 
+            title="Ventas YTD vs Ppto YTD" 
+            value={activeKPIs?.ventas || 0} 
+            subValue={activeKPIs?.objetivo || 0}
+            deviation={activeKPIs?.desviacionPct || 0}
+            type="currency" 
+            icon={Euro} 
             color="blue"
             variant="comparison"
-            label1="FACT:"
-            label2="DESV:"
-            isLoading={spLoading}
+            isLoading={isKpisLoading}
             infoProps={{
-              description: "Facturación real acumulada en el ejercicio actual frente al objetivo presupuestado.",
-              formulas: "Facturación Real YTD vs Desviación Nominal (€)"
+              description: "Comparativa de facturación real acumulada frente al presupuesto acumulado a fecha de hoy.",
+              formulas: "Ventas YTD vs Presupuesto YTD"
             }}
-            value={salespersonPerf?.kpis?.ventas || 0}
-            subValue={salespersonPerf?.kpis?.desviacionEur || 0}
           />
-
-          <KPICard
-            title="Objetivo YTD"
-            icon={Target}
+          <KPICard 
+            title="VENTAS YTD VS VENTAS LYTD" 
+            value={activeKPIs?.ventas || 0} 
+            subValue={activeKPIs?.facturacionAnioAnterior || 0}
+            deviation={activeKPIs?.facturacionAnioAnterior && activeKPIs.facturacionAnioAnterior > 0 
+              ? ((activeKPIs.ventas - activeKPIs.facturacionAnioAnterior) / activeKPIs.facturacionAnioAnterior) * 100 
+              : 0}
+            type="currency" 
+            icon={BarChart2} 
             color="indigo"
             variant="comparison"
-            label1="OBJETIVO:"
-            label2="CUMPLIM:"
-            isLoading={spLoading}
+            label1="2026:"
+            label2="2025:"
+            isLoading={isKpisLoading}
             infoProps={{
-              description: "Presupuesto asignado al vendedor para el periodo acumulado y porcentaje de consecución del mismo.",
-              formulas: "Objetivo YTD vs % Cumplimiento"
+              description: "Facturación total del ejercicio actual comparada con el mismo periodo del año anterior (comparativa día a día).",
+              formulas: "Ventas Actuales vs Ventas Año Anterior (Hasta hoy)"
             }}
-            value={salespersonPerf?.kpis?.objetivo || 0}
-            subValue={salespersonPerf?.kpis?.desviacionPct || 0}
-            type="currency"
           />
+          
+          {/* Speedometer KPI */}
+          <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
+            <div className="absolute top-4 left-6 flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Facturación Anual</span>
+              <InfoPopover 
+                title="Objetivo Facturación Anual" 
+                description="Porcentaje de consecución del presupuesto total de ventas fijado para el ejercicio completo."
+                formulas="(Ventas Actuales / Presupuesto Anual) * 100"
+                iconSize={12} 
+              />
+            </div>
+            <div className="w-full h-24 mt-4">
+              <GaugeChart value={annualStats.pctAchievement} />
+            </div>
+            <div className="text-center mt-2">
+              <span className="text-2xl font-light text-dts-primary dark:text-white">{annualStats.pctAchievement.toFixed(1)}%</span>
+            </div>
+          </div>
 
-          <KPICard
-            title="Cartera Pedidos"
-            value={salespersonPerf?.kpis?.carteraVentas || 0}
-            accountValue={salespersonPerf?.kpis?.carteraVentasAccounts}
-            type="currency"
-            icon={Package}
+          <KPICard 
+            title="CARTERA DE PEDIDOS" 
+            value={activeKPIs?.carteraVentas || 0} 
+            subValue={activeKPIs?.enviadosFacturar || 0}
+            accountValue={activeKPIs?.carteraVentasAccounts}
+            accountSubValue={activeKPIs?.enviadosFacturarAccounts}
+            type="currency" 
+            icon={Package} 
             color="emerald"
-            isLoading={spLoading}
+            variant="comparison"
+            label1="CARTE:"
+            label2="PEND:"
+            isLoading={isKpisLoading}
             infoProps={{
-              description: "Importe total de pedidos de venta abiertos de este vendedor.",
-              formulas: "Suma de pedidos abiertos"
+              description: "Resumen de cartera (pedidos abiertos) y mercancía enviada no facturada (Pendientes). Valoración basada en precio neto efectivo (incluye descuentos) y excluyendo líneas a cero. El valor entre paréntesis indica el total correspondiente a líneas de cuentas contables.",
+              formulas: "Suma(Cantidad * (Importe Neto / Cantidad Total))"
             }}
           />
-
-          <KPICard
-            title="Pend. Facturar"
-            value={salespersonPerf?.kpis?.enviadosFacturar || 0}
-            accountValue={salespersonPerf?.kpis?.enviadosFacturarAccounts}
-            type="currency"
-            icon={Euro}
-            color="amber"
-            isLoading={spLoading}
+          <KPICard 
+            title="CLIENTES NUEVOS" 
+            value={activeKPIs?.facturacionNuevos || 0} 
+            subValue={activeKPIs?.countNuevos || 0}
+            extraValue={activeKPIs?.countNuevosSinVenta || 0}
+            suffix=" clientes"
+            type="currency" 
+            icon={UserPlus} 
+            color="indigo"
+            variant="comparison"
+            label1="FACT:"
+            label2="TOTAL:"
+            label3="S/VTA:"
+            isLoading={isKpisLoading}
             infoProps={{
-              description: "Importe de la mercancía ya enviada pero pendiente de emitir la factura.",
-              formulas: "Enviado no facturado"
+              description: "Facturación acumulada de clientes creados en el ejercicio actual, número total de dichos clientes y cuántos de ellos aún no han realizado compras.",
+              formulas: "Suma(Ventas Clientes Nuevos) | Contar(Clientes Nuevos) | Clientes sin Venta"
             }}
           />
         </div>
