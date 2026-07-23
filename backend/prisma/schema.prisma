@@ -555,6 +555,37 @@ model customers {
   @@schema("public")
 }
 
+model vendors {
+  id                   String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id            String     @unique @db.VarChar(50)
+  name                 String     @db.VarChar(255)
+  address              String?
+  address_2            String?
+  city                 String?    @db.VarChar(100)
+  county               String?    @db.VarChar(100)
+  post_code            String?    @db.VarChar(20)
+  phone_no             String?    @db.VarChar(50)
+  mobile_no            String?    @db.VarChar(50)
+  email                String?    @db.VarChar(255)
+  contact              String?    @db.VarChar(100)
+  vat_no               String?    @db.VarChar(50)
+  home_page            String?    @db.VarChar(255)
+  payment_terms_code   String?    @db.VarChar(50)
+  payment_method_code  String?    @db.VarChar(50)
+  shipment_method_code String?    @db.VarChar(50)
+  blocked              String?    @db.VarChar(20)
+  privacy_blocked      Boolean?   @default(false)
+  balance_lcy          Decimal?   @default(0) @db.Decimal(15, 2)
+  balance_due_lcy      Decimal?   @default(0) @db.Decimal(15, 2)
+  payments_lcy         Decimal?   @default(0) @db.Decimal(15, 2)
+  prepayment_percent   Decimal?   @default(0) @db.Decimal(5, 2)
+  created_at           DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?  @default(now()) @db.Timestamptz(6)
+
+  @@schema("public")
+}
+
+
 model products {
   id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   item_no             String             @unique @db.VarChar(50)

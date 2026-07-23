@@ -14,6 +14,7 @@ import {
 } from './pages/finance';
 import { CustomersPage, ProductsPage, SalesBudgetPage, SalesOrdersPage, ProductBudgetPage, ValueEntriesPage, SalesInvoicesPage, QuotesPage } from './pages/sales';
 import { CrmPage } from './pages/crm';
+import { VendorsPage } from './pages/purchases';
 
 
 
@@ -120,6 +121,12 @@ const App: React.FC = () => {
 
               </Route>
               
+              {/* Modulo Compras: ADMIN, DIRECCION, OPERACIONES */}
+              <Route path="purchases" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'OPERACIONES']}><Outlet /></RoleGuard>}>
+                <Route index element={<Navigate to="vendors" replace />} />
+                <Route path="vendors" element={<VendorsPage />} />
+              </Route>
+
               <Route path="crm" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']}><Outlet /></RoleGuard>}>
                 <Route index element={<Navigate to="customers" replace />} />
                 <Route path="customers" element={<CrmPage mode="customers" />} />
