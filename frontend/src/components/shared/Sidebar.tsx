@@ -78,6 +78,7 @@ const navItems: NavItem[] = [
     roles: ['ADMIN', 'DIRECCION', 'OPERACIONES'],
     children: [
       { name: 'Proveedores', path: '/purchases/vendors' },
+      { name: 'Pedidos de Compra', path: '/purchases/orders' },
     ]
   },
   { 

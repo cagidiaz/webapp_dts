@@ -17,6 +17,7 @@ import { QuotesModule } from './modules/quotes/quotes.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
 import { CrmActivitiesModule } from './modules/crm-activities/crm-activities.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
+import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { VendorsModule } from './modules/vendors/vendors.module';
     ContactsModule,
     CrmActivitiesModule,
     VendorsModule,
+    PurchaseOrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -282,18 +282,28 @@ export const UsersPage: React.FC = () => {
       m.route_path === '/dashboard' || 
       m.route_path === '/finance' || 
       m.route_path === '/sales' || 
+      m.route_path === '/purchases' ||
       m.route_path === '/config' ||
       m.route_path === '/crm'
     );
 
     return parents.map(parent => {
-      let children = [];
+      let rawChildren: any[] = [];
       if (parent.route_path === '/config') {
-        children = allModules.filter(m => m.route_path === '/users' || m.route_path === '/settings');
+        rawChildren = allModules.filter(m => m.route_path === '/users' || m.route_path === '/settings');
       } else {
-        children = allModules.filter(m => m.route_path.startsWith(parent.route_path + '/'));
+        rawChildren = allModules.filter(m => m.route_path.startsWith(parent.route_path + '/'));
       }
-      return { parent, children };
+      
+      // Deduplicar módulos por route_path
+      const uniqueChildren = new Map();
+      rawChildren.forEach(child => {
+        if (!uniqueChildren.has(child.route_path)) {
+          uniqueChildren.set(child.route_path, child);
+        }
+      });
+
+      return { parent, children: Array.from(uniqueChildren.values()) };
     });
   }, [allModules]);
 

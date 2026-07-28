@@ -581,6 +581,7 @@ model vendors {
   prepayment_percent   Decimal?   @default(0) @db.Decimal(5, 2)
   created_at           DateTime?  @default(now()) @db.Timestamptz(6)
   updated_at           DateTime?  @default(now()) @db.Timestamptz(6)
+  purchase_orders      purchase_orders[]
 
   @@schema("public")
 }
@@ -611,6 +612,7 @@ model products {
   category            product_categories? @relation(fields: [subfamily_code], references: [subfamily_code], onDelete: SetNull)
   sales_orders        sales_orders[]
   sales_document_lines sales_document_lines[]
+  purchase_order_lines purchase_order_lines[]
 
   @@index([vendor_no], map: "idx_product_vendor")
   @@index([subfamily_code], map: "idx_product_subfamily")
@@ -912,6 +914,74 @@ model crm_activities {
   @@index([created_by])
   @@schema("public")
 }
+
+model purchase_orders {
+  id                                         String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_no                                   String                 @unique @db.VarChar(50)
+  vendor_no                                  String                 @db.VarChar(50)
+  posting_date                               DateTime?              @db.Date
+  document_date                              DateTime?              @db.Date
+  payment_terms_code                         String?                @db.VarChar(50)
+  payment_discount_percent                   Decimal?               @default(0) @db.Decimal(5, 2)
+  due_date                                   DateTime?              @db.Date
+  payment_method_code                        String?                @db.VarChar(50)
+  shipment_method_code                       String?                @db.VarChar(50)
+  posting_description                        String?                @db.Text
+  requested_receipt_date                     DateTime?              @db.Date
+  amount_received_not_invoiced_excl_vat_lcy Decimal?               @default(0) @db.Decimal(18, 4)
+  amount                                     Decimal?               @default(0) @db.Decimal(18, 4)
+  your_reference                             String?                @db.VarChar(100)
+  vendor_order_no                            String?                @db.VarChar(100)
+  created_at                                 DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at                                 DateTime?              @default(now()) @db.Timestamptz(6)
+
+  vendor                                     vendors                @relation(fields: [vendor_no], references: [vendor_id], onDelete: Cascade)
+  lines                                      purchase_order_lines[]
+
+  @@index([vendor_no], map: "idx_purchase_orders_vendor")
+  @@index([document_date], map: "idx_purchase_orders_date")
+  @@schema("public")
+}
+
+model purchase_order_lines {
+  id                     String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document_no            String          @db.VarChar(50)
+  type                   String?         @db.VarChar(50)
+  line_no                Int?
+  item_code              String?         @db.VarChar(50)
+  description            String?         @db.Text
+  unit_of_measure        String?         @db.VarChar(20)
+  quantity               Decimal?        @default(0) @db.Decimal(18, 4)
+  direct_unit_cost       Decimal?        @default(0) @db.Decimal(18, 4)
+  indirect_cost_percent  Decimal?        @default(0) @db.Decimal(5, 2)
+  unit_cost_lcy          Decimal?        @default(0) @db.Decimal(18, 4)
+  unit_price_lcy         Decimal?        @default(0) @db.Decimal(18, 4)
+  line_discount_percent  Decimal?        @default(0) @db.Decimal(5, 2)
+  line_amount            Decimal?        @default(0) @db.Decimal(18, 4)
+  line_discount_amount   Decimal?        @default(0) @db.Decimal(18, 4)
+  prepayment_percent     Decimal?        @default(0) @db.Decimal(5, 2)
+  prepmt_line_amount     Decimal?        @default(0) @db.Decimal(18, 4)
+  quantity_received      Decimal?        @default(0) @db.Decimal(18, 4)
+  qty_to_receive         Decimal?        @default(0) @db.Decimal(18, 4)
+  qty_to_invoice         Decimal?        @default(0) @db.Decimal(18, 4)
+  quantity_invoiced      Decimal?        @default(0) @db.Decimal(18, 4)
+  requested_receipt_date DateTime?       @db.Date
+  promised_receipt_date  DateTime?       @db.Date
+  planned_receipt_date   DateTime?       @db.Date
+  expected_receipt_date  DateTime?       @db.Date
+  order_date             DateTime?       @db.Date
+  created_at             DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?       @default(now()) @db.Timestamptz(6)
+
+  order                  purchase_orders @relation(fields: [document_no], references: [order_no], onDelete: Cascade)
+  product                products?       @relation(fields: [item_code], references: [item_no], onDelete: Cascade)
+
+  @@index([document_no], map: "idx_purchase_order_lines_doc_no")
+  @@index([item_code], map: "idx_purchase_order_lines_item_code")
+  @@index([order_date], map: "idx_purchase_order_lines_order_date")
+  @@schema("public")
+}
+
 
 
 
