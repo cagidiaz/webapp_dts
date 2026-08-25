@@ -384,6 +384,7 @@ model profiles {
   users      users       @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   roles      roles?      @relation(fields: [role_id], references: [id], onUpdate: NoAction)
   crm_activities crm_activities[]
+  user_exchange_account user_exchange_accounts?
 
   @@index([role_id], map: "idx_profiles_role")
   @@schema("public")
@@ -518,6 +519,7 @@ model customers {
   salesperson_code         String?         @db.VarChar(20)
   market_segment           String?         @db.VarChar(50)
   business_model           String?         @db.VarChar(50)
+  client_type              String?         @db.VarChar(10)
   total_sales              Decimal?        @default(0) @db.Decimal
   cost_profit_variance_lcy Decimal?        @default(0) @db.Decimal
   adjusted_profit          Decimal?        @default(0) @db.Decimal
@@ -890,20 +892,27 @@ enum CrmActivityType {
 }
 
 model crm_activities {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  client_id      String          @db.VarChar(50)
-  contact_id     String?         @db.Uuid
-  created_by     String          @db.Uuid
-  type           CrmActivityType
-  title          String          @db.VarChar(255)
-  description    String?         @db.Text
-  due_date       DateTime?       @db.Date
-  time_scheduled String?         @db.VarChar(10)
-  is_completed   Boolean         @default(false)
-  email          String?         @db.VarChar(255)
-  conclusions    String?         @db.Text
-  created_at     DateTime?       @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime        @default(now()) @db.Timestamptz(6)
+  id                      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  client_id               String          @db.VarChar(50)
+  contact_id              String?         @db.Uuid
+  created_by              String          @db.Uuid
+  type                    CrmActivityType
+  title                   String          @db.VarChar(255)
+  description             String?         @db.Text
+  due_date                DateTime?       @db.Date
+  time_scheduled          String?         @db.VarChar(10)
+  is_completed            Boolean         @default(false)
+  email                   String?         @db.VarChar(255)
+  conclusions             String?         @db.Text
+  exchange_item_id        String?         @db.VarChar(255)
+  exchange_change_key     String?         @db.VarChar(255)
+  exchange_web_link       String?         @db.Text
+  exchange_sync_status    String?         @default("local_only") @db.VarChar(50)
+  exchange_last_synced_at DateTime?       @db.Timestamptz(6)
+  attendees               Json?           @db.JsonB
+  location                String?         @db.VarChar(255)
+  created_at              DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime        @default(now()) @db.Timestamptz(6)
 
   customer       customers       @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
   contact        contacts?       @relation(fields: [contact_id], references: [id], onDelete: SetNull)
@@ -912,6 +921,31 @@ model crm_activities {
   @@index([client_id])
   @@index([contact_id])
   @@index([created_by])
+  @@index([exchange_item_id])
+  @@schema("public")
+}
+
+model user_exchange_accounts {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                  String    @unique @db.Uuid
+  email                    String    @db.VarChar(255)
+  microsoft_user_id        String?   @db.VarChar(255)
+  access_token             String    @db.Text
+  refresh_token            String    @db.Text
+  token_expires_at         DateTime  @db.Timestamptz(6)
+  calendar_sync_enabled    Boolean?  @default(true)
+  mail_sync_enabled        Boolean?  @default(true)
+  calendar_delta_token     String?   @db.Text
+  mail_delta_token         String?   @db.Text
+  calendar_subscription_id String?   @db.VarChar(255)
+  subscription_expires_at  DateTime? @db.Timestamptz(6)
+  last_synced_at           DateTime? @db.Timestamptz(6)
+  created_at               DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime? @default(now()) @db.Timestamptz(6)
+
+  profile                  profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
   @@schema("public")
 }
 

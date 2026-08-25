@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllCustomers } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
   Search, Building2, Euro, 
-  Clock, AlertCircle, X
+  Clock, AlertCircle, X, ChevronDown
 } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
-import { getCustomerSalespersons } from '../../../api/customers';
+import { getCustomerSalespersons, CLIENT_TYPES, updateCustomerClientType } from '../../../api/customers';
 
 interface CrmCustomersProps {}
 
 export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
+  const queryClient = useQueryClient();
   const { profile } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [salespersonFilter, setSalespersonFilter] = useState('');
+  const [clientTypeFilter, setClientTypeFilter] = useState('');
   const [showSyncModal, setShowSyncModal] = useState(false);
 
   const observerTarget = useRef<HTMLTableRowElement>(null);
@@ -45,6 +47,16 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
     }
   }, [isCommercial, profile]);
 
+  // Mutation to update client_type
+  const updateClientTypeMutation = useMutation({
+    mutationFn: ({ clientId, clientType }: { clientId: string; clientType: string | null }) =>
+      updateCustomerClientType(clientId, clientType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm-customers-infinite'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+  });
+
   // Fetch customers with infinite scroll
   const { 
     data: customersInfiniteData, 
@@ -53,12 +65,13 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
     isFetchingNextPage, 
     isLoading 
   } = useInfiniteQuery({
-    queryKey: ['crm-customers-infinite', debouncedSearch, salespersonFilter],
+    queryKey: ['crm-customers-infinite', debouncedSearch, salespersonFilter, clientTypeFilter],
     queryFn: ({ pageParam = 0 }) => getAllCustomers({
       take: itemsPerPage,
       skip: pageParam as number,
       search: debouncedSearch || undefined,
       salesperson: salespersonFilter || undefined,
+      clientType: clientTypeFilter || undefined,
       sortBy: 'name',
       sortDir: 'asc'
     }),
@@ -95,6 +108,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
   // Reset filters
   const handleResetFilters = () => {
     setSearchTerm('');
+    setClientTypeFilter('');
     if (!isCommercial) {
       setSalespersonFilter('');
     }
@@ -199,6 +213,21 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
               </div>
             )}
 
+            {/* Client Type Filter */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-500 font-medium">Relación:</span>
+              <select 
+                className="block pl-2 pr-8 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                value={clientTypeFilter}
+                onChange={(e) => setClientTypeFilter(e.target.value)}
+              >
+                <option value="">Todas</option>
+                {Object.values(CLIENT_TYPES).map(t => (
+                  <option key={t.code} value={t.code}>{t.code} - {t.name}</option>
+                ))}
+              </select>
+            </div>
+
             <button
               onClick={handleResetFilters}
               className="text-xs font-bold text-dts-secondary hover:text-dts-secondary-dark cursor-pointer transition-colors"
@@ -217,25 +246,27 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
                 <th className="px-4 py-3">Comercial</th>
                 <th className="px-4 py-3 text-right">Deuda Pendiente</th>
                 <th className="px-4 py-3 text-right">Ventas Totales</th>
+                <th className="px-4 py-3 text-center">Tipo Cliente</th>
                 <th className="px-4 py-3 text-center">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-white/5">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-xs text-gray-400 font-medium">
+                  <td colSpan={8} className="px-4 py-8 text-center text-xs text-gray-400 font-medium">
                     Cargando listado...
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-xs text-gray-400 font-medium">
+                  <td colSpan={8} className="px-4 py-8 text-center text-xs text-gray-400 font-medium">
                     No se encontraron empresas para la búsqueda seleccionada.
                   </td>
                 </tr>
               ) : (
                 customers.map(c => {
                   const isBlocked = c.blocked && c.blocked.trim() !== '';
+                  const typeDef = c.client_type ? CLIENT_TYPES[c.client_type] : null;
                   return (
                     <tr 
                       key={c.id}
@@ -268,6 +299,31 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
                         {formatCurrency(c.total_sales, 0)}
                       </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <div className="relative inline-flex items-center">
+                          <select
+                            value={c.client_type || ''}
+                            onChange={(e) => {
+                              const newType = e.target.value || null;
+                              updateClientTypeMutation.mutate({ clientId: c.client_id, clientType: newType });
+                            }}
+                            className={`text-[10px] font-black py-1 pl-2.5 pr-6 rounded-lg border appearance-none cursor-pointer transition-all outline-none focus:ring-2 focus:ring-dts-secondary/50 shadow-2xs ${
+                              typeDef
+                                ? `${typeDef.badgeBg} ${typeDef.badgeColor} ${typeDef.badgeBorder}`
+                                : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-300 dark:border-zinc-600 hover:border-slate-400'
+                            }`}
+                            title={typeDef ? `${typeDef.name}: ${typeDef.description}` : 'Seleccionar tipo de relación con la marca'}
+                          >
+                            <option value="" className="bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-200">Sin clasificar</option>
+                            {Object.values(CLIENT_TYPES).map(t => (
+                              <option key={t.code} value={t.code} className="bg-white dark:bg-zinc-900 text-gray-900 dark:text-white font-medium">
+                                {t.code} · {t.name}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-70 text-current" />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
                           isBlocked 
                             ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30'
@@ -281,7 +337,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
                 })
               )}
               <tr ref={observerTarget}>
-                <td colSpan={7} className="py-8 text-center text-gray-400 text-xs">
+                <td colSpan={8} className="py-8 text-center text-gray-400 text-xs">
                   {isFetchingNextPage ? (
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 border-2 border-dts-secondary border-t-transparent rounded-full animate-spin"></div>

@@ -1,13 +1,20 @@
 import { useState } from 'react';
 import { Drawer } from '../../../components/shared';
-import { type CustomerDataRow, getCustomerByClientId, getContacts, updateContactLinkedin } from '../../../api';
+import { 
+  type CustomerDataRow, 
+  getCustomerByClientId, 
+  getContacts, 
+  updateContactLinkedin,
+  updateCustomerClientType,
+  CLIENT_TYPES 
+} from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Phone, Mail, MapPin, Smartphone, 
   MessageCircle, ExternalLink, User,
   Wallet, TrendingUp, Calendar, Loader2,
-  Edit2, Check, X, Linkedin
+  Edit2, Check, X, Linkedin, ChevronDown
 } from 'lucide-react';
 
 interface CustomerDetailDrawerProps {
@@ -37,6 +44,16 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
 
   const customer = propCustomer || fetchedCustomer;
 
+  const updateTypeMutation = useMutation({
+    mutationFn: (newType: string | null) => 
+      updateCustomerClientType(customer!.client_id, newType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customerDetail', customer?.client_id] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-customers-infinite'] });
+    }
+  });
+
   const { data: contacts, isLoading: isLoadingContacts } = useQuery({
     queryKey: ['customerContacts', customer?.client_id],
     queryFn: () => customer?.client_id ? getContacts({ clientId: customer.client_id }) : Promise.resolve([]),
@@ -62,6 +79,8 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
 
   if (!isOpen) return null;
 
+  const currentTypeDef = customer?.client_type ? CLIENT_TYPES[customer.client_type] : null;
+
   return (
     <Drawer isOpen={isOpen} onClose={onClose} title="Ficha del Cliente">
       {isLoading ? (
@@ -74,14 +93,51 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
       ) : (
         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
           {/* Header Summary */}
-          <div className="flex flex-col items-center text-center pb-6 border-b border-gray-100 dark:border-white/5">
-            <div className="w-16 h-16 rounded-full bg-dts-secondary/10 flex items-center justify-center text-dts-secondary mb-3">
+          <div className="flex flex-col items-center text-center pb-6 border-b border-gray-100 dark:border-white/5 space-y-2">
+            <div className="w-16 h-16 rounded-full bg-dts-secondary/10 flex items-center justify-center text-dts-secondary mb-1">
               <User size={32} />
             </div>
             <h2 className="text-xl font-bold text-dts-primary dark:text-white">{customer.name}</h2>
-            <span className="text-xs font-mono text-dts-primary dark:text-dts-secondary font-bold bg-dts-secondary/5 px-2 py-0.5 rounded mt-1">
-              {customer.client_id}
-            </span>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="text-xs font-mono text-dts-primary dark:text-dts-secondary font-bold bg-dts-secondary/5 px-2 py-0.5 rounded">
+                {customer.client_id}
+              </span>
+              {customer.salesperson_code && (
+                <span className="text-xs font-medium text-gray-500 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded">
+                  Vendedor: {customer.salesperson_code}
+                </span>
+              )}
+            </div>
+
+            {/* Clasificación de Relación con la Marca */}
+            <div className="pt-2 flex flex-col items-center gap-1.5">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tipo de Cliente (Relación con la Marca)</span>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={customer.client_type || ''}
+                  onChange={(e) => updateTypeMutation.mutate(e.target.value || null)}
+                  disabled={updateTypeMutation.isPending}
+                  className={`text-xs font-black py-1.5 pl-3 pr-8 rounded-xl border appearance-none cursor-pointer transition-all outline-none focus:ring-2 focus:ring-dts-secondary/50 shadow-2xs ${
+                    currentTypeDef 
+                      ? `${currentTypeDef.badgeBg} ${currentTypeDef.badgeColor} ${currentTypeDef.badgeBorder}`
+                      : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-300 dark:border-zinc-600'
+                  }`}
+                >
+                  <option value="" className="bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-200">Sin clasificar</option>
+                  {Object.values(CLIENT_TYPES).map(t => (
+                    <option key={t.code} value={t.code} className="bg-white dark:bg-zinc-900 text-gray-900 dark:text-white font-medium">
+                      {t.code} · {t.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-70 text-current" />
+              </div>
+              {currentTypeDef && (
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 italic max-w-xs text-center mt-0.5">
+                  "{currentTypeDef.description}"
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Action Buttons */}

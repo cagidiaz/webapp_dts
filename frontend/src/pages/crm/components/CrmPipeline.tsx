@@ -796,7 +796,7 @@ export const CrmPipeline: React.FC = () => {
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Estado de la Oferta</label>
                   <select 
-                    value={selectedQuote.estado_oferta} 
+                    value={(selectedQuote.estado_oferta || '').toLowerCase().trim() === 'preliminar' ? 'borrador' : (selectedQuote.estado_oferta || 'borrador').toLowerCase().trim()} 
                     onChange={(e) => handleStageChange(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
                   >

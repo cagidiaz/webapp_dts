@@ -15,10 +15,11 @@ export class CustomersService {
     search?: string; 
     blocked?: boolean;
     salesperson?: string;
+    clientType?: string;
     sortBy?: string;
     sortDir?: 'asc' | 'desc';
   } = {}) {
-    const { skip, take, search, blocked, salesperson, sortBy = 'client_id', sortDir = 'desc' } = params;
+    const { skip, take, search, blocked, salesperson, clientType, sortBy = 'client_id', sortDir = 'desc' } = params;
     
     // Construir el filtro de búsqueda
     const where: any = {};
@@ -61,12 +62,17 @@ export class CustomersService {
       and.push({ salesperson_code: salesperson });
     }
 
+    // Filtro por tipo de cliente (A, B, C, D, E, F)
+    if (clientType) {
+      and.push({ client_type: clientType });
+    }
+
     if (and.length > 0) {
       where.AND = and;
     }
 
     // Configuración de ordenación
-    const allowedSortFields = ['client_id', 'name', 'balance_due_lcy', 'total_sales', 'city', 'salesperson_code'];
+    const allowedSortFields = ['client_id', 'name', 'balance_due_lcy', 'total_sales', 'city', 'salesperson_code', 'client_type'];
     const orderByField = allowedSortFields.includes(sortBy) ? sortBy : 'client_id';
     const orderBy: any = {};
     orderBy[orderByField] = sortDir || 'desc';
@@ -210,6 +216,35 @@ export class CustomersService {
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  /**
+   * Actualiza el tipo de cliente (relación con la marca: A, B, C, D, E, F o null)
+   */
+  async updateClientType(clientId: string, clientType: string | null) {
+    try {
+      const existing = await this.prisma.customers.findUnique({
+        where: { client_id: clientId },
+      });
+
+      if (!existing) {
+        throw new NotFoundException(`Cliente con código "${clientId}" no encontrado`);
+      }
+
+      const updated = await this.prisma.customers.update({
+        where: { client_id: clientId },
+        data: {
+          client_type: clientType ? clientType.trim().toUpperCase() : null,
+          updated_at: new Date(),
+        },
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      console.error('Error en CustomersService.updateClientType:', error);
+      throw new InternalServerErrorException('Error al actualizar el tipo de cliente');
     }
   }
 }

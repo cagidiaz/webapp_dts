@@ -5,13 +5,14 @@ import {
   updateContactLinkedin,
   getCrmActivitiesByContact, createCrmActivity, updateCrmActivity, deleteCrmActivity,
   getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
-  getQuoteActivities, updateQuoteActivity, deleteQuoteActivity
+  getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
+  sendExchangeEmail, getExchangeStatus
 } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
   ArrowLeft, Phone, Mail, MapPin, Smartphone,
   Linkedin, Edit2, Check, X, Plus, Calendar, Clock, Percent,
-  Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users
+  Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users, ExternalLink
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 
@@ -78,17 +79,18 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [showEmailModal, setShowEmailModal] = useState(false);
 
   // Form states (Unified Event Modal)
-  const [activityType, setActivityType] = useState<'TASK' | 'NOTE' | 'REUNION' | 'VIDEOLLAMADA' | 'VISITA' | 'CALL' | 'EVENT'>('TASK');
+  const [activityType, setActivityType] = useState<'TASK' | 'NOTE' | 'REUNION' | 'VIDEOLLAMADA' | 'CALL' | 'EVENT'>('TASK');
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [newTime, setNewTime] = useState('10:00');
   const [newConclusions, setNewConclusions] = useState('');
+  const [newLocation, setNewLocation] = useState('');
 
   // Form states (Emails)
   const [newEmailSubject, setNewEmailSubject] = useState('');
   const [newEmailBody, setNewEmailBody] = useState('');
-  const [newEmailAddress, setNewEmailAddress] = useState(''); // ← NUEVO
+  const [newEmailAddress, setNewEmailAddress] = useState('');
   const [selectedEmailTemplate, setSelectedEmailTemplate] = useState('');
 
   // Edit states
@@ -99,11 +101,18 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('');
   const [editConclusions, setEditConclusions] = useState('');
+  const [editLocation, setEditLocation] = useState('');
 
   // Filter chips in Eventos Tab
   const [eventFilter, setEventFilter] = useState<string>('ALL');
 
   // Queries
+  const { data: exchangeStatus } = useQuery({
+    queryKey: ['exchangeStatus'],
+    queryFn: getExchangeStatus,
+  });
+  const isExchangeConnected = !!exchangeStatus?.isConnected;
+
   const { data: contact, isLoading: isLoadingContact } = useQuery({
     queryKey: ['crmContactDetail', contactId],
     queryFn: () => getContactById(contactId),
@@ -124,6 +133,38 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     mutationFn: createCrmActivity,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
+    }
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async (payload: { to: string[]; subject: string; body: string }) => {
+      if (isExchangeConnected) {
+        return await sendExchangeEmail({
+          contactId,
+          clientId: contact?.client_id,
+          to: payload.to,
+          subject: payload.subject,
+          body: payload.body,
+        });
+      } else {
+        return await createCrmActivity({
+          contactId,
+          clientId: contact?.client_id,
+          type: 'EMAIL',
+          title: payload.subject,
+          description: payload.body,
+          email: payload.to.join(', '),
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
+      setNewEmailSubject('');
+      setNewEmailBody('');
+      setSelectedEmailTemplate('');
+      setShowEmailModal(false);
     }
   });
 
@@ -131,6 +172,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     mutationFn: ({ id, payload }: { id: string; payload: any }) => updateCrmActivity(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
     }
   });
 
@@ -138,6 +180,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     mutationFn: deleteCrmActivity,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
     }
   });
 
@@ -171,6 +214,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contactCrmQuotes', contactId] });
       queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['crm-quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-quotes-kpis'] });
     }
   });
 
@@ -317,6 +362,67 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     setIsQuoteDrawerOpen(true);
   };
 
+  const handleStageChange = (newStage: string) => {
+    if (!selectedQuote) return;
+
+    let prob = selectedQuote.probabilidad_exito;
+    const stage = newStage.toLowerCase();
+    if (stage === 'borrador') prob = 10;
+    else if (stage === 'enviada') prob = 25;
+    else if (stage === 'en negociación') prob = 50;
+    else if (stage === 'ganada') prob = 100;
+    else if (stage === 'perdida') prob = 0;
+
+    const newWeighted = ((selectedQuote.amount || 0) * prob) / 100;
+
+    updateQuoteMutation.mutate({
+      id: selectedQuote.id,
+      data: { 
+        estado_oferta: newStage,
+        probabilidad_exito: prob 
+      },
+      fromStage: (selectedQuote.estado_oferta || 'borrador').toUpperCase(),
+      toStage: newStage.toUpperCase(),
+      documentNo: selectedQuote.document_no
+    }, {
+      onSuccess: () => {
+        setSelectedQuote(prev => prev ? {
+          ...prev,
+          estado_oferta: newStage,
+          probabilidad_exito: prob,
+          valor_oferta_ponderado: newWeighted
+        } : null);
+      }
+    });
+  };
+
+  const handleFieldChange = (fieldName: string, value: any) => {
+    if (!selectedQuote) return;
+    const updateData: any = { [fieldName]: value };
+
+    let newWeighted = selectedQuote.valor_oferta_ponderado;
+    if (fieldName === 'probabilidad_exito') {
+      newWeighted = ((selectedQuote.amount || 0) * Number(value)) / 100;
+      updateData.probabilidad_exito = Number(value);
+    }
+
+    updateQuoteMutation.mutate({
+      id: selectedQuote.id,
+      data: updateData,
+      fromStage: (selectedQuote.estado_oferta || 'borrador').toUpperCase(),
+      toStage: (selectedQuote.estado_oferta || 'borrador').toUpperCase(),
+      documentNo: selectedQuote.document_no
+    }, {
+      onSuccess: () => {
+        setSelectedQuote(prev => prev ? {
+          ...prev,
+          [fieldName]: value,
+          valor_oferta_ponderado: newWeighted
+        } : null);
+      }
+    });
+  };
+
   const handleSavePlanning = () => {
     if (!selectedQuote) return;
     setIsSavingPlanning(true);
@@ -372,21 +478,24 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       conclusions?: string | null;
       email?: string;
       time?: string;
+      location?: string | null;
+      exchangeSyncStatus?: string | null;
+      exchangeWebLink?: string | null;
     }[] = [];
 
-    dbActivities.forEach(act => {
+    dbActivities.forEach((act: any) => {
       let icon = Calendar;
       let iconBg = 'bg-indigo-500';
-      let type: any = 'event';
+      let type: 'note' | 'task' | 'email' | 'event' | 'call' | 'reunion' | 'videollamada' | 'visita' = 'event';
 
       if (act.type === 'NOTE') {
         icon = FileText;
         iconBg = 'bg-amber-500 dark:bg-amber-600/90';
-        type = 'nota';
+        type = 'note';
       } else if (act.type === 'TASK') {
         icon = CheckSquare;
         iconBg = 'bg-blue-500 dark:bg-blue-600/90';
-        type = 'tarea';
+        type = 'task';
       } else if (act.type === 'EMAIL') {
         icon = Mail;
         iconBg = 'bg-indigo-500 dark:bg-indigo-600/90';
@@ -394,11 +503,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       } else if (act.type === 'CALL') {
         icon = Phone;
         iconBg = 'bg-emerald-500 dark:bg-emerald-600/90';
-        type = 'llamada';
+        type = 'call';
       } else if (act.type === 'REUNION') {
         icon = Users;
         iconBg = 'bg-purple-500 dark:bg-purple-600/90';
-        type = 'reunión';
+        type = 'reunion';
       } else if (act.type === 'VIDEOLLAMADA') {
         icon = Video;
         iconBg = 'bg-cyan-500 dark:bg-cyan-600/90';
@@ -420,7 +529,10 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         done: act.is_completed,
         conclusions: act.conclusions,
         email: act.email || undefined,
-        time: act.time_scheduled || undefined
+        time: act.time_scheduled || undefined,
+        location: act.location || undefined,
+        exchangeSyncStatus: act.exchange_sync_status || null,
+        exchangeWebLink: act.exchange_web_link || null,
       });
     });
 
@@ -476,9 +588,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       if (eventFilter === 'ALL') return true;
       if (eventFilter === 'TASK') return act.type === 'task';
       if (eventFilter === 'NOTE') return act.type === 'note';
-      if (eventFilter === 'REUNION') return act.type === 'reunion';
+      if (eventFilter === 'REUNION') return act.type === 'reunion' || act.type === 'visita';
       if (eventFilter === 'VIDEO') return act.type === 'videollamada';
-      if (eventFilter === 'VISIT') return act.type === 'visita';
       if (eventFilter === 'CALL') return act.type === 'call';
       if (eventFilter === 'EVENT') return act.type === 'event';
       return true;
@@ -512,10 +623,13 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       title: activityType === 'NOTE' ? 'Nota Comercial Registrada' : newTitle,
       description: newDescription || undefined,
       dueDate: activityType !== 'NOTE' ? newDate : undefined,
+      location: newLocation || undefined,
     };
 
+    if (activityType !== 'NOTE') {
+      payload.timeScheduled = newTime || undefined;
+    }
     if (activityType !== 'NOTE' && activityType !== 'TASK') {
-      payload.timeScheduled = newTime;
       payload.conclusions = newConclusions || undefined;
     }
 
@@ -527,6 +641,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     setNewDate(new Date().toISOString().split('T')[0]);
     setNewTime('10:00');
     setNewConclusions('');
+    setNewLocation('');
     setShowEventModal(false);
   };
 
@@ -538,13 +653,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     const payload: any = {
       title: editActivityType === 'NOTE' ? 'Nota Comercial Registrada' : editTitle,
       description: editDescription || null,
-      conclusions: editConclusions || null
+      conclusions: editConclusions || null,
+      location: editLocation || null,
     };
 
-    if (editActivityType === 'TASK' || editActivityType === 'EVENT' || editActivityType === 'REUNION' || editActivityType === 'VIDEOLLAMADA' || editActivityType === 'VISITA' || editActivityType === 'CALL') {
+    if (editActivityType !== 'NOTE') {
       payload.dueDate = editDate ? new Date(editDate).toISOString() : null;
-    }
-    if (editActivityType !== 'NOTE' && editActivityType !== 'TASK') {
       payload.timeScheduled = editTime || null;
     }
 
@@ -560,24 +674,22 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     });
   };
 
-  // Send email mockup handler
+  // Send email via Exchange handler
   const handleSendEmail = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmailSubject.trim() || !newEmailBody.trim()) return;
 
-    createActivityMutation.mutate({
-      contactId,
-      clientId: contact?.client_id,
-      type: 'EMAIL',
-      title: newEmailSubject,
-      description: newEmailBody,
-      email: contact?.email || undefined
-    });
+    const recipient = newEmailAddress || contact?.email;
+    if (!recipient) {
+      alert('Por favor especifica una dirección de correo de destino.');
+      return;
+    }
 
-    setNewEmailSubject('');
-    setNewEmailBody('');
-    setSelectedEmailTemplate('');
-    setShowEmailModal(false);
+    sendEmailMutation.mutate({
+      to: [recipient],
+      subject: newEmailSubject,
+      body: newEmailBody,
+    });
   };
 
   const applyTemplateBody = (templateId: string) => {
@@ -1124,7 +1236,6 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     { id: 'NOTE', label: 'Notas' },
                     { id: 'REUNION', label: 'Reuniones' },
                     { id: 'VIDEO', label: 'Videollamadas' },
-                    { id: 'VISIT', label: 'Visitas' },
                     { id: 'CALL', label: 'Llamadas' },
                     { id: 'EVENT', label: 'Eventos' }
                   ].map(chip => (
@@ -1179,11 +1290,31 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               act.type === 'call' ? 'bg-cyan-500/10 text-cyan-600' :
                               'bg-indigo-500/10 text-indigo-600'
                             }`}>
-                              {act.type}
+                              {act.type === 'task' ? 'Tarea' :
+                               act.type === 'note' ? 'Nota' :
+                               act.type === 'reunion' ? 'Reunión' :
+                               act.type === 'videollamada' ? 'Videollamada' :
+                               act.type === 'visita' ? 'Visita' :
+                               act.type === 'call' ? 'Llamada' : 'Evento'}
                             </span>
+
+                            {act.exchangeSyncStatus === 'synced' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Sincronizado con Outlook">
+                                <Check size={10} /> Outlook
+                              </span>
+                            )}
+
                             <h4 className={`text-xs font-bold ${act.done && act.type === 'task' ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>
                               {act.title}
                             </h4>
+
+                            {act.location && (
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                <MapPin size={10} className="text-gray-400" />
+                                {act.location}
+                              </span>
+                            )}
+
                             <span className="text-[10px] text-gray-400 font-mono ml-auto">
                               {new Date(act.date).toLocaleDateString('es-ES')} {act.time || ''}
                             </span>
@@ -1199,16 +1330,35 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                         </div>
 
                         {/* Actions */}
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
+                          {act.exchangeWebLink && (
+                            <a
+                              href={act.exchangeWebLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 text-gray-400 hover:text-[#00B0B9] hover:bg-cyan-500/10 rounded-lg transition-colors"
+                              title="Abrir en Outlook Web / Microsoft Teams"
+                            >
+                              <ExternalLink size={13} />
+                            </a>
+                          )}
                           <button
                             onClick={() => {
                               setEditActivityId(act.id);
-                              setEditActivityType(act.type.toUpperCase() === 'TASK' ? 'TASK' : act.type.toUpperCase() === 'NOTE' ? 'NOTE' : 'EVENT');
+                              setEditActivityType(
+                                act.type === 'task' ? 'TASK' :
+                                act.type === 'note' ? 'NOTE' :
+                                act.type === 'reunion' ? 'REUNION' :
+                                act.type === 'videollamada' ? 'VIDEOLLAMADA' :
+                                act.type === 'visita' ? 'VISITA' :
+                                act.type === 'call' ? 'CALL' : 'EVENT'
+                              );
                               setEditTitle(act.title);
                               setEditDescription(act.description || '');
                               setEditDate(act.date ? act.date.split('T')[0] : '');
                               setEditTime(act.time || '10:00');
                               setEditConclusions(act.conclusions || '');
+                              setEditLocation(act.location || '');
                               setShowEditModal(true);
                             }}
                             className="p-1 text-gray-400 hover:text-dts-secondary cursor-pointer"
@@ -1303,7 +1453,6 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   <option value="NOTE">Nota Comercial</option>
                   <option value="REUNION">Reunión Presencial</option>
                   <option value="VIDEOLLAMADA">Videollamada</option>
-                  <option value="VISITA">Visita a Cliente</option>
                   <option value="CALL">Llamada Telefónica</option>
                   <option value="EVENT">Otro Evento</option>
                 </select>
@@ -1335,17 +1484,28 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
                     />
                   </div>
-                  {activityType !== 'TASK' && (
-                    <div className="space-y-1">
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hora</label>
-                      <input
-                        type="time"
-                        value={newTime}
-                        onChange={(e) => setNewTime(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                      />
-                    </div>
-                  )}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hora</label>
+                    <input
+                      type="time"
+                      value={newTime}
+                      onChange={(e) => setNewTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activityType !== 'NOTE' && activityType !== 'TASK' && (
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar / Enlace</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Oficinas del cliente, Sala Demo dTS, Microsoft Teams..."
+                    value={newLocation}
+                    onChange={(e) => setNewLocation(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  />
                 </div>
               )}
 
@@ -1376,6 +1536,20 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 </div>
               )}
 
+              {isExchangeConnected && activityType !== 'NOTE' && (
+                <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-xl flex items-start gap-2 text-[11px] text-cyan-800 dark:text-cyan-200">
+                  <Calendar size={14} className="text-[#00B0B9] shrink-0 mt-0.5" />
+                  <div>
+                    <span>Se sincronizará en tu calendario de <strong>Microsoft Outlook</strong>.</span>
+                    {(activityType === 'REUNION' || activityType === 'VIDEOLLAMADA') ? (
+                      <p className="text-[10px] text-cyan-600 dark:text-cyan-300 font-medium mt-0.5">Se enviará una invitación de reunión por correo al contacto.</p>
+                    ) : (
+                      <p className="text-[10px] text-cyan-600 dark:text-cyan-300 font-medium mt-0.5">Apunte exclusivo para tu agenda (no enviará correo de reunión al contacto).</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3 justify-end pt-2">
                 <button
                   type="button"
@@ -1386,9 +1560,10 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer"
+                  disabled={createActivityMutation.isPending}
+                  className="px-4 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer disabled:opacity-50"
                 >
-                  Guardar
+                  {createActivityMutation.isPending ? 'Guardando...' : 'Guardar y Sincronizar'}
                 </button>
               </div>
             </form>
@@ -1396,12 +1571,21 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         </div>
       )}
 
-      {/* MODAL: Registrar Email Enviado */}
+      {/* MODAL: Enviar / Registrar Email */}
       {showEmailModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 max-w-lg w-full shadow-xl space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">Registrar Email Enviado</h3>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">
+                  {isExchangeConnected ? 'Redactar y Enviar Correo' : 'Registrar Email Enviado'}
+                </h3>
+                <p className="text-[11px] text-gray-500">
+                  {isExchangeConnected 
+                    ? `Se enviará desde tu cuenta Exchange: ${exchangeStatus?.account?.email}`
+                    : 'Registra una nota de correo en la ficha del contacto'}
+                </p>
+              </div>
               <button onClick={() => setShowEmailModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"><X size={16} /></button>
             </div>
 
@@ -1427,9 +1611,10 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 <input
                   type="email"
                   required
-                  disabled
                   value={newEmailAddress}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-zinc-800 text-gray-500 outline-none"
+                  onChange={(e) => setNewEmailAddress(e.target.value)}
+                  placeholder="destinatario@cliente.com"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
                 />
               </div>
 
@@ -1449,7 +1634,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cuerpo del Email</label>
                 <textarea
                   required
-                  placeholder="Escribe el cuerpo del correo registrado..."
+                  placeholder="Escribe el cuerpo del correo..."
                   rows={6}
                   value={newEmailBody}
                   onChange={(e) => setNewEmailBody(e.target.value)}
@@ -1467,9 +1652,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer"
+                  disabled={sendEmailMutation.isPending}
+                  className="px-4 py-2 bg-[#00B0B9] hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  Registrar Email
+                  <Send size={13} className={sendEmailMutation.isPending ? 'animate-pulse' : ''} />
+                  {sendEmailMutation.isPending ? 'Enviando...' : isExchangeConnected ? 'Enviar por Exchange' : 'Registrar Email'}
                 </button>
               </div>
             </form>
@@ -1512,17 +1699,27 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
                     />
                   </div>
-                  {editActivityType !== 'TASK' && (
-                    <div className="space-y-1">
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hora</label>
-                      <input
-                        type="time"
-                        value={editTime}
-                        onChange={(e) => setEditTime(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                      />
-                    </div>
-                  )}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hora</label>
+                    <input
+                      type="time"
+                      value={editTime}
+                      onChange={(e) => setEditTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {editActivityType !== 'NOTE' && editActivityType !== 'TASK' && (
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
+                  <input
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  />
                 </div>
               )}
 
@@ -1571,65 +1768,127 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       )}
 
       {/* DRAWER: Detalle de Oferta CRM */}
-      <Drawer isOpen={isQuoteDrawerOpen} onClose={() => setIsQuoteDrawerOpen(false)} title={`Detalle de Oferta - ${selectedQuote?.document_no || ''}`}>
+      <Drawer isOpen={isQuoteDrawerOpen} onClose={() => setIsQuoteDrawerOpen(false)} title={`Oportunidad: ${selectedQuote?.document_no || ''}`} size="2xl">
         {selectedQuote && (
           <div className="space-y-6 text-xs max-h-[calc(100vh-140px)] overflow-y-auto pr-1">
             
             {/* Cabecera del Drawer */}
-            <div className="bg-gray-50 dark:bg-zinc-800/10 p-4 rounded-xl border border-gray-100 dark:border-white/5 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black text-gray-400 uppercase">Oferta CRM</span>
-                <span className="text-xs font-bold font-mono text-emerald-500">{formatCurrency(selectedQuote.amount, 0)}</span>
+            <div className="bg-slate-50 dark:bg-white/2 p-4 rounded-xl border border-slate-100 dark:border-white/5 space-y-4">
+              <div>
+                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Cliente</span>
+                <span className="text-sm font-normal text-gray-900 dark:text-white block mt-0.5">{selectedQuote.customer_name}</span>
+                <span className="text-xs text-gray-500 font-mono mt-0.5 block">{selectedQuote.customer_no}</span>
               </div>
-              <h4 className="text-sm font-black text-gray-900 dark:text-white">{selectedQuote.customer_name}</h4>
-              <div className="grid grid-cols-2 gap-4 pt-2 text-[11px] text-gray-500">
+              
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-white/5 pt-4">
                 <div>
-                  <span className="block font-bold">Estado actual:</span>
-                  <span className="uppercase font-extrabold text-dts-secondary">{selectedQuote.estado_oferta}</span>
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Importe Original</span>
+                  <span className="text-base font-black text-gray-900 dark:text-white font-mono block mt-0.5">
+                    {formatCurrency(selectedQuote.amount, 2)}
+                  </span>
                 </div>
                 <div>
-                  <span className="block font-bold">Probabilidad:</span>
-                  <span className="font-mono font-extrabold">{selectedQuote.probabilidad_exito}%</span>
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Previsión Ponderada</span>
+                  <span className="text-base font-black text-dts-secondary font-mono block mt-0.5">
+                    {formatCurrency(selectedQuote.valor_oferta_ponderado, 2)}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Selector de estado del pipeline */}
-            <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cambiar Estado de la Oferta</label>
-              <div className="flex flex-wrap gap-1.5">
-                {STAGES.map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      let prob = 10;
-                      if (s.id === 'borrador') prob = 10;
-                      else if (s.id === 'enviada') prob = 25;
-                      else if (s.id === 'en negociación') prob = 50;
-                      else if (s.id === 'ganada') prob = 100;
-                      else if (s.id === 'perdida') prob = 0;
-
-                      updateQuoteMutation.mutate({
-                        id: selectedQuote.id,
-                        data: { estado_oferta: s.id, probabilidad_exito: prob },
-                        fromStage: (selectedQuote.estado_oferta || 'borrador').toUpperCase(),
-                        toStage: s.id.toUpperCase(),
-                        documentNo: selectedQuote.document_no
-                      }, {
-                        onSuccess: () => {
-                          setSelectedQuote(prev => prev ? { ...prev, estado_oferta: s.id, probabilidad_exito: prob } : null);
-                        }
-                      });
-                    }}
-                    className={`px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer ${
-                      selectedQuote.estado_oferta.toLowerCase() === s.id
-                        ? 'bg-dts-primary text-white dark:bg-dts-secondary'
-                        : 'bg-gray-100 dark:bg-white/5 text-gray-500 hover:bg-gray-200 dark:hover:bg-white/10'
-                    }`}
+            {/* Parámetros Comerciales */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Parámetros Comerciales</h4>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Estado de la Oferta</label>
+                  <select 
+                    value={(selectedQuote.estado_oferta || '').toLowerCase().trim() === 'preliminar' ? 'borrador' : (selectedQuote.estado_oferta || 'borrador').toLowerCase().trim()} 
+                    onChange={(e) => handleStageChange(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
                   >
-                    {s.label}
-                  </button>
-                ))}
+                    {STAGES.map(s => (
+                      <option key={s.id} value={s.id}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Probabilidad de Éxito</label>
+                  <select 
+                    value={selectedQuote.probabilidad_exito} 
+                    onChange={(e) => handleFieldChange('probabilidad_exito', Number(e.target.value))}
+                    className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  >
+                    <option value={0}>0% - Descartada / Perdida</option>
+                    <option value={10}>10% - Inicial</option>
+                    <option value={25}>25% - Revisiones</option>
+                    <option value={50}>50% - Entregada Pesimista</option>
+                    <option value={75}>75% - Entregada Optimista</option>
+                    <option value={100}>100% - Pedido Confirmado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Tipo de Oferta</label>
+                  <select 
+                    value={selectedQuote.oferta_type} 
+                    onChange={(e) => handleFieldChange('oferta_type', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                  >
+                    <option value="proyecto">Proyecto</option>
+                    <option value="cliente nuevo">Cliente Nuevo</option>
+                    <option value="cliente existente">Cliente Existente</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Cierre Previsto</label>
+                    <input 
+                      type="date" 
+                      value={selectedQuote.cierreprev_date ? selectedQuote.cierreprev_date.split('T')[0] : ''}
+                      onChange={(e) => handleFieldChange('cierreprev_date', e.target.value || null)}
+                      className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Finalización Oferta</label>
+                    <input 
+                      type="date" 
+                      disabled
+                      value={selectedQuote.confirmacion_date ? selectedQuote.confirmacion_date.split('T')[0] : ''}
+                      className="w-full bg-slate-50/50 dark:bg-slate-800/10 border border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 text-xs rounded-lg p-2 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                {selectedQuote.estado_oferta?.toLowerCase().trim() === 'ganada' && (
+                  <div className="animate-in slide-in-from-top-2 duration-200">
+                    <label className="block text-xs font-bold text-emerald-500 uppercase mb-1">Motivo de Ganada</label>
+                    <textarea 
+                      placeholder="Indica las razones del éxito..."
+                      value={selectedQuote.motivo_ganada || ''}
+                      onChange={(e) => handleFieldChange('motivo_ganada', e.target.value)}
+                      rows={2}
+                      className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    />
+                  </div>
+                )}
+
+                {selectedQuote.estado_oferta?.toLowerCase().trim() === 'perdida' && (
+                  <div className="animate-in slide-in-from-top-2 duration-200">
+                    <label className="block text-xs font-bold text-rose-500 uppercase mb-1">Motivo de Perdida</label>
+                    <textarea 
+                      placeholder="¿Por qué se ha descartado la oferta? (Precio, Competencia, Plazo...)"
+                      value={selectedQuote.motivo_perdida || ''}
+                      onChange={(e) => handleFieldChange('motivo_perdida', e.target.value)}
+                      rows={2}
+                      className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

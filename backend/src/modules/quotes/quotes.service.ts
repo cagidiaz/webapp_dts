@@ -475,12 +475,47 @@ export class QuotesService {
         }
       });
 
+function normalizeQuoteStatus(status?: string | null): string {
+  if (!status) return 'borrador';
+  const clean = status.trim().toLowerCase();
+  if (clean === '' || clean === 'preliminar' || clean === 'borrador') return 'borrador';
+  if (clean === 'enviada' || clean === 'enviado') return 'enviada';
+  if (clean === 'en negociación' || clean === 'en negociacion' || clean === 'negociacion' || clean === 'negociación') return 'en negociación';
+  if (clean === 'ganada' || clean === 'ganado' || clean === 'aceptada' || clean === 'aprobada') return 'ganada';
+  if (clean === 'perdida' || clean === 'perdido' || clean === 'cancelada' || clean === 'rechazada') return 'perdida';
+  return clean;
+}
+
       // 4. Formatear y unificar
       return quotes.map(q => {
         const crm = q.sales_quotes_crm;
-        const estado = crm?.estado_oferta || (q.estado_oferta || 'borrador').toLowerCase();
-        const prob = crm ? Number(crm.probabilidad_exito ?? 10) : Number(q.probabilidad_exito ?? 10);
-        const tipo = crm?.oferta_type || (q.oferta_type || 'proyecto').toLowerCase();
+        
+        // Determinar estado considerando sales_quotes y sales_quotes_crm
+        const rawEstado = (crm?.estado_oferta && crm.estado_oferta.trim() !== '')
+          ? crm.estado_oferta
+          : (q.estado_oferta && q.estado_oferta.trim() !== '' ? q.estado_oferta : 'borrador');
+        const estado = normalizeQuoteStatus(rawEstado);
+
+        // Determinar probabilidad
+        let prob = 10;
+        if (crm && crm.probabilidad_exito !== null && crm.probabilidad_exito !== undefined) {
+          prob = Number(crm.probabilidad_exito);
+        } else if (q.probabilidad_exito !== null && q.probabilidad_exito !== undefined) {
+          prob = Number(q.probabilidad_exito);
+        } else {
+          if (estado === 'ganada') prob = 100;
+          else if (estado === 'perdida') prob = 0;
+          else if (estado === 'en negociación') prob = 50;
+          else if (estado === 'enviada') prob = 25;
+          else prob = 10;
+        }
+
+        // Determinar tipo de oferta
+        const rawTipo = (crm?.oferta_type && crm.oferta_type.trim() !== '')
+          ? crm.oferta_type
+          : (q.oferta_type && q.oferta_type.trim() !== '' ? q.oferta_type : 'proyecto');
+        const tipo = rawTipo.trim().toLowerCase();
+
         const amt = Number(q.amount || 0);
         const valorPonderado = amt * (prob / 100);
 

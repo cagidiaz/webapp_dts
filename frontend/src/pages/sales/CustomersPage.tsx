@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { getAllCustomers, getCustomerSalespersons } from '../../api';
+import { getAllCustomers, getCustomerSalespersons, CLIENT_TYPES } from '../../api';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
   Search, Users, Euro, TrendingUp, UserPlus,
@@ -22,6 +22,7 @@ export const CustomersPage: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [blockedFilter, setBlockedFilter] = useState<boolean | undefined>(undefined);
   const [salespersonFilter, setSalespersonFilter] = useState<string>(isSalesRole ? profile?.code || '' : '');
+  const [clientTypeFilter, setClientTypeFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('client_id');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const observerTarget = useRef<HTMLTableRowElement>(null);
@@ -59,10 +60,10 @@ export const CustomersPage: React.FC = () => {
   }, [searchTerm]);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ['customers', debouncedSearch, blockedFilter, salespersonFilter, sortBy, sortDir],
+    queryKey: ['customers', debouncedSearch, blockedFilter, salespersonFilter, clientTypeFilter, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getAllCustomers({ 
       take: pageSize, skip: pageParam as number, search: debouncedSearch,
-      blocked: blockedFilter, salesperson: salespersonFilter, sortBy, sortDir
+      blocked: blockedFilter, salesperson: salespersonFilter, clientType: clientTypeFilter || undefined, sortBy, sortDir
     }),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
@@ -124,6 +125,7 @@ export const CustomersPage: React.FC = () => {
     const columns = [
       { key: 'client_id', label: 'Código' },
       { key: 'name', label: 'Cliente' },
+      { key: 'client_type', label: 'Tipo Cliente', format: (v: any) => v && CLIENT_TYPES[v] ? `${v} - ${CLIENT_TYPES[v].name}` : 'Sin clasificar' },
       { key: 'balance_due_lcy', label: 'Saldo Deuda (€)', format: (v: any) => Number(Number(v).toFixed(2)) },
       { key: 'total_sales', label: 'Ventas Anual (€)', format: (v: any) => Number(Number(v).toFixed(2)) },
       { key: 'salesperson_code', label: 'Vendedor' },
@@ -205,6 +207,12 @@ export const CustomersPage: React.FC = () => {
             </div>
             <div className="flex flex-wrap gap-3">
               <select value={blockedFilter?.toString() || ''} onChange={(e) => setBlockedFilter(e.target.value === '' ? undefined : e.target.value === 'true')} className="text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark rounded-md px-3 py-1 outline-none font-bold uppercase"><option value="">Estado</option><option value="false">Activos</option><option value="true">Bloqueados</option></select>
+              <select value={clientTypeFilter} onChange={(e) => setClientTypeFilter(e.target.value)} className="text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark rounded-md px-3 py-1 outline-none font-bold uppercase">
+                <option value="">Tipo Cliente</option>
+                {Object.values(CLIENT_TYPES).map(t => (
+                  <option key={t.code} value={t.code}>{t.code} - {t.name}</option>
+                ))}
+              </select>
               {!isSalesRole && (
                 <select value={salespersonFilter} onChange={(e) => setSalespersonFilter(e.target.value)} className="text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark rounded-md px-3 py-1 outline-none font-bold uppercase"><option value="">Vendedor</option>{salespersons.map(sp => (<option key={sp.code} value={sp.code}>{sp.code} - {sp.name}</option>))}</select>
               )}
@@ -217,7 +225,15 @@ export const CustomersPage: React.FC = () => {
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
               <tr>
-                {[{ label: 'Código', key: 'client_id' }, { label: 'Cliente', key: 'name' }, { label: 'Saldo Deuda', key: 'balance_due_lcy', align: 'right' }, { label: 'Ventas Anual', key: 'total_sales', align: 'right' }, { label: 'Vend.', key: 'salesperson_code' }, { label: 'Ciudad/País', key: 'city' }].map(col => (
+                {[
+                  { label: 'Código', key: 'client_id' }, 
+                  { label: 'Cliente', key: 'name' }, 
+                  { label: 'Tipo', key: 'client_type' },
+                  { label: 'Saldo Deuda', key: 'balance_due_lcy', align: 'right' }, 
+                  { label: 'Ventas Anual', key: 'total_sales', align: 'right' }, 
+                  { label: 'Vend.', key: 'salesperson_code' }, 
+                  { label: 'Ciudad/País', key: 'city' }
+                ].map(col => (
                   <th key={col.key} onClick={() => handleSort(col.key)} className={`px-6 py-4 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10 transition-colors ${col.align === 'right' ? 'text-right' : ''}`}>
                     <div className={`flex items-center ${col.align === 'right' ? 'justify-end' : 'justify-start'}`}>{col.label}{getSortIcon(col.key)}</div>
                   </th>
@@ -227,6 +243,7 @@ export const CustomersPage: React.FC = () => {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {customers.map(customer => {
                 const isNew = customer.created_at && new Date(customer.created_at).getFullYear() === new Date().getFullYear();
+                const typeDef = customer.client_type ? CLIENT_TYPES[customer.client_type] : null;
                 return (
                   <tr 
                     key={customer.id} 
@@ -235,6 +252,19 @@ export const CustomersPage: React.FC = () => {
                   >
                     <td className={`px-6 py-3 font-bold font-mono text-xs ${isNew ? 'text-emerald-600 dark:text-emerald-400' : 'text-dts-primary dark:text-dts-secondary'}`}>{customer.client_id}</td>
                     <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200"><div className="flex items-center gap-2">{customer.name}{isNew && <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 animate-pulse uppercase">Nuevo</span>}</div></td>
+                    <td className="px-6 py-3 whitespace-nowrap">
+                      {typeDef ? (
+                        <span 
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold border ${typeDef.badgeBg} ${typeDef.badgeColor} ${typeDef.badgeBorder}`}
+                          title={`${typeDef.name}: ${typeDef.description}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${typeDef.dotColor}`}></span>
+                          {typeDef.code} · {typeDef.name}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-400 italic">---</span>
+                      )}
+                    </td>
                     <td className={`px-6 py-3 text-right font-mono font-bold ${Number(customer.balance_due_lcy) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>{formatCurrency(Number(customer.balance_due_lcy), 0)}</td>
                     <td className="px-6 py-3 text-right font-mono font-bold">{formatCurrency(Number(customer.total_sales), 0)}</td>
                     <td className="px-6 py-3"><span className="bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded text-[10px] font-bold">{customer.salesperson_code || '---'}</span></td>
@@ -249,7 +279,7 @@ export const CustomersPage: React.FC = () => {
                   </tr>
                 );
               })}
-              <tr ref={observerTarget}><td colSpan={6} className="py-8 text-center text-gray-400 text-xs">{isFetchingNextPage ? 'Cargando más clientes...' : hasNextPage ? 'Baja para cargar más' : ''}</td></tr>
+              <tr ref={observerTarget}><td colSpan={7} className="py-8 text-center text-gray-400 text-xs">{isFetchingNextPage ? 'Cargando más clientes...' : hasNextPage ? 'Baja para cargar más' : ''}</td></tr>
             </tbody>
           </table>
         </div>

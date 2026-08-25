@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { CustomersService } from './customers.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -17,6 +17,7 @@ export class CustomersController {
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'blocked', required: false, type: Boolean })
   @ApiQuery({ name: 'salesperson', required: false, type: String })
+  @ApiQuery({ name: 'clientType', required: false, type: String })
   @ApiQuery({ name: 'sortBy', required: false, type: String })
   @ApiQuery({ name: 'sortDir', required: false, enum: ['asc', 'desc'] })
   async getAll(
@@ -25,6 +26,7 @@ export class CustomersController {
     @Query('search') search?: string,
     @Query('blocked') blocked?: string,
     @Query('salesperson') salesperson?: string,
+    @Query('clientType') clientType?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortDir') sortDir?: 'asc' | 'desc',
   ) {
@@ -34,6 +36,7 @@ export class CustomersController {
       search, 
       blocked: blocked === 'true' ? true : blocked === 'false' ? false : undefined,
       salesperson,
+      clientType,
       sortBy,
       sortDir
     });
@@ -61,5 +64,14 @@ export class CustomersController {
   @ApiOperation({ summary: 'Obtener un cliente por su client_id (Navision)' })
   async getByClientId(@Param('clientId') clientId: string) {
     return this.customersService.getByClientId(clientId);
+  }
+
+  @Patch(':clientId/client-type')
+  @ApiOperation({ summary: 'Actualizar la tipología del cliente (relación con la marca: A, B, C, D, E, F o null)' })
+  async updateClientType(
+    @Param('clientId') clientId: string,
+    @Body('clientType') clientType: string | null,
+  ) {
+    return this.customersService.updateClientType(clientId, clientType);
   }
 }

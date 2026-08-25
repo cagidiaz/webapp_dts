@@ -65,6 +65,7 @@ export const createCrmActivity = async (payload: {
   timeScheduled?: string;
   email?: string;
   conclusions?: string;
+  location?: string;
 }): Promise<CrmActivity> => {
   const { data } = await apiClient.post('/crm-activities', payload);
   return data;
@@ -82,6 +83,7 @@ export const updateCrmActivity = async (
     dueDate?: string;
     timeScheduled?: string;
     conclusions?: string | null;
+    location?: string | null;
   }
 ): Promise<CrmActivity> => {
   const { data } = await apiClient.patch(`/crm-activities/${id}`, payload);

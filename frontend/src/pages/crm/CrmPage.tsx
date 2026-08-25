@@ -7,6 +7,8 @@ import { CrmPipeline } from './components/CrmPipeline';
 import { CrmContacts } from './components/CrmContacts';
 import { CrmContactDetail } from './components/CrmContactDetail';
 
+import { ExchangeStatusBanner } from './components/ExchangeStatusBanner';
+
 interface CrmPageProps {
   mode: 'customers' | 'pipeline' | 'contacts';
 }
@@ -42,9 +44,9 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
       icon: <Briefcase size={20} />,
       infoProps: {
         title: 'CRM Comercial',
-        description: 'Permite a los comerciales dar seguimiento a sus cuentas asignadas, personas de contacto, tareas comerciales, notas, emails y oportunidades. Soporta vinculación directa de correos electrónicos desde Outlook con su fecha original y tareas comerciales integradas bidireccionalmente con el embudo.',
-        objective: 'Centralizar la relación con los clientes para maximizar las oportunidades de venta y retención, facilitando la integración con la bandeja de correo y unificando el seguimiento en un panel único.',
-        source: 'Sincronizado con Navision y enriquecido con metadatos CRM locales y actividades registradas con fecha original desde el complemento de Outlook.'
+        description: 'Permite a los comerciales dar seguimiento a sus cuentas asignadas, personas de contacto, tareas comerciales, notas, emails y oportunidades. Sincronización bidireccional perfecta con Microsoft Exchange y Outlook (eventos, reuniones Teams, emails).',
+        objective: 'Centralizar la relación con los clientes para maximizar las oportunidades de venta y retención, integrando el calendario de Outlook y la bandeja de correo en un panel único.',
+        source: 'Sincronizado con Navision y Microsoft Exchange / Microsoft Graph API en tiempo real.'
       }
     });
     return () => setPageInfo({ title: '', subtitle: '', icon: null });
@@ -75,15 +77,19 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
   // If a contact is selected, render the contact detail view
   if (selectedContactId) {
     return (
-      <CrmContactDetail 
-        contactId={selectedContactId} 
-        onBack={handleBack} 
-      />
+      <div className="space-y-4 animate-in fade-in duration-300">
+        <ExchangeStatusBanner />
+        <CrmContactDetail 
+          contactId={selectedContactId} 
+          onBack={handleBack} 
+        />
+      </div>
     );
   }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      <ExchangeStatusBanner />
       {/* Conditionally render mode */}
       {mode === 'customers' ? (
         <CrmCustomers />

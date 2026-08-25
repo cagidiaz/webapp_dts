@@ -1,10 +1,15 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CrmActivityType } from '@prisma/client';
+import { ExchangeSyncService } from '../exchange-sync/exchange-sync.service';
 
 @Injectable()
 export class CrmActivitiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => ExchangeSyncService))
+    private readonly exchangeSyncService: ExchangeSyncService,
+  ) {}
 
   /**
    * Obtiene todas las actividades de un cliente comercial ordenadas por fecha.
@@ -81,7 +86,7 @@ export class CrmActivitiesService {
   }
 
   /**
-   * Crea una nueva actividad comercial en la base de datos.
+   * Crea una nueva actividad comercial en la base de datos y la sincroniza con Outlook si corresponde.
    */
   async create(data: {
     clientId?: string;
@@ -95,8 +100,9 @@ export class CrmActivitiesService {
     email?: string;
     createdAt?: string;
     conclusions?: string;
+    location?: string;
   }) {
-    const { clientId, contactId, userId, type, title, description, dueDate, timeScheduled, email, createdAt, conclusions } = data;
+    const { clientId, contactId, userId, type, title, description, dueDate, timeScheduled, email, createdAt, conclusions, location } = data;
     
     let resolvedClientId = clientId;
 
@@ -106,17 +112,26 @@ export class CrmActivitiesService {
         where: { id: contactId }
       });
       if (contactObj) {
-        resolvedClientId = contactObj.client_id;
+        resolvedClientId = resolvedClientId || contactObj.client_id;
       }
     }
 
     if (!resolvedClientId) {
-      throw new NotFoundException('client_id no pudo ser determinado para la actividad');
+      throw new NotFoundException('client_id es obligatorio para registrar la actividad comercial');
+    }
+
+    // Verificar si el cliente realmente existe en la base de datos de clientes
+    const customerExists = await this.prisma.customers.findUnique({
+      where: { client_id: resolvedClientId }
+    });
+
+    if (!customerExists) {
+      throw new NotFoundException(`El cliente con código "${resolvedClientId}" no existe en la ficha de clientes`);
     }
 
     console.log(`[CRM Service] Creando actividad con tipo=${type}, title="${title}", contactId=${contactId || 'null'}, resolvedClientId=${resolvedClientId}`);
     try {
-      return await this.prisma.crm_activities.create({
+      const activity = await this.prisma.crm_activities.create({
         data: {
           client_id: resolvedClientId,
           contact_id: contactId || null,
@@ -128,9 +143,17 @@ export class CrmActivitiesService {
           time_scheduled: timeScheduled || null,
           email: email || null,
           conclusions: conclusions || null,
+          location: location || null,
           created_at: createdAt ? new Date(createdAt) : undefined
         }
       });
+
+      // Sincronizar con Outlook de forma asíncrona
+      this.exchangeSyncService.syncActivityToOutlook(activity.id).catch((err) =>
+        console.error(`[CRM Service] Error en syncActivityToOutlook para ${activity.id}:`, err)
+      );
+
+      return activity;
     } catch (error) {
       console.error('Error en CrmActivitiesService.create:', error);
       throw new InternalServerErrorException('Error al crear la actividad comercial');
@@ -138,9 +161,9 @@ export class CrmActivitiesService {
   }
 
   /**
-   * Actualiza una actividad existente (p. ej., marcar tarea como completada).
+   * Actualiza una actividad existente (p. ej., marcar tarea como completada, fecha/hora) y sincroniza con Outlook.
    */
-  async update(id: string, data: { isCompleted?: boolean; title?: string; description?: string; dueDate?: string; timeScheduled?: string; conclusions?: string }) {
+  async update(id: string, data: { isCompleted?: boolean; title?: string; description?: string; dueDate?: string; timeScheduled?: string; conclusions?: string; location?: string }) {
     try {
       // Verificar existencia
       const existing = await this.prisma.crm_activities.findUnique({ where: { id } });
@@ -155,14 +178,22 @@ export class CrmActivitiesService {
       if (data.dueDate !== undefined) prismaData.due_date = data.dueDate ? new Date(data.dueDate) : null;
       if (data.timeScheduled !== undefined) prismaData.time_scheduled = data.timeScheduled || null;
       if (data.conclusions !== undefined) prismaData.conclusions = data.conclusions || null;
+      if (data.location !== undefined) prismaData.location = data.location || null;
 
-      return await this.prisma.crm_activities.update({
+      const updated = await this.prisma.crm_activities.update({
         where: { id },
         data: {
           ...prismaData,
           updated_at: new Date()
         }
       });
+
+      // Sincronizar actualización hacia Outlook
+      this.exchangeSyncService.syncActivityToOutlook(updated.id).catch((err) =>
+        console.error(`[CRM Service] Error al sincronizar actualización ${updated.id} a Outlook:`, err)
+      );
+
+      return updated;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       console.error('Error en CrmActivitiesService.update:', error);
@@ -171,7 +202,7 @@ export class CrmActivitiesService {
   }
 
   /**
-   * Elimina una actividad de la base de datos.
+   * Elimina una actividad de la base de datos y la cancela en el calendario de Outlook.
    */
   async delete(id: string) {
     try {
@@ -181,6 +212,13 @@ export class CrmActivitiesService {
       }
 
       await this.prisma.crm_activities.delete({ where: { id } });
+
+      if (existing.exchange_item_id) {
+        this.exchangeSyncService.deleteActivityFromOutlook(id, existing.exchange_item_id, existing.created_by).catch((err) =>
+          console.error(`[CRM Service] Error al eliminar actividad de Outlook:`, err)
+        );
+      }
+
       return { success: true };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;

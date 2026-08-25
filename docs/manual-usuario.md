@@ -68,16 +68,20 @@ El Complemento de Outlook centraliza la correspondencia comercial vinculando cor
 - **Sincronización Directa y Limpieza**: Al registrar, el sistema limpia de forma automática firmas, bloques legales de descargo y el hilo de correos anteriores, acotando el cuerpo del mensaje a un máximo de 500 caracteres para guardar notas ligeras.
 - **Seguridad y Control de Sesión**: Cierre de sesión automático si la llamada al API devuelve un error `401 Unauthorized`.
 
-## 8. Pestaña de Emails y Redactor Mailto Inteligente
-La pestaña **Emails** en la ficha del cliente centraliza el histórico de comunicaciones por correo electrónico y permite redactar nuevos emails de manera ágil:
+## 8. Pestaña de Emails y Envío Directo por Exchange
+La pestaña **Emails** en la ficha del contacto/cliente centraliza el histórico de comunicaciones por correo electrónico y permite redactar y enviar nuevos emails de manera ágil:
 - **Procedencia Clara (Badges)**: Los correos se catalogan visualmente en el historial:
-  - **Outlook**: Correos sincronizados de forma externa usando el Complemento oficial de Outlook.
-  - **Enviado desde CRM**: Correos iniciados y registrados directamente desde la WebApp del CRM.
-- **Redactor Comercial con Plantillas**: En lugar de registro manual estático, el botón "Redactar Email" abre un asistente de correspondencia interactivo:
-  - **Selección de Destinatario**: Menú desplegable para elegir rápidamente entre el correo principal de la empresa o cualquiera de sus personas de contacto.
-  - **Plantillas Predefinidas**: Selección de plantillas para *Presentación comercial dTS*, *Seguimiento de oferta* o *Agradecimiento de reunión*.
-  - **Tokenización Automática**: El sistema autocompleta los campos de asunto y cuerpo reemplazando dinámicamente variables del cliente (`[Nombre Empresa]`), contacto (`[Contacto]`) y el comercial actual (`[Vendedor]`).
-- **Envío vía Outlook**: Al pulsar "Abrir en Outlook y Registrar", el sistema guarda la actividad `EMAIL` en el CRM y ejecuta un enlace `mailto` que abre el cliente de correo local del usuario (como Outlook) con toda la información ya pre-rellenada para proceder a su envío final.
+  - **Outlook**: Correos sincronizados de forma externa desde Outlook.
+  - **Enviado por Exchange**: Correos redactados y enviados directamente desde la WebApp del CRM a través de la cuenta de Microsoft 365 del comercial.
+- **Redactor Comercial con Plantillas**: El botón "Redactar Email" abre un asistente de correspondencia interactivo con plantillas para *Presentación comercial dTS*, *Seguimiento de oferta* o *Agradecimiento de reunión*, tokenizando variables del cliente y comercial.
+- **Envío Real por Exchange**: El correo sale autenticado formalmente por Microsoft Graph desde el buzón del comercial y se guarda en "Elementos enviados" de Outlook.
+
+## 9. Integración y Sincronización Bidireccional con Microsoft Exchange / Outlook
+El CRM dispone de un motor de sincronización nativo con Microsoft 365:
+- **Conexión en 1 Clic**: Cada empleado vincula su cuenta mediante OAuth 2.0 desde el banner superior del CRM.
+- **Sincronización de Calendario**: Crear o modificar visitas y reuniones en el CRM las refleja en el calendario de Outlook (con enlaces Teams y asistentes). Las reuniones agendadas en Outlook con contactos del CRM se indexan automáticamente en su historial.
+- **Guía Completa**: Consulta el documento detallado en [`docs/guia-integracion-outlook-exchange.md`](./guia-integracion-outlook-exchange.md).
 
 ---
-*Manual de dTS Instruments v5.4 — Actualizado a 30 de junio 2026.*
+*Manual de dTS Instruments v5.5 — Actualizado a 24 de agosto 2026.*
+

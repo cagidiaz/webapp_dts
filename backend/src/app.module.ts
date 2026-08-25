@@ -18,6 +18,7 @@ import { ContactsModule } from './modules/contacts/contacts.module';
 import { CrmActivitiesModule } from './modules/crm-activities/crm-activities.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
+import { ExchangeSyncModule } from './modules/exchange-sync/exchange-sync.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.
     CrmActivitiesModule,
     VendorsModule,
     PurchaseOrdersModule,
+    ExchangeSyncModule,
   ],
   controllers: [AppController],
   providers: [AppService],

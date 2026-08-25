@@ -55,6 +55,7 @@ export class CrmActivitiesController {
     @Body('email') email?: string,
     @Body('createdAt') createdAt?: string,
     @Body('conclusions') conclusions?: string,
+    @Body('location') location?: string,
   ) {
     const userId = req.user?.userId;
     return this.crmActivitiesService.create({
@@ -68,7 +69,8 @@ export class CrmActivitiesController {
       timeScheduled,
       email,
       createdAt,
-      conclusions
+      conclusions,
+      location,
     });
   }
 
@@ -82,8 +84,9 @@ export class CrmActivitiesController {
     @Body('dueDate') dueDate?: string,
     @Body('timeScheduled') timeScheduled?: string,
     @Body('conclusions') conclusions?: string,
+    @Body('location') location?: string,
   ) {
-    return this.crmActivitiesService.update(id, { isCompleted, title, description, dueDate, timeScheduled, conclusions });
+    return this.crmActivitiesService.update(id, { isCompleted, title, description, dueDate, timeScheduled, conclusions, location });
   }
 
   @Delete(':id')

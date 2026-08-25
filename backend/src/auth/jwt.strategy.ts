@@ -15,6 +15,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: any) {
     // payload usually contains 'sub' (user id) and 'email' from Supabase JWT
-    return { userId: payload.sub, email: payload.email };
+    return { id: payload.sub, userId: payload.sub, email: payload.email };
   }
 }

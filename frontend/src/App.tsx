@@ -39,6 +39,11 @@ const ScrollToTop = () => {
 // Placeholder pages for routes
 const SettingsPage = () => <div className="p-8"><h1 className="text-2xl font-medium">Settings</h1></div>;
 
+const CrmIndexRedirect = () => {
+  const location = useLocation();
+  return <Navigate to={`customers${location.search}`} replace />;
+};
+
 const ProtectedRoute = () => {
   const { session } = useAuthStore();
   if (!session) {
@@ -129,7 +134,7 @@ const App: React.FC = () => {
               </Route>
 
               <Route path="crm" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']}><Outlet /></RoleGuard>}>
-                <Route index element={<Navigate to="customers" replace />} />
+                <Route index element={<CrmIndexRedirect />} />
                 <Route path="customers" element={<CrmPage mode="customers" />} />
                 <Route path="contacts" element={<CrmPage mode="contacts" />} />
                 <Route path="pipeline" element={<CrmPage mode="pipeline" />} />

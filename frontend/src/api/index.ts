@@ -10,3 +10,4 @@ export * from './contacts';
 export * from './quotes';
 export * from './crmActivities';
 export * from './vendors';
+export * from './exchangeSync';
