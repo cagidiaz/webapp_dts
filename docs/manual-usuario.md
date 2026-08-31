@@ -76,12 +76,20 @@ La pestaña **Emails** en la ficha del contacto/cliente centraliza el histórico
 - **Redactor Comercial con Plantillas**: El botón "Redactar Email" abre un asistente de correspondencia interactivo con plantillas para *Presentación comercial dTS*, *Seguimiento de oferta* o *Agradecimiento de reunión*, tokenizando variables del cliente y comercial.
 - **Envío Real por Exchange**: El correo sale autenticado formalmente por Microsoft Graph desde el buzón del comercial y se guarda en "Elementos enviados" de Outlook.
 
-## 9. Integración y Sincronización Bidireccional con Microsoft Exchange / Outlook
-El CRM dispone de un motor de sincronización nativo con Microsoft 365:
-- **Conexión en 1 Clic**: Cada empleado vincula su cuenta mediante OAuth 2.0 desde el banner superior del CRM.
-- **Sincronización de Calendario**: Crear o modificar visitas y reuniones en el CRM las refleja en el calendario de Outlook (con enlaces Teams y asistentes). Las reuniones agendadas en Outlook con contactos del CRM se indexan automáticamente en su historial.
-- **Guía Completa**: Consulta el documento detallado en [`docs/guia-integracion-outlook-exchange.md`](./guia-integracion-outlook-exchange.md).
+## 10. Cartera de Clientes & Inteligencia Geográfica
+El módulo de **Cartera de Clientes** (`/sales/customers`) centraliza la gestión integral de cuentas y la distribución territorial de ventas y deuda.
+- **Inteligencia Geográfica & Top Clientes**:
+  - Proyección cartográfica dual D3 con Península Ibérica, Baleares, Portugal y el Inset dedicado para Canarias.
+  - **Ranking Interactivo**: Muestra los mejores clientes o mayores deudores según la métrica seleccionada.
+  - **Pin de Localización Instantáneo (0ms)**: Al pasar el cursor sobre cualquier cliente del ranking o del mapa, se dibuja al instante un pin vectorial verde esmeralda y ondas de radar concéntricas en su ubicación geográfica exacta, desplegando su ficha en el panel informativo.
+- **Tabla de Alto Rendimiento con Scroll Continuo**:
+  * Altura calibrada para mostrar 20 clientes iniciales con desplazamiento vertical fluido gracias a su buffer de precarga (`pageSize: 40`) y memoización de componentes.
+- **Filtros Comerciales y Segmentación**:
+  - Buscador global por nombre, código y ciudad.
+  - Selector desplegable de **Mercado** optimizado con ventana de 5 opciones visibles y desplazamiento interno.
+  - Filtros avanzados por Tipo de Cliente (A–F), Modelo de Negocio, Territorio y Comercial asignado.
+- **Drawer de Ficha de Cliente y Exportación**: Ficha lateral detallada con métricas históricas de ventas y botón de exportación a Excel (`.xlsx`).
 
 ---
-*Manual de dTS Instruments v5.5 — Actualizado a 24 de agosto 2026.*
+*Manual de dTS Instruments v5.6 — Actualizado a 31 de agosto 2026.*
 

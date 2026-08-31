@@ -14,6 +14,11 @@ export interface CustomerDataRow {
   business_model: string | null;
   client_type?: string | null;
   total_sales: number;
+  sales_2023?: number;
+  sales_2024?: number;
+  sales_2025?: number;
+  sales_2026_ytd?: number;
+  sales_total?: number;
   cost_profit_variance_lcy: number;
   adjusted_profit: number;
   adjusted_profit_pct: number;
@@ -118,6 +123,14 @@ export interface CustomersResponse {
   };
 }
 
+export interface CustomerFilterOptions {
+  marketSegments: string[];
+  businessModels: string[];
+  territories: string[];
+  paymentTerms: string[];
+  shipmentMethods: string[];
+}
+
 export const getAllCustomers = async (params: { 
   take?: number; 
   skip?: number; 
@@ -125,6 +138,11 @@ export const getAllCustomers = async (params: {
   blocked?: boolean;
   salesperson?: string;
   clientType?: string;
+  marketSegment?: string;
+  businessModel?: string;
+  territory?: string;
+  paymentTerms?: string;
+  shipmentMethod?: string;
   sortBy?: string;
   sortDir?: 'asc' | 'desc';
 }): Promise<CustomersResponse> => {
@@ -142,6 +160,11 @@ export const getCustomerSalespersons = async (): Promise<Salesperson[]> => {
   return data;
 };
 
+export const getCustomerFilterOptions = async (): Promise<CustomerFilterOptions> => {
+  const { data } = await apiClient.get('/customers/filter-options');
+  return data;
+};
+
 export const getCustomerById = async (id: string): Promise<CustomerDataRow> => {
   const { data } = await apiClient.get(`/customers/${id}`);
   return data;
@@ -156,3 +179,4 @@ export const updateCustomerClientType = async (clientId: string, clientType: str
   const { data } = await apiClient.patch(`/customers/${clientId}/client-type`, { clientType });
   return data;
 };
+

@@ -18,6 +18,11 @@ export class CustomersController {
   @ApiQuery({ name: 'blocked', required: false, type: Boolean })
   @ApiQuery({ name: 'salesperson', required: false, type: String })
   @ApiQuery({ name: 'clientType', required: false, type: String })
+  @ApiQuery({ name: 'marketSegment', required: false, type: String })
+  @ApiQuery({ name: 'businessModel', required: false, type: String })
+  @ApiQuery({ name: 'territory', required: false, type: String })
+  @ApiQuery({ name: 'paymentTerms', required: false, type: String })
+  @ApiQuery({ name: 'shipmentMethod', required: false, type: String })
   @ApiQuery({ name: 'sortBy', required: false, type: String })
   @ApiQuery({ name: 'sortDir', required: false, enum: ['asc', 'desc'] })
   async getAll(
@@ -27,6 +32,11 @@ export class CustomersController {
     @Query('blocked') blocked?: string,
     @Query('salesperson') salesperson?: string,
     @Query('clientType') clientType?: string,
+    @Query('marketSegment') marketSegment?: string,
+    @Query('businessModel') businessModel?: string,
+    @Query('territory') territory?: string,
+    @Query('paymentTerms') paymentTerms?: string,
+    @Query('shipmentMethod') shipmentMethod?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortDir') sortDir?: 'asc' | 'desc',
   ) {
@@ -37,9 +47,20 @@ export class CustomersController {
       blocked: blocked === 'true' ? true : blocked === 'false' ? false : undefined,
       salesperson,
       clientType,
+      marketSegment,
+      businessModel,
+      territory,
+      paymentTerms,
+      shipmentMethod,
       sortBy,
       sortDir
     });
+  }
+
+  @Get('filter-options')
+  @ApiOperation({ summary: 'Obtener opciones únicas de filtrado para clientes' })
+  async getFilterOptions() {
+    return this.customersService.getFilterOptions();
   }
 
   @Get('salespersons')
