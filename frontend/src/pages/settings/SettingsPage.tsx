@@ -40,7 +40,7 @@ export const SettingsPage: React.FC = () => {
   const [showSaveFeedback, setShowSaveFeedback] = useState(false);
 
   // Consulta de estado de Exchange / Microsoft Graph
-  const { data: exchangeStatus, isLoading: isLoadingStatus, refetch: refetchStatus } = useQuery({
+  const { data: exchangeStatus, isLoading: isLoadingStatus } = useQuery({
     queryKey: ['exchangeStatus'],
     queryFn: getExchangeStatus,
   });
@@ -378,11 +378,11 @@ export const SettingsPage: React.FC = () => {
           <section className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-dts-primary text-white font-black text-base flex items-center justify-center shadow-xs">
-                {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : <User size={20} />}
+                {profile?.firstName ? profile.firstName.charAt(0).toUpperCase() : <User size={20} />}
               </div>
               <div className="space-y-0.5 overflow-hidden">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                  {profile?.full_name || 'Usuario dTS'}
+                  {profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Usuario dTS' : 'Usuario dTS'}
                 </h3>
                 <span className="text-xs text-gray-400 font-mono truncate block">
                   {profile?.email}

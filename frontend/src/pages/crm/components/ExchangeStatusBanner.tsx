@@ -4,11 +4,9 @@ import { useSearchParams } from 'react-router-dom';
 import { 
   getExchangeStatus, 
   getExchangeConnectUrl, 
-  handleExchangeCallback, 
-  disconnectExchange, 
-  syncExchangeNow 
+  handleExchangeCallback
 } from '../../../api';
-import { RefreshCw, CheckCircle2, AlertCircle, Link2, Unlink, Mail } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle, Link2, Mail } from 'lucide-react';
 
 export const ExchangeStatusBanner: React.FC = () => {
   const queryClient = useQueryClient();
@@ -23,7 +21,6 @@ export const ExchangeStatusBanner: React.FC = () => {
   });
 
   const isConnected = statusData?.isConnected;
-  const account = statusData?.account;
 
   // Mutación para conectar (abrir URL de Microsoft)
   const connectMutation = useMutation({
@@ -75,33 +72,6 @@ export const ExchangeStatusBanner: React.FC = () => {
       callbackMutation.mutate(code);
     }
   }, [searchParams]);
-
-  // Mutación para sincronizar ahora
-  const syncMutation = useMutation({
-    mutationFn: syncExchangeNow,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
-      queryClient.invalidateQueries({ queryKey: ['crmActivities'] });
-      queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact'] });
-      setAuthSuccess(`Sincronización completada: ${data.syncedEvents} eventos y ${data.syncedEmails} correos actualizados.`);
-      setTimeout(() => setAuthSuccess(null), 5000);
-    },
-    onError: (err: any) => {
-      const serverMsg = err?.response?.data?.message || err?.message || 'Error al sincronizar con Exchange. Comprueba tu conexión.';
-      setAuthError(serverMsg);
-      setTimeout(() => setAuthError(null), 5000);
-    }
-  });
-
-  // Mutación para desconectar
-  const disconnectMutation = useMutation({
-    mutationFn: disconnectExchange,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
-      setAuthSuccess('Cuenta de Microsoft 365 desconectada.');
-      setTimeout(() => setAuthSuccess(null), 4000);
-    }
-  });
 
   if (isLoading) return null;
 

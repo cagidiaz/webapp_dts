@@ -7,7 +7,7 @@ import {
   getCrmActivitiesByContact, createCrmActivity, updateCrmActivity, deleteCrmActivity,
   getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
   getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
-  sendExchangeEmail, createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
+  createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
   getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook
 } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
