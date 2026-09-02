@@ -39,6 +39,9 @@ export interface CustomerDataRow {
   customer_posting_group: string | null;
   payment_terms_code: string | null;
   payment_method_code: string | null;
+  payment_days_agreed?: number;
+  payment_days_delay?: number;
+  payment_days_total?: number;
   shipment_method_code: string | null;
   shipping_agent_code: string | null;
   payments_lcy: number;

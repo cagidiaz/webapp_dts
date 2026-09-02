@@ -42,7 +42,14 @@ export class CustomersService {
     
     // Construir el filtro de búsqueda
     const where: any = {};
-    const and: any[] = [];
+    const and: any[] = [
+      // Excluir cliente ficticio / comodín de cliente nuevo (9999999 / 99999999)
+      {
+        client_id: {
+          notIn: ['9999999', '99999999', 'CLI-9999999', 'CLI-99999999']
+        }
+      }
+    ];
 
     if (search) {
       and.push({
@@ -97,14 +104,21 @@ export class CustomersService {
       and.push({ business_model: businessModel });
     }
 
-    // Filtro por territorio / provincia / país
+    // Filtro por territorio / provincia / país / código postal
     if (territory) {
+      const cleanTerritory = territory.trim();
+      const postalPrefix = cleanTerritory.replace(/^(ES|PT)-/i, '');
+      const orConditions: any[] = [
+        { county: { contains: cleanTerritory, mode: 'insensitive' as any } },
+        { country_reg_code: { contains: cleanTerritory, mode: 'insensitive' as any } },
+        { city: { contains: cleanTerritory, mode: 'insensitive' as any } },
+      ];
+      if (/^\d{1,2}$/.test(postalPrefix)) {
+        const padded = postalPrefix.padStart(2, '0');
+        orConditions.push({ post_code: { startsWith: padded } });
+      }
       and.push({
-        OR: [
-          { county: { contains: territory, mode: 'insensitive' as any } },
-          { country_reg_code: { contains: territory, mode: 'insensitive' as any } },
-          { city: { contains: territory, mode: 'insensitive' as any } }
-        ]
+        OR: orConditions
       });
     }
 
@@ -192,6 +206,24 @@ export class CustomersService {
         });
       }
 
+      const parsePaymentDays = (code: string | null | undefined): number => {
+        if (!code) return 30;
+        const upper = code.toUpperCase();
+        if (upper.includes('CON') || upper.includes('CONTADO')) return 0;
+        if (upper.includes('120')) return 120;
+        if (upper.includes('90')) return 90;
+        if (upper.includes('85')) return 85;
+        if (upper.includes('60')) return 60;
+        if (upper.includes('55')) return 55;
+        if (upper.includes('50')) return 50;
+        if (upper.includes('45')) return 45;
+        if (upper.includes('30 + 30') || upper.includes('30+30')) return 60;
+        if (upper.includes('30')) return 30;
+        if (upper.includes('15') || upper.includes('14')) return 15;
+        const match = upper.match(/\d+/);
+        return match ? parseInt(match[0], 10) : 30;
+      };
+
       const data = rawCustomers.map(customer => {
         const yData = yearlySalesMap[customer.client_id] || { y2023: 0, y2024: 0, y2025: 0, y2026: 0 };
         const sales2023 = yData.y2023;
@@ -200,13 +232,32 @@ export class CustomersService {
         const sales2026Ytd = Number(customer.total_sales) || yData.y2026 || 0;
         const salesTotal = sales2023 + sales2024 + sales2025 + sales2026Ytd;
 
+        // Cálculo de Días Reales de Cobro (Opción 3: Días Pactados + Demora Real por Mora)
+        const agreedDays = parsePaymentDays(customer.payment_terms_code);
+        const balanceDue = Number(customer.balance_due_lcy || 0);
+        const recentSales = Math.max(sales2025, sales2026Ytd, Number(customer.total_sales || 0));
+
+        let delayDays = 0;
+        if (balanceDue > 0) {
+          if (recentSales > 0) {
+            delayDays = Math.min(180, Math.round((balanceDue / recentSales) * 365));
+          } else {
+            delayDays = Math.min(120, Math.max(15, Math.round(balanceDue / 100)));
+          }
+        }
+
+        const totalPaymentDays = agreedDays + delayDays;
+
         return {
           ...customer,
           sales_2023: sales2023,
           sales_2024: sales2024,
           sales_2025: sales2025,
           sales_2026_ytd: sales2026Ytd,
-          sales_total: salesTotal
+          sales_total: salesTotal,
+          payment_days_agreed: agreedDays,
+          payment_days_delay: delayDays,
+          payment_days_total: totalPaymentDays,
         };
       });
 

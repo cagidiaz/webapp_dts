@@ -429,6 +429,62 @@ export class MicrosoftGraphService {
   }
 
   /**
+   * Crea un borrador de correo electrónico en la carpeta de Borradores de Exchange y devuelve el webLink de Outlook.
+   */
+  async createDraftMail(userId: string, mailPayload: SendMailPayload) {
+    const accessToken = await this.getValidAccessToken(userId);
+    if (!accessToken) {
+      throw new BadRequestException('Tu cuenta de Microsoft 365 / Exchange no está conectada. Conéctala para preparar borradores en Outlook.');
+    }
+
+    const message: any = {
+      subject: mailPayload.subject,
+      body: {
+        contentType: mailPayload.isHtml ? 'HTML' : 'Text',
+        content: mailPayload.body,
+      },
+      toRecipients: mailPayload.to.map((email) => ({
+        emailAddress: { address: email },
+      })),
+    };
+
+    if (mailPayload.cc && mailPayload.cc.length > 0) {
+      message.ccRecipients = mailPayload.cc.map((email) => ({
+        emailAddress: { address: email },
+      }));
+    }
+
+    if (mailPayload.bcc && mailPayload.bcc.length > 0) {
+      message.bccRecipients = mailPayload.bcc.map((email) => ({
+        emailAddress: { address: email },
+      }));
+    }
+
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/messages', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      this.logger.error(`Error al crear borrador en Microsoft Graph: ${errorText}`);
+      throw new InternalServerErrorException(`No se pudo crear el borrador en Exchange: ${errorText}`);
+    }
+
+    const createdDraft = await response.json();
+    return {
+      id: createdDraft.id as string,
+      webLink: createdDraft.webLink as string,
+      conversationId: createdDraft.conversationId as string,
+      subject: createdDraft.subject as string,
+    };
+  }
+
+  /**
    * Obtiene eventos recientes o deltas del calendario del usuario para sincronización hacia el CRM.
    */
   async getCalendarEventsDelta(userId: string, deltaTokenOrUrl?: string) {
@@ -466,11 +522,14 @@ export class MicrosoftGraphService {
   /**
    * Obtiene mensajes recientes de las carpetas de Entrada y Enviados para sincronización con contactos del CRM.
    */
+  /**
+   * Obtiene mensajes recientes de las carpetas de Entrada y Enviados para sincronización con contactos del CRM.
+   */
   async getRecentMessages(userId: string) {
     const accessToken = await this.getValidAccessToken(userId);
     if (!accessToken) return [];
 
-    // Consultar los últimos 30 correos recibidos y enviados
+    // Consultar los últimos 40 correos recibidos y enviados
     const url = `https://graph.microsoft.com/v1.0/me/messages?$top=40&$select=id,conversationId,subject,bodyPreview,receivedDateTime,sentDateTime,from,toRecipients,ccRecipients,webLink&$orderby=receivedDateTime desc`;
 
     const response = await fetch(url, {
@@ -481,6 +540,30 @@ export class MicrosoftGraphService {
 
     if (!response.ok) {
       this.logger.warn(`Error al consultar mensajes recientes de Graph para ${userId}`);
+      return [];
+    }
+
+    const data = await response.json();
+    return (data.value || []) as any[];
+  }
+
+  /**
+   * Obtiene los mensajes enviados recientemente desde la carpeta 'sentitems' de Microsoft 365.
+   */
+  async getRecentSentMessages(userId: string) {
+    const accessToken = await this.getValidAccessToken(userId);
+    if (!accessToken) return [];
+
+    const url = `https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$top=30&$select=id,conversationId,subject,bodyPreview,sentDateTime,toRecipients,ccRecipients,webLink&$orderby=sentDateTime desc`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      this.logger.warn(`Error al consultar mensajes enviados en sentitems para ${userId}`);
       return [];
     }
 

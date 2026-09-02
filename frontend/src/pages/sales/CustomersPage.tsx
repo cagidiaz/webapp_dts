@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery, useQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
   getAllCustomers, 
   getCustomerSalespersons, 
   getCustomerFilterOptions, 
+  getCustomerByClientId,
   CLIENT_TYPES, 
   type CustomerDataRow 
 } from '../../api/customers';
@@ -15,7 +17,7 @@ import {
 } from 'lucide-react';
 import { InfoPopover, KPISkeleton, TableSkeleton, ExportButton } from '../../components/ui';
 import { CustomerDetailDrawer } from './components/CustomerDetailDrawer';
-import { IberianGeoSalesMap } from './components/IberianGeoSalesMap';
+import { IberianGeoSalesMap, type GeoZone } from './components/IberianGeoSalesMap';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { exportToXlsx } from '../../utils/exportToXlsx';
@@ -56,6 +58,7 @@ interface VisibleColumnsState {
   margin: boolean;
   portes: boolean;
   paymentTerms: boolean;
+  paymentDays: boolean;
   market: boolean;
   businessModel: boolean;
   territory: boolean;
@@ -77,6 +80,7 @@ export const CustomersPage: React.FC = () => {
   const [marketFilter, setMarketFilter] = useState<string>('');
   const [businessModelFilter, setBusinessModelFilter] = useState<string>('');
   const [territoryFilter, setTerritoryFilter] = useState<string>('');
+  const [selectedGeoZone, setSelectedGeoZone] = useState<GeoZone | null>(null);
   const [paymentTermsFilter, setPaymentTermsFilter] = useState<string>('');
   const [shipmentMethodFilter, setShipmentMethodFilter] = useState<string>('');
 
@@ -95,7 +99,7 @@ export const CustomersPage: React.FC = () => {
   const [isMarketDropdownOpen, setIsMarketDropdownOpen] = useState(false);
   const marketDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Configuración de visibilidad de columnas (Mercado y Mod. Negocio ocultos por defecto)
+  // Configuración de visibilidad de columnas (Mercado, Mod. Negocio y Territorio ocultos por defecto)
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumnsState>({
     sales_2023: true,
     sales_2024: true,
@@ -105,9 +109,10 @@ export const CustomersPage: React.FC = () => {
     margin: true,
     portes: true,
     paymentTerms: true,
+    paymentDays: true,
     market: false,
     businessModel: false,
-    territory: true,
+    territory: false,
     salesperson: true,
     clientType: true,
   });
@@ -138,9 +143,19 @@ export const CustomersPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Drawer states
+  // Drawer states & URL Sync
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlClientId = searchParams.get('clientId');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDataRow | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Consulta de cliente directo si se accede o recarga con ?clientId=... en la URL
+  const { data: directCustomer } = useQuery({
+    queryKey: ['customerByCode', urlClientId],
+    queryFn: () => getCustomerByClientId(urlClientId!),
+    enabled: !!urlClientId,
+    staleTime: 1000 * 60 * 5,
+  });
 
   // Sync salesperson filter if profile loads late or changes
   useEffect(() => {
@@ -164,6 +179,7 @@ export const CustomersPage: React.FC = () => {
       marketFilter,
       businessModelFilter,
       territoryFilter,
+      selectedGeoZone?.id,
       paymentTermsFilter,
       shipmentMethodFilter,
       sortBy, 
@@ -177,7 +193,7 @@ export const CustomersPage: React.FC = () => {
       clientType: clientTypeFilter || undefined, 
       marketSegment: marketFilter || undefined,
       businessModel: businessModelFilter || undefined,
-      territory: territoryFilter || undefined,
+      territory: selectedGeoZone ? selectedGeoZone.name : (territoryFilter || undefined),
       paymentTerms: paymentTermsFilter || undefined,
       shipmentMethod: shipmentMethodFilter || undefined,
       sortBy, 
@@ -203,17 +219,26 @@ export const CustomersPage: React.FC = () => {
     staleTime: 1000 * 60 * 10
   });
 
-  // Query optimizada para el mapa geográfico
+  // Query optimizada para el mapa geográfico (mantiene en memoria la cartera completa para conmutación instantánea entre provincias)
   const { data: mapData, isLoading: isMapLoading } = useQuery({
-    queryKey: ['customersGeoMap', debouncedSearch, salespersonFilter, clientTypeFilter, marketFilter, businessModelFilter],
+    queryKey: [
+      'customersGeoMap', 
+      debouncedSearch, 
+      salespersonFilter, 
+      clientTypeFilter, 
+      marketFilter, 
+      businessModelFilter,
+      territoryFilter
+    ],
     queryFn: () => getAllCustomers({
-      take: 200,
+      take: 600,
       skip: 0,
       search: debouncedSearch,
       salesperson: salespersonFilter,
       clientType: clientTypeFilter || undefined,
       marketSegment: marketFilter || undefined,
       businessModel: businessModelFilter || undefined,
+      territory: territoryFilter || undefined,
       sortBy: 'total_sales',
       sortDir: 'desc'
     }),
@@ -222,7 +247,9 @@ export const CustomersPage: React.FC = () => {
   });
 
   const mapCustomers = useMemo(() => {
-    return mapData?.data || [];
+    return (mapData?.data || []).filter(
+      c => c.client_id !== '9999999' && c.client_id !== '99999999' && !c.client_id?.startsWith('999999')
+    );
   }, [mapData]);
 
   // Observer optimizado: vinculado estrictamente al contenedor de la tabla con rootMargin anticipado
@@ -253,7 +280,9 @@ export const CustomersPage: React.FC = () => {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const { customers, totalCustomers, globalDebt, globalSales, newCustomersCount } = useMemo(() => {
-    const allItems = data?.pages.flatMap(page => page.data) || [];
+    const allItems = (data?.pages.flatMap(page => page.data) || []).filter(
+      c => c.client_id !== '9999999' && c.client_id !== '99999999' && !c.client_id?.startsWith('999999')
+    );
     const totalCount = data?.pages[0]?.total || 0;
     const summary = data?.pages[0]?.summary || { totalDebt: 0, totalSales: 0, newCustomersCount: 0 };
     return { 
@@ -282,10 +311,42 @@ export const CustomersPage: React.FC = () => {
     return sortDir === 'asc' ? <ChevronUp size={11} className="ml-1 text-dts-secondary" /> : <ChevronDown size={11} className="ml-1 text-dts-secondary" />;
   };
 
+  // Sincronizar apertura automática del drawer si existe ?clientId= en la URL
+  useEffect(() => {
+    if (urlClientId) {
+      const found = customers.find(c => c.client_id === urlClientId);
+      if (found) {
+        setSelectedCustomer(found);
+        setIsDrawerOpen(true);
+      } else if (directCustomer) {
+        setSelectedCustomer(directCustomer);
+        setIsDrawerOpen(true);
+      }
+    } else {
+      setIsDrawerOpen(false);
+      setSelectedCustomer(null);
+    }
+  }, [urlClientId, customers, directCustomer]);
+
   const handleRowClick = useCallback((customer: CustomerDataRow) => {
     setSelectedCustomer(customer);
     setIsDrawerOpen(true);
-  }, []);
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('clientId', customer.client_id);
+      return newParams;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  const handleCloseDrawer = useCallback(() => {
+    setIsDrawerOpen(false);
+    setSelectedCustomer(null);
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete('clientId');
+      return newParams;
+    }, { replace: true });
+  }, [setSearchParams]);
 
   const hasActiveFilters = Boolean(
     searchTerm || 
@@ -294,6 +355,7 @@ export const CustomersPage: React.FC = () => {
     marketFilter || 
     businessModelFilter || 
     territoryFilter || 
+    selectedGeoZone ||
     paymentTermsFilter || 
     shipmentMethodFilter
   );
@@ -306,6 +368,7 @@ export const CustomersPage: React.FC = () => {
     setMarketFilter('');
     setBusinessModelFilter('');
     setTerritoryFilter('');
+    setSelectedGeoZone(null);
     setPaymentTermsFilter('');
     setShipmentMethodFilter('');
   };
@@ -319,7 +382,7 @@ export const CustomersPage: React.FC = () => {
       clientType: clientTypeFilter || undefined,
       marketSegment: marketFilter || undefined,
       businessModel: businessModelFilter || undefined,
-      territory: territoryFilter || undefined,
+      territory: selectedGeoZone ? selectedGeoZone.name : (territoryFilter || undefined),
       paymentTerms: paymentTermsFilter || undefined,
       shipmentMethod: shipmentMethodFilter || undefined,
       sortBy,
@@ -337,6 +400,9 @@ export const CustomersPage: React.FC = () => {
       { key: 'invoice_margin', label: '% Margen Fra.', format: (v: any) => v ? `${Number(v).toFixed(2)}%` : '0%' },
       { key: 'shipment_method_code', label: 'Portes' },
       { key: 'payment_terms_code', label: 'Términos Pago' },
+      { key: 'payment_days_agreed', label: 'Días Pactados', format: (_: any, row: CustomerDataRow) => row.payment_days_agreed !== undefined ? `${row.payment_days_agreed}d` : '-' },
+      { key: 'payment_days_delay', label: 'Días Demora Mora', format: (_: any, row: CustomerDataRow) => row.payment_days_delay ? `+${row.payment_days_delay}d` : '0d' },
+      { key: 'payment_days_total', label: 'Días Reales Cobro', format: (_: any, row: CustomerDataRow) => row.payment_days_total !== undefined ? `${row.payment_days_total}d` : '-' },
       { key: 'market_segment', label: 'Mercado' },
       { key: 'business_model', label: 'Mod. Negocio' },
       { key: 'territory', label: 'Territorio', format: (_: any, row: CustomerDataRow) => getTerritoryCode(row) },
@@ -346,7 +412,11 @@ export const CustomersPage: React.FC = () => {
       { key: 'city', label: 'Ciudad' },
     ];
 
-    exportToXlsx(result.data, columns, 'cartera_clientes_dts');
+    const exportData = (result.data || []).filter(
+      (c: CustomerDataRow) => c.client_id !== '9999999' && c.client_id !== '99999999' && !c.client_id?.startsWith('999999')
+    );
+
+    exportToXlsx(exportData, columns, 'cartera_clientes_dts');
   };
 
   if (isLoading && !data) return (
@@ -361,7 +431,7 @@ export const CustomersPage: React.FC = () => {
     <div className="space-y-5 animate-in fade-in duration-500 pb-10">
       <CustomerDetailDrawer 
         isOpen={isDrawerOpen} 
-        onClose={() => setIsDrawerOpen(false)} 
+        onClose={handleCloseDrawer} 
         customer={selectedCustomer} 
       />
 
@@ -417,6 +487,8 @@ export const CustomersPage: React.FC = () => {
         customers={mapCustomers} 
         onSelectCustomer={handleRowClick} 
         isLoading={isMapLoading} 
+        selectedZone={selectedGeoZone}
+        onSelectZone={setSelectedGeoZone}
       />
 
       {/* CONTENEDOR PRINCIPAL DE TABLA Y FILTROS */}
@@ -426,25 +498,41 @@ export const CustomersPage: React.FC = () => {
         <div className="p-3.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/40 dark:bg-transparent space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
             
-            {/* Buscador de texto */}
-            <div className="w-full lg:w-80 relative group">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <Search className="h-4 w-4" />
+            {/* Buscador de texto y chip de zona activa */}
+            <div className="flex items-center gap-2 flex-1 max-w-xl">
+              <div className="w-full lg:w-80 relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <Search className="h-4 w-4" />
+                </div>
+                <input 
+                  type="text" 
+                  className="block w-full pl-9 pr-8 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-xs font-medium" 
+                  placeholder="Buscar por código, nombre, ciudad..." 
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                />
+                {searchTerm && (
+                  <button 
+                    onClick={() => setSearchTerm('')}
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
-              <input 
-                type="text" 
-                className="block w-full pl-9 pr-8 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-xs font-medium" 
-                placeholder="Buscar por código, nombre, ciudad..." 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-              />
-              {searchTerm && (
-                <button 
-                  onClick={() => setSearchTerm('')}
-                  className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600"
-                >
-                  <X size={14} />
-                </button>
+
+              {/* Tag de Zona Geográfica Seleccionada en el Mapa */}
+              {selectedGeoZone && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-dts-secondary/15 text-dts-secondary border border-dts-secondary/30 shadow-xs shrink-0 animate-in fade-in zoom-in-95 duration-150">
+                  <span>🗺️ {selectedGeoZone.name}</span>
+                  <button 
+                    onClick={() => setSelectedGeoZone(null)} 
+                    className="hover:text-red-500 ml-0.5 font-black transition-colors"
+                    title="Quitar filtro de zona geográfica"
+                  >
+                    ✕
+                  </button>
+                </div>
               )}
             </div>
 
@@ -598,6 +686,7 @@ export const CustomersPage: React.FC = () => {
                         { key: 'margin', label: '% Margen Fra.' },
                         { key: 'portes', label: 'Portes' },
                         { key: 'paymentTerms', label: 'Términos Pago' },
+                        { key: 'paymentDays', label: 'Días Cobro' },
                         { key: 'market', label: 'Mercado' },
                         { key: 'businessModel', label: 'Mod. Negocio' },
                         { key: 'territory', label: 'Territorio' },
@@ -817,6 +906,19 @@ export const CustomersPage: React.FC = () => {
                   >
                     <div className="flex items-center justify-start">
                       <span>Términos Pago</span>
+                      {getSortIcon('payment_terms_code')}
+                    </div>
+                  </th>
+                )}
+
+                {/* Días Cobro */}
+                {visibleColumns.paymentDays && (
+                  <th 
+                    onClick={() => handleSort('payment_terms_code')} 
+                    className="px-2.5 py-3 font-bold uppercase tracking-wider text-[10.5px] text-right cursor-pointer group hover:bg-white/10 transition-colors whitespace-nowrap"
+                  >
+                    <div className="flex items-center justify-end">
+                      <span>Días Cobro</span>
                       {getSortIcon('payment_terms_code')}
                     </div>
                   </th>
@@ -1046,6 +1148,30 @@ const CustomerTableRow = React.memo<CustomerTableRowProps>(({
       {visibleColumns.paymentTerms && (
         <td className="px-2.5 py-2.5 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap font-medium">
           {customer.payment_terms_code || <span className="text-gray-300 dark:text-gray-600">-</span>}
+        </td>
+      )}
+
+      {/* Días Cobro (Opción 3: Días Pactados + Demora Real por Mora) */}
+      {visibleColumns.paymentDays && (
+        <td className="px-2.5 py-2.5 text-right whitespace-nowrap">
+          {customer.payment_days_total !== undefined ? (
+            customer.payment_days_delay && customer.payment_days_delay > 0 ? (
+              <div className="inline-flex items-center justify-end gap-1 font-mono text-xs">
+                <span className="font-bold text-amber-600 dark:text-amber-400">
+                  {customer.payment_days_total}d
+                </span>
+                <span className="text-[9px] px-1 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-500/30">
+                  +{customer.payment_days_delay}d mora
+                </span>
+              </div>
+            ) : (
+              <span className="font-mono text-xs text-gray-700 dark:text-gray-300 font-medium">
+                {customer.payment_days_agreed === 0 ? 'Contado (0d)' : `${customer.payment_days_agreed}d`}
+              </span>
+            )
+          ) : (
+            <span className="text-[10px] text-gray-300 dark:text-gray-600">-</span>
+          )}
         </td>
       )}
 

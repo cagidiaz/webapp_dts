@@ -1,95 +1,237 @@
 # Manual de Usuario — WebApp dTS Instruments
 
-> Este documento detalla el funcionamiento técnico y la procedencia de los datos de la plataforma dTS Instruments.
-
-## 1. Dashboard Principal
-El Dashboard es el centro de monitorización en tiempo real del cumplimiento de objetivos.
-- **Ventas YTD vs Ppto YTD**: Compara la facturación real acumulada contra el presupuesto acumulado a fecha de hoy.
-- **CLIENTES NUEVOS**: Panel de captación con facturación (FACT), total de altas (TOTAL) y clientes sin venta (S/VTA).
-- **CARTERA Y PENDIENTES**: Tarjeta consolidada que muestra los pedidos abiertos en cartera (CARTE) y la mercancía enviada pendiente de factura (PEND).
-- **Objetivo Anual (Velocímetro)**: Porcentaje de cumplimiento del objetivo total de facturación anual.
-- **Evolución Ventas vs Presupuesto**: Gráfico con comparativa mensual de Ventas Año en Curso, Objetivo de Presupuesto y Ventas del Año Anterior (línea punteada).
-
-## 2. Ventas vs Presupuesto (Seguimiento de Objetivos)
-Vista detallada para analizar el grado de cumplimiento de los objetivos comerciales y detectar desviaciones por familias o vendedores de forma proactiva.
-- **Gráfico de Evolución**: Compara mensualmente el presupuesto con las Ventas Año en Curso y una línea de referencia punteada fina con las Ventas del Año Anterior.
-- **Tabla de Clientes**: Detalle del rendimiento YTD de cada cliente contra su objetivo, mostrando la desviación monetaria, la desviación porcentual y su comparativa con el año anterior (Fact. LY).
-
-## 3. Presupuesto por Product Manager (PM)
-Análisis de cumplimiento presupuestario orientado a Product Managers.
-- Permite expandir cada cliente para desglosar la facturación y el presupuesto a nivel de referencia de producto (SKU).
-- Incluye el gráfico de evolución mensual idéntico, enriquecido con la línea punteada de ventas del año anterior para contextualizar la estacionalidad del producto.
-
-## 4. Histórico de Ventas (Auditoría de Movimientos)
-Vista de auditoría transaccional de la tabla `value_entries`, restringida exclusivamente a los roles de **ADMIN** y **DIRECCION**.
-- **Acceso Restringido**: Oculta de forma automática en el menú de navegación y protegida en el enrutamiento para vendedores u otros roles inferiores.
-- **Filtro Avanzado**: Permite aislar los registros por **Tipo de Documento** (Facturas o Abonos) mediante un desplegable optimizado sin ruido visual.
-- **Buscador en Tiempo Real**: Búsqueda reactiva por número de documento, referencia de producto, código de cliente o vendedor.
-- **Ordenación Completa**: Todas las columnas (Nº Movimiento, Fecha, Documento, Producto, Cliente, Cantidad, Ventas y Costes) son interactivas y ordenables.
-- **Exportación Directa**: Botón para descargar el histórico filtrado y ordenado a un documento Excel (`.xlsx`).
-
-## 5. Histórico de Facturación (Consolidación de Documentos y Líneas)
-Vista unificada para consultar facturas y abonos de venta con soporte para filtros y desglose de líneas detalladas.
-- **Desglose de Líneas**: Permite expandir cada fila de factura para consultar sus líneas detalladas (SKU/Producto, Descripción, Tipo de línea, Cantidad, Precio Unitario, Descuento %, Importe Neto, Margen LDR y el número de línea `line_no`).
-- **Resumen y KPIs de Facturación**: Panel de indicadores superiores que calcula en tiempo real para la selección actual:
-  - Facturación Neta total (Excl. IVA) y el desglose correspondiente a portes y servicios.
-  - Margen Real Medio (%).
-  - Cantidad de Documentos Emitidos.
-  - Descuentos Aplicados en las líneas.
-- **Filtros Avanzados**: Desplegables para filtrar de forma simultánea por año de emisión del documento y tipo de línea (productos o cuentas contables de servicio).
-- **Búsqueda Dinámica**: Filtro reactivo en tiempo real por número de documento, código o nombre de cliente, SKU, pedido de origen o referencia externa.
-- **Exportación Excel**: Botón de exportación para descargar a un reporte Excel (`.xlsx`) el detalle consolidado de las cabeceras junto con sus líneas (incluyendo la nueva columna de número de línea `line_no`).
-
-## 6. CRM de Ofertas (Seguimiento del Pipeline Comercial)
-El módulo CRM de Ofertas permite centralizar, gestionar y dar seguimiento a las oportunidades comerciales y cotizaciones emitidas de manera interactiva.
-- **Vista Tablero (Kanban)**: Permite visualizar las ofertas agrupadas en columnas según su estado comercial actual: *Borrador*, *Enviada*, *En Negociación*, *Ganada* o *Perdida*. Facilita el avance del embudo mediante arrastrar y soltar (Drag & Drop) tarjetas entre columnas.
-- **Vista de Tabla**: Presentación tabular compacta y detallada de todas las ofertas que facilita búsquedas globales, filtros simultáneos por año, comercial asignado o tipo de oferta (Proyecto, Comercial Nuevo, Comercial Existente) y ordenamiento ágil de datos.
-- **Panel de KPIs Superiores**: Indicadores clave de rendimiento calculados reactivamente:
-  - **Pipeline Activo**: Sumatorio total del importe de ofertas en estados abiertos.
-  - **Previsión Ponderada**: Estimación probabilística de facturación calculada como `Sumatorio(Importe * Probabilidad / 100)`.
-  - **Tasa de Cierre**: Porcentaje de éxito basado en ofertas Ganadas frente al total de cerradas.
-  - **Seguimiento Vencido**: Cantidad de oportunidades activas cuya fecha de próxima acción programada es anterior a la fecha de hoy.
-- **Resumen de Pipeline y Acción Crítica Unificada (Pestaña Información)**:
-  - Muestra el sumatorio financiero del pipeline abierto y ponderado de la empresa.
-  - **Próxima Acción Crítica**: Muestra la acción pendiente más urgente de toda la empresa (unificando tareas generales de cliente, tareas específicas de ofertas y reuniones programadas en el calendario).
-- **Drawer de Detalles y Registro de Actividades**: Al hacer clic en cualquier oferta se despliega un panel lateral para:
-  - **Parámetros en una Línea**: El Estado de la oferta, la Probabilidad de éxito y el Tipo de oferta se encuentran distribuidos horizontalmente en una misma fila para optimizar el espacio.
-  - **Formulario de Planificación Local**: Los campos de "Próxima Acción", "Fecha Límite" y "Observaciones del Comercial" están agrupados en un formulario unificado que maneja estado local de React, evitando peticiones instantáneas en red al escribir, y dispone de un botón explícito de **"Guardar"**.
-  - **Sincronización Bidireccional de Tareas**: Guardar una próxima acción crea o actualiza la tarea comercial de la oferta. Completar la tarea comercial desde el Timeline o la pestaña de Tareas limpia la próxima acción de la oferta automáticamente.
-
-## 7. Complemento de Outlook (Add-in dTS CRM)
-El Complemento de Outlook centraliza la correspondencia comercial vinculando correos directamente en el CRM de dTS Instruments desde la interfaz de Outlook (tanto en versión Web como de Escritorio).
-- **Activación en Lectura (Read Mode)**: Al abrir el panel del complemento visualizando un correo recibido, este detecta la dirección de email del remitente y busca coincidencias en la base de datos de clientes y contactos. Si encuentra una coincidencia, muestra la información del cliente, vendedor asignado y ventas totales.
-- **Activación en Redacción (Compose Mode)**: Al abrir el panel al redactar un correo nuevo o responder, detecta automáticamente la dirección del primer destinatario (campo *Para*) y busca coincidencias en el CRM.
-- **Buscador y Vinculación Manual**: Si un correo no coincide con ningún cliente o contacto registrado en el CRM, se activa la sección "Cuenta no identificada". Esta sección dispone de un buscador de empresas predictivo y un desplegable para su vinculación manual.
-- **Visualización y Conservación de la Fecha de Outlook**:
-  - **Ficha Informativa**: El complemento lee de forma nativa la fecha y hora de recepción original del correo en Outlook y la muestra en la cabecera informativa de la tarjeta del correo.
-  - **Sincronización Histórica**: Al pulsar "Registrar Email en dTS CRM", la fecha original del correo (`dateTimeCreated`) se envía al backend y se almacena en la columna `created_at` de la actividad del CRM. Esto asegura que el Timeline del cliente mantenga la cronología histórica exacta en que ocurrió el intercambio de correos, en lugar del momento de su registro manual.
-- **Sincronización Directa y Limpieza**: Al registrar, el sistema limpia de forma automática firmas, bloques legales de descargo y el hilo de correos anteriores, acotando el cuerpo del mensaje a un máximo de 500 caracteres para guardar notas ligeras.
-- **Seguridad y Control de Sesión**: Cierre de sesión automático si la llamada al API devuelve un error `401 Unauthorized`.
-
-## 8. Pestaña de Emails y Envío Directo por Exchange
-La pestaña **Emails** en la ficha del contacto/cliente centraliza el histórico de comunicaciones por correo electrónico y permite redactar y enviar nuevos emails de manera ágil:
-- **Procedencia Clara (Badges)**: Los correos se catalogan visualmente en el historial:
-  - **Outlook**: Correos sincronizados de forma externa desde Outlook.
-  - **Enviado por Exchange**: Correos redactados y enviados directamente desde la WebApp del CRM a través de la cuenta de Microsoft 365 del comercial.
-- **Redactor Comercial con Plantillas**: El botón "Redactar Email" abre un asistente de correspondencia interactivo con plantillas para *Presentación comercial dTS*, *Seguimiento de oferta* o *Agradecimiento de reunión*, tokenizando variables del cliente y comercial.
-- **Envío Real por Exchange**: El correo sale autenticado formalmente por Microsoft Graph desde el buzón del comercial y se guarda en "Elementos enviados" de Outlook.
-
-## 10. Cartera de Clientes & Inteligencia Geográfica
-El módulo de **Cartera de Clientes** (`/sales/customers`) centraliza la gestión integral de cuentas y la distribución territorial de ventas y deuda.
-- **Inteligencia Geográfica & Top Clientes**:
-  - Proyección cartográfica dual D3 con Península Ibérica, Baleares, Portugal y el Inset dedicado para Canarias.
-  - **Ranking Interactivo**: Muestra los mejores clientes o mayores deudores según la métrica seleccionada.
-  - **Pin de Localización Instantáneo (0ms)**: Al pasar el cursor sobre cualquier cliente del ranking o del mapa, se dibuja al instante un pin vectorial verde esmeralda y ondas de radar concéntricas en su ubicación geográfica exacta, desplegando su ficha en el panel informativo.
-- **Tabla de Alto Rendimiento con Scroll Continuo**:
-  * Altura calibrada para mostrar 20 clientes iniciales con desplazamiento vertical fluido gracias a su buffer de precarga (`pageSize: 40`) y memoización de componentes.
-- **Filtros Comerciales y Segmentación**:
-  - Buscador global por nombre, código y ciudad.
-  - Selector desplegable de **Mercado** optimizado con ventana de 5 opciones visibles y desplazamiento interno.
-  - Filtros avanzados por Tipo de Cliente (A–F), Modelo de Negocio, Territorio y Comercial asignado.
-- **Drawer de Ficha de Cliente y Exportación**: Ficha lateral detallada con métricas históricas de ventas y botón de exportación a Excel (`.xlsx`).
+> Guía operativa y técnica del sistema **dTS Instruments WebApp**. Este documento describe el funcionamiento de cada módulo, la interpretación de KPIs, el flujo de datos sincronizado con Microsoft Dynamics 365 Business Central y las herramientas de productividad comercial.
 
 ---
-*Manual de dTS Instruments v5.6 — Actualizado a 31 de agosto 2026.*
+
+## 📑 Índice de Módulos
+1. [Panel de Control (Dashboard Principal)](#1-panel-de-control-dashboard-principal)
+2. [Módulo de Ventas y Gestión Comercial](#2-módulo-de-ventas-y-gestión-comercial)
+   - [2.1 Cartera de Clientes & Inteligencia Geográfica](#21-cartera-de-clientes--inteligencia-geográfica)
+   - [2.2 Presupuestos y Seguimiento de Objetivos (Ventas vs Ppto)](#22-presupuestos-y-seguimiento-de-objetivos-ventas-vs-ppto)
+   - [2.3 Presupuesto por Product Manager (PM)](#23-presupuesto-por-product-manager-pm)
+   - [2.4 Pedidos de Venta (Cartera y Pendientes)](#24-pedidos-de-venta-cartera-y-pendientes)
+   - [2.5 Catálogo de Productos y Stock](#25-catálogo-de-productos-y-stock)
+   - [2.6 Histórico de Facturación (Documentos y Líneas)](#26-histórico-de-facturación-documentos-y-líneas)
+   - [2.7 Movimientos de Valor (Auditoría de value_entries)](#27-movimientos-de-valor-auditoría-de-value_entries)
+3. [Módulo de CRM y Productividad Comercial](#3-módulo-de-crm-y-productividad-comercial)
+   - [3.1 CRM de Ofertas y Pipeline Comercial](#31-crm-de-ofertas-y-pipeline-comercial)
+   - [3.2 Contactos, Cuentas y Timeline de Actividades](#32-contactos-cuentas-y-timeline-de-actividades)
+   - [3.3 Pestaña de Emails y Envío Directo por Exchange](#33-pestaña-de-emails-y-envío-directo-por-exchange)
+   - [3.4 Complemento de Outlook (Add-in dTS CRM)](#34-complemento-de-outlook-add-in-dts-crm)
+4. [Módulo de Compras](#4-módulo-de-compras)
+   - [4.1 Directorio de Proveedores](#41-directorio-de-proveedores)
+   - [4.2 Pedidos de Compra](#42-pedidos-de-compra)
+5. [Módulo de Finanzas y Análisis Económico](#5-módulo-de-finanzas-y-análisis-económico)
+   - [5.1 Análisis de Balances y Cuentas de Resultados](#51-análisis-de-balances-y-cuentas-de-resultados)
+   - [5.2 4 Puntos Clave y 20 Ratios Financieros](#52-4-puntos-clave-y-20-ratios-financieros)
+   - [5.3 Gráficos de Ratios y Simulador Financiero](#53-gráficos-de-ratios-y-simulador-financiero)
+6. [Configuración, Seguridad y Control de Acceso (RBAC)](#6-configuración-seguridad-y-control-de-acceso-rbac)
+
+---
+
+## 1. Panel de Control (Dashboard Principal)
+El **Panel de Control** (`/dashboard`) es el centro de mando visual para la monitorización ejecutiva y comercial en tiempo real.
+
+* **Tarjetas KPI Superiores**:
+  * **Ventas YTD vs Ppto YTD**: Compara la facturación neta real acumulada desde el 1 de enero hasta la fecha actual con el presupuesto acumulado proporcional exacto (*día a día*).
+  * **Clientes Nuevos**: Panel de captación con desglose de facturación generada por clientes captados en el año (`FACT`), total de nuevas altas registradas (`TOTAL`) y clientes nuevos sin venta inicial (`S/VTA`).
+  * **Cartera de Pedidos y Pendientes**: Muestra el total valorado de pedidos de venta abiertos (`CARTE`) y la mercancía despachada pendiente de emitir factura (`PEND`).
+  * **Objetivo Anual (Velocímetro)**: Medidor circular interactivo que refleja el porcentaje de consecución del presupuesto total de facturación anual.
+* **Gráficos de Tendencia**:
+  * **Evolución Mensual (Real vs Presupuesto vs LY)**: Gráfico de barras combinadas con la facturación real mensual (azul corporativo `#003E51`), el objetivo fijado (cian `#00B0B9`) y una línea punteada de referencia con las ventas del año anterior (*Last Year*), permitiendo analizar estacionalidad y desvíos.
+* **Adaptación por Rol**:
+  * Los roles `ADMIN` y `DIRECCION` acceden a la visión consolidada corporativa.
+  * Los roles `VENTAS` y `OPERACIONES` cargan de forma predeterminada el panel comercial filtrado por su ámbito de asignación.
+
+---
+
+## 2. Módulo de Ventas y Gestión Comercial
+
+### 2.1 Cartera de Clientes & Inteligencia Geográfica
+Ubicado en `/sales/customers`, ofrece un directorio analítico de clientes con facturación multianual (2023–2026 YTD), plazos de pago y geolocalización cartográfica.
+
+* **Mapa Interactivo de Inteligencia Geográfica (Península Ibérica, Canarias y Portugal)**:
+  * Proyección cartográfica dual D3 con recuadro específico e inset dedicado para Canarias.
+  * **Filtrado Geográfico Bidireccional**: Al hacer clic en cualquier provincia o distrito, el territorio se resalta con relleno cian (`#00B0B9`) y contorno blanco de `1.3px`, atenuando las demás zonas y filtrando simultáneamente el ranking lateral y la tabla de clientes.
+  * **Conmutación Instantánea (0 ms)**: Permite saltar de una provincia a otra de manera inmediata sin tiempos de espera.
+  * **Pin Vectorial 3D Verde Esmeralda**: Al pasar el ratón sobre cualquier cliente del ranking o del mapa, proyecta su posición geográfica exacta con un halo de radar concéntrico.
+* **Días Reales de Cobro (Cálculo Híbrido Contractual + Mora)**:
+  * Combina los términos contractuales de Business Central (`payment_terms_code`, ej. *Contado*, *30d*, *60d*) con el cálculo proporcional de retraso por saldo vencido impagado (`balance_due_lcy > 0`).
+  * Muestra el plazo al corriente (ej. `30d`) o con badge de advertencia si existe demora (ej. `78d (+18d mora)`).
+* **Tabla de Alto Rendimiento y Filtros Avanzados**:
+  * Scroll continuo y memoización de filas con buffer de 40 clientes.
+  * Columnas secundarias (*Territorio*, *Mercado*, *Mod. Negocio*) configurables en el popover selector y optimizadas para evitar scroll horizontal.
+  * Filtros por Tipo de Cliente (A–F), Términos de Pago, Vendedor, Portes y Mercado (con desplegable acotado a 5 elementos visibles).
+  * Exclusión de clientes comodín de sistema (`9999999`).
+  * Exportación completa a Excel (`.xlsx`) con desglose de días pactados, demora y totales.
+
+---
+
+### 2.2 Presupuestos y Seguimiento de Objetivos (Ventas vs Ppto)
+Ubicado en `/sales/budgets`, permite el seguimiento del grado de cumplimiento comercial frente al plan anual.
+
+* **Comparativa YTD Día a Día**: Facturación neta del ejercicio acumulada hasta la fecha frente a la cuota presupuestaria equivalente.
+* **Desviaciones Financieras y Porcentuales**: Cálculo automático de la brecha en euros y en porcentaje, con alertas por colores (verde si está por encima de meta, ámbar/rojo si está por debajo).
+* **Tabla de Detalle por Cliente y Vendedor**: Desglose por cuenta cliente con facturación del año actual, meta presupuestada, desvío y comparativa con el año precedente (*Fact. LY*).
+
+---
+
+### 2.3 Presupuesto por Product Manager (PM)
+Ubicado en `/sales/product-budgets`, enfocado al análisis presupuestario por línea de producto y responsable técnico.
+
+* **Desglose Jerárquico por SKU / Referencia**: Permite desplegar cada cliente para examinar las ventas y metas presupuestadas a nivel de artículo individual.
+* **Análisis de Cartera por Fabricante / Marca**: Evaluación de líneas de producto para Product Managers y responsables de marca.
+
+---
+
+### 2.4 Pedidos de Venta (Cartera y Pendientes)
+Ubicado en `/sales/orders`, centraliza los pedidos abiertos sincronizados desde Dynamics 365 Business Central.
+
+* **Cartera Abierta**: Pedidos confirmados en fase de preparación o suministro.
+* **Valoración Neta Real**: Cálculo del importe efectivo mediante `(line_amount / quantity)` excluyendo líneas a coste cero.
+* **Desglose de Cuentas G/L**: Separación transparente entre artículos físicos y líneas de servicios o cuentas contables.
+
+---
+
+### 2.5 Catálogo de Productos y Stock
+Ubicado en `/sales/products`, proporciona la consulta técnica y disponibilidad de inventario de dTS Instruments.
+
+* **Disponibilidad en Almacén**: Stock físico actual, cantidades reservadas en pedidos abiertos y stock disponible neto.
+* **Precios y Tarifas**: Precios base unitarios, costes estándar y familias de producto.
+
+---
+
+### 2.6 Histórico de Facturación (Documentos y Líneas)
+Ubicado en `/sales/invoices`, consolida todas las facturas y abonos emitidos por la empresa.
+
+* **Desglose Expandible de Líneas**: Consulta detallada de artículos, servicios, precios netos, descuentos y margen por línea (`line_no`).
+* **KPIs Superiores de Facturación**: Facturación neta total, margen real medio ponderado (%), número de documentos emitidos y volumen total de descuentos concedidos.
+* **Exportación Avanzada**: Descarga en Excel incluyendo la cabecera del documento y todas sus líneas desglosadas.
+
+---
+
+### 2.7 Movimientos de Valor (Auditoría de value_entries)
+Ubicado en `/sales/value-entries`, vista de auditoría transaccional directa restringida a los roles `ADMIN` y `DIRECCION`.
+
+* **Trazabilidad Completa**: Número de movimiento, fecha contable, tipo de documento (Factura o Abono), código de producto, cliente, cantidad, importes de venta y costes reales asociados.
+* **Búsqueda Reactiva y Ordenación**: Filtros dinámicos en todas las columnas y exportación a Excel.
+
+---
+
+## 3. Módulo de CRM y Productividad Comercial
+
+### 3.1 CRM de Ofertas y Pipeline Comercial
+Ubicado en `/sales/quotes` (y `/crm/pipeline`), gestiona el ciclo de vida de las cotizaciones y oportunidades de venta.
+
+* **Vista Tablero Kanban Interactivo**:
+  * Columnas por estado: *Borrador*, *Enviada*, *En Negociación*, *Ganada* o *Perdida*.
+  * Arrastrar y soltar (Drag & Drop) para avanzar el estado comercial de las ofertas.
+* **Vista Tabla Compacta**: Listado tabular con filtros por ejercicio, comercial, tipo de oferta (*Proyecto*, *Comercial Nuevo*, *Comercial Existente*) y probabilidad de éxito.
+* **Indicadores Clave del Pipeline**:
+  * **Pipeline Activo**: Sumatorio nominal de cotizaciones abiertas.
+  * **Previsión Ponderada**: Estimación probabilística calculada como `∑(Importe × Probabilidad / 100)`.
+  * **Tasa de Cierre**: Porcentaje de éxito de ofertas ganadas sobre el total de resueltas.
+  * **Seguimiento Vencido**: Oportunidades cuya fecha de próxima acción está vencida.
+* **Drawer Lateral de Oferta**: Edición rápida de próxima acción, fecha límite, notas del comercial y sincronización bidireccional automática con la agenda de tareas.
+
+---
+
+### 3.2 Contactos, Cuentas y Timeline de Actividades
+Ubicado en `/crm/contacts` y `/crm/customers`.
+
+* **Directorio de Interlocutores**: Registro de personas de contacto por empresa (nombre, cargo, teléfono, email y notas).
+* **Timeline Histórico de Actividades**: Registro cronológico de reuniones, llamadas, notas comerciales y correos electrónicos vinculados al cliente.
+
+---
+
+### 3.3 Pestaña de Emails, Preparación de Correos y Apertura en Outlook
+Integrada en la ficha del contacto/cliente en el CRM.
+
+* **Preparación Directa en Outlook (Sin Envío Automático)**:
+  * El comercial redacta el correo o carga una plantilla corporativa en la WebApp y, al pulsar **"Abrir y Preparar en Outlook"**, el sistema genera el nuevo correo en Outlook con todos los datos precargados (destinatario, asunto y cuerpo).
+  * Permite al comercial revisar el texto, adjuntar archivos o catálogos PDF y pulsar **"Enviar"** directamente desde Outlook.
+* **Memorización de Preferencia (Escritorio vs Web)**:
+  * El usuario selecciona su cliente preferido (**Outlook de Escritorio** o **Outlook Web Microsoft 365**) y la WebApp **recuerda su elección de forma permanente en el navegador (`localStorage`)**, no teniendo que volver a seleccionarlo en usos posteriores.
+* **Botón Directo "Abrir en Outlook"**:
+  * En cada tarjeta de email de la pestaña *Emails*, en los eventos de correo del *Timeline* y en el botón de email de la cabecera del contacto, se incluye la acción **"Abrir en Outlook"** para acceder inmediatamente al mensaje o hilo en Outlook con un clic.
+* **Utilidad "Copiar Texto"**: Botón rápido para copiar el asunto y cuerpo al portapapeles con un clic para pegarlo en hilos existentes.
+* **Trazabilidad Automática en el CRM**: Registra la actividad en el Timeline del contacto como interacción de correo electrónico.
+* **Plantillas Comerciales**: Modelos precargados (*Presentación dTS*, *Seguimiento de Oferta*, *Reunión técnica*) con tokenización dinámica del cliente y comercial.
+
+---
+
+### 3.4 Complemento de Outlook (Add-in dTS CRM)
+Extensión integrada para Microsoft Outlook (Web y Escritorio).
+
+* **Detección Automática**: Reconocimiento del remitente o destinatarios buscando coincidencias en la base de datos de clientes y contactos de dTS Instruments.
+* **Registro de Correos con Fecha Histórica**: Al pulsar *Registrar Email en dTS CRM*, conserva la fecha y hora de emisión original del mensaje (`created_at`) en el Timeline.
+* **Limpieza Inteligente**: Depuración automática de firmas, cadenas de respuesta y cláusulas legales (limitando a 500 caracteres clave).
+* **Vinculación Manual**: Buscador predictivo para asociar correos a empresas cuando el remitente no esté registrado previamente.
+
+---
+
+## 4. Módulo de Compras
+
+### 4.1 Directorio de Proveedores
+Ubicado en `/purchases/vendors`.
+
+* Ficha de proveedores sincronizada con Business Central con condiciones de pago, contacto, moneda y volumen acumulado de compras.
+
+### 4.2 Pedidos de Compra
+Ubicado en `/purchases/orders`.
+
+* Consulta de pedidos de aprovisionamiento emitidos, estado de recepción de mercancía y control de entregas pendientes de proveedores.
+
+---
+
+## 5. Módulo de Finanzas y Análisis Económico
+
+*(Acceso exclusivo para roles de Dirección y Administración).*
+
+### 5.1 Análisis de Balances y Cuentas de Resultados
+Ubicado en `/finance/balances`.
+
+* Estructura financiera patrimonial (Activo Corriente, No Corriente, Pasivo y Patrimonio Neto) y Cuenta de Pérdidas y Ganancias multianual.
+
+### 5.2 4 Puntos Clave y 20 Ratios Financieros
+Ubicado en `/finance/key-points` y `/finance/ratios-table`.
+
+* **4 Puntos Clave**: Liquidez, Solvencia, Rentabilidad y Endeudamiento.
+* **20 Ratios Financieros**: Cuadro de mando económico con ratios de liquidez inmediata, rotación de activos, período medio de cobro/pago, margen EBITDA y ROE/ROA.
+
+### 5.3 Gráficos de Ratios y Simulador Financiero
+Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
+
+* Proyecciones dinámicas y simulaciones de escenarios económicos para la toma de decisiones estratégicas.
+
+---
+
+## 6. Configuración, Ajustes y Control de Acceso (RBAC)
+
+### 6.1 Ajustes Generales y Preferencias de Outlook (`/settings`)
+*(Disponible para todos los roles: `ADMIN`, `DIRECCION`, `VENTAS`, `OPERACIONES`)*
+
+* **Integración con Microsoft 365 (Microsoft Graph)**:
+  * Vinculación segura OAuth 2.0 con el buzón corporativo de dTS Instruments.
+  * Diagnóstico del estado de la conexión, visualización del correo vinculado y estado de sincronización.
+  * Botones para forzar sincronización manual de borradores y eventos o desconectar la cuenta.
+* **Cliente de Outlook Predeterminado**:
+  * Selector dual entre **Outlook de Escritorio (App Windows/Mac)** y **Outlook Web (Microsoft 365)**.
+  * Memorización persistente en el navegador local (`localStorage`).
+  * Botón de prueba inmediata para validar la apertura de Outlook.
+
+### 6.2 Gestión de Usuarios y Roles (`/users`)
+*(Acceso exclusivo para rol `ADMIN`)*
+
+* Control de acceso basado en roles: `ADMIN`, `DIRECCION`, `VENTAS`, `OPERACIONES`.
+* Matriz de permisos modulares dinámicos (`role_modules`) gestionada mediante Supabase Auth.
+
+### 6.3 Inmutabilidad y Seguridad de Datos
+* Los datos de negocio procedentes de Dynamics 365 Business Central son de **estricta solo lectura**.
+* Únicamente se permite la persistencia de datos en metadatos propios del CRM (ofertas locales, actividades, tareas y configuraciones de usuario).
+
+---
+
+*Manual de dTS Instruments v5.8 — Actualizado a 2 de septiembre de 2026.*
 

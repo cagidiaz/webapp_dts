@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { 
@@ -6,13 +7,15 @@ import {
   getCrmActivitiesByContact, createCrmActivity, updateCrmActivity, deleteCrmActivity,
   getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
   getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
-  sendExchangeEmail, getExchangeStatus
+  sendExchangeEmail, createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
+  getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook
 } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
   ArrowLeft, Phone, Mail, MapPin, Smartphone,
   Linkedin, Edit2, Check, X, Plus, Calendar, Clock, Percent,
-  Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users, ExternalLink
+  Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users, ExternalLink,
+  Copy, CheckCheck, Laptop, Globe, RefreshCw
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 
@@ -66,7 +69,31 @@ interface CrmContactDetailProps {
 export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, onBack }) => {
   const queryClient = useQueryClient();
   const { profile } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'info' | 'timeline' | 'ofertas' | 'eventos' | 'emails'>('info');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const urlTab = searchParams.get('tab') as 'info' | 'timeline' | 'ofertas' | 'eventos' | 'emails' | null;
+  const validTabs = ['info', 'timeline', 'ofertas', 'eventos', 'emails'];
+  const initialTab = urlTab && validTabs.includes(urlTab) ? urlTab : 'info';
+  const [activeTab, setActiveTab] = useState<'info' | 'timeline' | 'ofertas' | 'eventos' | 'emails'>(initialTab);
+
+  useEffect(() => {
+    if (urlTab && validTabs.includes(urlTab) && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab]);
+
+  const handleTabChange = (tabId: 'info' | 'timeline' | 'ofertas' | 'eventos' | 'emails') => {
+    setActiveTab(tabId);
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (tabId === 'info') {
+        newParams.delete('tab');
+      } else {
+        newParams.set('tab', tabId);
+      }
+      return newParams;
+    }, { replace: true });
+  };
 
   // LinkedIn editing states
   const [editingLinkedinId, setEditingLinkedinId] = useState<string | null>(null);
@@ -92,6 +119,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [newEmailBody, setNewEmailBody] = useState('');
   const [newEmailAddress, setNewEmailAddress] = useState('');
   const [selectedEmailTemplate, setSelectedEmailTemplate] = useState('');
+  const [outlookTarget, setOutlookTarget] = useState<'desktop' | 'web'>(getPreferredOutlookClient());
+  const [isCopied, setIsCopied] = useState(false);
 
   // Edit states
   const [editActivityId, setEditActivityId] = useState<string | null>(null);
@@ -137,25 +166,46 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     }
   });
 
-  const sendEmailMutation = useMutation({
-    mutationFn: async (payload: { to: string[]; subject: string; body: string }) => {
-      if (isExchangeConnected) {
-        return await sendExchangeEmail({
+  const prepareEmailMutation = useMutation({
+    mutationFn: async (payload: { to: string[]; subject: string; body: string; target: 'desktop' | 'web' }) => {
+      const recipient = payload.to[0] || '';
+      
+      if (payload.target === 'web' && isExchangeConnected) {
+        // Crear borrador en Microsoft Graph y abrir su webLink en Outlook Web
+        const result = await createExchangeDraft({
           contactId,
           clientId: contact?.client_id,
           to: payload.to,
           subject: payload.subject,
           body: payload.body,
         });
+
+        openInOutlook({
+          to: recipient,
+          subject: payload.subject,
+          body: payload.body,
+          target: 'web',
+          webLink: result.draft?.webLink,
+        });
+        return result;
       } else {
-        return await createCrmActivity({
+        // Registrar actividad de preparación en el CRM y lanzar Outlook Escritorio o Web
+        const activity = await createCrmActivity({
           contactId,
           clientId: contact?.client_id,
           type: 'EMAIL',
           title: payload.subject,
           description: payload.body,
-          email: payload.to.join(', '),
+          email: recipient,
         });
+
+        openInOutlook({
+          to: recipient,
+          subject: payload.subject,
+          body: payload.body,
+          target: payload.target,
+        });
+        return { activity };
       }
     },
     onSuccess: () => {
@@ -183,6 +233,35 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
     }
   });
+
+  const syncExchangeMutation = useMutation({
+    mutationFn: syncExchangeNow,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
+    }
+  });
+
+  // Auto-sincronización silenciosa en segundo plano si hay borradores pendientes en la ficha
+  const hasPendingDrafts = useMemo(() => {
+    return (dbActivities || []).some((act: any) => act.type === 'EMAIL' && act.exchange_sync_status === 'draft');
+  }, [dbActivities]);
+
+  const autoSyncedRef = useRef(false);
+
+  useEffect(() => {
+    if (isExchangeConnected && hasPendingDrafts && !autoSyncedRef.current && !syncExchangeMutation.isPending) {
+      autoSyncedRef.current = true;
+      syncExchangeMutation.mutate(undefined, {
+        onSettled: () => {
+          // Permitir re-comprobación tras 20 segundos
+          setTimeout(() => {
+            autoSyncedRef.current = false;
+          }, 20000);
+        }
+      });
+    }
+  }, [isExchangeConnected, hasPendingDrafts, activeTab]);
 
   // CRM Quotes pipeline mutations
   const updateQuoteMutation = useMutation({
@@ -674,8 +753,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     });
   };
 
-  // Send email via Exchange handler
-  const handleSendEmail = (e: React.FormEvent) => {
+  // Prepare and open email in Outlook handler
+  const handlePrepareEmail = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmailSubject.trim() || !newEmailBody.trim()) return;
 
@@ -685,11 +764,19 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       return;
     }
 
-    sendEmailMutation.mutate({
+    prepareEmailMutation.mutate({
       to: [recipient],
       subject: newEmailSubject,
       body: newEmailBody,
+      target: outlookTarget,
     });
+  };
+
+  const handleCopyContent = () => {
+    const fullText = `Asunto: ${newEmailSubject}\n\n${newEmailBody}`;
+    navigator.clipboard.writeText(fullText);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const applyTemplateBody = (templateId: string) => {
@@ -771,9 +858,13 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
           <div className="flex flex-wrap gap-3 items-center pt-2 md:pt-0">
             {contact.email && (
-              <a href={`mailto:${contact.email}`} className="p-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" title={contact.email}>
-                <Mail size={16} className="text-gray-400" />
-              </a>
+              <button 
+                onClick={() => openExistingEmailInOutlook({ email: contact.email, target: outlookTarget })} 
+                className="p-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/20 hover:border-cyan-200 dark:hover:border-cyan-800/40 text-gray-400 hover:text-[#00B0B9] transition-all cursor-pointer" 
+                title={`Abrir conversación en Outlook (${contact.email})`}
+              >
+                <Mail size={16} />
+              </button>
             )}
             {contact.phone_no && (
               <a href={`tel:${contact.phone_no}`} className="p-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" title={contact.phone_no}>
@@ -837,7 +928,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => handleTabChange(tab.id as any)}
               className={`flex-1 py-2 px-2 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === tab.id 
                   ? 'bg-dts-primary text-white dark:bg-dts-secondary shadow-xs' 
@@ -1085,14 +1176,33 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                         <div className="flex items-center gap-2">
                           <h4 className="text-xs font-bold text-gray-900 dark:text-zinc-100">{act.title}</h4>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[9.5px] text-gray-400 dark:text-zinc-400 font-mono">
-                          <Calendar size={11} className="text-gray-400 dark:text-zinc-450" />
-                          <span>{new Date(act.date).toLocaleDateString('es-ES')}</span>
-                          {act.time && (
-                            <>
-                              <Clock size={11} className="text-gray-400 dark:text-zinc-450 ml-1" />
-                              <span>{act.time}</span>
-                            </>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 text-[9.5px] text-gray-400 dark:text-zinc-400 font-mono">
+                            <Calendar size={11} className="text-gray-400 dark:text-zinc-450" />
+                            <span>{new Date(act.date).toLocaleDateString('es-ES')}</span>
+                            {act.time && (
+                              <>
+                                <Clock size={11} className="text-gray-400 dark:text-zinc-450 ml-1" />
+                                <span>{act.time}</span>
+                              </>
+                            )}
+                          </div>
+                          {act.type === 'email' && (
+                            <button
+                              type="button"
+                              onClick={() => openExistingEmailInOutlook({
+                                webLink: act.exchangeWebLink,
+                                email: act.email || contact?.email,
+                                subject: act.title,
+                                target: outlookTarget,
+                                exchangeSyncStatus: act.exchangeSyncStatus,
+                              })}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9.5px] font-bold text-[#00B0B9] hover:bg-[#00B0B9]/10 rounded-md transition-colors cursor-pointer border border-[#00B0B9]/20"
+                              title={`Abrir en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
+                            >
+                              <ExternalLink size={9} />
+                              <span>Abrir en Outlook</span>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -1387,17 +1497,33 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           {/* Emails Tab */}
           {activeTab === 'emails' && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-white/5">
+              <div className="flex flex-wrap justify-between items-center gap-3 pb-2 border-b border-gray-100 dark:border-white/5">
                 <span className="text-xs text-gray-400">Correos electrónicos registrados y plantillas</span>
-                <button
-                  onClick={() => {
-                    setNewEmailAddress(contact.email || '');
-                    setShowEmailModal(true);
-                  }}
-                  className="px-3 py-1.5 bg-dts-secondary hover:brightness-110 text-white font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus size={14} /> Registrar Email Enviado
-                </button>
+                
+                <div className="flex items-center gap-2">
+                  {isExchangeConnected && (
+                    <button
+                      type="button"
+                      onClick={() => syncExchangeMutation.mutate()}
+                      disabled={syncExchangeMutation.isPending}
+                      className="px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-200 font-bold text-xs rounded-lg transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Sincroniza y actualiza los borradores que ya hayan sido enviados desde Outlook"
+                    >
+                      <RefreshCw size={12} className={syncExchangeMutation.isPending ? 'animate-spin text-dts-secondary' : ''} />
+                      <span>{syncExchangeMutation.isPending ? 'Sincronizando...' : 'Sincronizar Cambios'}</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setNewEmailAddress(contact.email || '');
+                      setShowEmailModal(true);
+                    }}
+                    className="px-3 py-1.5 bg-[#00B0B9] hover:brightness-110 text-white font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Mail size={13} /> Redactar Correo en Outlook
+                  </button>
+                </div>
               </div>
 
               {/* List of registered emails */}
@@ -1409,15 +1535,44 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 ) : (
                   <div className="space-y-3">
                     {timelineActivities.filter(a => a.type === 'email').map(mail => (
-                      <div key={mail.id} className="bg-gray-50/50 dark:bg-zinc-800/10 p-4 rounded-xl border border-gray-100 dark:border-gray-800/50 space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="text-xs font-bold text-gray-900 dark:text-white">{mail.title}</h4>
-                            <span className="text-[10px] text-gray-400 font-mono mt-0.5 block">Destinatario: {mail.email}</span>
+                      <div key={mail.id} className="bg-gray-50/50 dark:bg-zinc-800/10 p-4 rounded-xl border border-gray-100 dark:border-gray-800/50 space-y-2.5">
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-bold text-gray-900 dark:text-white">{mail.title}</h4>
+                              {mail.exchangeSyncStatus === 'draft' ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                  Borrador en Outlook
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/10 text-[#00B0B9] border border-[#00B0B9]/20">
+                                  Sincronizado
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-gray-400 font-mono block">Destinatario: {mail.email || contact?.email}</span>
                           </div>
-                          <span className="text-[9px] font-mono text-gray-400">
-                            {new Date(mail.date).toLocaleDateString('es-ES')}
-                          </span>
+                          
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[9px] font-mono text-gray-400">
+                              {new Date(mail.date).toLocaleDateString('es-ES')}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => openExistingEmailInOutlook({
+                                webLink: mail.exchangeWebLink,
+                                email: mail.email || contact?.email,
+                                subject: mail.title,
+                                target: outlookTarget,
+                                exchangeSyncStatus: mail.exchangeSyncStatus,
+                              })}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-[#00B0B9] hover:bg-[#00B0B9]/10 rounded-lg transition-colors cursor-pointer border border-[#00B0B9]/25 shadow-2xs"
+                              title={mail.exchangeSyncStatus === 'draft' ? 'Abrir bandeja de borradores en Outlook' : `Abrir en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
+                            >
+                              <ExternalLink size={10} />
+                              <span>{mail.exchangeSyncStatus === 'draft' ? 'Ver Borradores' : 'Abrir en Outlook'}</span>
+                            </button>
+                          </div>
                         </div>
                         <p className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed pt-1 bg-white/40 dark:bg-black/5 p-2 rounded-lg font-mono text-[11px] border border-gray-50/50 dark:border-white/2">
                           {mail.description}
@@ -1446,34 +1601,32 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipo de Actividad</label>
                 <select
                   value={activityType}
-                  onChange={(e: any) => setActivityType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  onChange={(e) => setActivityType(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white font-bold outline-none focus:ring-2 focus:ring-dts-secondary/50"
                 >
-                  <option value="TASK">Tarea (Completar)</option>
-                  <option value="NOTE">Nota Comercial</option>
+                  <option value="TASK">Tarea</option>
+                  <option value="NOTE">Nota Interna</option>
                   <option value="REUNION">Reunión Presencial</option>
-                  <option value="VIDEOLLAMADA">Videollamada</option>
+                  <option value="VIDEOLLAMADA">Videollamada Teams / Online</option>
                   <option value="CALL">Llamada Telefónica</option>
-                  <option value="EVENT">Otro Evento</option>
+                  <option value="EVENT">Evento / Otro</option>
                 </select>
               </div>
 
-              {activityType !== 'NOTE' && (
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Título / Concepto</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej. Enviar propuesta, Demo técnica, Presentación..."
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                  />
-                </div>
-              )}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Título / Concepto</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Seguimiento comercial..."
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                />
+              </div>
 
               {activityType !== 'NOTE' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fecha</label>
                     <input
@@ -1496,12 +1649,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 </div>
               )}
 
-              {activityType !== 'NOTE' && activityType !== 'TASK' && (
+              {activityType === 'REUNION' && (
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar / Enlace</label>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
                   <input
                     type="text"
-                    placeholder="Ej. Oficinas del cliente, Sala Demo dTS, Microsoft Teams..."
+                    placeholder="Sede del cliente / Oficinas dTS..."
                     value={newLocation}
                     onChange={(e) => setNewLocation(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
@@ -1510,41 +1663,38 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
               )}
 
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  {activityType === 'NOTE' ? 'Texto de la Nota' : 'Descripción / Detalles'}
-                </label>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Detalles / Descripción</label>
                 <textarea
-                  required={activityType === 'NOTE'}
-                  placeholder={activityType === 'NOTE' ? 'Escribe aquí los comentarios de seguimiento...' : 'Notas opcionales sobre la actividad...'}
-                  rows={4}
+                  placeholder="Detalla los puntos a tratar..."
+                  rows={3}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
                 />
               </div>
 
-              {activityType !== 'NOTE' && activityType !== 'TASK' && (
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Conclusiones (si ya finalizó)</label>
-                  <textarea
-                    placeholder="Conclusiones o acuerdos alcanzados..."
-                    rows={2}
-                    value={newConclusions}
-                    onChange={(e) => setNewConclusions(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
-                  />
-                </div>
-              )}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Conclusiones / Resultado (Opcional)</label>
+                <textarea
+                  placeholder="Acuerdos alcanzados..."
+                  rows={2}
+                  value={newConclusions}
+                  onChange={(e) => setNewConclusions(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
+                />
+              </div>
 
-              {isExchangeConnected && activityType !== 'NOTE' && (
-                <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-xl flex items-start gap-2 text-[11px] text-cyan-800 dark:text-cyan-200">
-                  <Calendar size={14} className="text-[#00B0B9] shrink-0 mt-0.5" />
-                  <div>
-                    <span>Se sincronizará en tu calendario de <strong>Microsoft Outlook</strong>.</span>
-                    {(activityType === 'REUNION' || activityType === 'VIDEOLLAMADA') ? (
-                      <p className="text-[10px] text-cyan-600 dark:text-cyan-300 font-medium mt-0.5">Se enviará una invitación de reunión por correo al contacto.</p>
+              {activityType !== 'NOTE' && (
+                <div className="p-2.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/10 border border-cyan-100 dark:border-cyan-900/30 flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-1.5 text-dts-primary dark:text-cyan-400 font-semibold">
+                    <Calendar size={13} className="text-[#00B0B9]" />
+                    <span>Sincronizar en Outlook</span>
+                  </div>
+                  <div className="text-[10px] text-gray-400 font-mono">
+                    {isExchangeConnected ? (
+                      <span className="text-emerald-500 font-bold">● Conectado a Exchange</span>
                     ) : (
-                      <p className="text-[10px] text-cyan-600 dark:text-cyan-300 font-medium mt-0.5">Apunte exclusivo para tu agenda (no enviará correo de reunión al contacto).</p>
+                      <span className="text-amber-500 font-bold">● Modo Local</span>
                     )}
                   </div>
                 </div>
@@ -1571,25 +1721,67 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         </div>
       )}
 
-      {/* MODAL: Enviar / Registrar Email */}
+      {/* MODAL: Preparar y Abrir Correo en Outlook */}
       {showEmailModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 max-w-lg w-full shadow-xl space-y-4">
             <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">
-                  {isExchangeConnected ? 'Redactar y Enviar Correo' : 'Registrar Email Enviado'}
-                </h3>
-                <p className="text-[11px] text-gray-500">
-                  {isExchangeConnected 
-                    ? `Se enviará desde tu cuenta Exchange: ${exchangeStatus?.account?.email}`
-                    : 'Registra una nota de correo en la ficha del contacto'}
-                </p>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-dts-secondary/15 flex items-center justify-center text-dts-secondary">
+                  <Mail size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">
+                    Preparar Correo en Outlook
+                  </h3>
+                  <p className="text-[11px] text-gray-500">
+                    Se abrirá en Outlook con los datos precargados para revisar, adjuntar archivos y pulsar Enviar.
+                  </p>
+                </div>
               </div>
               <button onClick={() => setShowEmailModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"><X size={16} /></button>
             </div>
 
-            <form onSubmit={handleSendEmail} className="space-y-4 text-xs">
+            <form onSubmit={handlePrepareEmail} className="space-y-3.5 text-xs">
+              
+              {/* SELECTOR DE DESTINO: OUTLOOK APP (WINDOWS) VS OUTLOOK WEB (M365) */}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Abrir en:</label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100/70 dark:bg-zinc-800/40 rounded-xl border border-gray-200/60 dark:border-gray-700/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOutlookTarget('desktop');
+                      setPreferredOutlookClient('desktop');
+                    }}
+                    className={`py-1.5 px-2.5 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer ${
+                      outlookTarget === 'desktop'
+                        ? 'bg-white dark:bg-dts-primary text-dts-primary dark:text-white shadow-xs border border-gray-200/50 dark:border-gray-700'
+                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    <Laptop size={13} />
+                    <span>Outlook Escritorio</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOutlookTarget('web');
+                      setPreferredOutlookClient('web');
+                    }}
+                    className={`py-1.5 px-2.5 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer ${
+                      outlookTarget === 'web'
+                        ? 'bg-white dark:bg-dts-primary text-dts-primary dark:text-white shadow-xs border border-gray-200/50 dark:border-gray-700'
+                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    <Globe size={13} />
+                    <span>Outlook Web (M365)</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cargar Plantilla Corporativa</label>
                 <select
@@ -1614,7 +1806,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   value={newEmailAddress}
                   onChange={(e) => setNewEmailAddress(e.target.value)}
                   placeholder="destinatario@cliente.com"
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 font-medium"
                 />
               </div>
 
@@ -1626,12 +1818,31 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   placeholder="Asunto del correo..."
                   value={newEmailSubject}
                   onChange={(e) => setNewEmailSubject(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 font-medium"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cuerpo del Email</label>
+                <div className="flex justify-between items-center">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cuerpo del Email</label>
+                  <button
+                    type="button"
+                    onClick={handleCopyContent}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold text-dts-secondary hover:underline cursor-pointer"
+                  >
+                    {isCopied ? (
+                      <>
+                        <CheckCheck size={11} className="text-emerald-500" />
+                        <span className="text-emerald-500">¡Copiado al portapapeles!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={11} />
+                        <span>Copiar texto</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 <textarea
                   required
                   placeholder="Escribe el cuerpo del correo..."
@@ -1642,7 +1853,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 />
               </div>
 
-              <div className="flex gap-3 justify-end pt-2">
+              <div className="flex gap-2.5 justify-end pt-2">
                 <button
                   type="button"
                   onClick={() => setShowEmailModal(false)}
@@ -1652,11 +1863,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 </button>
                 <button
                   type="submit"
-                  disabled={sendEmailMutation.isPending}
-                  className="px-4 py-2 bg-[#00B0B9] hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                  disabled={prepareEmailMutation.isPending}
+                  className="px-4 py-2 bg-[#00B0B9] hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50 transition-all"
                 >
-                  <Send size={13} className={sendEmailMutation.isPending ? 'animate-pulse' : ''} />
-                  {sendEmailMutation.isPending ? 'Enviando...' : isExchangeConnected ? 'Enviar por Exchange' : 'Registrar Email'}
+                  <ExternalLink size={13} className={prepareEmailMutation.isPending ? 'animate-spin' : ''} />
+                  {prepareEmailMutation.isPending ? 'Preparando en Outlook...' : 'Abrir y Preparar en Outlook'}
                 </button>
               </div>
             </form>

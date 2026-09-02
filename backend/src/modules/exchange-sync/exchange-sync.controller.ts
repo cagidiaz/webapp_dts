@@ -99,6 +99,29 @@ export class ExchangeSyncController {
   }
 
   /**
+   * Crea un borrador de correo en Exchange (Microsoft 365) para abrirlo en Outlook y no enviarlo directamente.
+   */
+  @Post('create-draft')
+  @UseGuards(JwtAuthGuard)
+  async createDraft(
+    @Req() req: any,
+    @Body()
+    payload: {
+      contactId?: string;
+      clientId?: string;
+      to: string[];
+      cc?: string[];
+      bcc?: string[];
+      subject: string;
+      body: string;
+      isHtml?: boolean;
+    },
+  ) {
+    const userId = req.user?.userId || req.user?.id;
+    return await this.exchangeSyncService.createDraftFromCrm(userId, payload);
+  }
+
+  /**
    * Receptor de Webhook para notificaciones en tiempo real de Microsoft Graph.
    * Valida tokens y procesa cambios de calendario y buzón.
    */

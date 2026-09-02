@@ -84,9 +84,9 @@ const navItems: NavItem[] = [
   { 
     name: 'Configuración', 
     icon: Sliders,
-    roles: ['ADMIN'],
+    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES'],
     children: [
-      { name: 'Gestión de Usuarios', path: '/users' },
+      { name: 'Gestión de Usuarios', path: '/users', roles: ['ADMIN'] },
       { name: 'Ajustes Generales', path: '/settings' },
     ]
   },

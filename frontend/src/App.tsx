@@ -15,8 +15,7 @@ import {
 import { CustomersPage, ProductsPage, SalesBudgetPage, SalesOrdersPage, ProductBudgetPage, ValueEntriesPage, SalesInvoicesPage, QuotesPage } from './pages/sales';
 import { CrmPage } from './pages/crm';
 import { VendorsPage, PurchaseOrdersPage } from './pages/purchases';
-
-
+import { SettingsPage } from './pages/settings';
 
 import { supabase } from './api/supabase';
 import { useAuthStore } from './store/authStore';
@@ -35,9 +34,6 @@ const ScrollToTop = () => {
   }, [pathname]);
   return null;
 };
-
-// Placeholder pages for routes
-const SettingsPage = () => <div className="p-8"><h1 className="text-2xl font-medium">Settings</h1></div>;
 
 const CrmIndexRedirect = () => {
   const location = useLocation();
@@ -140,7 +136,7 @@ const App: React.FC = () => {
                 <Route path="pipeline" element={<CrmPage mode="pipeline" />} />
               </Route>
               <Route path="users" element={<RoleGuard allowedRoles={['ADMIN']}><UsersPage /></RoleGuard>} />
-              <Route path="settings" element={<RoleGuard allowedRoles={['ADMIN']}><SettingsPage /></RoleGuard>} />
+              <Route path="settings" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']}><SettingsPage /></RoleGuard>} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -73,3 +73,99 @@ export const sendExchangeEmail = async (payload: {
   const { data } = await apiClient.post('/exchange-sync/send-email', payload);
   return data;
 };
+
+/**
+ * Crea un borrador en Exchange (Microsoft 365) para abrirlo en Outlook sin enviarlo directamente
+ */
+export const createExchangeDraft = async (payload: {
+  contactId?: string;
+  clientId?: string;
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  body: string;
+  isHtml?: boolean;
+}): Promise<{ success: boolean; draft: { id: string; webLink: string; conversationId?: string; subject: string }; activity: any }> => {
+  const { data } = await apiClient.post('/exchange-sync/create-draft', payload);
+  return data;
+};
+
+const OUTLOOK_PREF_KEY = 'dts_outlook_preferred_client';
+
+/**
+ * Obtiene la preferencia guardada del cliente de Outlook del usuario ('desktop' o 'web')
+ */
+export const getPreferredOutlookClient = (): 'desktop' | 'web' => {
+  const saved = localStorage.getItem(OUTLOOK_PREF_KEY);
+  if (saved === 'web' || saved === 'desktop') {
+    return saved;
+  }
+  return 'desktop';
+};
+
+/**
+ * Guarda la preferencia del cliente de Outlook en localStorage
+ */
+export const setPreferredOutlookClient = (client: 'desktop' | 'web') => {
+  localStorage.setItem(OUTLOOK_PREF_KEY, client);
+};
+
+const OUTLOOK_WEB_TAB_NAME = 'dts_outlook_web';
+
+/**
+ * Abre Outlook (Bandeja de Borradores en Web o App de Escritorio) para editar y enviar el borrador
+ */
+export const openInOutlook = (options: {
+  to: string;
+  subject: string;
+  body: string;
+  target?: 'desktop' | 'web';
+  webLink?: string;
+}) => {
+  const target = options.target || getPreferredOutlookClient();
+  const { to, subject, body } = options;
+
+  if (target === 'web') {
+    // Abrir directamente la Bandeja de Borradores en la interfaz completa de Outlook Web (reutilizando pestaña existente)
+    window.open('https://outlook.office.com/mail/drafts', OUTLOOK_WEB_TAB_NAME);
+  } else {
+    // Protocolo nativo para Outlook de Escritorio
+    const mailtoUri = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUri;
+  }
+};
+
+/**
+ * Abre un correo existente o la conversación de un contacto en Outlook respetando la preferencia del usuario
+ */
+export const openExistingEmailInOutlook = (options: {
+  webLink?: string | null;
+  email?: string | null;
+  subject?: string | null;
+  target?: 'desktop' | 'web';
+  exchangeSyncStatus?: string | null;
+}) => {
+  const target = options.target || getPreferredOutlookClient();
+  const { email, subject, exchangeSyncStatus } = options;
+
+  if (target === 'web') {
+    if (exchangeSyncStatus === 'draft') {
+      // Abrir la carpeta de borradores en la interfaz completa de Outlook Web
+      window.open('https://outlook.office.com/mail/drafts', OUTLOOK_WEB_TAB_NAME);
+      return;
+    }
+
+    // Para correos enviados o recibidos, abrir la bandeja de Elementos Enviados con la interfaz completa de Outlook
+    window.open('https://outlook.office.com/mail/sentitems', OUTLOOK_WEB_TAB_NAME);
+  } else {
+    // Modo Desktop (Windows)
+    if (email) {
+      const sub = subject ? `Re: ${subject}` : '';
+      const mailtoUri = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(sub)}`;
+      window.location.href = mailtoUri;
+    } else {
+      window.open('https://outlook.office.com/mail/sentitems', OUTLOOK_WEB_TAB_NAME);
+    }
+  }
+};

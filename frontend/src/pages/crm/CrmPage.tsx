@@ -17,6 +17,7 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
   const { setPageInfo } = useUIStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const prevModeRef = React.useRef(mode);
 
   // Sync state with URL search parameters
   useEffect(() => {
@@ -52,15 +53,19 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
     return () => setPageInfo({ title: '', subtitle: '', icon: null });
   }, [setPageInfo, mode]);
 
-  // Reset selected contact when mode (tab) changes
+  // Reset selected contact ONLY when mode (tab principal del CRM) realmente cambia
   useEffect(() => {
-    if (searchParams.get('contactId')) {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('contactId');
-      setSearchParams(newParams);
+    if (prevModeRef.current !== mode) {
+      prevModeRef.current = mode;
+      if (searchParams.get('contactId')) {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('contactId');
+        newParams.delete('tab');
+        setSearchParams(newParams);
+      }
+      setSelectedContactId(null);
     }
-    setSelectedContactId(null);
-  }, [mode]);
+  }, [mode, searchParams, setSearchParams]);
 
   const handleSelectContact = (id: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -71,6 +76,7 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
   const handleBack = () => {
     const newParams = new URLSearchParams(searchParams);
     newParams.delete('contactId');
+    newParams.delete('tab');
     setSearchParams(newParams);
   };
 

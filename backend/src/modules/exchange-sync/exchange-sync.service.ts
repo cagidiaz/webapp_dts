@@ -297,6 +297,75 @@ export class ExchangeSyncService {
   }
 
   /**
+   * Crea un borrador de correo en Exchange (Microsoft 365) y lo registra en crm_activities como borrador preparado en Outlook.
+   */
+  async createDraftFromCrm(
+    userId: string,
+    params: {
+      contactId?: string;
+      clientId?: string;
+      to: string[];
+      cc?: string[];
+      bcc?: string[];
+      subject: string;
+      body: string;
+      isHtml?: boolean;
+    },
+  ) {
+    const { contactId, clientId, to, cc, bcc, subject, body, isHtml } = params;
+
+    let resolvedClientId = clientId;
+    let resolvedContact = null;
+
+    if (contactId) {
+      resolvedContact = await this.prisma.contacts.findUnique({
+        where: { id: contactId },
+      });
+      if (resolvedContact) {
+        resolvedClientId = resolvedContact.client_id;
+      }
+    }
+
+    if (!resolvedClientId) {
+      throw new BadRequestException('No se especificó la empresa o contacto destinatario.');
+    }
+
+    // 1. Crear borrador en Microsoft Graph
+    const draft = await this.graphService.createDraftMail(userId, {
+      to,
+      cc,
+      bcc,
+      subject,
+      body,
+      isHtml: isHtml ?? false,
+    });
+
+    // 2. Registrar actividad de correo en CRM como borrador pendiente
+    const createdActivity = await this.prisma.crm_activities.create({
+      data: {
+        client_id: resolvedClientId,
+        contact_id: contactId || null,
+        created_by: userId,
+        type: 'EMAIL',
+        title: subject,
+        description: body,
+        email: to.join(', '),
+        due_date: new Date(),
+        exchange_item_id: draft.id,
+        exchange_web_link: draft.webLink,
+        exchange_sync_status: 'draft',
+        exchange_last_synced_at: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      draft,
+      activity: createdActivity,
+    };
+  }
+
+  /**
    * Sincroniza eventos y correos recientes desde Outlook / Exchange hacia el CRM.
    */
   async syncOutlookToCrm(userId: string) {
@@ -402,52 +471,56 @@ export class ExchangeSyncService {
       }
     }
 
-    // 2. Sincronizar correos recientes con contactos de CRM
+    // 2. Sincronizar y reconciliar únicamente los borradores pendientes de la app
     if (account.mail_sync_enabled) {
       try {
-        const messages = await this.graphService.getRecentMessages(userId);
-        for (const msg of messages) {
-          const fromEmail = msg.from?.emailAddress?.address?.toLowerCase().trim();
-          const toEmails = (msg.toRecipients || []).map((r: any) => r.emailAddress?.address?.toLowerCase().trim());
-          const allPartyEmails = [fromEmail, ...toEmails].filter(Boolean);
+        const pendingDrafts = await this.prisma.crm_activities.findMany({
+          where: {
+            created_by: userId,
+            type: 'EMAIL',
+            exchange_sync_status: 'draft',
+          },
+          include: { contact: true },
+        });
 
-          const matchedContact = await this.prisma.contacts.findFirst({
-            where: {
-              email: { in: allPartyEmails, mode: 'insensitive' },
-            },
-          });
+        if (pendingDrafts.length > 0) {
+          const recentSent = await this.graphService.getRecentSentMessages(userId);
 
-          if (!matchedContact) continue;
+          if (recentSent.length > 0) {
+            for (const draftAct of pendingDrafts) {
+              const targetEmail = (draftAct.contact?.email || draftAct.email || '').toLowerCase().trim();
+              const draftDate = draftAct.created_at ? new Date(draftAct.created_at) : new Date();
 
-          // Verificar si ya existe registrado este correo
-          const existing = await this.prisma.crm_activities.findFirst({
-            where: { exchange_item_id: msg.id },
-          });
+              const matchingSent = recentSent.find((msg: any) => {
+                const toRecipients = (msg.toRecipients || []).map((r: any) => r.emailAddress?.address?.toLowerCase().trim());
+                const ccRecipients = (msg.ccRecipients || []).map((r: any) => r.emailAddress?.address?.toLowerCase().trim());
+                const allRecipients = [...toRecipients, ...ccRecipients];
+                const matchesRecipient = targetEmail && allRecipients.includes(targetEmail);
+                const sentDate = msg.sentDateTime ? new Date(msg.sentDateTime) : null;
+                const isSentAfterDraft = sentDate && (sentDate.getTime() >= draftDate.getTime() - 120000); // 2 minutos de margen
 
-          if (!existing) {
-            const dateReceived = msg.receivedDateTime || msg.sentDateTime;
-            await this.prisma.crm_activities.create({
-              data: {
-                client_id: matchedContact.client_id,
-                contact_id: matchedContact.id,
-                created_by: userId,
-                type: 'EMAIL',
-                title: msg.subject || '(Sin Asunto)',
-                description: msg.bodyPreview ? msg.bodyPreview.substring(0, 800) : null,
-                email: fromEmail === account.email.toLowerCase() ? toEmails.join(', ') : fromEmail,
-                due_date: dateReceived ? new Date(dateReceived) : new Date(),
-                exchange_item_id: msg.id,
-                exchange_web_link: msg.webLink,
-                exchange_sync_status: 'synced',
-                exchange_last_synced_at: new Date(),
-                created_at: dateReceived ? new Date(dateReceived) : undefined,
-              },
-            });
-            syncedEmails++;
+                return matchesRecipient && isSentAfterDraft;
+              });
+
+              if (matchingSent) {
+                await this.prisma.crm_activities.update({
+                  where: { id: draftAct.id },
+                  data: {
+                    title: matchingSent.subject || draftAct.title,
+                    description: matchingSent.bodyPreview ? matchingSent.bodyPreview.substring(0, 1000) : draftAct.description,
+                    exchange_item_id: matchingSent.id,
+                    exchange_web_link: matchingSent.webLink,
+                    exchange_sync_status: 'synced',
+                    exchange_last_synced_at: new Date(),
+                  },
+                });
+                syncedEmails++;
+              }
+            }
           }
         }
       } catch (mailError) {
-        this.logger.error(`Error al sincronizar correos desde Outlook para ${userId}:`, mailError);
+        this.logger.error(`Error al reconciliar borradores enviados para ${userId}:`, mailError);
       }
     }
 

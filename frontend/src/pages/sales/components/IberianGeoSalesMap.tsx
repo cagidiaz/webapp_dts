@@ -9,10 +9,18 @@ import { formatCurrency } from '../../../api/formatters';
 import { getCustomerGeoLocation, type GeoLocation } from '../../../utils/geoCoordinates';
 import iberiaGeoData from '../../../assets/geo/iberia-provinces.json';
 
+export interface GeoZone {
+  id: string; // 'ES-28', 'PT-lisboa', etc.
+  name: string; // 'Madrid', 'Barcelona', etc.
+  country?: string; // 'ES' | 'PT'
+}
+
 interface IberianGeoSalesMapProps {
   customers: CustomerDataRow[];
   onSelectCustomer: (customer: CustomerDataRow) => void;
   isLoading?: boolean;
+  selectedZone?: GeoZone | null;
+  onSelectZone?: (zone: GeoZone | null) => void;
 }
 
 interface MappedCustomer {
@@ -34,14 +42,29 @@ interface HoveredProvinceInfo {
 export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(({
   customers,
   onSelectCustomer,
-  isLoading = false
+  isLoading = false,
+  selectedZone,
+  onSelectZone,
 }) => {
   const [metric, setMetric] = useState<'sales' | 'debt'>('sales');
   const [topLimit, setTopLimit] = useState<number>(10);
   const [hoveredCustomer, setHoveredCustomer] = useState<MappedCustomer | null>(null);
   const [hoveredProvince, setHoveredProvince] = useState<HoveredProvinceInfo | null>(null);
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
-  const [activeProvinceFilter, setActiveProvinceFilter] = useState<string | null>(null);
+  const [internalZone, setInternalZone] = useState<GeoZone | null>(null);
+
+  const activeZone = selectedZone !== undefined ? selectedZone : internalZone;
+  const activeZoneId = activeZone?.id || null;
+
+  const handleToggleZone = (provId: string, provName: string, country?: string) => {
+    const isCurrentlySelected = activeZoneId === provId;
+    const newZone: GeoZone | null = isCurrentlySelected ? null : { id: provId, name: provName, country: country || 'ES' };
+    if (onSelectZone) {
+      onSelectZone(newZone);
+    } else {
+      setInternalZone(newZone);
+    }
+  };
 
   const svgWidth = 900;
   const svgHeight = 650;
@@ -104,6 +127,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
     provinceAggregates, 
     summaryStats, 
     topRanked,
+    totalZoneCount,
     maxProvinceVal,
     maxCustomerVal 
   } = useMemo(() => {
@@ -113,6 +137,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
         provinceAggregates: {}, 
         summaryStats: { totalVal: 0, topRegion: 'N/D', topRegionPct: 0, provinceCount: 0 }, 
         topRanked: [],
+        totalZoneCount: 0,
         maxProvinceVal: 1,
         maxCustomerVal: 1
       };
@@ -138,17 +163,15 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
         provAgg[provKey].count += 1;
 
         const val = metric === 'sales' ? sales : debt;
-        if (val > 0) {
-          // Si el cliente está en Canarias, proyectar con canariasProjection; si no, con peninsulaProjection
-          const projected = geo.isCanarias 
-            ? canariasProjection([geo.lng, geo.lat])
-            : peninsulaProjection([geo.lng, geo.lat]);
+        // Si el cliente está en Canarias, proyectar con canariasProjection; si no, con peninsulaProjection
+        const projected = geo.isCanarias 
+          ? canariasProjection([geo.lng, geo.lat])
+          : peninsulaProjection([geo.lng, geo.lat]);
 
-          if (projected) {
-            validList.push({ customer: c, geo, value: val, coords: projected });
-            provinceSet.add(geo.name);
-            regionTotals[geo.region] = (regionTotals[geo.region] || 0) + val;
-          }
+        if (projected) {
+          validList.push({ customer: c, geo, value: val, coords: projected });
+          provinceSet.add(geo.name);
+          regionTotals[geo.region] = (regionTotals[geo.region] || 0) + val;
         }
       }
     }
@@ -182,6 +205,23 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
 
     const maxCust = mapped.length > 0 ? mapped[0].value : 1;
 
+    // Si hay una zona/provincia seleccionada, filtrar exhaustivamente para el ranking de Mejores Clientes
+    const activeZoneCustomers = activeZoneId 
+      ? mapped.filter(m => {
+          const matchId = m.geo.id === activeZoneId;
+          const normZoneName = activeZone?.name?.toLowerCase() || '';
+          const matchName = normZoneName ? m.geo.name.toLowerCase() === normZoneName : false;
+          const matchCity = normZoneName ? Boolean(m.customer.city?.toLowerCase().includes(normZoneName)) : false;
+          const matchCounty = normZoneName ? Boolean(m.customer.county?.toLowerCase().includes(normZoneName)) : false;
+          return matchId || matchName || matchCity || matchCounty;
+        })
+      : mapped.filter(m => m.value > 0);
+
+    const reRankedZoneCustomers = activeZoneCustomers.map((item, idx) => ({
+      ...item,
+      rank: activeZoneId ? idx + 1 : item.rank
+    }));
+
     return {
       mappedCustomers: mapped,
       provinceAggregates: provAgg,
@@ -191,11 +231,12 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
         topRegionPct: Math.round(topRegionPct * 10) / 10,
         provinceCount: provinceSet.size
       },
-      topRanked: mapped.slice(0, topLimit),
+      topRanked: reRankedZoneCustomers.slice(0, topLimit),
+      totalZoneCount: reRankedZoneCustomers.length,
       maxProvinceVal: maxProv,
       maxCustomerVal: maxCust
     };
-  }, [customers, metric, topLimit, peninsulaProjection, canariasProjection]);
+  }, [customers, metric, topLimit, peninsulaProjection, canariasProjection, activeZoneId, activeZone]);
 
   // Radio proporcional para los marcadores
   const getMarkerRadius = (value: number, rank: number) => {
@@ -209,11 +250,20 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
   // Clientes filtrados por provincia si hay filtro activo
   const displayMapCustomers = useMemo(() => {
     let list = mappedCustomers;
-    if (activeProvinceFilter) {
-      list = list.filter(m => m.geo.id === activeProvinceFilter || m.geo.name === activeProvinceFilter);
+    if (activeZoneId) {
+      const normZoneName = activeZone?.name?.toLowerCase() || '';
+      list = list.filter(m => {
+        const matchId = m.geo.id === activeZoneId;
+        const matchName = normZoneName ? m.geo.name.toLowerCase() === normZoneName : false;
+        const matchCity = normZoneName ? Boolean(m.customer.city?.toLowerCase().includes(normZoneName)) : false;
+        const matchCounty = normZoneName ? Boolean(m.customer.county?.toLowerCase().includes(normZoneName)) : false;
+        return matchId || matchName || matchCity || matchCounty;
+      });
+    } else {
+      list = list.filter(m => m.value > 0);
     }
-    return list.slice(0, 60);
-  }, [mappedCustomers, activeProvinceFilter]);
+    return list.slice(0, 100);
+  }, [mappedCustomers, activeZoneId, activeZone]);
 
   if (isLoading) {
     return (
@@ -316,12 +366,12 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
               <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <span className="inline-block w-2.5 h-2.5 rounded-full bg-dts-secondary ring-4 ring-dts-secondary/20"></span>
                 <span>{displayMapCustomers.length} clientes geoposicionados</span>
-                {activeProvinceFilter && (
+                {activeZone && (
                   <button 
-                    onClick={() => setActiveProvinceFilter(null)}
-                    className="ml-2 text-[11px] font-bold text-dts-secondary bg-dts-secondary/10 px-2 py-0.5 rounded-md hover:underline"
+                    onClick={() => onSelectZone ? onSelectZone(null) : setInternalZone(null)}
+                    className="ml-2 inline-flex items-center gap-1 text-[11px] font-bold text-dts-secondary bg-dts-secondary/15 px-2.5 py-0.5 rounded-md hover:bg-dts-secondary/25 border border-dts-secondary/30 transition-all"
                   >
-                    Ver todas las provincias ✕
+                    <span>Zona: {activeZone.name} ✕</span>
                   </button>
                 )}
               </div>
@@ -369,7 +419,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
                     const val = agg ? (metric === 'sales' ? agg.totalSales : agg.totalDebt) : 0;
                     
                     const intensity = maxProvinceVal > 0 ? val / maxProvinceVal : 0;
-                    const isSelected = activeProvinceFilter === provId;
+                    const isSelected = activeZoneId === provId;
 
                     let fillStyle = '';
                     if (val > 0) {
@@ -385,26 +435,31 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
                       <path
                         key={provId}
                         d={item.pathD}
-                        fill={isSelected ? 'rgba(0, 176, 185, 0.45)' : fillStyle}
-                        stroke={isSelected ? '#00B0B9' : '#64748B'}
-                        strokeWidth={isSelected ? 1.8 : 0.45}
-                        strokeOpacity={isSelected ? 1 : 0.3}
-                        className="cursor-pointer hover:stroke-dts-secondary hover:stroke-[1.5px] hover:stroke-opacity-100"
+                        fill={isSelected ? '#00B0B9' : fillStyle}
+                        fillOpacity={isSelected ? 0.88 : 1}
+                        stroke={isSelected ? '#FFFFFF' : '#64748B'}
+                        strokeWidth={isSelected ? 1.3 : 0.45}
+                        strokeOpacity={isSelected ? 0.95 : 0.3}
+                        style={{
+                          filter: isSelected ? 'drop-shadow(0 0 5px rgba(0, 176, 185, 0.7))' : undefined,
+                          opacity: activeZoneId && !isSelected ? 0.45 : 1,
+                        }}
+                        className={`cursor-pointer transition-all duration-150 ${isSelected ? 'z-20' : 'hover:stroke-dts-secondary hover:stroke-[1.3px] hover:stroke-opacity-100'}`}
                         onClick={() => {
-                          if (agg && agg.count > 0) {
-                            setActiveProvinceFilter(activeProvinceFilter === provId ? null : provId);
-                          }
+                          const provName = agg?.name || item.feature?.properties?.name || provId;
+                          const country = agg?.country || (provId.startsWith('PT') ? 'PT' : 'ES');
+                          handleToggleZone(provId, provName, country);
                         }}
                         onMouseEnter={() => {
-                          if (agg && agg.count > 0) {
-                            setHoveredProvince({
-                              name: agg.name,
-                              country: agg.country,
-                              totalSales: agg.totalSales,
-                              totalDebt: agg.totalDebt,
-                              customerCount: agg.count,
-                            });
-                          }
+                          const provName = agg?.name || item.feature?.properties?.name || provId;
+                          const country = agg?.country || (provId.startsWith('PT') ? 'PT' : 'ES');
+                          setHoveredProvince({
+                            name: provName,
+                            country: country,
+                            totalSales: agg?.totalSales || 0,
+                            totalDebt: agg?.totalDebt || 0,
+                            customerCount: agg?.count || 0,
+                          });
                         }}
                         onMouseLeave={() => setHoveredProvince(null)}
                       />
@@ -420,7 +475,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
                     const val = agg ? (metric === 'sales' ? agg.totalSales : agg.totalDebt) : 0;
                     
                     const intensity = maxProvinceVal > 0 ? val / maxProvinceVal : 0;
-                    const isSelected = activeProvinceFilter === provId;
+                    const isSelected = activeZoneId === provId;
 
                     let fillStyle = '';
                     if (val > 0) {
@@ -436,26 +491,31 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
                       <path
                         key={provId}
                         d={item.pathD}
-                        fill={isSelected ? 'rgba(0, 176, 185, 0.45)' : fillStyle}
-                        stroke={isSelected ? '#00B0B9' : '#64748B'}
-                        strokeWidth={isSelected ? 1.8 : 0.45}
-                        strokeOpacity={isSelected ? 1 : 0.3}
-                        className="cursor-pointer hover:stroke-dts-secondary hover:stroke-[1.5px]"
+                        fill={isSelected ? '#00B0B9' : fillStyle}
+                        fillOpacity={isSelected ? 0.88 : 1}
+                        stroke={isSelected ? '#FFFFFF' : '#64748B'}
+                        strokeWidth={isSelected ? 1.3 : 0.45}
+                        strokeOpacity={isSelected ? 0.95 : 0.3}
+                        style={{
+                          filter: isSelected ? 'drop-shadow(0 0 5px rgba(0, 176, 185, 0.7))' : undefined,
+                          opacity: activeZoneId && !isSelected ? 0.45 : 1,
+                        }}
+                        className={`cursor-pointer transition-all duration-150 ${isSelected ? 'z-20' : 'hover:stroke-dts-secondary hover:stroke-[1.5px]'}`}
                         onClick={() => {
-                          if (agg && agg.count > 0) {
-                            setActiveProvinceFilter(activeProvinceFilter === provId ? null : provId);
-                          }
+                          const provName = agg?.name || item.feature?.properties?.name || provId;
+                          const country = agg?.country || (provId.startsWith('PT') ? 'PT' : 'ES');
+                          handleToggleZone(provId, provName, country);
                         }}
                         onMouseEnter={() => {
-                          if (agg && agg.count > 0) {
-                            setHoveredProvince({
-                              name: agg.name,
-                              country: agg.country,
-                              totalSales: agg.totalSales,
-                              totalDebt: agg.totalDebt,
-                              customerCount: agg.count,
-                            });
-                          }
+                          const provName = agg?.name || item.feature?.properties?.name || provId;
+                          const country = agg?.country || (provId.startsWith('PT') ? 'PT' : 'ES');
+                          setHoveredProvince({
+                            name: provName,
+                            country: country,
+                            totalSales: agg?.totalSales || 0,
+                            totalDebt: agg?.totalDebt || 0,
+                            customerCount: agg?.count || 0,
+                          });
                         }}
                         onMouseLeave={() => setHoveredProvince(null)}
                       />
@@ -726,11 +786,16 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
           <div className="lg:col-span-5 xl:col-span-4 p-4 sm:p-5 flex flex-col justify-between bg-white dark:bg-surface-card-dark">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Award className="text-amber-500 h-4 w-4" />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Award className="text-amber-500 h-4 w-4 shrink-0" />
                   <h4 className="font-bold text-sm text-gray-900 dark:text-white">
                     Ranking de {metric === 'sales' ? 'Mejores Clientes' : 'Mayor Deuda'}
                   </h4>
+                  {activeZone && (
+                    <span className="text-[11px] font-bold text-dts-secondary bg-dts-secondary/15 px-2 py-0.5 rounded-full border border-dts-secondary/30">
+                      {activeZone.name}
+                    </span>
+                  )}
                 </div>
 
                 <select
@@ -741,6 +806,9 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
                   <option value={5}>Top 5</option>
                   <option value={10}>Top 10</option>
                   <option value={15}>Top 15</option>
+                  <option value={25}>Top 25</option>
+                  <option value={50}>Top 50</option>
+                  <option value={500}>Todos ({totalZoneCount})</option>
                 </select>
               </div>
 
