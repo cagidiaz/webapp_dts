@@ -12,6 +12,7 @@ export interface CalendarEventPayload {
   location?: string;
   isOnlineMeeting?: boolean;
   attendees?: { email: string; name?: string }[];
+  categories?: string[];
 }
 
 export interface SendMailPayload {
@@ -54,6 +55,7 @@ export class MicrosoftGraphService {
       'offline_access',
       'User.Read',
       'Calendars.ReadWrite',
+      'MailboxSettings.ReadWrite',
       'Mail.ReadWrite',
       'Mail.Send',
     ].join(' ');
@@ -84,7 +86,7 @@ export class MicrosoftGraphService {
       grant_type: 'authorization_code',
       code,
       redirect_uri: redirectUri,
-      scope: 'openid profile email offline_access User.Read Calendars.ReadWrite Mail.ReadWrite Mail.Send',
+      scope: 'openid profile email offline_access User.Read Calendars.ReadWrite MailboxSettings.ReadWrite Mail.ReadWrite Mail.Send',
     });
 
     const response = await fetch(tokenEndpoint, {
@@ -162,7 +164,7 @@ export class MicrosoftGraphService {
         client_secret: this.clientSecret,
         grant_type: 'refresh_token',
         refresh_token: account.refresh_token,
-        scope: 'openid profile email offline_access User.Read Calendars.ReadWrite Mail.ReadWrite Mail.Send',
+        scope: 'openid profile email offline_access User.Read Calendars.ReadWrite MailboxSettings.ReadWrite Mail.ReadWrite Mail.Send',
       });
 
       const response = await fetch(tokenEndpoint, {
@@ -200,6 +202,59 @@ export class MicrosoftGraphService {
   }
 
   /**
+   * Asegura que la categoría maestra "dTS CRM" esté creada en Outlook con el color corporativo (preset7 - Azul dTS)
+   * para que los eventos sincronizados aparezcan coloreados y claramente diferenciados en el calendario de Outlook.
+   */
+  async ensureDtsCategory(userId: string): Promise<void> {
+    const categoryName = 'dTS CRM';
+    const accessToken = await this.getValidAccessToken(userId);
+    if (!accessToken) return;
+
+    try {
+      const listRes = await fetch('https://graph.microsoft.com/v1.0/me/outlook/masterCategories', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (listRes.ok) {
+        const data = await listRes.json();
+        const existing = (data.value || []).find(
+          (c: any) => c.displayName?.toLowerCase().trim() === categoryName.toLowerCase().trim(),
+        );
+
+        if (!existing) {
+          const createRes = await fetch('https://graph.microsoft.com/v1.0/me/outlook/masterCategories', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              displayName: categoryName,
+              color: 'preset7', // Color azul corporativo dTS (#003E51)
+            }),
+          });
+          if (createRes.ok) {
+            this.logger.log(`Categoría "${categoryName}" (preset7 - Azul dTS) registrada exitosamente en Outlook para ${userId}`);
+          }
+        } else if (existing && existing.color !== 'preset7') {
+          // Si existía con otro preset (ej. preset5), actualizar al azul corporativo dTS
+          await fetch(`https://graph.microsoft.com/v1.0/me/outlook/masterCategories/${existing.id}`, {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ color: 'preset7' }),
+          });
+          this.logger.log(`Categoría "${categoryName}" actualizada a preset7 (Azul dTS) para ${userId}`);
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`No se pudo asegurar la categoría de Outlook para ${userId}:`, error);
+    }
+  }
+
+  /**
    * Crea un evento en el calendario de Outlook del usuario mediante Microsoft Graph.
    */
   async createCalendarEvent(userId: string, eventData: CalendarEventPayload) {
@@ -208,6 +263,9 @@ export class MicrosoftGraphService {
       this.logger.warn(`No hay cuenta de Exchange conectada para el usuario ${userId}`);
       return null;
     }
+
+    // Asegurar categoría maestra de color en Outlook
+    await this.ensureDtsCategory(userId);
 
     let startDateTime = eventData.startDate;
     let endDateTime = eventData.endDate || eventData.startDate;
@@ -225,6 +283,7 @@ export class MicrosoftGraphService {
 
     const payload: any = {
       subject: eventData.title,
+      categories: eventData.categories && eventData.categories.length > 0 ? eventData.categories : ['dTS CRM'],
       body: {
         contentType: 'HTML',
         content: eventData.description || `<p>${eventData.title}</p>`,
@@ -292,7 +351,15 @@ export class MicrosoftGraphService {
     const accessToken = await this.getValidAccessToken(userId);
     if (!accessToken) return null;
 
+    // Asegurar categoría maestra de color en Outlook
+    await this.ensureDtsCategory(userId);
+
     const payload: any = {};
+    if (eventData.categories !== undefined) {
+      payload.categories = eventData.categories;
+    } else {
+      payload.categories = ['dTS CRM'];
+    }
     if (eventData.title !== undefined) payload.subject = eventData.title;
     if (eventData.description !== undefined) {
       payload.body = {
@@ -371,6 +438,36 @@ export class MicrosoftGraphService {
     }
 
     return true;
+  }
+
+  /**
+   * Comprueba si un evento específico sigue existiendo en el calendario de Outlook del usuario.
+   * Devuelve { exists: false } si Microsoft Graph devuelve 404 (eliminado en Outlook).
+   */
+  async checkCalendarEventExists(userId: string, eventId: string): Promise<{ exists: boolean; isCancelled?: boolean }> {
+    const accessToken = await this.getValidAccessToken(userId);
+    if (!accessToken) return { exists: true };
+
+    try {
+      const response = await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}?$select=id,isCancelled`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response.status === 404) {
+        return { exists: false };
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        return { exists: true, isCancelled: !!data.isCancelled };
+      }
+
+      return { exists: true };
+    } catch {
+      return { exists: true };
+    }
   }
 
   /**
@@ -496,13 +593,13 @@ export class MicrosoftGraphService {
       // Sincronizar desde hace 30 días hasta dentro de 90 días
       const startDateTime = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
       const endDateTime = new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString();
-      url = `https://graph.microsoft.com/v1.0/me/calendarView/delta?startDateTime=${startDateTime}&endDateTime=${endDateTime}&$top=50`;
+      url = `https://graph.microsoft.com/v1.0/me/calendarView/delta?startDateTime=${startDateTime}&endDateTime=${endDateTime}`;
     }
 
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        Prefer: 'outlook.timezone="Europe/Madrid"',
+        Prefer: 'outlook.timezone="Europe/Madrid", odata.maxpagesize=50',
       },
     });
 

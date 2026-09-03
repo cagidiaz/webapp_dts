@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { 
-  updateContactLinkedin,
+  updateContactLinkedin, updateContactLocation,
   getCrmActivitiesByContact, createCrmActivity, updateCrmActivity, deleteCrmActivity,
   getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
   getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
@@ -84,6 +84,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
   const handleTabChange = (tabId: 'info' | 'timeline' | 'ofertas' | 'eventos' | 'emails') => {
     setActiveTab(tabId);
+    if (tabId === 'eventos' || tabId === 'timeline') {
+      queryClient.invalidateQueries({ queryKey: ['crmContactActivities', contactId] });
+      if (isExchangeConnected) {
+        syncExchangeMutation.mutate();
+      }
+    }
     setSearchParams(prev => {
       const newParams = new URLSearchParams(prev);
       if (tabId === 'info') {
@@ -99,6 +105,16 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [editingLinkedinId, setEditingLinkedinId] = useState<string | null>(null);
   const [linkedinValue, setLinkedinValue] = useState<string>('');
   const [isSavingLinkedin, setIsSavingLinkedin] = useState<boolean>(false);
+
+  // Contact location editing states
+  const [isEditingLocation, setIsEditingLocation] = useState<boolean>(false);
+  const [locAddress, setLocAddress] = useState<string>('');
+  const [locAddress2, setLocAddress2] = useState<string>('');
+  const [locPostCode, setLocPostCode] = useState<string>('');
+  const [locCity, setLocCity] = useState<string>('');
+  const [locCounty, setLocCounty] = useState<string>('');
+  const [locTerritoryCode, setLocTerritoryCode] = useState<string>('');
+  const [isSavingLocation, setIsSavingLocation] = useState<boolean>(false);
 
   // Modals
   const [showEventModal, setShowEventModal] = useState(false);
@@ -157,8 +173,20 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     queryFn: () => getAllCrmQuotes({ contactId }),
   });
 
-  // Helper para obtener la dirección completa de la empresa del contacto
+  // Helper para obtener la dirección completa de la sede/centro del contacto o de su empresa
   const getCompanyAddress = (): string => {
+    // 1. Prioridad: Dirección específica del propio contacto si está definida
+    if (contact?.address || contact?.city) {
+      const street = [contact.address, contact.address2].filter(Boolean).join(', ');
+      const locality = [contact.post_code, contact.city].filter(Boolean).join(' ');
+      const showCounty = contact.county && 
+        contact.county.trim().toLowerCase() !== (contact.city || '').trim().toLowerCase();
+      const parts = [street, locality, showCounty ? contact.county : null].filter(Boolean);
+      const res = parts.join(', ').trim();
+      if (res) return res;
+    }
+
+    // 2. Fallback: Dirección de la empresa matriz
     if (!contact?.customer) return '';
     const street = [contact.customer.address, contact.customer.address_2].filter(Boolean).join(', ');
     const locality = [contact.customer.post_code, contact.customer.city].filter(Boolean).join(' ');
@@ -166,6 +194,45 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       contact.customer.county.trim().toLowerCase() !== (contact.customer.city || '').trim().toLowerCase();
     const parts = [street, locality, showCounty ? contact.customer.county : null].filter(Boolean);
     return parts.join(', ').trim();
+  };
+
+  const updateLocationMutation = useMutation({
+    mutationFn: (payload: { address?: string | null; address2?: string | null; post_code?: string | null; city?: string | null; county?: string | null; territory_code?: string | null }) => 
+      updateContactLocation(contactId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crmContactDetail', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['crm-contacts-all'] });
+      setIsEditingLocation(false);
+    }
+  });
+
+  const handleOpenEditLocation = () => {
+    setLocAddress(contact?.address || '');
+    setLocAddress2(contact?.address2 || '');
+    setLocPostCode(contact?.post_code || '');
+    setLocCity(contact?.city || '');
+    setLocCounty(contact?.county || '');
+    setLocTerritoryCode(contact?.territory_code || '');
+    setIsEditingLocation(true);
+  };
+
+  const handleSaveLocation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingLocation(true);
+    try {
+      await updateLocationMutation.mutateAsync({
+        address: locAddress || null,
+        address2: locAddress2 || null,
+        post_code: locPostCode || null,
+        city: locCity || null,
+        county: locCounty || null,
+        territory_code: locTerritoryCode || null,
+      });
+    } catch (error) {
+      console.error('Error saving contact location:', error);
+    } finally {
+      setIsSavingLocation(false);
+    }
   };
 
   const handleOpenEventModal = () => {
@@ -879,7 +946,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
             {contact.email && (
               <button 
                 onClick={() => openExistingEmailInOutlook({ email: contact.email, target: outlookTarget })} 
-                className="p-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/20 hover:border-cyan-200 dark:hover:border-cyan-800/40 text-gray-400 hover:text-[#00B0B9] transition-all cursor-pointer" 
+                className="p-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/20 hover:border-cyan-200 dark:hover:border-cyan-800/40 text-gray-400 hover:text-dts-secondary transition-all cursor-pointer" 
                 title={`Abrir conversación en Outlook (${contact.email})`}
               >
                 <Mail size={16} />
@@ -935,7 +1002,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       </div>
 
       {/* Unified Tabbed Panel */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-340px)] min-h-[450px]">
+      <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-340px)] min-h-112.5">
         {/* Navigation Tabs */}
         <div className="flex border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-zinc-800/20 p-1 shrink-0">
           {[
@@ -995,6 +1062,54 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     <div>
                       <span className="text-gray-400 font-medium">Relación Comercial</span>
                       <span className="block font-bold text-gray-900 dark:text-white mt-1">{contact.business_relation}</span>
+                    </div>
+
+                    {/* Ubicación del Contacto / Centro de Trabajo */}
+                    <div className="col-span-2 pt-3 border-t border-gray-100 dark:border-white/5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <MapPin size={13} className="text-dts-secondary" />
+                          Ubicación del Contacto / Centro de Trabajo
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleOpenEditLocation}
+                          className="text-[11px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit2 size={11} />
+                          <span>{contact.address || contact.city ? 'Editar ubicación' : 'Asignar ubicación'}</span>
+                        </button>
+                      </div>
+
+                      {contact.address || contact.city ? (
+                        <div className="p-3 rounded-xl bg-gray-50/50 dark:bg-white/2 border border-gray-100 dark:border-white/5 flex items-start justify-between gap-3">
+                          <div>
+                            {contact.address && <p className="font-bold text-gray-900 dark:text-white text-xs">{contact.address}</p>}
+                            {contact.address2 && <p className="text-[11px] text-gray-500">{contact.address2}</p>}
+                            <p className="text-xs text-gray-700 dark:text-gray-300 font-medium mt-0.5">
+                              {[contact.post_code, contact.city].filter(Boolean).join(' ')}
+                              {contact.county ? ` (${contact.county})` : ''}
+                            </p>
+                            {contact.territory_code && (
+                              <span className="inline-block mt-1.5 text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold">
+                                Zona: {contact.territory_code}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${contact.address || ''} ${contact.city || ''} ${contact.post_code || ''}`)}`, '_blank')}
+                            className="p-1.5 text-gray-400 hover:text-dts-secondary hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer shrink-0"
+                            title="Abrir en Google Maps"
+                          >
+                            <ExternalLink size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic">
+                          No tiene dirección específica registrada (utiliza por defecto la sede de la empresa).
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1149,11 +1264,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   ) : timelineActivities.length === 0 ? (
                     <div className="text-center py-6 text-gray-400 italic text-xs">No hay actividades registradas.</div>
                   ) : (
-                    <div className="relative pl-6 ml-2.5 space-y-4 overflow-y-auto max-h-[190px] pr-1 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-gray-150 dark:before:bg-zinc-800/60">
+                    <div className="relative pl-6 ml-2.5 space-y-4 overflow-y-auto max-h-47.5 pr-1 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-gray-150 dark:before:bg-zinc-800/60">
                       {timelineActivities.slice(0, 3).map(act => (
                         <div key={act.id} className="relative animate-in slide-in-from-left duration-300">
                           {/* Icon Outside Card */}
-                          <div className={`absolute -left-[24px] top-1.5 w-4.5 h-4.5 rounded-full ${act.iconBg} text-white flex items-center justify-center border border-white dark:border-zinc-900 shadow-sm`} title={act.type}>
+                          <div className={`absolute -left-6 top-1.5 w-4.5 h-4.5 rounded-full ${act.iconBg} text-white flex items-center justify-center border border-white dark:border-zinc-900 shadow-sm`} title={act.type}>
                             <act.icon size={9} />
                           </div>
                           
@@ -1216,7 +1331,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                 target: outlookTarget,
                                 exchangeSyncStatus: act.exchangeSyncStatus,
                               })}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9.5px] font-bold text-[#00B0B9] hover:bg-[#00B0B9]/10 rounded-md transition-colors cursor-pointer border border-[#00B0B9]/20"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9.5px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-md transition-colors cursor-pointer border border-dts-secondary/20"
                               title={`Abrir en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
                             >
                               <ExternalLink size={9} />
@@ -1260,7 +1375,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
               ) : crmQuotes.length === 0 ? (
                 <div className="text-center py-20 text-gray-400 italic text-xs">Este contacto no tiene ofertas CRM asociadas actualmente.</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 h-full min-h-[350px]">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 h-full min-h-87.5">
                   {STAGES.map(stage => {
                     const stageQuotes = crmQuotes.filter(q => (q.estado_oferta || 'borrador').toLowerCase() === stage.id);
                     return (
@@ -1278,7 +1393,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                             {stageQuotes.length}
                           </span>
                         </div>
-                        <div className="flex-1 overflow-y-auto space-y-2 max-h-[400px] pr-1">
+                        <div className="flex-1 overflow-y-auto space-y-2 max-h-100 pr-1">
                           {stageQuotes.map(quote => {
                             const isTaskOverdue = quote.fecha_proxima_accion 
                               ? new Date(quote.fecha_proxima_accion).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) 
@@ -1381,12 +1496,26 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     </button>
                   ))}
                 </div>
-                <button
-                  onClick={handleOpenEventModal}
-                  className="px-3 py-1.5 bg-dts-secondary hover:brightness-110 text-white font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer shrink-0"
-                >
-                  <Plus size={14} /> Nueva Actividad
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {isExchangeConnected && (
+                    <button
+                      type="button"
+                      onClick={() => syncExchangeMutation.mutate()}
+                      disabled={syncExchangeMutation.isPending}
+                      className="px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-200 font-bold text-xs rounded-lg transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Sincronizar cambios y eliminaciones de Outlook"
+                    >
+                      <RefreshCw size={12} className={syncExchangeMutation.isPending ? 'animate-spin text-dts-secondary' : ''} />
+                      <span>{syncExchangeMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={handleOpenEventModal}
+                    className="px-3 py-1.5 bg-dts-secondary hover:brightness-110 text-white font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer shrink-0"
+                  >
+                    <Plus size={14} /> Nueva Actividad
+                  </button>
+                </div>
               </div>
 
               {/* Listado de eventos */}
@@ -1465,7 +1594,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               href={act.exchangeWebLink}
                               target="_blank"
                               rel="noreferrer"
-                              className="p-1.5 text-gray-400 hover:text-[#00B0B9] hover:bg-cyan-500/10 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-dts-secondary hover:bg-cyan-500/10 rounded-lg transition-colors"
                               title="Abrir en Outlook Web / Microsoft Teams"
                             >
                               <ExternalLink size={13} />
@@ -1538,7 +1667,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       setNewEmailAddress(contact.email || '');
                       setShowEmailModal(true);
                     }}
-                    className="px-3 py-1.5 bg-[#00B0B9] hover:brightness-110 text-white font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    className="px-3 py-1.5 bg-dts-secondary hover:brightness-110 text-white font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                   >
                     <Mail size={13} /> Redactar Correo en Outlook
                   </button>
@@ -1564,7 +1693,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                   Borrador en Outlook
                                 </span>
                               ) : (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/10 text-[#00B0B9] border border-[#00B0B9]/20">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/10 text-dts-secondary border border-dts-secondary/20">
                                   Sincronizado
                                 </span>
                               )}
@@ -1585,7 +1714,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                 target: outlookTarget,
                                 exchangeSyncStatus: mail.exchangeSyncStatus,
                               })}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-[#00B0B9] hover:bg-[#00B0B9]/10 rounded-lg transition-colors cursor-pointer border border-[#00B0B9]/25 shadow-2xs"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-lg transition-colors cursor-pointer border border-dts-secondary/25 shadow-2xs"
                               title={mail.exchangeSyncStatus === 'draft' ? 'Abrir bandeja de borradores en Outlook' : `Abrir en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
                             >
                               <ExternalLink size={10} />
@@ -1726,12 +1855,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
               {activityType !== 'NOTE' && (
                 <div className="p-2.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/10 border border-cyan-100 dark:border-cyan-900/30 flex items-center justify-between text-[11px]">
                   <div className="flex items-center gap-1.5 text-dts-primary dark:text-cyan-400 font-semibold">
-                    <Calendar size={13} className="text-[#00B0B9]" />
+                    <Calendar size={13} className="text-dts-secondary" />
                     <span>Sincronizar en Outlook</span>
                   </div>
                   <div className="text-[10px] text-gray-400 font-mono">
                     {isExchangeConnected ? (
-                      <span className="text-emerald-500 font-bold">● Conectado a Exchange</span>
+                      <span className="text-emerald-500 font-bold">● Conectado a Exchange (Categoría dTS CRM)</span>
                     ) : (
                       <span className="text-amber-500 font-bold">● Modo Local</span>
                     )}
@@ -1903,7 +2032,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 <button
                   type="submit"
                   disabled={prepareEmailMutation.isPending}
-                  className="px-4 py-2 bg-[#00B0B9] hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50 transition-all"
+                  className="px-4 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50 transition-all"
                 >
                   <ExternalLink size={13} className={prepareEmailMutation.isPending ? 'animate-spin' : ''} />
                   {prepareEmailMutation.isPending ? 'Preparando en Outlook...' : 'Abrir y Preparar en Outlook'}
@@ -2290,7 +2419,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 </button>
               </form>
 
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              <div className="space-y-2 max-h-50 overflow-y-auto">
                 {quoteActivities.length === 0 ? (
                   <p className="text-[10px] text-gray-400 italic">Sin interacciones registradas.</p>
                 ) : (
@@ -2331,6 +2460,107 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         )}
       </Drawer>
 
+      {/* MODAL: Editar Ubicación del Contacto */}
+      {isEditingLocation && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 max-w-md w-full shadow-xl space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-dts-secondary" />
+                <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">Ubicación del Contacto</h3>
+              </div>
+              <button onClick={() => setIsEditingLocation(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"><X size={16} /></button>
+            </div>
+
+            <form onSubmit={handleSaveLocation} className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Dirección / Calle y Número</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Calle Mayor, 15"
+                  value={locAddress}
+                  onChange={(e) => setLocAddress(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Dirección Adicional / Planta / Dpto (address2)</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Edificio B, Planta 2ª, Dpto. Compras"
+                  value={locAddress2}
+                  onChange={(e) => setLocAddress2(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Código Postal</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 28001"
+                    value={locPostCode}
+                    onChange={(e) => setLocPostCode(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ciudad / Localidad</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Madrid"
+                    value={locCity}
+                    onChange={(e) => setLocCity(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Provincia (County)</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Madrid"
+                    value={locCounty}
+                    onChange={(e) => setLocCounty(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Zona / Territorio</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. CENTRO, ES-28..."
+                    value={locTerritoryCode}
+                    onChange={(e) => setLocTerritoryCode(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingLocation(false)}
+                  className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 font-bold cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingLocation || updateLocationMutation.isPending}
+                  className="px-4 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingLocation || updateLocationMutation.isPending ? 'Guardando...' : 'Guardar Ubicación'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

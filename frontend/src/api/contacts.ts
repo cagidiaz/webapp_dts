@@ -12,6 +12,12 @@ export interface ContactDataRow {
   mobile_no: string | null;
   business_relation: string;
   linkedin: string | null;
+  address?: string | null;
+  address2?: string | null;
+  city?: string | null;
+  post_code?: string | null;
+  county?: string | null;
+  territory_code?: string | null;
   created_at: string | null;
   updated_at: string;
   customer?: {
@@ -56,5 +62,23 @@ export const getContactById = async (id: string): Promise<ContactDataRow> => {
  */
 export const updateContactLinkedin = async (id: string, linkedin: string): Promise<ContactDataRow> => {
   const { data } = await apiClient.patch(`/contacts/${id}/linkedin`, { linkedin });
+  return data;
+};
+
+/**
+ * Actualiza la información de localización física de un contacto.
+ */
+export const updateContactLocation = async (
+  id: string,
+  payload: {
+    address?: string | null;
+    address2?: string | null;
+    city?: string | null;
+    post_code?: string | null;
+    county?: string | null;
+    territory_code?: string | null;
+  }
+): Promise<ContactDataRow> => {
+  const { data } = await apiClient.patch(`/contacts/${id}/location`, payload);
   return data;
 };

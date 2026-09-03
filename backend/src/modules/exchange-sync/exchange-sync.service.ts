@@ -62,6 +62,9 @@ export class ExchangeSyncService {
       },
     });
 
+    // Asegurar categoría de color corporativo en Outlook
+    this.graphService.ensureDtsCategory(userId).catch(() => {});
+
     // Iniciar sincronización inicial en segundo plano
     this.syncOutlookToCrm(userId).catch((err) =>
       this.logger.error(`Error en sincronización inicial de Exchange para ${userId}:`, err),
@@ -143,6 +146,9 @@ export class ExchangeSyncService {
       const clientOrContactName = activity.customer?.name || activity.contact?.name || 'Cliente';
       const fullTitle = `${eventPrefix} ${activity.title} (${clientOrContactName})`;
 
+      // Categoría oficial de Outlook para colorear y destacar el evento con el color corporativo dTS (preset7 - Azul dTS)
+      const categories = ['dTS CRM'];
+
       let locationDisplay = activity.location || '';
       if (activity.type === 'VISITA' && !locationDisplay && activity.customer) {
         locationDisplay = [activity.customer.address, activity.customer.city].filter(Boolean).join(', ');
@@ -169,6 +175,7 @@ export class ExchangeSyncService {
           timeScheduled: activity.time_scheduled || undefined,
           location: locationDisplay || undefined,
           attendees,
+          categories,
         });
 
         if (updated) {
@@ -191,6 +198,7 @@ export class ExchangeSyncService {
           isOnlineMeeting: isTeams,
           location: locationDisplay || undefined,
           attendees,
+          categories,
         });
 
         if (created) {
@@ -366,6 +374,32 @@ export class ExchangeSyncService {
   }
 
   /**
+   * Comprueba una lista de actividades con exchange_item_id y elimina las que ya no existan en Outlook.
+   * Devuelve los IDs de las actividades que fueron eliminadas.
+   */
+  async purgeDeletedCalendarActivities(
+    userId: string,
+    activities: Array<{ id: string; exchange_item_id: string | null; title?: string }>,
+  ): Promise<string[]> {
+    const calendarActs = activities.filter((a) => !!a.exchange_item_id);
+    if (calendarActs.length === 0) return [];
+
+    const deletedIds: string[] = [];
+    await Promise.all(
+      calendarActs.map(async (act) => {
+        const status = await this.graphService.checkCalendarEventExists(userId, act.exchange_item_id!);
+        if (!status.exists || status.isCancelled) {
+          deletedIds.push(act.id);
+          await this.prisma.crm_activities.delete({ where: { id: act.id } }).catch(() => null);
+          this.logger.log(`Actividad ${act.id} ("${act.title || 'Evento'}") eliminada del CRM porque se eliminó de Outlook.`);
+        }
+      }),
+    );
+
+    return deletedIds;
+  }
+
+  /**
    * Sincroniza eventos y correos recientes desde Outlook / Exchange hacia el CRM.
    */
   async syncOutlookToCrm(userId: string) {
@@ -381,6 +415,19 @@ export class ExchangeSyncService {
     // 1. Sincronizar eventos de Calendario
     if (account.calendar_sync_enabled) {
       try {
+        // Purgar actividades locales que fueron eliminadas directamente en Outlook
+        const userCalendarActivities = await this.prisma.crm_activities.findMany({
+          where: {
+            created_by: userId,
+            exchange_item_id: { not: null },
+            type: { in: ['REUNION', 'VIDEOLLAMADA', 'VISITA', 'TASK', 'EVENT'] },
+          },
+          select: { id: true, exchange_item_id: true, title: true },
+        });
+
+        const purged = await this.purgeDeletedCalendarActivities(userId, userCalendarActivities);
+        syncedEvents += purged.length;
+
         const deltaResult = await this.graphService.getCalendarEventsDelta(userId, account.calendar_delta_token || undefined);
         if (deltaResult && deltaResult.events) {
           for (const ev of deltaResult.events) {

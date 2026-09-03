@@ -868,6 +868,12 @@ model contacts {
   mobile_no         String?   @db.VarChar(50)
   business_relation String    @db.VarChar(50)
   linkedin          String?   @db.VarChar(255)
+  address           String?   @db.VarChar(255)
+  address2          String?   @db.VarChar(255)
+  city              String?   @db.VarChar(100)
+  post_code         String?   @db.VarChar(20)
+  county            String?   @db.VarChar(100)
+  territory_code    String?   @db.VarChar(20)
   created_at        DateTime? @db.Timestamptz(6)
   updated_at        DateTime  @default(now()) @db.Timestamptz(6)
   customer          customers? @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
@@ -875,6 +881,9 @@ model contacts {
   sales_quotes_crm  sales_quotes_crm[]
 
   @@index([client_id])
+  @@index([city], map: "idx_contacts_city")
+  @@index([county], map: "idx_contacts_county")
+  @@index([territory_code], map: "idx_contacts_territory_code")
   @@schema("public")
 }
 

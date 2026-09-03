@@ -423,7 +423,7 @@ export const CustomersPage: React.FC = () => {
     <div className="space-y-6 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4"><KPISkeleton /><KPISkeleton /><KPISkeleton /><KPISkeleton /></div>
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl h-[500px]"><TableSkeleton rows={15} columns={10} /></div>
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl h-125"><TableSkeleton rows={15} columns={10} /></div>
     </div>
   );
 
@@ -576,13 +576,13 @@ export const CustomersPage: React.FC = () => {
                       : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="truncate max-w-[130px]">{marketFilter ? `Mercado: ${marketFilter}` : 'Mercado (Todos)'}</span>
+                  <span className="truncate max-w-32.5">{marketFilter ? `Mercado: ${marketFilter}` : 'Mercado (Todos)'}</span>
                   <ChevronDown size={13} className={`text-gray-400 transition-transform ${isMarketDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isMarketDropdownOpen && (
                   <div className="absolute left-0 mt-1.5 w-48 bg-white dark:bg-surface-card-dark rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-1 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="max-h-[165px] overflow-y-auto custom-scrollbar space-y-0.5">
+                    <div className="max-h-41.25 overflow-y-auto custom-scrollbar space-y-0.5">
                       <button
                         type="button"
                         onClick={() => {
@@ -781,7 +781,7 @@ export const CustomersPage: React.FC = () => {
         </div>
 
         {/* TABLA PRINCIPAL DE DATOS CON SCROLL Y ALTURA AJUSTADA PARA 20 FILAS */}
-        <div ref={tableContainerRef} className="flex-1 overflow-auto custom-scrollbar max-h-[735px] will-change-scroll">
+        <div ref={tableContainerRef} className="flex-1 overflow-auto custom-scrollbar max-h-183.75 will-change-scroll">
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="bg-[#003E51] text-white sticky top-0 z-20 shadow-xs select-none">
               <tr>
@@ -799,7 +799,7 @@ export const CustomersPage: React.FC = () => {
                 {/* Nombre de Cliente */}
                 <th 
                   onClick={() => handleSort('name')} 
-                  className="px-3.5 py-3 font-bold uppercase tracking-wider text-[10.5px] cursor-pointer group hover:bg-white/10 transition-colors min-w-[200px]"
+                  className="px-3.5 py-3 font-bold uppercase tracking-wider text-[10.5px] cursor-pointer group hover:bg-white/10 transition-colors min-w-50"
                 >
                   <div className="flex items-center justify-start">
                     <span>Nombre Cliente</span>
@@ -853,7 +853,7 @@ export const CustomersPage: React.FC = () => {
                     className="px-3 py-3 font-bold uppercase tracking-wider text-[10.5px] text-right cursor-pointer group hover:bg-white/10 transition-colors bg-[#002f3d] whitespace-nowrap"
                   >
                     <div className="flex items-center justify-end">
-                      <span className="text-[#00B0B9] font-black">2026 (YTD)</span>
+                      <span className="text-dts-secondary font-black">2026 (YTD)</span>
                       {getSortIcon('total_sales')}
                     </div>
                   </th>
@@ -1072,7 +1072,7 @@ const CustomerTableRow = React.memo<CustomerTableRowProps>(({
       {/* Nombre Cliente */}
       <td className="px-3.5 py-2.5 font-semibold text-xs text-gray-800 dark:text-gray-100">
         <div className="flex items-center gap-2">
-          <span className="truncate max-w-[220px]" title={customer.name}>
+          <span className="truncate max-w-55" title={customer.name}>
             {customer.name}
           </span>
           {isNew && (
@@ -1106,7 +1106,7 @@ const CustomerTableRow = React.memo<CustomerTableRowProps>(({
 
       {/* 2026 (YTD) */}
       {visibleColumns.sales_2026 && (
-        <td className="px-3 py-2.5 text-right font-mono text-xs font-bold text-dts-primary dark:text-[#00B0B9] bg-cyan-50/20 dark:bg-cyan-950/10 whitespace-nowrap">
+        <td className="px-3 py-2.5 text-right font-mono text-xs font-bold text-dts-primary dark:text-dts-secondary bg-cyan-50/20 dark:bg-cyan-950/10 whitespace-nowrap">
           {sales2026 > 0 ? formatCurrency(sales2026, 2) : <span className="text-gray-300 dark:text-gray-600">- €</span>}
         </td>
       )}

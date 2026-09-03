@@ -29,6 +29,11 @@ export class ContactsService {
         { email: { contains: search, mode: 'insensitive' } },
         { client_id: { contains: search, mode: 'insensitive' } },
         { job_title: { contains: search, mode: 'insensitive' } },
+        { city: { contains: search, mode: 'insensitive' } },
+        { county: { contains: search, mode: 'insensitive' } },
+        { post_code: { contains: search, mode: 'insensitive' } },
+        { territory_code: { contains: search, mode: 'insensitive' } },
+        { address: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -90,6 +95,39 @@ export class ContactsService {
     } catch (error) {
       console.error('Error en ContactsService.updateLinkedin:', error);
       throw new InternalServerErrorException('Error al actualizar el perfil de LinkedIn');
+    }
+  }
+
+  /**
+   * Actualiza los datos de localización física de un contacto.
+   */
+  async updateLocation(id: string, data: {
+    address?: string | null;
+    address2?: string | null;
+    city?: string | null;
+    post_code?: string | null;
+    county?: string | null;
+    territory_code?: string | null;
+  }) {
+    // Verificar si el contacto existe
+    await this.getById(id);
+
+    try {
+      return await this.prisma.contacts.update({
+        where: { id },
+        data: {
+          ...(data.address !== undefined && { address: data.address }),
+          ...(data.address2 !== undefined && { address2: data.address2 }),
+          ...(data.city !== undefined && { city: data.city }),
+          ...(data.post_code !== undefined && { post_code: data.post_code }),
+          ...(data.county !== undefined && { county: data.county }),
+          ...(data.territory_code !== undefined && { territory_code: data.territory_code }),
+          updated_at: new Date()
+        },
+      });
+    } catch (error) {
+      console.error('Error en ContactsService.updateLocation:', error);
+      throw new InternalServerErrorException('Error al actualizar la localización del contacto');
     }
   }
 }

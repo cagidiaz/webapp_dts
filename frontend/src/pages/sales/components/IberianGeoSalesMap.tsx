@@ -385,7 +385,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
                 onClick={() => handleToggleZone('INTL', 'Internacional / Exportación', 'INTL')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
                   activeZoneId === 'INTL'
-                    ? 'bg-[#00B0B9] text-white border-[#00B0B9] shadow-sm ring-2 ring-[#00B0B9]/30'
+                    ? 'bg-dts-secondary text-white border-dts-secondary shadow-sm ring-2 ring-dts-secondary/30'
                     : 'bg-white dark:bg-dts-primary-dark text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-dts-secondary'
                 }`}
                 title="Listar y consultar clientes fuera de la Península (Exportación / Internacional)"
@@ -786,7 +786,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
               {/* Banner flotante de Modo Internacional */}
               {activeZoneId === 'INTL' && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2.5 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-md text-white text-xs font-semibold rounded-2xl border border-cyan-400/50 shadow-2xl flex items-center gap-3 animate-in fade-in zoom-in-95">
-                  <div className="w-7 h-7 rounded-xl bg-cyan-500/20 text-[#00B0B9] flex items-center justify-center shrink-0 border border-cyan-500/30">
+                  <div className="w-7 h-7 rounded-xl bg-cyan-500/20 text-dts-secondary flex items-center justify-center shrink-0 border border-cyan-500/30">
                     <Globe size={16} />
                   </div>
                   <div>

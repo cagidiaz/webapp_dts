@@ -143,11 +143,19 @@ Ubicado en `/sales/quotes` (y `/crm/pipeline`), gestiona el ciclo de vida de las
 ### 3.2 Contactos, Cuentas y Timeline de Actividades
 Ubicado en `/crm/contacts` y `/crm/customers`.
 
-* **Directorio de Interlocutores**: Registro de personas de contacto por empresa (nombre, cargo, teléfono, email y notas).
+* **Directorio de Interlocutores**: Registro de personas de contacto por empresa (nombre, cargo, teléfono, email, notas y ubicación).
+* **Localización Física del Contacto y Centros de Trabajo**:
+  * Registro de dirección específica del interlocutor (`address`, `address2`, `city`, `post_code`, `county`, `territory_code`).
+  * Tarjeta de centro de trabajo en la pestaña *Información* con enlace directo a Google Maps y modal de edición rápida.
+  * Búsqueda global y en tabla filtrable por localidad, provincia o código de territorio.
 * **Timeline Histórico de Actividades**: Registro cronológico de reuniones, llamadas, notas comerciales y correos electrónicos vinculados al cliente.
 * **Gestión de Eventos y Reuniones Presenciales**:
-  * Al programar una actividad de tipo *Reunión Presencial* (`REUNION`), el campo de ubicación se autocompleta de forma automática con la dirección física completa de la empresa.
-  * Botón de restauración rápida (*📍 Usar dirección de la empresa*) para volver a aplicar la sede del cliente con un clic si fuera necesario.
+  * Autocompletado jerárquico prioritario: si el contacto dispone de centro de trabajo propio registrado, se utiliza su dirección; de lo contrario, se aplica la sede social de la empresa matriz.
+  * Botones de restauración rápida para alternar entre la sede del contacto y la de la empresa con un solo clic.
+* **Sincronización Bidireccional de Calendario con Microsoft Outlook**:
+  * Categorización visual automática con la etiqueta corporativa **`dTS CRM`** (Azul dTS).
+  * Detección activa de eliminaciones: si una reunión o tarea es eliminada directamente en el calendario de Outlook, el CRM la detecta y purga de inmediato en la base de datos local.
+  * Botón directo de **"Sincronizar"** en la pestaña de Eventos y actualización en segundo plano al cambiar de pestaña.
 
 ---
 

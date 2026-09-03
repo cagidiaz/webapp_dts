@@ -37,4 +37,20 @@ export class ContactsController {
   ) {
     return this.contactsService.updateLinkedin(id, linkedin);
   }
+
+  @Patch(':id/location')
+  @ApiOperation({ summary: 'Actualizar la localización física de un contacto' })
+  async updateLocation(
+    @Param('id') id: string,
+    @Body() body: {
+      address?: string | null;
+      address2?: string | null;
+      city?: string | null;
+      post_code?: string | null;
+      county?: string | null;
+      territory_code?: string | null;
+    },
+  ) {
+    return this.contactsService.updateLocation(id, body);
+  }
 }

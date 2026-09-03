@@ -14,15 +14,27 @@ export class CrmActivitiesService {
   /**
    * Obtiene todas las actividades de un cliente comercial ordenadas por fecha.
    */
-  async getByClient(clientId: string) {
+  async getByClient(clientId: string, userId?: string) {
     try {
-      return await this.prisma.crm_activities.findMany({
+      let activities = await this.prisma.crm_activities.findMany({
         where: { client_id: clientId },
         include: {
           contact: true
         },
         orderBy: { created_at: 'desc' }
       });
+
+      if (userId) {
+        const syncedActs = activities.filter(a => a.exchange_item_id && a.created_by === userId && a.type !== 'EMAIL');
+        if (syncedActs.length > 0) {
+          const deletedIds = await this.exchangeSyncService.purgeDeletedCalendarActivities(userId, syncedActs);
+          if (deletedIds.length > 0) {
+            activities = activities.filter(a => !deletedIds.includes(a.id));
+          }
+        }
+      }
+
+      return activities;
     } catch (error) {
       console.error('Error en CrmActivitiesService.getByClient:', error);
       throw new InternalServerErrorException('Error al obtener las actividades del cliente');
@@ -32,15 +44,27 @@ export class CrmActivitiesService {
   /**
    * Obtiene todas las actividades de un contacto comercial ordenadas por fecha.
    */
-  async getByContact(contactId: string) {
+  async getByContact(contactId: string, userId?: string) {
     try {
-      return await this.prisma.crm_activities.findMany({
+      let activities = await this.prisma.crm_activities.findMany({
         where: { contact_id: contactId },
         include: {
           customer: true
         },
         orderBy: { created_at: 'desc' }
       });
+
+      if (userId) {
+        const syncedActs = activities.filter(a => a.exchange_item_id && a.created_by === userId && a.type !== 'EMAIL');
+        if (syncedActs.length > 0) {
+          const deletedIds = await this.exchangeSyncService.purgeDeletedCalendarActivities(userId, syncedActs);
+          if (deletedIds.length > 0) {
+            activities = activities.filter(a => !deletedIds.includes(a.id));
+          }
+        }
+      }
+
+      return activities;
     } catch (error) {
       console.error('Error en CrmActivitiesService.getByContact:', error);
       throw new InternalServerErrorException('Error al obtener las actividades del contacto');
@@ -69,7 +93,7 @@ export class CrmActivitiesService {
     }
 
     try {
-      return await this.prisma.crm_activities.findMany({
+      let activities = await this.prisma.crm_activities.findMany({
         where: whereClause,
         include: {
           customer: true,
@@ -79,6 +103,18 @@ export class CrmActivitiesService {
           due_date: 'asc'
         }
       });
+
+      if (userId) {
+        const syncedActs = activities.filter(a => a.exchange_item_id && a.created_by === userId && a.type !== 'EMAIL');
+        if (syncedActs.length > 0) {
+          const deletedIds = await this.exchangeSyncService.purgeDeletedCalendarActivities(userId, syncedActs);
+          if (deletedIds.length > 0) {
+            activities = activities.filter(a => !deletedIds.includes(a.id));
+          }
+        }
+      }
+
+      return activities;
     } catch (error) {
       console.error('Error en CrmActivitiesService.getAgenda:', error);
       throw new InternalServerErrorException('Error al obtener la agenda de actividades');

@@ -31,14 +31,14 @@ export class CrmActivitiesController {
 
   @Get('contact/:contactId')
   @ApiOperation({ summary: 'Obtener todas las actividades comerciales de un contacto' })
-  async getByContact(@Param('contactId') contactId: string) {
-    return this.crmActivitiesService.getByContact(contactId);
+  async getByContact(@Param('contactId') contactId: string, @Req() req: any) {
+    return this.crmActivitiesService.getByContact(contactId, req.user?.userId);
   }
 
   @Get(':clientId')
   @ApiOperation({ summary: 'Obtener todas las actividades comerciales de un cliente' })
-  async getByClient(@Param('clientId') clientId: string) {
-    return this.crmActivitiesService.getByClient(clientId);
+  async getByClient(@Param('clientId') clientId: string, @Req() req: any) {
+    return this.crmActivitiesService.getByClient(clientId, req.user?.userId);
   }
 
   @Post()

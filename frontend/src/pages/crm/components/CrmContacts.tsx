@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getContacts, updateContactLinkedin } from '../../../api';
 import { 
   Search, User, Linkedin, Edit2, Check, X, 
-  Mail, Phone, Smartphone, Users
+  Mail, Phone, Smartphone, Users, MapPin
 } from 'lucide-react';
 
 interface CrmContactsProps {
@@ -76,7 +76,12 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact }) => 
         c.client_id.toLowerCase().includes(searchLower) ||
         (c.email || '').toLowerCase().includes(searchLower) ||
         (c.phone_no || '').toLowerCase().includes(searchLower) ||
-        (c.mobile_no || '').toLowerCase().includes(searchLower)
+        (c.mobile_no || '').toLowerCase().includes(searchLower) ||
+        (c.city || '').toLowerCase().includes(searchLower) ||
+        (c.county || '').toLowerCase().includes(searchLower) ||
+        (c.post_code || '').toLowerCase().includes(searchLower) ||
+        (c.territory_code || '').toLowerCase().includes(searchLower) ||
+        (c.address || '').toLowerCase().includes(searchLower)
       );
     });
   }, [allContacts, debouncedSearch]);
@@ -179,7 +184,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact }) => 
       </div>
 
       {/* Contacts Table (Adjusted to screen viewport) */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-320px)] min-h-[400px]">
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-320px)] min-h-100">
         {/* Integrated Search Bar */}
         <div className="p-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between gap-4 shrink-0 bg-gray-50/20 dark:bg-surface-card-dark">
           <div className="w-full sm:max-w-md relative">
@@ -240,10 +245,18 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact }) => 
                         </span>
                         {contact.customer?.name && (
                           <span 
-                            className="text-[12px] text-gray-500 dark:text-gray-400 font-medium truncate max-w-[180px] block" 
+                            className="text-[12px] text-gray-500 dark:text-gray-400 font-medium truncate max-w-45 block" 
                             title={contact.customer.name}
                           >
                             {contact.customer.name}
+                          </span>
+                        )}
+                        {(contact.city || contact.county || contact.customer?.city) && (
+                          <span className="text-[10px] text-gray-400 flex items-center gap-1 truncate max-w-45 pt-0.5">
+                            <MapPin size={10} className="text-dts-secondary shrink-0" />
+                            <span className="truncate">
+                              {[contact.city || contact.customer?.city, contact.county && contact.county.toLowerCase() !== (contact.city || '').toLowerCase() ? contact.county : null].filter(Boolean).join(', ')}
+                            </span>
                           </span>
                         )}
                       </div>
