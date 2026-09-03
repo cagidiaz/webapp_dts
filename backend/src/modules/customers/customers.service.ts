@@ -104,22 +104,39 @@ export class CustomersService {
       and.push({ business_model: businessModel });
     }
 
-    // Filtro por territorio / provincia / país / código postal
+    // Filtro por territorio / provincia / país / código postal / internacional
     if (territory) {
       const cleanTerritory = territory.trim();
-      const postalPrefix = cleanTerritory.replace(/^(ES|PT)-/i, '');
-      const orConditions: any[] = [
-        { county: { contains: cleanTerritory, mode: 'insensitive' as any } },
-        { country_reg_code: { contains: cleanTerritory, mode: 'insensitive' as any } },
-        { city: { contains: cleanTerritory, mode: 'insensitive' as any } },
-      ];
-      if (/^\d{1,2}$/.test(postalPrefix)) {
-        const padded = postalPrefix.padStart(2, '0');
-        orConditions.push({ post_code: { startsWith: padded } });
+      const isIntlFilter = cleanTerritory === 'INTL' || 
+                           cleanTerritory.toUpperCase().includes('INTERNACIONAL') || 
+                           cleanTerritory.toUpperCase().includes('EXPORT');
+
+      if (isIntlFilter) {
+        and.push({
+          AND: [
+            { country_reg_code: { not: null } },
+            { country_reg_code: { not: '' } },
+            { country_reg_code: { not: 'ES' } },
+            { country_reg_code: { not: 'PT' } },
+            { country_reg_code: { not: 'ESP' } },
+            { country_reg_code: { not: 'PRT' } },
+          ]
+        });
+      } else {
+        const postalPrefix = cleanTerritory.replace(/^(ES|PT)-/i, '');
+        const orConditions: any[] = [
+          { county: { contains: cleanTerritory, mode: 'insensitive' as any } },
+          { country_reg_code: { contains: cleanTerritory, mode: 'insensitive' as any } },
+          { city: { contains: cleanTerritory, mode: 'insensitive' as any } },
+        ];
+        if (/^\d{1,2}$/.test(postalPrefix)) {
+          const padded = postalPrefix.padStart(2, '0');
+          orConditions.push({ post_code: { startsWith: padded } });
+        }
+        and.push({
+          OR: orConditions
+        });
       }
-      and.push({
-        OR: orConditions
-      });
     }
 
     // Filtro por términos de pago

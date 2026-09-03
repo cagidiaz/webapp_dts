@@ -116,6 +116,7 @@ function buildGeoLocation(code: string, data: Omit<GeoLocation, 'id' | 'code' | 
 
 /**
  * Obtiene la geolocalización aproximada para un cliente a partir de sus campos de dirección.
+ * Si el cliente pertenece a un país extranjero fuera de España o Portugal, devuelve null.
  */
 export function getCustomerGeoLocation(customer: {
   post_code?: string | null;
@@ -123,35 +124,48 @@ export function getCustomerGeoLocation(customer: {
   county?: string | null;
   country_reg_code?: string | null;
 }): GeoLocation | null {
-  const countryCode = (customer.country_reg_code || 'ES').trim().toUpperCase();
+  const rawCountry = (customer.country_reg_code || '').trim().toUpperCase();
   const rawPostCode = (customer.post_code || '').trim();
   const city = (customer.city || '').trim();
   const county = (customer.county || '').trim();
 
-  // 1. Caso España: por código postal (2 primeros dígitos)
-  if (countryCode === 'ES' || countryCode === 'ESP' || countryCode === 'SPAIN' || countryCode === '') {
+  const isSpain = rawCountry === 'ES' || rawCountry === 'ESP' || rawCountry === 'SPAIN' || rawCountry === 'ESPAÑA' || rawCountry === 'E';
+  const isPortugal = rawCountry === 'PT' || rawCountry === 'PRT' || rawCountry === 'PORTUGAL' || rawCountry === 'P';
+  const isUnknownCountry = !rawCountry;
+
+  // Si tiene un código de país explícito y NO es España ni Portugal -> ES CLIENTE INTERNACIONAL/EXTRANJERO
+  if (!isSpain && !isPortugal && !isUnknownCountry) {
+    return null;
+  }
+
+  // 1. Caso España
+  if (isSpain || isUnknownCountry) {
     if (rawPostCode) {
-      const digits = rawPostCode.replace(/\D/g, '');
-      if (digits.length >= 2) {
-        const prefix = digits.substring(0, 2).padStart(2, '0');
+      // Formato estándar español: 5 dígitos o código con prefijo "ES-" / "ES "
+      const cleaned = rawPostCode.replace(/^ES-?/i, '').replace(/\s+/g, '');
+      const digits = cleaned.replace(/\D/g, '');
+      if (digits.length >= 4 && digits.length <= 5) {
+        const prefix = digits.length === 4 ? ('0' + digits[0]) : digits.substring(0, 2);
         if (SPANISH_PROVINCES[prefix]) {
           return buildGeoLocation(prefix, SPANISH_PROVINCES[prefix]);
         }
       }
     }
 
-    // Si no hay post_code válido, buscar por ciudad o provincia
+    // Buscar por coincidencia de ciudad o provincia española
     const searchTarget = normalizeString(`${city} ${county}`);
-    for (const [code, prov] of Object.entries(SPANISH_PROVINCES)) {
-      const normProv = normalizeString(prov.name);
-      if (searchTarget.includes(normProv)) {
-        return buildGeoLocation(code, prov);
+    if (searchTarget) {
+      for (const [code, prov] of Object.entries(SPANISH_PROVINCES)) {
+        const normProv = normalizeString(prov.name);
+        if (searchTarget.includes(normProv)) {
+          return buildGeoLocation(code, prov);
+        }
       }
     }
   }
 
-  // 2. Caso Portugal: por nombre de ciudad o distrito
-  if (countryCode === 'PT' || countryCode === 'PRT' || countryCode === 'PORTUGAL') {
+  // 2. Caso Portugal
+  if (isPortugal || (isUnknownCountry && (rawPostCode.toLowerCase().startsWith('pt') || normalizeString(`${city} ${county}`).includes('portugal')))) {
     const searchTarget = normalizeString(`${city} ${county}`);
     for (const [key, dist] of Object.entries(PORTUGAL_DISTRICTS)) {
       if (searchTarget.includes(key)) {
@@ -160,23 +174,12 @@ export function getCustomerGeoLocation(customer: {
     }
 
     if (rawPostCode) {
-      const ptPrefix = rawPostCode.substring(0, 1);
-      if (ptPrefix === '1' || ptPrefix === '2') return buildGeoLocation('lisboa', PORTUGAL_DISTRICTS['lisboa']);
-      if (ptPrefix === '4') return buildGeoLocation('porto', PORTUGAL_DISTRICTS['porto']);
-      if (ptPrefix === '3') return buildGeoLocation('coimbra', PORTUGAL_DISTRICTS['coimbra']);
-      if (ptPrefix === '8') return buildGeoLocation('faro', PORTUGAL_DISTRICTS['faro']);
-    }
-
-    return buildGeoLocation('lisboa', PORTUGAL_DISTRICTS['lisboa']);
-  }
-
-  // Fallback si no tiene país pero tiene código postal numérico de 5 cifras
-  if (rawPostCode) {
-    const digits = rawPostCode.replace(/\D/g, '');
-    if (digits.length === 5 || digits.length === 4) {
-      const prefix = digits.length === 4 ? ('0' + digits[0]) : digits.substring(0, 2);
-      if (SPANISH_PROVINCES[prefix]) {
-        return buildGeoLocation(prefix, SPANISH_PROVINCES[prefix]);
+      const cleanPt = rawPostCode.replace(/^PT-?/i, '').replace(/\D/g, '');
+      if (cleanPt.length > 0) {
+        const ptPrefix = cleanPt[0];
+        const distKey = ptPrefix === '1' || ptPrefix === '2' ? 'lisboa' : ptPrefix === '4' ? 'porto' : ptPrefix === '3' ? 'coimbra' : ptPrefix === '8' ? 'faro' : 'lisboa';
+        const dist = PORTUGAL_DISTRICTS[distKey];
+        return buildGeoLocation(distKey, dist);
       }
     }
   }

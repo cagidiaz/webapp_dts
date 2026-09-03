@@ -157,6 +157,25 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     queryFn: () => getAllCrmQuotes({ contactId }),
   });
 
+  // Helper para obtener la dirección completa de la empresa del contacto
+  const getCompanyAddress = (): string => {
+    if (!contact?.customer) return '';
+    const street = [contact.customer.address, contact.customer.address_2].filter(Boolean).join(', ');
+    const locality = [contact.customer.post_code, contact.customer.city].filter(Boolean).join(' ');
+    const showCounty = contact.customer.county && 
+      contact.customer.county.trim().toLowerCase() !== (contact.customer.city || '').trim().toLowerCase();
+    const parts = [street, locality, showCounty ? contact.customer.county : null].filter(Boolean);
+    return parts.join(', ').trim();
+  };
+
+  const handleOpenEventModal = () => {
+    if (activityType === 'REUNION' && !newLocation.trim()) {
+      const addr = getCompanyAddress();
+      if (addr) setNewLocation(addr);
+    }
+    setShowEventModal(true);
+  };
+
   // Mutations
   const createActivityMutation = useMutation({
     mutationFn: createCrmActivity,
@@ -1363,7 +1382,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   ))}
                 </div>
                 <button
-                  onClick={() => setShowEventModal(true)}
+                  onClick={handleOpenEventModal}
                   className="px-3 py-1.5 bg-dts-secondary hover:brightness-110 text-white font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer shrink-0"
                 >
                   <Plus size={14} /> Nueva Actividad
@@ -1601,7 +1620,14 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipo de Actividad</label>
                 <select
                   value={activityType}
-                  onChange={(e) => setActivityType(e.target.value as any)}
+                  onChange={(e) => {
+                    const nextType = e.target.value as any;
+                    setActivityType(nextType);
+                    if (nextType === 'REUNION' && !newLocation.trim()) {
+                      const addr = getCompanyAddress();
+                      if (addr) setNewLocation(addr);
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white font-bold outline-none focus:ring-2 focus:ring-dts-secondary/50"
                 >
                   <option value="TASK">Tarea</option>
@@ -1651,7 +1677,20 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
               {activityType === 'REUNION' && (
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
+                    {getCompanyAddress() && (
+                      <button
+                        type="button"
+                        onClick={() => setNewLocation(getCompanyAddress())}
+                        className="text-[10px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Rellenar con la dirección de la empresa del contacto"
+                      >
+                        <MapPin size={11} />
+                        <span>Usar dirección de la empresa</span>
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     placeholder="Sede del cliente / Oficinas dTS..."
@@ -1924,7 +1963,20 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
               {editActivityType !== 'NOTE' && editActivityType !== 'TASK' && (
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
+                    {getCompanyAddress() && (
+                      <button
+                        type="button"
+                        onClick={() => setEditLocation(getCompanyAddress())}
+                        className="text-[10px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Rellenar con la dirección de la empresa del contacto"
+                      >
+                        <MapPin size={11} />
+                        <span>Usar dirección de la empresa</span>
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={editLocation}

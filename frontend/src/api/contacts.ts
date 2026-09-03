@@ -22,7 +22,12 @@ export interface ContactDataRow {
     salesperson_code?: string;
     phone_no?: string;
     email?: string;
-    city?: string;
+    address?: string | null;
+    address_2?: string | null;
+    post_code?: string | null;
+    city?: string | null;
+    county?: string | null;
+    country_reg_code?: string | null;
   };
 }
 

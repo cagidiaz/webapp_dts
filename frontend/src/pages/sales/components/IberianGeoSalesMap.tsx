@@ -2,17 +2,44 @@ import React, { useState, useMemo } from 'react';
 import { geoMercator, geoPath } from 'd3-geo';
 import { 
   MapPin, TrendingUp, Euro, Building2, Sparkles, 
-  ChevronDown, ChevronUp, Layers, Award, Info
+  ChevronDown, ChevronUp, Layers, Award, Info, Globe
 } from 'lucide-react';
 import { type CustomerDataRow, CLIENT_TYPES } from '../../../api/customers';
 import { formatCurrency } from '../../../api/formatters';
 import { getCustomerGeoLocation, type GeoLocation } from '../../../utils/geoCoordinates';
 import iberiaGeoData from '../../../assets/geo/iberia-provinces.json';
 
+export const COUNTRY_INFO: Record<string, { name: string; flag: string }> = {
+  'AT': { name: 'Austria', flag: '🇦🇹' },
+  'FR': { name: 'Francia', flag: '🇫🇷' },
+  'DE': { name: 'Alemania', flag: '🇩🇪' },
+  'IT': { name: 'Italia', flag: '🇮🇹' },
+  'US': { name: 'EE.UU.', flag: '🇺🇸' },
+  'GB': { name: 'Reino Unido', flag: '🇬🇧' },
+  'UK': { name: 'Reino Unido', flag: '🇬🇧' },
+  'IE': { name: 'Irlanda', flag: '🇮🇪' },
+  'NL': { name: 'Países Bajos', flag: '🇳🇱' },
+  'BE': { name: 'Bélgica', flag: '🇧🇪' },
+  'CH': { name: 'Suiza', flag: '🇨🇭' },
+  'MX': { name: 'México', flag: '🇲🇽' },
+  'CO': { name: 'Colombia', flag: '🇨🇴' },
+  'CL': { name: 'Chile', flag: '🇨🇱' },
+  'DZ': { name: 'Argelia', flag: '🇩🇿' },
+  'GH': { name: 'Ghana', flag: '🇬🇭' },
+  'AE': { name: 'EAU (Dubái)', flag: '🇦🇪' },
+  'CN': { name: 'China', flag: '🇨🇳' },
+  'AN': { name: 'Antillas', flag: '🏝️' },
+  'MA': { name: 'Marruecos', flag: '🇲🇦' },
+  'SE': { name: 'Suecia', flag: '🇸🇪' },
+  'NO': { name: 'Noruega', flag: '🇳🇴' },
+  'DK': { name: 'Dinamarca', flag: '🇩🇰' },
+  'PL': { name: 'Polonia', flag: '🇵🇱' },
+};
+
 export interface GeoZone {
-  id: string; // 'ES-28', 'PT-lisboa', etc.
-  name: string; // 'Madrid', 'Barcelona', etc.
-  country?: string; // 'ES' | 'PT'
+  id: string; // 'ES-28', 'PT-lisboa', 'INTL', etc.
+  name: string; // 'Madrid', 'Barcelona', 'Internacional / Exportación', etc.
+  country?: string; // 'ES' | 'PT' | 'INTL'
 }
 
 interface IberianGeoSalesMapProps {
@@ -121,65 +148,96 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
     return { peninsulaPaths: pen, canariasPaths: can, outlinePaths: outlines };
   }, [peninsulaPathGenerator, canariasPathGenerator]);
 
-  // Procesamiento de clientes y agregados provinciales
+  // Procesamiento de clientes, agregados provinciales y clientes internacionales
   const { 
     mappedCustomers, 
     provinceAggregates, 
     summaryStats, 
-    topRanked,
-    totalZoneCount,
-    maxProvinceVal,
-    maxCustomerVal 
+    topRanked, 
+    totalZoneCount, 
+    maxProvinceVal, 
+    maxCustomerVal, 
+    intlCustomerCount 
   } = useMemo(() => {
     if (!customers || customers.length === 0) {
       return { 
         mappedCustomers: [], 
+        internationalCustomers: [],
         provinceAggregates: {}, 
         summaryStats: { totalVal: 0, topRegion: 'N/D', topRegionPct: 0, provinceCount: 0 }, 
         topRanked: [],
         totalZoneCount: 0,
         maxProvinceVal: 1,
-        maxCustomerVal: 1
+        maxCustomerVal: 1,
+        intlCustomerCount: 0
       };
     }
 
     const validList: { customer: CustomerDataRow; geo: GeoLocation; value: number; coords: [number, number] }[] = [];
+    const intlList: { customer: CustomerDataRow; geo: GeoLocation; value: number; coords: [number, number] }[] = [];
     const provAgg: Record<string, { totalSales: number; totalDebt: number; count: number; name: string; country: string }> = {};
     const regionTotals: Record<string, number> = {};
     const provinceSet = new Set<string>();
 
     for (const c of customers) {
+      const country = (c.country_reg_code || '').trim().toUpperCase();
+      const isForeign = country && country !== 'ES' && country !== 'PT' && country !== 'ESP' && country !== 'PRT' && country !== 'E' && country !== 'P';
       const sales = Number(c.total_sales || 0);
       const debt = Number(c.balance_due_lcy || 0);
-      const geo = getCustomerGeoLocation(c);
+      const val = metric === 'sales' ? sales : debt;
 
-      if (geo) {
-        const provKey = geo.id; // 'ES-28', 'PT-lisboa'
-        if (!provAgg[provKey]) {
-          provAgg[provKey] = { totalSales: 0, totalDebt: 0, count: 0, name: geo.name, country: geo.country };
-        }
-        provAgg[provKey].totalSales += sales;
-        provAgg[provKey].totalDebt += debt;
-        provAgg[provKey].count += 1;
+      if (isForeign) {
+        const countryLabel = COUNTRY_INFO[country]?.name || country;
+        intlList.push({
+          customer: c,
+          geo: {
+            id: 'INTL',
+            code: country,
+            name: countryLabel,
+            region: 'Internacional',
+            country: 'ES' as any,
+            lat: 0,
+            lng: 0,
+            isCanarias: false
+          },
+          value: val,
+          coords: [0, 0]
+        });
+      } else {
+        const geo = getCustomerGeoLocation(c);
+        if (geo) {
+          const provKey = geo.id; // 'ES-28', 'PT-lisboa'
+          if (!provAgg[provKey]) {
+            provAgg[provKey] = { totalSales: 0, totalDebt: 0, count: 0, name: geo.name, country: geo.country };
+          }
+          provAgg[provKey].totalSales += sales;
+          provAgg[provKey].totalDebt += debt;
+          provAgg[provKey].count += 1;
 
-        const val = metric === 'sales' ? sales : debt;
-        // Si el cliente está en Canarias, proyectar con canariasProjection; si no, con peninsulaProjection
-        const projected = geo.isCanarias 
-          ? canariasProjection([geo.lng, geo.lat])
-          : peninsulaProjection([geo.lng, geo.lat]);
+          // Si el cliente está en Canarias, proyectar con canariasProjection; si no, con peninsulaProjection
+          const projected = geo.isCanarias 
+            ? canariasProjection([geo.lng, geo.lat])
+            : peninsulaProjection([geo.lng, geo.lat]);
 
-        if (projected) {
-          validList.push({ customer: c, geo, value: val, coords: projected });
-          provinceSet.add(geo.name);
-          regionTotals[geo.region] = (regionTotals[geo.region] || 0) + val;
+          if (projected) {
+            validList.push({ customer: c, geo, value: val, coords: projected });
+            provinceSet.add(geo.name);
+            regionTotals[geo.region] = (regionTotals[geo.region] || 0) + val;
+          }
         }
       }
     }
 
     // Ordenar de mayor a menor según la métrica seleccionada
     validList.sort((a, b) => b.value - a.value);
+    intlList.sort((a, b) => b.value - a.value);
 
     const mapped: MappedCustomer[] = validList.map((item, idx) => ({
+      ...item,
+      rank: idx + 1
+    }));
+
+    const mappedIntl: MappedCustomer[] = intlList.map((item, idx) => ({
       ...item,
       rank: idx + 1
     }));
@@ -205,17 +263,20 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
 
     const maxCust = mapped.length > 0 ? mapped[0].value : 1;
 
-    // Si hay una zona/provincia seleccionada, filtrar exhaustivamente para el ranking de Mejores Clientes
-    const activeZoneCustomers = activeZoneId 
-      ? mapped.filter(m => {
-          const matchId = m.geo.id === activeZoneId;
-          const normZoneName = activeZone?.name?.toLowerCase() || '';
-          const matchName = normZoneName ? m.geo.name.toLowerCase() === normZoneName : false;
-          const matchCity = normZoneName ? Boolean(m.customer.city?.toLowerCase().includes(normZoneName)) : false;
-          const matchCounty = normZoneName ? Boolean(m.customer.county?.toLowerCase().includes(normZoneName)) : false;
-          return matchId || matchName || matchCity || matchCounty;
-        })
-      : mapped.filter(m => m.value > 0);
+    // Si hay una zona/provincia seleccionada, filtrar clientes
+    let activeZoneCustomers: MappedCustomer[] = [];
+    if (activeZoneId === 'INTL') {
+      activeZoneCustomers = mappedIntl;
+    } else if (activeZoneId) {
+      activeZoneCustomers = mapped.filter(m => {
+        const matchId = m.geo.id === activeZoneId;
+        const normZoneName = activeZone?.name?.toLowerCase() || '';
+        const matchName = normZoneName ? m.geo.name.toLowerCase() === normZoneName : false;
+        return matchId || matchName;
+      });
+    } else {
+      activeZoneCustomers = mapped.filter(m => m.value > 0);
+    }
 
     const reRankedZoneCustomers = activeZoneCustomers.map((item, idx) => ({
       ...item,
@@ -224,6 +285,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
 
     return {
       mappedCustomers: mapped,
+      internationalCustomers: mappedIntl,
       provinceAggregates: provAgg,
       summaryStats: {
         totalVal,
@@ -234,7 +296,8 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
       topRanked: reRankedZoneCustomers.slice(0, topLimit),
       totalZoneCount: reRankedZoneCustomers.length,
       maxProvinceVal: maxProv,
-      maxCustomerVal: maxCust
+      maxCustomerVal: maxCust,
+      intlCustomerCount: mappedIntl.length
     };
   }, [customers, metric, topLimit, peninsulaProjection, canariasProjection, activeZoneId, activeZone]);
 
@@ -315,6 +378,22 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
               <span className="text-gray-500 dark:text-gray-400 font-medium">Provincias Activas:</span>
               <span className="font-bold text-gray-800 dark:text-gray-200">{summaryStats.provinceCount}</span>
             </div>
+
+            {/* Botón Acceso Rápido Clientes Internacionales / Fuera de la Península */}
+            {intlCustomerCount > 0 && (
+              <button
+                onClick={() => handleToggleZone('INTL', 'Internacional / Exportación', 'INTL')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                  activeZoneId === 'INTL'
+                    ? 'bg-[#00B0B9] text-white border-[#00B0B9] shadow-sm ring-2 ring-[#00B0B9]/30'
+                    : 'bg-white dark:bg-dts-primary-dark text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-dts-secondary'
+                }`}
+                title="Listar y consultar clientes fuera de la Península (Exportación / Internacional)"
+              >
+                <Globe size={13} className={activeZoneId === 'INTL' ? 'text-white' : 'text-dts-secondary'} />
+                <span>Internacional ({intlCustomerCount})</span>
+              </button>
+            )}
 
             {/* Selector de Métrica */}
             <div className="inline-flex p-1 bg-gray-100 dark:bg-dts-primary-dark rounded-lg border border-gray-200/80 dark:border-gray-700 text-xs font-semibold">
@@ -704,6 +783,32 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
                 )}
               </svg>
 
+              {/* Banner flotante de Modo Internacional */}
+              {activeZoneId === 'INTL' && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2.5 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-md text-white text-xs font-semibold rounded-2xl border border-cyan-400/50 shadow-2xl flex items-center gap-3 animate-in fade-in zoom-in-95">
+                  <div className="w-7 h-7 rounded-xl bg-cyan-500/20 text-[#00B0B9] flex items-center justify-center shrink-0 border border-cyan-500/30">
+                    <Globe size={16} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-cyan-300 font-bold">Mercado Internacional / Exportación</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/30 font-mono">
+                        {intlCustomerCount} clientes
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 font-normal">
+                      Mostrando clientes fuera de la Península Ibérica en el ranking lateral y tabla.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => handleToggleZone('INTL', 'Internacional / Exportación', 'INTL')}
+                    className="ml-2 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-cyan-200 hover:text-white text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Quitar ✕
+                  </button>
+                </div>
+              )}
+
               {/* PANEL DE INFORMACIÓN FIJA AL EXTREMO SUPERIOR IZQUIERDO DEL MAPA (SOBRE EL OCÉANO ATLÁNTICO) */}
               <div className="absolute top-2 left-2 z-30 pointer-events-none">
                 {hoveredCustomer ? (
@@ -878,9 +983,19 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
 
                         {/* Fila inferior */}
                         <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400">
-                          <span className="flex items-center gap-1 truncate max-w-35">
+                          <span className="flex items-center gap-1 truncate max-w-45">
                             <MapPin size={10} className="text-gray-400 shrink-0" />
-                            <span className="truncate">{item.customer.city || item.geo.name}</span>
+                            <span className="truncate">
+                              {(() => {
+                                const rawCountry = (item.customer.country_reg_code || '').trim().toUpperCase();
+                                const isForeign = rawCountry && !['ES', 'PT', 'ESP', 'PRT', 'E', 'P'].includes(rawCountry);
+                                if (isForeign) {
+                                  const info = COUNTRY_INFO[rawCountry];
+                                  return `${info?.flag || '🌍'} ${item.customer.city ? item.customer.city + ', ' : ''}${info?.name || rawCountry}`;
+                                }
+                                return item.customer.city || item.geo.name;
+                              })()}
+                            </span>
                           </span>
 
                           <div className="flex items-center gap-1.5">

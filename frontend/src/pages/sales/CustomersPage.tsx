@@ -193,7 +193,7 @@ export const CustomersPage: React.FC = () => {
       clientType: clientTypeFilter || undefined, 
       marketSegment: marketFilter || undefined,
       businessModel: businessModelFilter || undefined,
-      territory: selectedGeoZone ? selectedGeoZone.name : (territoryFilter || undefined),
+      territory: selectedGeoZone ? (selectedGeoZone.id === 'INTL' ? 'INTL' : selectedGeoZone.name) : (territoryFilter || undefined),
       paymentTerms: paymentTermsFilter || undefined,
       shipmentMethod: shipmentMethodFilter || undefined,
       sortBy, 
@@ -524,10 +524,10 @@ export const CustomersPage: React.FC = () => {
               {/* Tag de Zona Geográfica Seleccionada en el Mapa */}
               {selectedGeoZone && (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-dts-secondary/15 text-dts-secondary border border-dts-secondary/30 shadow-xs shrink-0 animate-in fade-in zoom-in-95 duration-150">
-                  <span>🗺️ {selectedGeoZone.name}</span>
+                  <span>{selectedGeoZone.id === 'INTL' ? '🌍' : '🗺️'} {selectedGeoZone.name}</span>
                   <button 
                     onClick={() => setSelectedGeoZone(null)} 
-                    className="hover:text-red-500 ml-0.5 font-black transition-colors"
+                    className="hover:text-red-500 ml-0.5 font-black transition-colors cursor-pointer"
                     title="Quitar filtro de zona geográfica"
                   >
                     ✕

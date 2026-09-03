@@ -59,6 +59,9 @@ Ubicado en `/sales/customers`, ofrece un directorio analítico de clientes con f
 * **Días Reales de Cobro (Cálculo Híbrido Contractual + Mora)**:
   * Combina los términos contractuales de Business Central (`payment_terms_code`, ej. *Contado*, *30d*, *60d*) con el cálculo proporcional de retraso por saldo vencido impagado (`balance_due_lcy > 0`).
   * Muestra el plazo al corriente (ej. `30d`) o con badge de advertencia si existe demora (ej. `78d (+18d mora)`).
+* **Mercado Internacional / Exportación**:
+  * Identificación automática de clientes con sede fuera de España y Portugal con su respectiva bandera nacional y código de país.
+  * Botón interactivo en cabecera del mapa (`🌍 Ver Internacionales`) para filtrar simultáneamente en servidor (`territory=INTL`) y visualizar de forma dedicada los clientes extranjeros en el ranking lateral y la tabla.
 * **Tabla de Alto Rendimiento y Filtros Avanzados**:
   * Scroll continuo y memoización de filas con buffer de 40 clientes.
   * Columnas secundarias (*Territorio*, *Mercado*, *Mod. Negocio*) configurables en el popover selector y optimizadas para evitar scroll horizontal.
@@ -142,6 +145,9 @@ Ubicado en `/crm/contacts` y `/crm/customers`.
 
 * **Directorio de Interlocutores**: Registro de personas de contacto por empresa (nombre, cargo, teléfono, email y notas).
 * **Timeline Histórico de Actividades**: Registro cronológico de reuniones, llamadas, notas comerciales y correos electrónicos vinculados al cliente.
+* **Gestión de Eventos y Reuniones Presenciales**:
+  * Al programar una actividad de tipo *Reunión Presencial* (`REUNION`), el campo de ubicación se autocompleta de forma automática con la dirección física completa de la empresa.
+  * Botón de restauración rápida (*📍 Usar dirección de la empresa*) para volver a aplicar la sede del cliente con un clic si fuera necesario.
 
 ---
 
