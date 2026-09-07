@@ -50,4 +50,4 @@ COPY --from=frontend-builder /build/frontend/dist ./frontend/dist
 # 3. Final entrypoint
 EXPOSE 3000
 ENV NODE_ENV=production
-CMD ["node", "backend/dist/src/main.js"]
+CMD ["sh", "-c", "if [ -f backend/dist/src/main.js ]; then node backend/dist/src/main.js; else node backend/dist/main.js; fi"]
