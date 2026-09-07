@@ -36,7 +36,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://localhost:5173/outlook-addin" />
+        <SourceLocation DefaultValue="https://localhost:5173/outlook-crm" />
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -88,7 +88,7 @@
         <bt:Image id="Icon80" DefaultValue="https://app.dtsinstruments.com/outlook-addin/icon.png" />
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="TaskpaneUrl" DefaultValue="https://localhost:5173/outlook-addin" />
+        <bt:Url id="TaskpaneUrl" DefaultValue="https://localhost:5173/outlook-crm" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="dTS CRM" />

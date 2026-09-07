@@ -95,6 +95,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/outlook-addin" element={<OutlookAddinPage />} />
+          <Route path="/outlook-crm" element={<OutlookAddinPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Navigate to="/dashboard" replace />} />
