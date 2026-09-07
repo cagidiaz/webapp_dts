@@ -11,3 +11,4 @@ export * from './quotes';
 export * from './crmActivities';
 export * from './vendors';
 export * from './exchangeSync';
+export * from './outlookAddin';

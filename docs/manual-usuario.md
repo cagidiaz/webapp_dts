@@ -176,12 +176,15 @@ Integrada en la ficha del contacto/cliente en el CRM.
 ---
 
 ### 3.4 Complemento de Outlook (Add-in dTS CRM)
-Extensión integrada para Microsoft Outlook (Web y Escritorio).
+Extensión oficial integrada en la cinta de opciones de Microsoft Outlook (Web, Escritorio Windows y Mac). Para instrucciones completas de instalación ver [Guía de Instalación y Despliegue del Add-in de Outlook](file:///c:/proyectos/webapp_dts/docs/manual-instalacion-addin-outlook.md).
 
-* **Detección Automática**: Reconocimiento del remitente o destinatarios buscando coincidencias en la base de datos de clientes y contactos de dTS Instruments.
-* **Registro de Correos con Fecha Histórica**: Al pulsar *Registrar Email en dTS CRM*, conserva la fecha y hora de emisión original del mensaje (`created_at`) en el Timeline.
-* **Limpieza Inteligente**: Depuración automática de firmas, cadenas de respuesta y cláusulas legales (limitando a 500 caracteres clave).
-* **Vinculación Manual**: Buscador predictivo para asociar correos a empresas cuando el remitente no esté registrado previamente.
+* **Botón Ribbon "Registrar en dTS CRM"**: Acceso en caliente desde la barra superior de Outlook mientras se lee o redacta cualquier correo.
+* **Detección Contextual Inteligente**: Reconocimiento automático del contacto y empresa (evalúa el remitente en recibidos o el destinatario en enviados).
+* **Vinculación Dual (Contacto + Ofertas del Pipeline)**: Desplegable interactivo para asociar el correo a cotizaciones abiertas del cliente (`sales_quotes_crm` y `sales_quote_activities`).
+* **Etiquetado Comercial por Tipología**: Clasificación en un clic (`📄 Cierre / Aceptación`, `⚙️ Especificación Técnica`, `💬 Negociación`, `⚠️ Incidencia / Postventa`, `✉️ General`).
+* **Limpieza Inteligente de RGPD**: Filtro automático de cláusulas legales de privacidad, cadenas repetidas de reenvío y firmas pesadas.
+* **Prevención Activa de Duplicados**: Detección por identificador único de Microsoft Graph (`✓ Ya registrado en dTS CRM`).
+* **Asociación Flexible a Empresas**: Permite vincular correos de remitentes no registrados directamente al historial de la empresa cliente (los contactos oficiales se gestionan exclusivamente en Business Central y se sincronizan vía n8n).
 
 ---
 

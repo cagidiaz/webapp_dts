@@ -11,8 +11,9 @@ Este archivo contiene las directrices críticas y reglas de desarrollo específi
 ---
 
 ## 2. CONTROL DE VERSIONES (GIT) Y DESPLIEGUE 🚨
+* **PROHIBICIÓN TOTAL DE PUSH AUTOMÁTICO (REGLA INQUEBRANTABLE):** Está **estrictamente prohibido** que realices subidas (`git push`) a GitHub por tu cuenta bajo ninguna circunstancia.
+* **VERIFICACIÓN Y PRUEBAS PREVIAS DEL USUARIO:** **NUNCA** subas a GitHub hasta que el usuario haya probado y verificado personalmente en su entorno que todo funciona a la perfección. La subida a GitHub solo se realizará cuando el usuario lo solicite de forma explícita (ej. *"sube a producción"*, *"haz git push"*).
 * **Mensajes de Commit Semánticos:** Usar prefijos semánticos en español (`feat:`, `fix:`, `style:`, `docs:`, etc.) y opcionalmente etiquetas de rol: `[ADMIN]`, `[SALES]`, `[OPERACIONES]`.
-* **PUSH MANUAL ESTRICTO:** Está **estrictamente prohibido** que realices subidas automáticas (`git push`) a GitHub por tu cuenta. Solo se realizarán subidas bajo petición explícita y aprobación del usuario.
 * **Novedades de la App:** Solo los commits `feat:` y `style:` que sean descriptivos aparecerán en el modal de novedades de la aplicación. Los commits tipo `fix:` y cambios puramente técnicos deben filtrarse de esta vista.
 
 ---

@@ -205,7 +205,16 @@
   </main>
 
   <footer class="p-3 bg-dts-light dark:bg-dts-primary-dark/40 text-center text-[9px] text-slate-400 border-t border-slate-200/30 shrink-0">
-    dTS Instruments S.A. &copy; 202    let supabaseClient = null;
+    dTS Instruments S.A. &copy; 2026
+  </footer>
+
+  <script>
+    // Supabase configurations
+    const SUPABASE_URL = "https://db.dtsinstruments.com";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzM3MzIxMTksImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.YKEmC5AlCIPP-gnXh3x3Hc5ShyVW6HKVtrkPoJQqj6M";
+    const API_BASE_URL = 'https://app.dtsinstruments.com/api';
+
+    let supabaseClient = null;
     let activeCustomer = null;
     let activeContact = null;
     let emailSenderAddress = "";
@@ -283,47 +292,65 @@
       if (typeof Office !== 'undefined' && Office.context && Office.context.mailbox && Office.context.mailbox.item) {
         const item = Office.context.mailbox.item;
         
-        // Check if we are in Compose mode first (subject is an object with getAsync in Compose mode)
-        if (item.subject && typeof item.subject.getAsync === 'function') {
-          // Compose mode (Redacción)
+        const fromObj = item.from || item.sender;
+
+        if (fromObj) {
+          // Read mode (Lectura de correo recibido o enviado)
+          emailSubject = typeof item.subject === 'string' ? (item.subject || "(Sin Asunto)") : "(Sin Asunto)";
+          emailSenderAddress = fromObj.emailAddress || fromObj.address || '';
+          emailDateTime = item.dateTimeCreated ? new Date(item.dateTimeCreated).toISOString() : new Date().toISOString();
+          const formattedDate = new Date(emailDateTime).toLocaleString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          const fromDisplayName = fromObj.displayName || emailSenderAddress || 'Remitente';
+          document.getElementById('mailSender').innerText = `De: ${fromDisplayName} <${emailSenderAddress}>`;
+          document.getElementById('mailSubject').innerText = emailSubject;
+          document.getElementById('mailDate').innerText = `Fecha: ${formattedDate}`;
+          searchContactInCRM(emailSenderAddress);
+        } else if (item.to && typeof item.to.getAsync === 'function') {
+          // Compose mode (Redacción de correo nuevo)
           emailDateTime = new Date().toISOString();
           document.getElementById('mailSender').innerText = "Destinatario: Cargando...";
           document.getElementById('mailSubject').innerText = "Asunto: Cargando...";
           document.getElementById('mailDate').innerText = "Fecha: (Se enviará ahora)";
 
           // Fetch recipients asynchronously
-          if (item.to && typeof item.to.getAsync === 'function') {
-            item.to.getAsync((asyncResult) => {
-              if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-                const recipients = asyncResult.value;
-                if (recipients && recipients.length > 0) {
-                  emailSenderAddress = recipients[0].emailAddress;
-                  const displayName = recipients[0].displayName || emailSenderAddress;
-                  document.getElementById('mailSender').innerText = `Para: ${displayName} <${emailSenderAddress}>`;
-                  searchContactInCRM(emailSenderAddress);
-                } else {
-                  emailSenderAddress = "";
-                  document.getElementById('mailSender').innerText = "Para: (Sin destinatario)";
-                  showCrmState('crmNotFound');
-                  loadContactSelector();
-                }
+          item.to.getAsync((asyncResult) => {
+            if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+              const recipients = asyncResult.value;
+              if (recipients && recipients.length > 0) {
+                emailSenderAddress = recipients[0].emailAddress || recipients[0].address || '';
+                const displayName = recipients[0].displayName || emailSenderAddress;
+                document.getElementById('mailSender').innerText = `Para: ${displayName} <${emailSenderAddress}>`;
+                searchContactInCRM(emailSenderAddress);
               } else {
                 emailSenderAddress = "";
-                document.getElementById('mailSender').innerText = "Para: (Error al leer destinatario)";
+                document.getElementById('mailSender').innerText = "Para: (Sin destinatario)";
+                showCrmState('crmNotFound');
+                loadContactSelector();
+              }
+            } else {
+              emailSenderAddress = "";
+              document.getElementById('mailSender').innerText = "Para: (Error al leer destinatario)";
+            }
+          });
+
+          // Fetch subject asynchronously
+          if (item.subject && typeof item.subject.getAsync === 'function') {
+            item.subject.getAsync((asyncResult) => {
+              if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                emailSubject = asyncResult.value || "(Sin Asunto)";
+                document.getElementById('mailSubject').innerText = emailSubject;
+              } else {
+                emailSubject = "(Sin Asunto)";
+                document.getElementById('mailSubject').innerText = emailSubject;
               }
             });
           }
-
-          // Fetch subject asynchronously
-          item.subject.getAsync((asyncResult) => {
-            if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-              emailSubject = asyncResult.value || "(Sin Asunto)";
-              document.getElementById('mailSubject').innerText = emailSubject;
-            } else {
-              emailSubject = "(Sin Asunto)";
-              document.getElementById('mailSubject').innerText = emailSubject;
-            }
-          });
 
           // Register handlers to auto-update when user changes recipients in compose mode (only once)
           if (!areHandlersRegistered) {
@@ -332,7 +359,6 @@
                   Office.EventType && 
                   Office.EventType.RecipientsChanged && 
                   Office.context.requirements.isSetSupported('Mailbox', '1.7')) {
-                // Register recipients changed event directly on the item
                 item.addHandlerAsync(Office.EventType.RecipientsChanged, () => {
                   loadOutlookContext();
                 });
@@ -341,7 +367,6 @@
               console.error("Error al registrar el controlador RecipientsChanged:", err);
             }
 
-            // Start a polling interval (every 2 seconds) to dynamically update the subject in the UI
             setInterval(() => {
               try {
                 if (item.subject && typeof item.subject.getAsync === 'function') {
@@ -362,26 +387,10 @@
 
             areHandlersRegistered = true;
           }
-        } else if (item.from) {
-          // Read mode (Lectura)
-          emailSubject = item.subject || "(Sin Asunto)";
-          emailSenderAddress = item.from.emailAddress;
-          emailDateTime = item.dateTimeCreated ? new Date(item.dateTimeCreated).toISOString() : new Date().toISOString();
-          const formattedDate = new Date(emailDateTime).toLocaleString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-          document.getElementById('mailSender').innerText = `${item.from.displayName} <${emailSenderAddress}>`;
-          document.getElementById('mailSubject').innerText = emailSubject;
-          document.getElementById('mailDate').innerText = `Fecha original: ${formattedDate}`;
-          searchContactInCRM(emailSenderAddress);
         } else {
           emailSenderAddress = "";
           emailDateTime = new Date().toISOString();
-          document.getElementById('mailSender').innerText = "Borrador o destinatario desconocido";
+          document.getElementById('mailSender').innerText = "Borrador o desconocido";
           document.getElementById('mailSubject').innerText = "(Sin Asunto)";
           document.getElementById('mailDate').innerText = "Fecha: ---";
           showCrmState('crmNotFound');

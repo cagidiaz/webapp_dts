@@ -16,6 +16,7 @@ import { CustomersPage, ProductsPage, SalesBudgetPage, SalesOrdersPage, ProductB
 import { CrmPage } from './pages/crm';
 import { VendorsPage, PurchaseOrdersPage } from './pages/purchases';
 import { SettingsPage } from './pages/settings';
+import { OutlookAddinPage } from './pages/outlook-addin/OutlookAddinPage';
 
 import { supabase } from './api/supabase';
 import { useAuthStore } from './store/authStore';
@@ -93,6 +94,7 @@ const App: React.FC = () => {
         <ScrollToTop /> {/* Reset scroll position on route change */}
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/outlook-addin" element={<OutlookAddinPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Navigate to="/dashboard" replace />} />

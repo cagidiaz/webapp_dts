@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { 
@@ -22,6 +22,11 @@ export const FinancialDashboard: React.FC = () => {
   const { setPageInfo } = useUIStore();
   const currentYear = new Date().getFullYear();
   const [selectedSalesperson, setSelectedSalesperson] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // 1. Fetch Finance Data (for EBITDA)
 
@@ -234,7 +239,7 @@ export const FinancialDashboard: React.FC = () => {
                 iconSize={12} 
               />
             </div>
-            <div className="w-full h-24 mt-4">
+            <div className="w-full h-24 mt-4" style={{ height: 96, minHeight: 96 }}>
               <GaugeChart value={annualStats.pctAchievement} />
             </div>
             <div className="text-center mt-2">
@@ -296,74 +301,76 @@ export const FinancialDashboard: React.FC = () => {
               <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700"></span> <span>Ppto</span></div>
             </div>
           </div>
-          <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22C55E" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#22C55E" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorPrev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#818CF8" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#818CF8" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 11, fill: '#9CA3AF' }} 
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 11, fill: '#9CA3AF' }} 
-                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#002A38', 
-                    border: 'none', 
-                    borderRadius: '12px', 
-                    color: '#fff',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                  }}
-                  itemStyle={{ fontSize: '12px' }}
-                  labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
-                  formatter={(value: any, name: any) => [formatCurrency(Number(value || 0)), String(name || '')]}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="Año Anterior" 
-                  stroke="#818CF8" 
-                  strokeWidth={2} 
-                  fillOpacity={1} 
-                  fill="url(#colorPrev)" 
-                  animationDuration={1500}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="Ventas" 
-                  name="Año Actual"
-                  stroke="#22C55E" 
-                  strokeWidth={2} 
-                  fillOpacity={1} 
-                  fill="url(#colorSales)" 
-                  animationDuration={2000}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="Objetivo" 
-                  stroke="#9CA3AF" 
-                  strokeWidth={2} 
-                  strokeDasharray="5 5" 
-                  fill="transparent" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-[350px] w-full min-w-0" style={{ height: 350, minHeight: 350 }}>
+            {isMounted && (
+              <ResponsiveContainer width="100%" height={350} initialDimension={{ width: 500, height: 350 }}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22C55E" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#22C55E" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorPrev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#818CF8" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#818CF8" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 11, fill: '#9CA3AF' }} 
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 11, fill: '#9CA3AF' }} 
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#002A38', 
+                      border: 'none', 
+                      borderRadius: '12px', 
+                      color: '#fff',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                    }}
+                    itemStyle={{ fontSize: '12px' }}
+                    labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
+                    formatter={(value: any, name: any) => [formatCurrency(Number(value || 0)), String(name || '')]}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="Año Anterior" 
+                    stroke="#818CF8" 
+                    strokeWidth={2} 
+                    fillOpacity={1} 
+                    fill="url(#colorPrev)" 
+                    animationDuration={1500}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="Ventas" 
+                    name="Año Actual"
+                    stroke="#22C55E" 
+                    strokeWidth={2} 
+                    fillOpacity={1} 
+                    fill="url(#colorSales)" 
+                    animationDuration={2000}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="Objetivo" 
+                    stroke="#9CA3AF" 
+                    strokeWidth={2} 
+                    strokeDasharray="5 5" 
+                    fill="transparent" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -512,6 +519,11 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
 };
 
 const GaugeChart = ({ value }: { value: number }) => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const normalizedValue = Math.min(Math.max(value, 0), 100);
   const data = [
     { value: normalizedValue, color: '#22C55E' },
@@ -528,7 +540,7 @@ const GaugeChart = ({ value }: { value: number }) => {
   else data[0].color = '#22C55E'; // Verde
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full min-w-0 min-h-0" style={{ height: 96, minHeight: 96 }}>
       {/* Semicircle Track for Ticks */}
       <div 
         className="absolute left-1/2 -translate-x-1/2 aspect-square h-[170%] border border-gray-200 dark:border-white/20 rounded-full pointer-events-none z-0"
@@ -555,27 +567,29 @@ const GaugeChart = ({ value }: { value: number }) => {
         </div>
       ))}
 
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="100%"
-            startAngle={180}
-            endAngle={0}
-            innerRadius="65%"
-            outerRadius="100%"
-            paddingAngle={0}
-            dataKey="value"
-            stroke="none"
-            animationDuration={1500}
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
+      {mounted && (
+        <ResponsiveContainer width="100%" height={96} initialDimension={{ width: 200, height: 96 }}>
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="100%"
+              startAngle={180}
+              endAngle={0}
+              innerRadius="65%"
+              outerRadius="100%"
+              paddingAngle={0}
+              dataKey="value"
+              stroke="none"
+              animationDuration={1500}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      )}
       
       {/* Needle Indicator (Arrow Shape) */}
       <div 

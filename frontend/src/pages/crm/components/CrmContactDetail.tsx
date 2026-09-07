@@ -15,7 +15,7 @@ import {
   ArrowLeft, Phone, Mail, MapPin, Smartphone,
   Linkedin, Edit2, Check, X, Plus, Calendar, Clock, Percent,
   Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users, ExternalLink,
-  Copy, CheckCheck, Laptop, Globe, RefreshCw
+  Copy, CheckCheck, Laptop, Globe, RefreshCw, Building2, PhoneCall
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 
@@ -115,6 +115,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [locCounty, setLocCounty] = useState<string>('');
   const [locTerritoryCode, setLocTerritoryCode] = useState<string>('');
   const [isSavingLocation, setIsSavingLocation] = useState<boolean>(false);
+
+  // Company sub-tab state (general vs comunicacion)
+  const [companyTab, setCompanyTab] = useState<'general' | 'comunicacion'>('general');
 
   // Modals
   const [showEventModal, setShowEventModal] = useState(false);
@@ -1028,70 +1031,76 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         </div>
 
         {/* Tab contents (scrollable) */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1">
           {/* Info Tab */}
           {activeTab === 'info' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
-              <div className="space-y-6">
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="space-y-3.5">
+                {/* Datos del Contacto */}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 dark:border-white/5 pb-1.5">
+                    <User size={14} className="text-dts-secondary" />
+                    Datos del Contacto
+                  </h3>
+
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                     <div>
-                      <span className="text-gray-400 font-medium">Nombre completo</span>
-                      <span className="block font-bold text-gray-900 dark:text-white mt-1">{contact.name}</span>
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Nombre Completo</span>
+                      <span className="block font-semibold text-gray-900 dark:text-white mt-0.5">{contact.name}</span>
                     </div>
                     <div>
-                      <span className="text-gray-400 font-medium">Cargo</span>
-                      <span className="block font-bold text-gray-900 dark:text-white mt-1">{contact.job_title || 'No especificado'}</span>
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Cargo</span>
+                      <span className="block font-semibold text-gray-900 dark:text-white mt-0.5">{contact.job_title || 'No especificado'}</span>
                     </div>
                     <div>
-                      <span className="text-gray-400 font-medium">Email</span>
-                      <span className="block font-bold text-gray-900 dark:text-white mt-1 break-all">{contact.email || 'No especificado'}</span>
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Email</span>
+                      <span className="block font-semibold text-gray-900 dark:text-white mt-0.5 break-all">{contact.email || 'No especificado'}</span>
                     </div>
                     <div>
-                      <span className="text-gray-400 font-medium">Teléfono / Móvil</span>
-                      <span className="block font-bold text-gray-900 dark:text-white mt-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Teléfono / Móvil</span>
+                      <span className="block font-semibold text-gray-900 dark:text-white mt-0.5">
                         {contact.phone_no || contact.mobile_no || 'No especificado'}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-400 font-medium">Nivel Organizacional</span>
-                      <span className="block font-bold text-gray-900 dark:text-white mt-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Nivel Organizacional</span>
+                      <span className="block font-semibold text-gray-900 dark:text-white mt-0.5">
                         {contact.org_level_code ? contact.org_level_code.replace(/\.+$/, '') : 'No especificado'}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-400 font-medium">Relación Comercial</span>
-                      <span className="block font-bold text-gray-900 dark:text-white mt-1">{contact.business_relation}</span>
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Relación Comercial</span>
+                      <span className="block font-semibold text-gray-900 dark:text-white mt-0.5">{contact.business_relation}</span>
                     </div>
 
                     {/* Ubicación del Contacto / Centro de Trabajo */}
-                    <div className="col-span-2 pt-3 border-t border-gray-100 dark:border-white/5">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <MapPin size={13} className="text-dts-secondary" />
+                    <div className="col-span-2 pt-3 mt-1 border-t border-gray-100 dark:border-white/5">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <MapPin size={11} className="text-dts-secondary" />
                           Ubicación del Contacto / Centro de Trabajo
                         </span>
                         <button
                           type="button"
                           onClick={handleOpenEditLocation}
-                          className="text-[11px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-[9.5px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <Edit2 size={11} />
+                          <Edit2 size={10} />
                           <span>{contact.address || contact.city ? 'Editar ubicación' : 'Asignar ubicación'}</span>
                         </button>
                       </div>
 
                       {contact.address || contact.city ? (
-                        <div className="p-3 rounded-xl bg-gray-50/50 dark:bg-white/2 border border-gray-100 dark:border-white/5 flex items-start justify-between gap-3">
+                        <div className="p-2.5 rounded-xl bg-gray-50/50 dark:bg-white/2 border border-gray-100 dark:border-white/5 flex items-start justify-between gap-3">
                           <div>
-                            {contact.address && <p className="font-bold text-gray-900 dark:text-white text-xs">{contact.address}</p>}
-                            {contact.address2 && <p className="text-[11px] text-gray-500">{contact.address2}</p>}
+                            {contact.address && <p className="font-semibold text-gray-900 dark:text-white text-xs">{contact.address}</p>}
+                            {contact.address2 && <p className="text-[11px] text-gray-500 dark:text-gray-400">{contact.address2}</p>}
                             <p className="text-xs text-gray-700 dark:text-gray-300 font-medium mt-0.5">
                               {[contact.post_code, contact.city].filter(Boolean).join(' ')}
                               {contact.county ? ` (${contact.county})` : ''}
                             </p>
                             {contact.territory_code && (
-                              <span className="inline-block mt-1.5 text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold">
+                              <span className="inline-block mt-1 text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold">
                                 Zona: {contact.territory_code}
                               </span>
                             )}
@@ -1106,7 +1115,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                           </button>
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-400 italic">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 italic">
                           No tiene dirección específica registrada (utiliza por defecto la sede de la empresa).
                         </p>
                       )}
@@ -1115,95 +1124,160 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 </div>
 
                 {contact.customer && (
-                  <div className="space-y-6 pt-4">
-                    <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-2">
-                      Datos de Empresa
-                    </h3>
-                    <div className="space-y-4 text-xs">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex gap-3">
-                          <MapPin className="text-dts-secondary shrink-0" size={18} />
-                          <div>
-                            <span className="text-[9px] text-gray-400 font-bold uppercase block">Localización</span>
-                            <p className="text-sm font-bold text-gray-900 dark:text-gray-200 mt-0.5">{contact.customer.address}</p>
-                            {contact.customer.address_2 && <p className="text-sm text-gray-600 dark:text-gray-400">{contact.customer.address_2}</p>}
-                            <p className="text-sm text-gray-700 dark:text-gray-300 font-bold">{contact.customer.post_code} {contact.customer.city}</p>
-                            {contact.customer.county && <p className="text-[9px] text-gray-400 uppercase tracking-wider font-bold mt-0.5">{contact.customer.county}</p>}
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <div className="flex gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-400 shrink-0">
-                              <Mail size={16} />
-                            </div>
-                            <div>
-                              <span className="text-[9px] text-gray-400 font-bold uppercase block">Email Principal</span>
-                              {contact.customer.email ? (
-                                <a href={`mailto:${contact.customer.email}`} className="text-xs font-semibold text-dts-primary dark:text-dts-secondary hover:underline break-all">
-                                  {contact.customer.email}
-                                </a>
-                              ) : <span className="text-xs text-gray-400 italic">No disponible</span>}
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-400 shrink-0">
-                              <Phone size={16} />
-                            </div>
-                            <div>
-                              <span className="text-[9px] text-gray-400 font-bold uppercase block">Teléfono Fijo</span>
-                              {contact.customer.phone_no ? (
-                                <a href={`tel:${contact.customer.phone_no}`} className="text-xs font-semibold text-dts-primary dark:text-dts-secondary hover:underline">
-                                  {contact.customer.phone_no}
-                                </a>
-                              ) : <span className="text-xs text-gray-400 italic">No disponible</span>}
-                            </div>
-                          </div>
-                        </div>
+                  <div className="space-y-2.5 pt-1">
+                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1.5">
+                      <h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider flex items-center gap-2">
+                        <Building2 size={14} className="text-dts-secondary" />
+                        Datos de Empresa
+                      </h3>
+                      {/* Sub-pestañas Empresa */}
+                      <div className="flex bg-gray-100 dark:bg-zinc-800 p-0.5 rounded-lg text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setCompanyTab('general')}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer text-[11px] ${
+                            companyTab === 'general'
+                              ? 'bg-white dark:bg-zinc-700 text-dts-primary dark:text-white shadow-xs'
+                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                          }`}
+                        >
+                          <Building2 size={12} />
+                          General
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCompanyTab('comunicacion')}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer text-[11px] ${
+                            companyTab === 'comunicacion'
+                              ? 'bg-white dark:bg-zinc-700 text-dts-primary dark:text-white shadow-xs'
+                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                          }`}
+                        >
+                          <PhoneCall size={12} />
+                          Comunicación
+                        </button>
                       </div>
+                    </div>
 
-                      <div className="p-4 bg-gray-50 dark:bg-white/1 rounded-xl border border-gray-100 dark:border-white/5 grid grid-cols-2 gap-4 text-xs">
+                    {companyTab === 'general' && (
+                      <div className="p-3 bg-gray-50 dark:bg-white/1 rounded-xl border border-gray-100 dark:border-white/5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                         <div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase block">Razón Social</span>
+                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Razón Social</span>
                           <span className="font-semibold text-gray-900 dark:text-white mt-0.5 block truncate" title={contact.customer.name}>
                             {contact.customer.name}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase block">Código ERP</span>
+                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Código ERP</span>
                           <span className="font-semibold font-mono text-gray-900 dark:text-white mt-0.5 block">{contact.customer.client_id}</span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase block">Segmento de Mercado</span>
+                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Segmento de Mercado</span>
                           <span className="font-semibold text-dts-primary dark:text-white mt-0.5 block">{contact.customer.market_segment || 'No definido'}</span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase block">Modelo de Negocio</span>
+                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Modelo de Negocio</span>
                           <span className="font-semibold text-dts-primary dark:text-white mt-0.5 block">{contact.customer.business_model || 'No definido'}</span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase block">Comercial Asignado</span>
+                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Comercial Asignado</span>
                           <span className="font-semibold text-dts-secondary mt-0.5 block">{contact.customer.salesperson_code || 'No asignado'}</span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase block">Condiciones Pago</span>
+                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Condiciones Pago</span>
                           <span className="font-semibold text-dts-primary dark:text-white mt-0.5 block">{contact.customer.payment_terms_code || 'Estándar'}</span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase block">Ventas Totales (Real)</span>
+                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Ventas Totales (Real)</span>
                           <span className="font-semibold font-mono text-emerald-500 mt-0.5 block">
                             {formatCurrency(contact.customer.total_sales, 0)}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase block">Saldo Vencido</span>
+                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Saldo Vencido</span>
                           <span className="font-semibold font-mono text-rose-500 mt-0.5 block">
                             {formatCurrency(contact.customer.balance_due_lcy, 0)}
                           </span>
                         </div>
                       </div>
-                    </div>
+                    )}
+
+                    {companyTab === 'comunicacion' && (
+                      <div className="space-y-2.5 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="p-2.5 bg-gray-50 dark:bg-white/1 rounded-xl border border-gray-100 dark:border-white/5 flex gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-dts-primary/5 dark:bg-white/5 flex items-center justify-center text-dts-primary dark:text-dts-secondary shrink-0">
+                              <Mail size={14} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Email Principal</span>
+                              {contact.customer.email ? (
+                                <a href={`mailto:${contact.customer.email}`} className="text-xs font-semibold text-dts-primary dark:text-dts-secondary hover:underline break-all block mt-0.5">
+                                  {contact.customer.email}
+                                </a>
+                              ) : <span className="text-xs text-gray-400 dark:text-gray-500 italic block mt-0.5">No disponible</span>}
+                            </div>
+                          </div>
+
+                          <div className="p-2.5 bg-gray-50 dark:bg-white/1 rounded-xl border border-gray-100 dark:border-white/5 flex gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-dts-primary/5 dark:bg-white/5 flex items-center justify-center text-dts-primary dark:text-dts-secondary shrink-0">
+                              <Phone size={14} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[10px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider block">Teléfono Fijo</span>
+                              {contact.customer.phone_no ? (
+                                <a href={`tel:${contact.customer.phone_no}`} className="text-xs font-semibold text-dts-primary dark:text-dts-secondary hover:underline block mt-0.5">
+                                  {contact.customer.phone_no}
+                                </a>
+                              ) : <span className="text-xs text-gray-400 dark:text-gray-500 italic block mt-0.5">No disponible</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Localización / Sede */}
+                        <div className="p-3 bg-gray-50 dark:bg-white/1 rounded-xl border border-gray-100 dark:border-white/5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex gap-2.5">
+                              <div className="w-7 h-7 rounded-lg bg-dts-secondary/10 dark:bg-white/5 flex items-center justify-center text-dts-secondary shrink-0 mt-0.5">
+                                <MapPin size={14} />
+                              </div>
+                              <div>
+                                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Sede / Dirección Física</span>
+                                {contact.customer.address ? (
+                                  <>
+                                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-200 mt-0.5">{contact.customer.address}</p>
+                                    {contact.customer.address_2 && <p className="text-[11px] text-gray-600 dark:text-gray-400">{contact.customer.address_2}</p>}
+                                    <p className="text-xs text-gray-700 dark:text-gray-300 font-semibold mt-0.5">
+                                      {[contact.customer.post_code, contact.customer.city].filter(Boolean).join(' ')}
+                                    </p>
+                                    {contact.customer.county && <p className="text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold mt-0.5">{contact.customer.county}</p>}
+                                  </>
+                                ) : (
+                                  <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-0.5">No tiene dirección registrada en Business Central</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {contact.customer.address && (
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                  [contact.customer.address, contact.customer.city, contact.customer.post_code, contact.customer.county]
+                                    .filter(Boolean)
+                                    .join(', ')
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold text-dts-primary dark:text-dts-secondary bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors shadow-xs shrink-0"
+                                title="Abrir en Google Maps"
+                              >
+                                <ExternalLink size={12} />
+                                <span>Ver en Maps</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1212,43 +1286,43 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
               <div className="flex flex-col h-full border-l border-gray-100 dark:border-white/5 pl-0 lg:pl-8 space-y-6">
                 {/* KPIs de Ofertas */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-2">
+                  <h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-1.5">
                     Resumen de Ofertas
                   </h3>
                   {isLoadingQuotes ? (
-                    <div className="text-center py-4 text-xs text-gray-400 uppercase font-medium">Cargando KPIs...</div>
+                    <div className="text-center py-4 text-xs text-gray-400 dark:text-gray-500 uppercase font-medium">Cargando KPIs...</div>
                   ) : (
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Valor Total Ofertas</span>
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Valor Total Ofertas</span>
                         <span className="text-sm font-black font-mono text-dts-primary dark:text-white mt-1 block">
                           {formatCurrency(contactQuoteKpis.totalAmount, 0)}
                         </span>
-                        <span className="text-[9px] text-gray-400 mt-0.5 block">{contactQuoteKpis.totalCount} ofertas emitidas</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 block">{contactQuoteKpis.totalCount} ofertas emitidas</span>
                       </div>
 
                       <div className="bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Cartera en Curso</span>
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Cartera en Curso</span>
                         <span className="text-sm font-black font-mono text-dts-secondary mt-1 block">
                           {formatCurrency(contactQuoteKpis.activeAmount, 0)}
                         </span>
-                        <span className="text-[9px] text-gray-400 mt-0.5 block">{contactQuoteKpis.activeCount} ofertas activas</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 block">{contactQuoteKpis.activeCount} ofertas activas</span>
                       </div>
 
                       <div className="bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Ofertas Ganadas</span>
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Ofertas Ganadas</span>
                         <span className="text-sm font-black font-mono text-emerald-500 mt-1 block">
                           {formatCurrency(contactQuoteKpis.wonAmount, 0)}
                         </span>
-                        <span className="text-[9px] text-gray-400 mt-0.5 block">{contactQuoteKpis.wonCount} ofertas cerradas con éxito</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 block">{contactQuoteKpis.wonCount} ofertas cerradas con éxito</span>
                       </div>
 
                       <div className="bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-                        <span className="text-[9px] text-gray-400 font-bold uppercase block">Tasa de Éxito</span>
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Tasa de Éxito</span>
                         <span className="text-sm font-black font-mono text-indigo-500 mt-1 block">
                           {contactQuoteKpis.successRate}%
                         </span>
-                        <span className="text-[9px] text-gray-400 mt-0.5 block">Ganadas / Cerradas</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 block">Ganadas / Cerradas</span>
                       </div>
                     </div>
                   )}
@@ -1256,7 +1330,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
                 {/* Timeline de Actividades Recientes */}
                 <div className="flex-1 flex flex-col min-h-0 space-y-3">
-                  <h3 className="text-sm font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-2">
+                  <h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-1.5">
                     Últimas Actividades
                   </h3>
                   {isLoadingActivities ? (
@@ -1698,7 +1772,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-gray-400 font-mono block">Destinatario: {mail.email || contact?.email}</span>
+                            <span className="text-[10px] text-gray-400 font-mono block">
+                              {mail.title?.includes('Recibido') || mail.title?.includes('📥') ? 'Remitente' : 'Destinatario'}: {mail.email || contact?.email}
+                            </span>
                           </div>
                           
                           <div className="flex items-center gap-2 shrink-0">

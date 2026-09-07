@@ -8,8 +8,14 @@ export const UpdatesModal: React.FC = () => {
   if (!isModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-surface-card-dark w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
+      onClick={closeModal}
+    >
+      <div 
+        className="bg-white dark:bg-surface-card-dark w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/10 bg-dts-primary dark:bg-dts-primary-dark">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-dts-secondary/20 rounded-lg">

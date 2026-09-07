@@ -18,12 +18,8 @@ export const MainLayout: React.FC = () => {
 
   useEffect(() => {
     const role = profile?.roles?.name;
-    if (role) {
-      fetchUpdates(role);
-    } else {
-      fetchUpdates();
-    }
-  }, [fetchUpdates, profile]);
+    fetchUpdates(role);
+  }, [profile?.roles?.name]);
 
   return (
     <div className="min-h-screen flex transition-colors duration-300">

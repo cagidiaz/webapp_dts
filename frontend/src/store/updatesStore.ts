@@ -20,6 +20,7 @@ interface UpdatesState {
   isModalOpen: boolean;
   isLoading: boolean;
   error: string | null;
+  lastFetchedAt: number | null;
   fetchUpdates: (userRole?: string) => Promise<void>;
   markAsSeen: () => void;
   getUnreadCount: () => number;
@@ -38,13 +39,30 @@ export const useUpdatesStore = create<UpdatesState>()(
       isModalOpen: false,
       isLoading: false,
       error: null,
-      
+      lastFetchedAt: null,
       fetchUpdates: async (userRole?: string) => {
+        // 1. En entorno de desarrollo local, no saturamos la cuota de GitHub API
+        if (import.meta.env.DEV) {
+          return;
+        }
+
+        const { lastFetchedAt } = get();
+        // 2. En producción: evitar saturar el límite de GitHub (60 req/h): caché/espera de 15 minutos
+        if (lastFetchedAt && Date.now() - lastFetchedAt < 15 * 60 * 1000) {
+          return;
+        }
+
         set({ isLoading: true, error: null });
         try {
-          // Aumentamos a 30 por si al filtrar nos quedamos con pocos
           const API_URL_EXT = `https://api.github.com/repos/${GITHUB_REPO}/commits?sha=main&per_page=30`;
           const response = await fetch(API_URL_EXT);
+
+          if (response.status === 403) {
+            // Límite de tasa de GitHub alcanzado para la IP
+            set({ isLoading: false, lastFetchedAt: Date.now() });
+            return;
+          }
+
           if (!response.ok) throw new Error('Failed to fetch updates');
           
           let commits: GithubCommit[] = await response.json();
@@ -53,15 +71,28 @@ export const useUpdatesStore = create<UpdatesState>()(
           const roleUpper = userRole?.toUpperCase() || 'GUEST';
           
           commits = commits.filter(c => {
-            const msg = c.commit.message.toUpperCase();
+            const rawMsg = c.commit.message.trim();
+            const lowerMsg = rawMsg.toLowerCase();
+            
+            // Regla AGENTS.md: Solo commits feat: y style: descriptivos; filtrar fixes y cambios técnicos
+            const isFixOrTech = lowerMsg.startsWith('fix:') || 
+                                lowerMsg.startsWith('fix(') || 
+                                lowerMsg.startsWith('chore:') || 
+                                lowerMsg.startsWith('chore(') ||
+                                lowerMsg.startsWith('ci:') || 
+                                lowerMsg.startsWith('test:') ||
+                                lowerMsg.startsWith('merge ');
+            if (isFixOrTech) return false;
+
+            const msgUpper = rawMsg.toUpperCase();
             
             // Extraer etiqueta entre corchetes ej: [ADMIN], [VENTAS]
-            const tagMatch = msg.match(/\[([A-Z]+)\]/);
+            const tagMatch = msgUpper.match(/\[([A-Z]+)\]/);
             
             // 1. Si no hay etiqueta, es una actualización global (visible para todos)
             // EXCEPCIÓN: Si el mensaje contiene palabras clave de admin/sistema, lo ocultamos a no-admins
             if (!tagMatch) {
-              const isAdminContent = msg.includes('ADMIN') || msg.includes('SYSTEM') || msg.includes('DATABASE') || msg.includes('DB ');
+              const isAdminContent = msgUpper.includes('ADMIN') || msgUpper.includes('SYSTEM') || msgUpper.includes('DATABASE') || msgUpper.includes('DB ');
               if (roleUpper === 'ADMIN') return true;
               return !isAdminContent;
             }
@@ -103,19 +134,33 @@ export const useUpdatesStore = create<UpdatesState>()(
           
           if (commits.length > 0) {
             const latestSha = commits[0].sha;
-            // If we have no lastSeenSha, or it's different from the latest, we have unseen updates
+            
+            // Si el usuario ya vio este commit exacto, NO abrir el modal jamás
             const hasSeenLatest = lastSeenSha === latestSha;
+
+            // Comprobar si ya se mostró en la sesión actual
+            const sessionKey = `dts_updates_shown_${latestSha}`;
+            const alreadyShownThisSession = sessionStorage.getItem(sessionKey) === 'true';
+
+            // Solo se abre si es una versión no vista Y no se ha mostrado aún en esta sesión
+            const shouldOpen = !hasSeenLatest && !alreadyShownThisSession;
+
+            if (shouldOpen) {
+              sessionStorage.setItem(sessionKey, 'true');
+            }
+
             set({ 
               commits, 
               hasSeenLatest, 
               isLoading: false,
-              isModalOpen: !hasSeenLatest 
+              lastFetchedAt: Date.now(),
+              isModalOpen: shouldOpen 
             });
           } else {
-            set({ commits: [], isLoading: false });
+            set({ commits: [], isLoading: false, lastFetchedAt: Date.now() });
           }
         } catch (error: any) {
-          set({ error: error.message, isLoading: false });
+          set({ error: error.message, isLoading: false, lastFetchedAt: Date.now() });
         }
       },
       
@@ -142,7 +187,11 @@ export const useUpdatesStore = create<UpdatesState>()(
     }),
     {
       name: 'dts-updates-storage',
-      partialize: (state) => ({ lastSeenSha: state.lastSeenSha }), // Only persist lastSeenSha
+      partialize: (state) => ({ 
+        lastSeenSha: state.lastSeenSha,
+        commits: state.commits,
+        lastFetchedAt: state.lastFetchedAt
+      }),
     }
   )
 );

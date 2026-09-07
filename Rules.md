@@ -64,7 +64,7 @@
 ### 4.1 Reglas de Commit y Push
 * **Idioma:** **TODOS** los mensajes de commit deben redactarse en **español** y su título debe ser un resumen claro de todos los cambios realizados en el commit.
 * **Semántica:** Usar prefijos `feat:`, `fix:`, `style:`, `docs:`, etc.
-* **PUSH MANUAL:** Está estrictamente prohibido que la IA realice un `git push` automático. Solo se hará bajo petición explícita del usuario.
+* **PUSH MANUAL ESTRICTO (PROHIBIDO PUSH AUTOMÁTICO):** Está **estrictamente prohibido** que la IA realice un `git push` automático. **NUNCA** se subirá a GitHub hasta que el usuario haya probado y verificado personalmente en su entorno que todo funciona, y dé la orden explícita de subirlo.
 * **Actualizaciones en la App:** 
     * Solo los commits `feat:` y `style:` que sean descriptivos aparecerán en el modal de novedades de la app.
     * Los `fix:` y cambios técnicos deben estar en español pero se filtran para no molestar al usuario.

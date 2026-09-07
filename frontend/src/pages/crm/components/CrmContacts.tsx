@@ -74,6 +74,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact }) => 
         (c.job_title || '').toLowerCase().includes(searchLower) ||
         (c.org_level_code || '').toLowerCase().includes(searchLower) ||
         c.client_id.toLowerCase().includes(searchLower) ||
+        (c.customer?.name || '').toLowerCase().includes(searchLower) ||
         (c.email || '').toLowerCase().includes(searchLower) ||
         (c.phone_no || '').toLowerCase().includes(searchLower) ||
         (c.mobile_no || '').toLowerCase().includes(searchLower) ||
@@ -193,7 +194,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact }) => 
             </span>
             <input 
               type="text" 
-              placeholder="Buscar por nombre, cargo, código de cliente, email..." 
+              placeholder="Buscar por nombre, cargo, empresa, email..." 
               className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -240,19 +241,14 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact }) => 
                     </td>
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-col space-y-0.5">
-                        <span className="font-bold text-gray-600 dark:text-gray-300">
-                          {contact.client_id}
+                        <span 
+                          className="font-bold text-gray-800 dark:text-gray-200 truncate max-w-56 block text-xs" 
+                          title={contact.customer?.name || ''}
+                        >
+                          {contact.customer?.name || '---'}
                         </span>
-                        {contact.customer?.name && (
-                          <span 
-                            className="text-[12px] text-gray-500 dark:text-gray-400 font-medium truncate max-w-45 block" 
-                            title={contact.customer.name}
-                          >
-                            {contact.customer.name}
-                          </span>
-                        )}
                         {(contact.city || contact.county || contact.customer?.city) && (
-                          <span className="text-[10px] text-gray-400 flex items-center gap-1 truncate max-w-45 pt-0.5">
+                          <span className="text-[10px] text-gray-400 flex items-center gap-1 truncate max-w-56 pt-0.5">
                             <MapPin size={10} className="text-dts-secondary shrink-0" />
                             <span className="truncate">
                               {[contact.city || contact.customer?.city, contact.county && contact.county.toLowerCase() !== (contact.city || '').toLowerCase() ? contact.county : null].filter(Boolean).join(', ')}
