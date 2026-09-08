@@ -144,13 +144,25 @@ El sistema sincroniza automáticamente todas las actividades con fecha y hora en
 
 ### C. Complemento de Outlook (Add-in dTS CRM)
 
-Además de la sincronización de fondo, dispones del **Complemento oficial de Outlook**:
+Además de la sincronización de fondo, dispones del **Complemento oficial de Outlook** (Add-in dTS CRM):
 * **Panel Lateral en Outlook**: Permite abrir la ficha rápida del cliente sin salir de tu correo.
-* **Clasificación a Ofertas Específicas**: Si deseas vincular un correo a una oportunidad concreta del embudo (`sales_quotes_crm`) o añadir notas adicionales de negociación, puedes hacerlo directamente desde el panel lateral del complemento.
+* **Presentación Limpia**: Muestra directamente los correos remitente y destinatarios sin etiquetas superfluas.
+* **Carga Inmediata (Skeleton Loading)**: Abre el panel de forma instantánea gracias a la desacoplación de lectura pesada del cuerpo.
+* **Clasificación a Ofertas Específicas**: Por defecto se mantiene en *(Sin vincular a oferta)*, permitiendo asociar una cotización concreta del embudo (`sales_quotes_crm`) con un solo clic.
 
 ---
 
-## 5. 🛠️ Herramientas de Control y Preguntas Frecuentes
+## 5. 🛠️ Herramientas de Control, Ajustes y Preguntas Frecuentes
+
+### Pantalla de Configuración y Preferencias (`/settings`)
+En la nueva sección de **Ajustes** de la WebApp puedes:
+* **Elegir tu Cliente de Outlook Predeterminado**: Selecciona entre **Outlook de Escritorio (Windows/Mac)** o **Outlook Web (Microsoft 365)**. El sistema recordará tu preferencia de forma permanente en tu navegador para abrir los correos y borradores siempre en tu cliente favorito.
+* **Probar la Apertura**: Dispone de un botón interactivo de validación para asegurar que tu cliente de Outlook abre correctamente.
+
+### Detección Proactiva de Sesión Expirada y Reconexión
+Si por políticas de seguridad corporativas de Microsoft o actualización de permisos en Azure AD tu sesión requiere re-autenticación (`AADSTS65001 / consent_required`):
+* El banner del CRM y la pantalla de Ajustes mostrarán el distintivo **"Sesión expirada"**.
+* Un botón directo **"Reconectar con Microsoft 365"** te permitirá reanudar la sincronización interactiva en 5 segundos sin errores ni bloqueos.
 
 ### Botón "Sincronizar ahora"
 En la parte superior derecha del banner de Exchange dispones del botón **`Sincronizar ahora`**.
@@ -158,7 +170,7 @@ En la parte superior derecha del banner de Exchange dispones del botón **`Sincr
 
 ### Desconexión de Cuenta
 Si cambias de equipo o deseas revocar el acceso a tu cuenta:
-* Pulsa el icono de desconexión (**Unlink / Romper enlace**) situado junto al botón de sincronización y confirma la acción.
+* Pulsa el icono de desconexión (**Desconectar cuenta**) en el banner o en Ajustes y confirma la acción.
 
 ---
 
@@ -167,9 +179,11 @@ Si cambias de equipo o deseas revocar el acceso a tu cuenta:
 | Pregunta | Respuesta |
 | :--- | :--- |
 | **¿Mis eventos personales se guardan en el CRM?** | **No.** El CRM solo indexa reuniones cuyos asistentes coincidan con correos de contactos o clientes dados de alta en dTS. Tus eventos personales permanecen privados. |
-| **¿Tengo que volver a conectar mi cuenta cada día?** | **No.** La conexión utiliza un sistema de renovación automática de credenciales (*refresh token*). Solo tendrás que volver a conectar si cambias tu contraseña de Microsoft 365. |
+| **¿Tengo que volver a conectar mi cuenta cada día?** | **No.** La conexión utiliza un sistema de renovación automática de credenciales (*refresh token*). Solo tendrás que volver a conectar si cambias tu contraseña de Microsoft 365 o si expira el plazo de seguridad. |
+| **¿Qué significa el aviso "Sesión expirada" o "consent_required"?** | Significa que Microsoft 365 requiere que confirmes nuevamente los permisos interactivos de acceso al buzón. Pulsa en **"Reconectar con Microsoft 365"** para solucionarlo en un clic. |
 | **¿Qué ocurre si borro una reunión en Outlook?** | El sistema detectará la cancelación y actualizará o eliminará el evento del CRM para mantener la agenda al día. |
 | **¿Los clientes reciben invitaciones al crear un evento en CRM?** | **Sí.** Si el contacto tiene su dirección de correo configurada, Outlook enviará la invitación estándar de calendario con opción de aceptar/rechazar. |
+| **¿Puedo cambiar entre abrir los correos en Outlook Web o Outlook Escritorio?** | **Sí.** Puedes cambiarlo en cualquier momento desde **Ajustes** (`/settings`) y tu elección se guardará automáticamente. |
 
 ---
 

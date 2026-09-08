@@ -178,9 +178,11 @@ Integrada en la ficha del contacto/cliente en el CRM.
 ### 3.4 Complemento de Outlook (Add-in dTS CRM)
 Extensión oficial integrada en la cinta de opciones de Microsoft Outlook (Web, Escritorio Windows y Mac). Para instrucciones completas de instalación ver [Guía de Instalación y Despliegue del Add-in de Outlook](file:///c:/proyectos/webapp_dts/docs/manual-instalacion-addin-outlook.md).
 
-* **Botón Ribbon "Registrar en dTS CRM"**: Acceso en caliente desde la barra superior de Outlook mientras se lee o redacta cualquier correo.
+* **Botón Ribbon "Registrar en dTS CRM"**: Acceso en caliente desde la barra superior de Outlook mientras se lee o redacta cualquier correo en Windows, Mac o Web.
+* **Carga Inmediata y Skeleton Loading**: Apertura instantánea con animación estructurada corporativa dTS, desacoplando la lectura pesada del cuerpo del correo para iniciar la consulta al CRM en milisegundos.
+* **Presentación Limpia y Ergonómica**: Visualización directa de las direcciones de correo en los campos **De:** y **Para:**, eliminando etiquetas superfluas y aprovechando todo el ancho del panel.
 * **Detección Contextual Inteligente**: Reconocimiento automático del contacto y empresa (evalúa el remitente en recibidos o el destinatario en enviados).
-* **Vinculación Dual (Contacto + Ofertas del Pipeline)**: Desplegable interactivo para asociar el correo a cotizaciones abiertas del cliente (`sales_quotes_crm` y `sales_quote_activities`).
+* **Vinculación a Ofertas Opcional**: Por defecto se mantiene en **`(Sin vincular a oferta - Solo ficha cliente)`**, permitiendo al comercial asociar una cotización abierta del cliente (`sales_quotes_crm`) solo cuando corresponda.
 * **Etiquetado Comercial por Tipología**: Clasificación en un clic (`📄 Cierre / Aceptación`, `⚙️ Especificación Técnica`, `💬 Negociación`, `⚠️ Incidencia / Postventa`, `✉️ General`).
 * **Limpieza Inteligente de RGPD**: Filtro automático de cláusulas legales de privacidad, cadenas repetidas de reenvío y firmas pesadas.
 * **Prevención Activa de Duplicados**: Detección por identificador único de Microsoft Graph (`✓ Ya registrado en dTS CRM`).
@@ -191,14 +193,18 @@ Extensión oficial integrada en la cinta de opciones de Microsoft Outlook (Web, 
 ## 4. Módulo de Compras
 
 ### 4.1 Directorio de Proveedores
-Ubicado en `/purchases/vendors`.
+Ubicado en `/purchases/vendors` (Acceso para roles `ADMIN`, `DIRECCION` y `OPERACIONES`).
 
-* Ficha de proveedores sincronizada con Business Central con condiciones de pago, contacto, moneda y volumen acumulado de compras.
+* **Directorio Maestro de Proveedores**: Listado sincronizado en tiempo real desde Business Central con filtros por término de búsqueda, localidad y vendedor asignado.
+* **KPIs Financieros de Compras**: Total de compras acumuladas, saldo vivo de deuda pendiente y saldo vencido con proveedores.
+* **Drawer Lateral de Detalle del Proveedor**: Consulta rápida con condiciones comerciales y de pago pactadas (días de pago, forma de pago, moneda), datos fiscales y desglose de pedidos abiertos.
 
 ### 4.2 Pedidos de Compra
 Ubicado en `/purchases/orders`.
 
-* Consulta de pedidos de aprovisionamiento emitidos, estado de recepción de mercancía y control de entregas pendientes de proveedores.
+* **Cartera de Compras**: Consulta integral de pedidos de aprovisionamiento emitidos a fabricantes y proveedores.
+* **Seguimiento de Recepción**: Control de líneas de pedido, cantidades pendientes de recibir, fechas prometidas de entrega y albaranes de recepción asociados.
+* **Exportación a Excel**: Descarga de pedidos de compra para control de aprovisionamiento y logística.
 
 ---
 
@@ -232,6 +238,7 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
 * **Integración con Microsoft 365 (Microsoft Graph)**:
   * Vinculación segura OAuth 2.0 con el buzón corporativo de dTS Instruments.
   * Diagnóstico del estado de la conexión, visualización del correo vinculado y estado de sincronización.
+  * **Detección de Sesión Expirada**: Aviso específico si el token requiere consentimiento interactivo (`AADSTS65001 / consent_required`) con botón de un clic para **"Reconectar con Microsoft 365"**.
   * Botones para forzar sincronización manual de borradores y eventos o desconectar la cuenta.
 * **Cliente de Outlook Predeterminado**:
   * Selector dual entre **Outlook de Escritorio (App Windows/Mac)** y **Outlook Web (Microsoft 365)**.
@@ -250,5 +257,5 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
 
 ---
 
-*Manual de dTS Instruments v5.8 — Actualizado a 2 de septiembre de 2026.*
+*Manual de dTS Instruments v6.0 — Actualizado a 8 de septiembre de 2026.*
 

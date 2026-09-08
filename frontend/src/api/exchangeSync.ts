@@ -2,6 +2,7 @@ import apiClient from './apiClient';
 
 export interface ExchangeStatus {
   isConnected: boolean;
+  requiresConsent?: boolean;
   account: {
     id: string;
     email: string;

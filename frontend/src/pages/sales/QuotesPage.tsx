@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { getAllQuotes, getQuoteById, type SalesQuote } from '../../api/quotes';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getAllQuotes, getQuoteById, updateCrmQuote, type SalesQuote } from '../../api/quotes';
 import { getCustomerSalespersons } from '../../api/customers';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
   Search, FileText, Euro, CheckCircle, Percent, ArrowUpDown, 
-  ChevronUp, ChevronDown, Sparkles, BarChart3, Calendar
+  ChevronUp, ChevronDown, Sparkles, BarChart3, Calendar,
+  AlertTriangle, ChevronLeft, ChevronRight, Check, X, Clock, HelpCircle
 } from 'lucide-react';
 import { KPISkeleton, TableSkeleton, InfoPopover, ExportButton } from '../../components/ui';
 import { Drawer } from '../../components/shared';
@@ -27,6 +28,8 @@ import {
 export const QuotesPage: React.FC = () => {
   const { setPageInfo } = useUIStore();
 
+  const queryClient = useQueryClient();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [salespersonFilter, setSalespersonFilter] = useState('');
@@ -40,6 +43,17 @@ export const QuotesPage: React.FC = () => {
   const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
   const [showCharts, setShowCharts] = useState(true);
 
+  // Estados para Filtro de Cierre Previsto (Opción 1)
+  const [enableCierreFilter, setEnableCierreFilter] = useState<boolean>(false);
+  const [cierrePrevYear, setCierrePrevYear] = useState<number>(new Date().getFullYear());
+  // selectedCierreFilter: 'all' | 'none' | 'overdue' | 'months'
+  const [cierreMode, setCierreMode] = useState<'all' | 'none' | 'overdue' | 'months'>('all');
+  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+
+  // Estado editable en drawer
+  const [editingCierreDate, setEditingCierreDate] = useState<string>('');
+  const [isSavingCierre, setIsSavingCierre] = useState(false);
+
   const currentYear = new Date().getFullYear();
   const availableYears = useMemo(() => {
     const list = [];
@@ -49,8 +63,34 @@ export const QuotesPage: React.FC = () => {
     return list;
   }, [currentYear]);
 
+  // Años disponibles para cierre previsto (desde el pasado hasta 2 años en el futuro)
+  const availableCierreYears = useMemo(() => {
+    const list = [];
+    for (let y = currentYear + 2; y >= currentYear - 2; y--) {
+      list.push(y);
+    }
+    return list;
+  }, [currentYear]);
+
   const observerTarget = useRef<HTMLTableRowElement>(null);
   const pageSize = 50;
+
+  // Parámetro formateado para la API de cierre previsto
+  const cierrePrevMonthsParam = useMemo(() => {
+    if (!enableCierreFilter) return undefined;
+    if (cierreMode === 'overdue') return 'overdue';
+    if (cierreMode === 'none') return 'none';
+    if (cierreMode === 'months' && selectedMonths.length > 0) {
+      return selectedMonths.sort((a, b) => a - b).join(',');
+    }
+    return 'all';
+  }, [enableCierreFilter, cierreMode, selectedMonths]);
+
+  const effectiveCierreYearParam = useMemo(() => {
+    if (!enableCierreFilter) return undefined;
+    if (cierreMode === 'overdue' || cierreMode === 'none') return undefined;
+    return cierrePrevYear;
+  }, [enableCierreFilter, cierreMode, cierrePrevYear]);
 
   useEffect(() => {
     setPageInfo({
@@ -80,7 +120,20 @@ export const QuotesPage: React.FC = () => {
 
   // Query quotes with infinite scroll
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ['sales-quotes', debouncedSearch, salespersonFilter, stateFilter, closedFilter, sortBy, sortDir, yearFilter, probabilityFilter],
+    queryKey: [
+      'sales-quotes', 
+      debouncedSearch, 
+      salespersonFilter, 
+      stateFilter, 
+      closedFilter, 
+      sortBy, 
+      sortDir, 
+      yearFilter, 
+      probabilityFilter,
+      enableCierreFilter,
+      effectiveCierreYearParam,
+      cierrePrevMonthsParam
+    ],
     queryFn: ({ pageParam = 0 }) => getAllQuotes({
       take: pageSize,
       skip: pageParam as number,
@@ -91,7 +144,9 @@ export const QuotesPage: React.FC = () => {
       sortBy,
       sortDir,
       year: yearFilter ? Number(yearFilter) : undefined,
-      probabilidadExito: probabilityFilter || undefined
+      probabilidadExito: probabilityFilter || undefined,
+      cierrePrevYear: effectiveCierreYearParam,
+      cierrePrevMonths: cierrePrevMonthsParam
     }),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
@@ -106,6 +161,37 @@ export const QuotesPage: React.FC = () => {
     queryFn: () => getQuoteById(selectedQuoteId!),
     enabled: !!selectedQuoteId,
   });
+
+  // Sincronizar fecha en drawer cuando se cargue la oferta
+  useEffect(() => {
+    if (selectedQuote) {
+      setEditingCierreDate(selectedQuote.cierreprev_date ? selectedQuote.cierreprev_date.split('T')[0] : '');
+    }
+  }, [selectedQuote]);
+
+  // Mutación para guardar fecha de cierre previsto directamente desde el Drawer
+  const updateCierreMutation = useMutation({
+    mutationFn: async ({ id, date }: { id: string; date: string | null }) => {
+      return updateCrmQuote(id, { cierreprev_date: date });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-detail', selectedQuoteId] });
+      setIsSavingCierre(false);
+    },
+    onError: () => {
+      setIsSavingCierre(false);
+    }
+  });
+
+  const handleSaveCierreDate = () => {
+    if (!selectedQuoteId) return;
+    setIsSavingCierre(true);
+    updateCierreMutation.mutate({
+      id: selectedQuoteId,
+      date: editingCierreDate ? editingCierreDate : null
+    });
+  };
 
   const handleSort = (key: string) => {
     if (sortBy === key) {
@@ -141,7 +227,9 @@ export const QuotesPage: React.FC = () => {
       sortBy,
       sortDir,
       year: yearFilter ? Number(yearFilter) : undefined,
-      probabilidadExito: probabilityFilter || undefined
+      probabilidadExito: probabilityFilter || undefined,
+      cierrePrevYear: effectiveCierreYearParam,
+      cierrePrevMonths: cierrePrevMonthsParam
     });
 
     const columns = [
@@ -260,6 +348,41 @@ export const QuotesPage: React.FC = () => {
     if (lower.includes('ganada')) return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30';
     if (lower.includes('perdida')) return 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30';
     return 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30';
+  };
+
+  // Helper para verificar estado de cierre previsto
+  const getCierreStatus = (cierreDateStr: string | null, estado: string | null) => {
+    if (!cierreDateStr) return { type: 'none', label: 'Sin fecha' };
+
+    const lower = (estado || '').toLowerCase();
+    const isClosed = lower.includes('ganada') || lower.includes('ganado') || lower.includes('perdida') || lower.includes('perdido');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const cDate = new Date(cierreDateStr);
+    cDate.setHours(0, 0, 0, 0);
+
+    const diffTime = cDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (!isClosed && diffDays < 0) {
+      return { 
+        type: 'overdue', 
+        label: `Vencida (${Math.abs(diffDays)}d)`, 
+        days: Math.abs(diffDays) 
+      };
+    }
+
+    if (!isClosed && diffDays >= 0 && diffDays <= 7) {
+      return { 
+        type: 'urgent', 
+        label: diffDays === 0 ? 'Vence hoy' : `Vence en ${diffDays}d`, 
+        days: diffDays 
+      };
+    }
+
+    return { type: 'normal', label: '', days: diffDays };
   };
 
   if (isLoading && !data) {
@@ -503,6 +626,294 @@ export const QuotesPage: React.FC = () => {
           </div>
         </div>
 
+        {/* --- BARRA DE FILTRADO POR CIERRE PREVISTO (OPCIÓN 1 CON SELECTOR HABILITAR/DESHABILITAR) --- */}
+        <div className={`border-b transition-all duration-300 px-4 py-2.5 text-xs ${
+          enableCierreFilter 
+            ? 'bg-gradient-to-r from-teal-50/50 via-slate-50 to-teal-50/30 dark:from-teal-950/20 dark:via-dts-primary-dark/40 dark:to-slate-900/60 border-teal-200/70 dark:border-teal-900/50' 
+            : 'bg-gray-50/40 dark:bg-white/[0.02] border-gray-200/60 dark:border-gray-800/60'
+        }`}>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            
+            {/* Lado izquierdo: Switch Habilitar/Deshabilitar y Controles */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Selector / Toggle: Habilitar filtrado por Cierre Previsto */}
+              <button
+                type="button"
+                onClick={() => setEnableCierreFilter(prev => !prev)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs transition-all shadow-2xs cursor-pointer border ${
+                  enableCierreFilter
+                    ? 'bg-teal-600 dark:bg-teal-500 text-white border-teal-600 dark:border-teal-500 shadow-sm'
+                    : 'bg-white dark:bg-surface-card-dark border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400'
+                }`}
+                title={enableCierreFilter ? "Desactivar filtrado por cierre previsto (ver todas las ofertas según filtros generales)" : "Activar filtrado por cierre previsto"}
+              >
+                {/* Visual toggle pill */}
+                <div className={`w-7 h-4 flex items-center rounded-full p-0.5 transition-colors duration-300 ${
+                  enableCierreFilter ? 'bg-white/30 justify-end' : 'bg-gray-300 dark:bg-gray-600 justify-start'
+                }`}>
+                  <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-300 shadow-sm`}></div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Calendar size={14} className={enableCierreFilter ? 'text-white' : 'text-gray-400'} />
+                  <span>Filtrar por Cierre Previsto:</span>
+                  <span className={`text-[10px] uppercase font-black px-1.5 py-0.2 rounded ${
+                    enableCierreFilter 
+                      ? 'bg-white/20 text-white' 
+                      : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400'
+                  }`}>
+                    {enableCierreFilter ? 'ACTIVO' : 'INACTIVO'}
+                  </span>
+                </div>
+              </button>
+
+              {!enableCierreFilter && (
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 italic">
+                  Mostrando todas las ofertas (activa el selector para filtrar por año/meses de cierre previsto)
+                </span>
+              )}
+
+              {/* Controles de Cierre Previsto (Visibles cuando está activo) */}
+              {enableCierreFilter && (
+                <div className="flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                  <div className="h-5 w-px bg-gray-200 dark:bg-gray-700 mx-0.5"></div>
+
+                  {/* Selector de Año con flechas */}
+                  <div className="flex items-center bg-white dark:bg-surface-card-dark border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xs overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setCierrePrevYear(prev => prev - 1)}
+                      className="p-1 px-1.5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors"
+                      title="Año anterior"
+                    >
+                      <ChevronLeft size={13} />
+                    </button>
+                    <select
+                      value={cierrePrevYear}
+                      onChange={(e) => setCierrePrevYear(Number(e.target.value))}
+                      className="bg-transparent text-center font-black text-xs text-gray-900 dark:text-white py-1 px-1 focus:outline-none cursor-pointer"
+                    >
+                      {availableCierreYears.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setCierrePrevYear(prev => prev + 1)}
+                      className="p-1 px-1.5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors"
+                      title="Año siguiente"
+                    >
+                      <ChevronRight size={13} />
+                    </button>
+                  </div>
+
+                  {/* Botón: Todo el año */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCierreMode('all');
+                      setSelectedMonths([]);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer shadow-2xs ${
+                      cierreMode === 'all'
+                        ? 'bg-dts-primary text-white dark:bg-dts-secondary dark:text-slate-900 shadow-sm'
+                        : 'bg-white dark:bg-surface-card-dark border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-dts-secondary/50'
+                    }`}
+                  >
+                    Todo {cierrePrevYear}
+                  </button>
+
+                  {/* Trimestres (T1, T2, T3, T4) */}
+                  <div className="flex items-center bg-white dark:bg-surface-card-dark border border-gray-200 dark:border-gray-700 rounded-lg p-0.5 shadow-2xs">
+                    {[
+                      { label: 'T1', months: [1, 2, 3] },
+                      { label: 'T2', months: [4, 5, 6] },
+                      { label: 'T3', months: [7, 8, 9] },
+                      { label: 'T4', months: [10, 11, 12] }
+                    ].map(q => {
+                      const isQSelected = cierreMode === 'months' && 
+                        q.months.every(m => selectedMonths.includes(m)) && 
+                        selectedMonths.length === 3;
+                      return (
+                        <button
+                          key={q.label}
+                          type="button"
+                          onClick={() => {
+                            setCierreMode('months');
+                            setSelectedMonths(q.months);
+                          }}
+                          className={`px-2 py-0.5 rounded-md font-bold text-[11px] transition-colors cursor-pointer ${
+                            isQSelected
+                              ? 'bg-dts-primary text-white dark:bg-dts-secondary dark:text-slate-900'
+                              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                          }`}
+                          title={`Trimestre ${q.label} (${q.months.join(', ')})`}
+                        >
+                          {q.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Filtros especiales de Cierre: Vencidas y Sin fecha */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (cierreMode === 'overdue') {
+                        setCierreMode('all');
+                      } else {
+                        setCierreMode('overdue');
+                        setSelectedMonths([]);
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                      cierreMode === 'overdue'
+                        ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-400/50 animate-pulse'
+                        : 'bg-white dark:bg-surface-card-dark border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+                    }`}
+                    title="Mostrar únicamente ofertas abiertas con fecha de cierre prevista ya vencida"
+                  >
+                    <AlertTriangle size={13} />
+                    <span>Vencidas</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (cierreMode === 'none') {
+                        setCierreMode('all');
+                      } else {
+                        setCierreMode('none');
+                        setSelectedMonths([]);
+                      }
+                    }}
+                    className={`px-2 py-1 rounded-lg font-bold text-xs transition-all flex items-center gap-1 cursor-pointer shadow-2xs ${
+                      cierreMode === 'none'
+                        ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900 shadow-sm'
+                        : 'bg-white dark:bg-surface-card-dark border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'
+                    }`}
+                    title="Mostrar ofertas sin fecha de cierre prevista registrada"
+                  >
+                    <HelpCircle size={12} />
+                    <span>Sin fecha</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Lado derecho: Métricas de Cierre Previsto en el periodo filtrado */}
+            {enableCierreFilter && (
+              <div className="flex items-center gap-4 bg-white/90 dark:bg-surface-card-dark/90 px-3 py-1.5 rounded-xl border border-gray-200/70 dark:border-gray-700/70 shadow-2xs animate-in fade-in duration-200">
+                <div className="flex flex-col items-end">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Cierre Previsto Nominal</span>
+                  <span className="text-xs font-mono font-black text-dts-primary dark:text-white">
+                    {formatCurrency(summary.totalAmount, 0)}
+                  </span>
+                </div>
+                <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+                <div className="flex flex-col items-end">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles size={10} className="text-dts-secondary" />
+                    Valor Ponderado
+                  </span>
+                  <span className="text-xs font-mono font-black text-dts-secondary">
+                    {formatCurrency(summary.totalWeightedValue, 0)}
+                  </span>
+                </div>
+                <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+                <div className="flex flex-col items-end">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Ofertas</span>
+                  <span className="text-xs font-mono font-bold text-gray-700 dark:text-gray-300">
+                    {summary.totalCount}
+                  </span>
+                </div>
+              </div>
+            )}
+
+          </div>
+
+          {/* Segunda fila: Botones de Meses (Pills Ene - Dic) SOLO si está activo el filtro */}
+          {enableCierreFilter && (
+            <div className="mt-2.5 pt-2 border-t border-gray-200/60 dark:border-gray-800/60 flex flex-wrap items-center gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+              <span className="text-[10px] text-gray-400 font-semibold uppercase mr-1">Meses:</span>
+              {[
+                { num: 1, name: 'Ene' },
+                { num: 2, name: 'Feb' },
+                { num: 3, name: 'Mar' },
+                { num: 4, name: 'Abr' },
+                { num: 5, name: 'May' },
+                { num: 6, name: 'Jun' },
+                { num: 7, name: 'Jul' },
+                { num: 8, name: 'Ago' },
+                { num: 9, name: 'Sep' },
+                { num: 10, name: 'Oct' },
+                { num: 11, name: 'Nov' },
+                { num: 12, name: 'Dic' }
+              ].map(m => {
+                const isSelected = cierreMode === 'months' && selectedMonths.includes(m.num);
+                const isCurrentMonth = new Date().getFullYear() === cierrePrevYear && (new Date().getMonth() + 1) === m.num;
+
+                return (
+                  <button
+                    key={m.num}
+                    type="button"
+                    onClick={(e) => {
+                      setCierreMode('months');
+                      if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                        if (selectedMonths.includes(m.num)) {
+                          const next = selectedMonths.filter(n => n !== m.num);
+                          if (next.length === 0) setCierreMode('all');
+                          else setSelectedMonths(next);
+                        } else {
+                          setSelectedMonths(prev => [...prev, m.num]);
+                        }
+                      } else {
+                        if (selectedMonths.length === 1 && selectedMonths[0] === m.num && cierreMode === 'months') {
+                          setCierreMode('all');
+                          setSelectedMonths([]);
+                        } else {
+                          setSelectedMonths([m.num]);
+                        }
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer relative shadow-2xs ${
+                      isSelected
+                        ? 'bg-dts-primary text-white dark:bg-dts-secondary dark:text-slate-900 shadow-sm font-black ring-1 ring-dts-primary/20'
+                        : 'bg-white dark:bg-surface-card-dark border border-gray-200 dark:border-gray-700/80 text-gray-700 dark:text-gray-300 hover:border-dts-secondary hover:text-dts-secondary'
+                    }`}
+                    title={`${m.name} ${cierrePrevYear} (Usa Ctrl+clic para multiselección)`}
+                  >
+                    {m.name}
+                    {isCurrentMonth && (
+                      <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-dts-secondary opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-dts-secondary"></span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+
+              <span className="text-[10px] text-gray-400 italic ml-2 hidden sm:inline">
+                Tip: Haz clic en un mes o usa Ctrl+clic para seleccionar varios
+              </span>
+
+              {(cierreMode !== 'all' || selectedMonths.length > 0) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCierreMode('all');
+                    setSelectedMonths([]);
+                  }}
+                  className="ml-auto text-[10px] text-dts-secondary hover:underline font-bold flex items-center gap-0.5 cursor-pointer"
+                >
+                  <X size={11} />
+                  Limpiar meses
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Table View */}
         <div className="flex-1 overflow-auto custom-scrollbar" style={{ scrollbarGutter: 'stable' }}>
           <table className="w-full text-left text-sm border-separate border-spacing-0">
@@ -559,11 +970,38 @@ export const QuotesPage: React.FC = () => {
                   <td className="px-4 py-3 text-right font-mono text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                     {quote.probabilidad_exito !== null ? `${formatNumber(Number(quote.probabilidad_exito), 1)}%` : '---'}
                   </td>
-                  <td className="px-4 py-3 text-center text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      <Calendar size={12} className="text-gray-400" />
-                      {quote.cierreprev_date ? new Date(quote.cierreprev_date).toLocaleDateString('es-ES') : '---'}
-                    </span>
+                  <td className="px-4 py-3 text-center text-xs whitespace-nowrap">
+                    {(() => {
+                      const cierreInfo = getCierreStatus(quote.cierreprev_date, quote.estado_oferta);
+                      if (cierreInfo.type === 'overdue') {
+                        return (
+                          <div className="inline-flex flex-col items-center">
+                            <span className="inline-flex items-center gap-1 font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-full border border-rose-200/50 dark:border-rose-900/50 animate-pulse text-[11px]">
+                              <AlertTriangle size={11} />
+                              {new Date(quote.cierreprev_date!).toLocaleDateString('es-ES')}
+                            </span>
+                            <span className="text-[9px] font-bold text-rose-500 mt-0.5">{cierreInfo.label}</span>
+                          </div>
+                        );
+                      }
+                      if (cierreInfo.type === 'urgent') {
+                        return (
+                          <div className="inline-flex flex-col items-center">
+                            <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200/50 dark:border-amber-900/50 text-[11px]">
+                              <Clock size={11} />
+                              {new Date(quote.cierreprev_date!).toLocaleDateString('es-ES')}
+                            </span>
+                            <span className="text-[9px] font-bold text-amber-500 mt-0.5">{cierreInfo.label}</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <span className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-300">
+                          <Calendar size={12} className="text-gray-400" />
+                          {quote.cierreprev_date ? new Date(quote.cierreprev_date).toLocaleDateString('es-ES') : <span className="text-gray-400 dark:text-gray-600">---</span>}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-center whitespace-nowrap">
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${getStateBadgeClass(quote.estado_oferta)}`}>
@@ -667,7 +1105,7 @@ export const QuotesPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Additional info */}
+            {/* Additional info / Fechas */}
             <div className="space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/5 pb-2">Información de Fechas</h4>
               <div className="grid grid-cols-2 gap-4 text-xs">
@@ -678,10 +1116,33 @@ export const QuotesPage: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block font-medium">Cierre Previsto:</span>
-                  <span className="font-bold text-gray-900 dark:text-white mt-0.5 block">
-                    {selectedQuote.cierreprev_date ? new Date(selectedQuote.cierreprev_date).toLocaleDateString() : '---'}
-                  </span>
+                  <label className="text-gray-400 block font-medium mb-1 flex items-center justify-between">
+                    <span>Cierre Previsto (CRM):</span>
+                    {editingCierreDate !== (selectedQuote.cierreprev_date ? selectedQuote.cierreprev_date.split('T')[0] : '') && (
+                      <span className="text-[10px] text-amber-500 font-semibold animate-pulse">Sin guardar</span>
+                    )}
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input 
+                      type="date" 
+                      value={editingCierreDate}
+                      onChange={(e) => setEditingCierreDate(e.target.value)}
+                      className="w-full bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs rounded-lg p-1.5 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveCierreDate}
+                      disabled={isSavingCierre || editingCierreDate === (selectedQuote.cierreprev_date ? selectedQuote.cierreprev_date.split('T')[0] : '')}
+                      className="p-1.5 rounded-lg bg-dts-primary hover:bg-dts-primary/90 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      title="Guardar Cierre Previsto"
+                    >
+                      {isSavingCierre ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <Check size={14} />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

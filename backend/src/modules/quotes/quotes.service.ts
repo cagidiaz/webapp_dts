@@ -22,6 +22,8 @@ export class QuotesService {
     sortDir?: 'asc' | 'desc';
     year?: number;
     probabilidadExito?: string;
+    cierrePrevYear?: number;
+    cierrePrevMonths?: string;
   } = {}) {
     const { 
       skip, 
@@ -34,7 +36,9 @@ export class QuotesService {
       sortBy = 'document_date', 
       sortDir = 'desc',
       year,
-      probabilidadExito
+      probabilidadExito,
+      cierrePrevYear,
+      cierrePrevMonths
     } = params;
 
     const where: any = {};
@@ -96,6 +100,125 @@ export class QuotesService {
       }
     }
 
+    // Filtro por Fecha de Cierre Previsto (cierreprev_date)
+    if (cierrePrevMonths === 'overdue') {
+      // Ofertas abiertas cuya fecha de cierre previsto ya venció (< hoy a las 00:00:00)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const overdueCondition = {
+        AND: [
+          {
+            OR: [
+              {
+                sales_quotes_crm: {
+                  cierreprev_date: { lt: today }
+                }
+              },
+              {
+                AND: [
+                  {
+                    OR: [
+                      { sales_quotes_crm: null },
+                      { sales_quotes_crm: { cierreprev_date: null } }
+                    ]
+                  },
+                  { cierreprev_date: { lt: today } }
+                ]
+              }
+            ]
+          },
+          // No deben estar ganadas ni perdidas
+          {
+            NOT: {
+              OR: [
+                { estado_oferta: { in: ['ganada', 'ganado', 'aceptada', 'aprobada', 'perdida', 'perdido', 'cancelada', 'rechazada'], mode: 'insensitive' } },
+                { sales_quotes_crm: { estado_oferta: { in: ['ganada', 'ganado', 'aceptada', 'aprobada', 'perdida', 'perdido', 'cancelada', 'rechazada'], mode: 'insensitive' } } }
+              ]
+            }
+          }
+        ]
+      };
+      and.push(overdueCondition);
+    } else if (cierrePrevMonths === 'none') {
+      // Ofertas que NO tienen fecha de cierre previsto en ninguna de las dos tablas
+      and.push({
+        AND: [
+          { cierreprev_date: null },
+          {
+            OR: [
+              { sales_quotes_crm: null },
+              { sales_quotes_crm: { cierreprev_date: null } }
+            ]
+          }
+        ]
+      });
+    } else if (cierrePrevYear) {
+      // Filtro por año y opcionalmente meses
+      if (cierrePrevMonths && cierrePrevMonths !== 'all') {
+        const months = cierrePrevMonths
+          .split(',')
+          .map(m => parseInt(m.trim(), 10))
+          .filter(m => !isNaN(m) && m >= 1 && m <= 12);
+
+        if (months.length > 0) {
+          // Generar rangos para cada mes seleccionado
+          const monthOrConditions = months.map(m => {
+            const start = new Date(Date.UTC(cierrePrevYear, m - 1, 1, 0, 0, 0));
+            const end = new Date(Date.UTC(cierrePrevYear, m, 0, 23, 59, 59, 999));
+            
+            return {
+              OR: [
+                {
+                  sales_quotes_crm: {
+                    cierreprev_date: { gte: start, lte: end }
+                  }
+                },
+                {
+                  AND: [
+                    {
+                      OR: [
+                        { sales_quotes_crm: null },
+                        { sales_quotes_crm: { cierreprev_date: null } }
+                      ]
+                    },
+                    { cierreprev_date: { gte: start, lte: end } }
+                  ]
+                }
+              ]
+            };
+          });
+
+          and.push({ OR: monthOrConditions });
+        }
+      } else {
+        // Todo el año de cierre previsto
+        const start = new Date(Date.UTC(cierrePrevYear, 0, 1, 0, 0, 0));
+        const end = new Date(Date.UTC(cierrePrevYear, 11, 31, 23, 59, 59, 999));
+
+        and.push({
+          OR: [
+            {
+              sales_quotes_crm: {
+                cierreprev_date: { gte: start, lte: end }
+              }
+            },
+            {
+              AND: [
+                {
+                  OR: [
+                    { sales_quotes_crm: null },
+                    { sales_quotes_crm: { cierreprev_date: null } }
+                  ]
+                },
+                { cierreprev_date: { gte: start, lte: end } }
+              ]
+            }
+          ]
+        });
+      }
+    }
+
     if (and.length > 0) {
       where.AND = and;
     }
@@ -121,6 +244,20 @@ export class QuotesService {
               select: {
                 name: true,
               }
+            },
+            sales_quotes_crm: {
+              select: {
+                id: true,
+                cierreprev_date: true,
+                estado_oferta: true,
+                probabilidad_exito: true,
+                proxima_accion: true,
+                fecha_proxima_accion: true,
+                oferta_type: true,
+                motivo_ganada: true,
+                motivo_perdida: true,
+                observaciones: true,
+              }
             }
           },
         }),
@@ -134,12 +271,20 @@ export class QuotesService {
             valor_oferta_ponderado: true,
             cerrado: true,
             document_date: true,
+            cierreprev_date: true,
             salesperson_code: true,
             sales_rep: {
               select: {
                 name: true,
               },
             },
+            sales_quotes_crm: {
+              select: {
+                cierreprev_date: true,
+                estado_oferta: true,
+                probabilidad_exito: true,
+              }
+            }
           },
         }),
       ]);
@@ -178,9 +323,29 @@ export class QuotesService {
 
       allRelevantQuotes.forEach(quote => {
         const amt = Number(quote.amount || 0);
-        const weighted = Number(quote.valor_oferta_ponderado || 0);
-        const prob = Number(quote.probabilidad_exito || 0);
-        const state = (quote.estado_oferta || '').toLowerCase();
+        const crm = quote.sales_quotes_crm;
+
+        // Probabilidad efectiva
+        let prob = 0;
+        if (crm && crm.probabilidad_exito !== null && crm.probabilidad_exito !== undefined) {
+          prob = Number(crm.probabilidad_exito);
+        } else if (quote.probabilidad_exito !== null && quote.probabilidad_exito !== undefined) {
+          prob = Number(quote.probabilidad_exito);
+        }
+
+        // Valor ponderado efectivo
+        let weighted = 0;
+        if (quote.valor_oferta_ponderado !== null && quote.valor_oferta_ponderado !== undefined) {
+          weighted = Number(quote.valor_oferta_ponderado);
+        } else {
+          weighted = amt * (prob / 100);
+        }
+
+        // Estado efectivo
+        const rawState = (crm?.estado_oferta && crm.estado_oferta.trim() !== '')
+          ? crm.estado_oferta
+          : (quote.estado_oferta || '');
+        const state = rawState.toLowerCase();
 
         totalAmount += amt;
 
@@ -191,8 +356,8 @@ export class QuotesService {
 
         totalWeightedValue += weighted;
 
-        const isWon = state.includes('ganada');
-        const isLost = state.includes('perdida');
+        const isWon = state.includes('ganada') || state.includes('ganado') || state.includes('aceptada') || state.includes('aprobada');
+        const isLost = state.includes('perdida') || state.includes('perdido') || state.includes('cancelada') || state.includes('rechazada');
 
         if (isWon) {
           wonAmount += amt;
@@ -265,8 +430,41 @@ export class QuotesService {
       const successRate = closedCount > 0 ? (wonCount / closedCount) * 100 : 0;
       const avgProbability = probabilityCount > 0 ? (totalProbabilitySum / probabilityCount) : 0;
 
+      const formattedData = data.map(q => {
+        const crm = q.sales_quotes_crm;
+        const rawEstado = (crm?.estado_oferta && crm.estado_oferta.trim() !== '')
+          ? crm.estado_oferta
+          : (q.estado_oferta || '');
+
+        let prob = q.probabilidad_exito !== null && q.probabilidad_exito !== undefined ? Number(q.probabilidad_exito) : null;
+        if (crm && crm.probabilidad_exito !== null && crm.probabilidad_exito !== undefined) {
+          prob = Number(crm.probabilidad_exito);
+        }
+
+        const amt = Number(q.amount || 0);
+        let weighted = q.valor_oferta_ponderado !== null && q.valor_oferta_ponderado !== undefined ? Number(q.valor_oferta_ponderado) : null;
+        if (prob !== null) {
+          weighted = Number((amt * (prob / 100)).toFixed(2));
+        }
+
+        return {
+          ...q,
+          estado_oferta: rawEstado || q.estado_oferta,
+          probabilidad_exito: prob,
+          valor_oferta_ponderado: weighted,
+          cierreprev_date: crm?.cierreprev_date || q.cierreprev_date || null,
+          oferta_type: crm?.oferta_type || q.oferta_type || null,
+          motivo_ganada: crm?.motivo_ganada || q.motivo_ganada || null,
+          motivo_perdida: crm?.motivo_perdida || q.motivo_perdida || null,
+          observaciones: crm?.observaciones || q.observaciones || null,
+          proxima_accion: crm?.proxima_accion || null,
+          fecha_proxima_accion: crm?.fecha_proxima_accion || null,
+          crm_id: crm?.id || null,
+        };
+      });
+
       return {
-        data,
+        data: formattedData,
         total,
         summary: {
           totalCount: allRelevantQuotes.length,

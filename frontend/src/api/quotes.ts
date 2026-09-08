@@ -83,6 +83,8 @@ export const getAllQuotes = async (params: {
   sortDir?: string;
   year?: number;
   probabilidadExito?: string;
+  cierrePrevYear?: number;
+  cierrePrevMonths?: string;
 }): Promise<SalesQuotesResponse> => {
   const { data } = await apiClient.get('/quotes', { params });
   return data;

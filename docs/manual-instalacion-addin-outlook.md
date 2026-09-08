@@ -87,13 +87,15 @@ Cuando estés leyendo un correo en Outlook de un cliente o proveedor, haz clic e
 
 ### Paso 2: Revisar la información detectada
 En el panel lateral derecho verás:
-* El asunto, remitente y fecha original del mensaje.
+* El asunto, remitente y fecha original del mensaje. Los campos **De:** y **Para:** muestran directamente las direcciones de correo electrónico de cada interlocutor de forma limpia y legible.
+* Por defecto, la opción de vinculación a oferta permanece en **`(Sin vincular a oferta - Solo ficha cliente)`**, permitiendo al comercial asociar una cotización solo cuando sea pertinente.
+* Mientras se consulta la base de datos, el panel muestra un **Skeleton Loader** estructurado con animación suave corporativa, garantizando una percepción de carga instantánea sin pantallas en blanco ni esperas bloqueantes.
 * Si el contacto ya existe en dTS, aparecerá con el distintivo verde **✓ Identificado** junto a su empresa.
 * Si el remitente no está registrado, dispones de un buscador predictivo para asociar el correo a la empresa cliente correspondiente (los contactos oficiales se crean y sincronizan desde Business Central vía n8n).
 
 ### Paso 3: Asignar tipología y oferta (Opcional)
 * **Tipología:** Selecciona el botón correspondiente (`📄 Cierre/Aceptación`, `⚙️ Técnica`, `💬 Negociación`, `⚠️ Postventa`, `✉️ General`).
-* **Vincular a Oferta:** Si el cliente tiene cotizaciones en curso, selecciónala del menú desplegable para que el correo se registre también en el seguimiento de esa venta.
+* **Vincular a Oferta:** Si el cliente tiene cotizaciones en curso y deseas vincular el correo a una de ellas, elígela del menú desplegable. De lo contrario, déjalo en la opción predeterminada para registrarlo exclusivamente en la ficha general del cliente.
 
 ### Paso 4: Guardar
 Haz clic en **[ 💾 Guardar Correo en dTS CRM ]**.  
@@ -111,3 +113,9 @@ Sí. Al registrar un correo con el Add-in, pasa a formar parte del historial com
 
 #### ¿Funciona en la aplicación de escritorio de Outlook para Windows?
 Sí. El complemento es un Add-in web universal compatible con el nuevo Outlook para Windows, Outlook clásico, Outlook para Mac y Outlook en la web (navegador).
+
+#### ¿Qué hacer si aparece un error de consentimiento o token caducado (`AADSTS65001 / consent_required`)?
+Este mensaje indica que Microsoft requiere una confirmación interactiva de permisos para la aplicación `dTS CRM - Exchange Sync`:
+1. **Solución rápida para el comercial:** Entra a la WebApp en **CRM** o **Ajustes** (`/settings`), pulsa en **"Reconectar con Microsoft 365"**, inicia sesión y pulsa **Aceptar** en la pantalla de permisos.
+2. **Solución definitiva para la empresa (Administrador de TI):** Accede al [Portal de Microsoft Entra / Azure](https://entra.microsoft.com/) ➔ *Aplicaciones* ➔ *Registros de aplicaciones* ➔ `dTS CRM - Exchange Sync` ➔ *Permisos de API* y haz clic en **"Conceder consentimiento de administrador para dTS Instruments"**. De este modo, ningún empleado volverá a requerir confirmación individual.
+

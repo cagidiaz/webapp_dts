@@ -146,6 +146,11 @@ export class MicrosoftGraphService {
       return null;
     }
 
+    // Si la cuenta requiere consentimiento o re-autenticación interactiva, no reintentar automáticamente
+    if (account.access_token === 'CONSENT_REQUIRED' || account.access_token === 'AUTH_REQUIRED') {
+      return null;
+    }
+
     // Si el token expira en menos de 5 minutos, refrescarlo
     const fiveMinutes = 5 * 60 * 1000;
     const isExpired = new Date(account.token_expires_at).getTime() - Date.now() < fiveMinutes;
@@ -177,6 +182,30 @@ export class MicrosoftGraphService {
 
       if (!response.ok) {
         const errorText = await response.text();
+
+        // Si Microsoft responde que se requiere consentimiento interactivo (AADSTS65001) o el grant es inválido
+        if (
+          errorText.includes('invalid_grant') ||
+          errorText.includes('consent_required') ||
+          errorText.includes('AADSTS65001')
+        ) {
+          this.logger.warn(
+            `La sesión de Microsoft 365 para el usuario ${userId} ha caducado o requiere consentimiento interactivo (AADSTS65001 / consent_required). Se desactiva la renovación en segundo plano hasta que el usuario vuelva a conectar su cuenta en la WebApp.`
+          );
+
+          // Marcamos el token como CONSENT_REQUIRED y posponemos la expiración para detener el bucle infinito de reintentos
+          await this.prisma.user_exchange_accounts.update({
+            where: { user_id: userId },
+            data: {
+              access_token: 'CONSENT_REQUIRED',
+              token_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              updated_at: new Date(),
+            },
+          }).catch(() => {});
+
+          return null;
+        }
+
         this.logger.error(`Error al refrescar token de Microsoft: ${errorText}`);
         return null;
       }

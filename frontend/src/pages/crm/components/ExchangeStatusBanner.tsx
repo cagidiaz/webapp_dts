@@ -118,13 +118,19 @@ export const ExchangeStatusBanner: React.FC = () => {
                 <h4 className="font-bold text-sm text-white tracking-wide">
                   Integración con Microsoft Outlook 365
                 </h4>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  Sin conectar
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                  statusData?.requiresConsent
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}>
+                  {statusData?.requiresConsent ? 'Sesión expirada' : 'Sin conectar'}
                 </span>
               </div>
 
               <p className="text-xs text-slate-300 mt-0.5">
-                Conecta tu cuenta de correo de Microsoft 365 para preparar borradores automáticos y sincronizar tus reuniones del CRM. Puedes configurarlo también desde <strong className="text-white">Ajustes Generales</strong>.
+                {statusData?.requiresConsent
+                  ? 'Tu sesión de Microsoft 365 ha caducado o requiere confirmación interactiva de permisos en Azure. Vuelve a conectar tu cuenta para reactivar la sincronización.'
+                  : 'Conecta tu cuenta de correo de Microsoft 365 para preparar borradores automáticos y sincronizar tus reuniones del CRM. Puedes configurarlo también desde Ajustes Generales.'}
               </p>
             </div>
           </div>
@@ -136,7 +142,7 @@ export const ExchangeStatusBanner: React.FC = () => {
               className="px-4 py-2 bg-[#00B0B9] hover:brightness-110 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               <Link2 size={15} />
-              {connectMutation.isPending ? 'Conectando...' : 'Conectar con Microsoft 365'}
+              {connectMutation.isPending ? 'Conectando...' : statusData?.requiresConsent ? 'Reconectar con Microsoft 365' : 'Conectar con Microsoft 365'}
             </button>
           </div>
         </div>

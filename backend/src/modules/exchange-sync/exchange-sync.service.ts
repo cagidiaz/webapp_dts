@@ -25,12 +25,24 @@ export class ExchangeSyncService {
         mail_sync_enabled: true,
         last_synced_at: true,
         created_at: true,
+        access_token: true,
       },
     });
 
+    const isConnected = !!account && account.access_token !== 'CONSENT_REQUIRED' && account.access_token !== 'AUTH_REQUIRED';
+    const requiresConsent = !!account && (account.access_token === 'CONSENT_REQUIRED' || account.access_token === 'AUTH_REQUIRED');
+
     return {
-      isConnected: !!account,
-      account: account || null,
+      isConnected,
+      requiresConsent,
+      account: account ? {
+        id: account.id,
+        email: account.email,
+        calendar_sync_enabled: account.calendar_sync_enabled,
+        mail_sync_enabled: account.mail_sync_enabled,
+        last_synced_at: account.last_synced_at,
+        created_at: account.created_at,
+      } : null,
     };
   }
 
