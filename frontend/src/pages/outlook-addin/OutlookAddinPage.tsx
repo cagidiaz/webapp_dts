@@ -193,24 +193,6 @@ export const OutlookAddinPage: React.FC = () => {
         : [];
       setToEmails(toList);
 
-      // Continuar con la consulta al backend
-      const proceedWithLookup = (finalSubject: string, bodyContent: string) => {
-        setSubject(finalSubject);
-        setBodyText(bodyContent);
-
-        const activeUser = currentMailboxUser || 'gdiaz@dtsinstruments.com';
-        setUserEmail(activeUser);
-
-        performLookup({
-          userEmail: activeUser,
-          fromEmail: fromAddr,
-          fromName: fromDisplay,
-          toEmails: toList,
-          subject: finalSubject,
-          itemId: mailItemId,
-        });
-      };
-
       // Obtener Asunto de forma robusta
       const resolveSubject = (cb: (subj: string) => void) => {
         if (typeof item.subject === 'string') {
@@ -224,17 +206,30 @@ export const OutlookAddinPage: React.FC = () => {
         }
       };
 
-      // Obtener cuerpo del correo
+      // Iniciar búsqueda en backend inmediatamente sin esperar a descargar el cuerpo completo
       resolveSubject((finalSubject) => {
+        setSubject(finalSubject);
+        const activeUser = currentMailboxUser || 'gdiaz@dtsinstruments.com';
+        setUserEmail(activeUser);
+
+        // Disparo inmediato de la consulta al CRM (ahorra hasta 1.5s de espera)
+        performLookup({
+          userEmail: activeUser,
+          fromEmail: fromAddr,
+          fromName: fromDisplay,
+          toEmails: toList,
+          subject: finalSubject,
+          itemId: mailItemId,
+        });
+
+        // Lectura del cuerpo del correo en segundo plano de forma no bloqueante
         if (item.body && typeof item.body.getAsync === 'function') {
           item.body.getAsync('text', (result: any) => {
             const bodyVal = result && (result.status === 'succeeded' || result.status === OfficeObj?.AsyncResultStatus?.Succeeded)
               ? (result.value || '')
               : '';
-            proceedWithLookup(finalSubject, bodyVal);
+            setBodyText(bodyVal);
           });
-        } else {
-          proceedWithLookup(finalSubject, '');
         }
       });
     } catch (err: any) {
@@ -280,9 +275,7 @@ export const OutlookAddinPage: React.FC = () => {
     try {
       const data = await lookupEmailInAddin(params);
       setLookupData(data);
-      if (data.openQuotes && data.openQuotes.length > 0) {
-        setSelectedQuoteDocNo(data.openQuotes[0].document_no);
-      }
+      setSelectedQuoteDocNo('');
     } catch (err: any) {
       console.error('Error en lookupEmailInAddin:', err);
       const serverMsg = err.response?.data?.message;
@@ -334,12 +327,34 @@ export const OutlookAddinPage: React.FC = () => {
     const targetContactId = lookupData?.matchedContact?.id;
     const interlocutor = isOutgoingEmail ? (toEmails[0] || fromEmail) : (fromEmail || toEmails[0]);
 
+    // Asegurar que el cuerpo del correo está cargado antes de enviar
+    let finalBody = bodyText;
+    if (!finalBody && typeof (window as any).Office !== 'undefined') {
+      const currentItem = (window as any).Office?.context?.mailbox?.item;
+      if (currentItem?.body && typeof currentItem.body.getAsync === 'function') {
+        try {
+          finalBody = await new Promise<string>((resolve) => {
+            currentItem.body.getAsync('text', (result: any) => {
+              if (result && (result.status === 'succeeded' || result.status === (window as any).Office?.AsyncResultStatus?.Succeeded)) {
+                resolve(result.value || '');
+              } else {
+                resolve('');
+              }
+            });
+          });
+          setBodyText(finalBody);
+        } catch {
+          finalBody = '';
+        }
+      }
+    }
+
     try {
       const result = await logEmailToAddin({
         userEmail,
         exchangeItemId: itemId,
         subject,
-        body: bodyText,
+        body: finalBody,
         sentDate,
         contactId: targetContactId,
         clientId: targetClientId,
@@ -375,11 +390,11 @@ export const OutlookAddinPage: React.FC = () => {
       {/* Cabecera Corporativa dTS */}
       <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-200 dark:border-white/10">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#003E51] text-[#00B0B9] flex items-center justify-center font-black text-sm shadow-xs">
+          <div className="w-7 h-7 rounded-lg bg-dts-primary text-dts-secondary flex items-center justify-center font-black text-sm shadow-xs">
             dTS
           </div>
           <div>
-            <h1 className="text-xs font-bold text-[#003E51] dark:text-white uppercase tracking-wider flex items-center gap-1">
+            <h1 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider flex items-center gap-1">
               dTS Instruments CRM
             </h1>
             <p className="text-[10px] text-gray-400">Complemento Oficial Outlook</p>
@@ -401,11 +416,51 @@ export const OutlookAddinPage: React.FC = () => {
         </div>
       )}
 
-      {/* Estado cargando */}
+      {/* Estado cargando con Skeleton estructurado */}
       {isLoading ? (
-        <div className="py-12 flex flex-col items-center justify-center gap-2 text-gray-400">
-          <div className="w-6 h-6 border-2 border-[#00B0B9] border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-[11px] font-medium">Analizando correo y CRM...</span>
+        <div className="space-y-3 animate-pulse">
+          {/* Skeleton Tarjeta Correo */}
+          <div className="bg-white dark:bg-[#00222C]/60 border border-gray-200 dark:border-white/10 rounded-xl p-3 shadow-2xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-28 bg-gray-200 dark:bg-white/10 rounded-full"></div>
+              <div className="h-3 w-16 bg-gray-200 dark:bg-white/10 rounded"></div>
+            </div>
+            <div className="space-y-1.5 pt-1">
+              <div className="h-3.5 w-4/5 bg-gray-200 dark:bg-white/10 rounded"></div>
+              <div className="h-3 w-3/5 bg-gray-200 dark:bg-white/10 rounded"></div>
+            </div>
+            <div className="pt-2 border-t border-gray-100 dark:border-white/5 flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <div className="h-3 w-8 bg-gray-200 dark:bg-white/10 rounded"></div>
+                <div className="h-3 w-40 bg-gray-200 dark:bg-white/10 rounded"></div>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="h-3 w-10 bg-gray-200 dark:bg-white/10 rounded"></div>
+                <div className="h-3 w-44 bg-gray-200 dark:bg-white/10 rounded"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Skeleton Tarjeta Interlocutor */}
+          <div className="bg-white dark:bg-[#00222C]/60 border border-gray-200 dark:border-white/10 rounded-xl p-3 shadow-2xs space-y-2.5">
+            <div className="flex justify-between items-center">
+              <div className="h-3 w-28 bg-gray-200 dark:bg-white/10 rounded"></div>
+              <div className="h-3 w-16 bg-gray-200 dark:bg-white/10 rounded"></div>
+            </div>
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+              <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-white/10 shrink-0"></div>
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-32 bg-gray-200 dark:bg-white/10 rounded"></div>
+                <div className="h-2.5 w-44 bg-gray-200 dark:bg-white/10 rounded"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Skeleton Botón de Acción con indicador sutil */}
+          <div className="w-full py-2.5 px-4 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl flex items-center justify-center gap-2 text-gray-400">
+            <div className="w-3.5 h-3.5 border-2 border-dts-secondary border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-xs font-semibold">Identificando interlocutor en CRM...</span>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -434,39 +489,17 @@ export const OutlookAddinPage: React.FC = () => {
             </div>
 
             <div className="pt-2 border-t border-gray-100 dark:border-white/5 flex flex-col gap-1.5 text-[11px]">
-              <div className="flex items-center justify-between text-gray-500">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-gray-400 font-semibold">De (Remitente):</span>
-                  {!isOutgoingEmail ? (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-900/40">
-                      Cliente / Contacto
-                    </span>
-                  ) : (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-medium">
-                      dTS Comercial
-                    </span>
-                  )}
-                </div>
-                <span className="font-medium text-gray-700 dark:text-gray-200 truncate max-w-[170px]" title={fromEmail}>
-                  {fromName || fromEmail}
+              <div className="flex items-center justify-between text-gray-500 gap-2">
+                <span className="text-gray-400 font-semibold shrink-0">De:</span>
+                <span className="font-medium text-gray-700 dark:text-gray-200 truncate text-right" title={fromName ? `${fromName} <${fromEmail}>` : fromEmail}>
+                  {fromEmail || fromName}
                 </span>
               </div>
               {toEmails.length > 0 && (
-                <div className="flex items-center justify-between text-gray-500">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400 font-semibold">Para (Destinatario):</span>
-                    {isOutgoingEmail ? (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold border border-blue-200 dark:border-blue-900/40">
-                        Cliente / Contacto
-                      </span>
-                    ) : (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-medium">
-                        dTS Comercial
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-gray-600 dark:text-gray-300 truncate max-w-[170px]" title={toEmails.join(', ')}>
-                    {toEmails[0]} {toEmails.length > 1 ? `(+${toEmails.length - 1})` : ''}
+                <div className="flex items-center justify-between text-gray-500 gap-2">
+                  <span className="text-gray-400 font-semibold shrink-0">Para:</span>
+                  <span className="text-gray-600 dark:text-gray-300 truncate text-right" title={toEmails.join(', ')}>
+                    {toEmails.join(', ')}
                   </span>
                 </div>
               )}
@@ -487,7 +520,7 @@ export const OutlookAddinPage: React.FC = () => {
             {lookupData?.matchedContact ? (
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
-                  <div className="w-7 h-7 rounded-full bg-[#00B0B9]/20 text-[#00B0B9] flex items-center justify-center font-bold">
+                  <div className="w-7 h-7 rounded-full bg-dts-secondary/20 text-dts-secondary flex items-center justify-center font-bold">
                     <User size={13} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -502,7 +535,7 @@ export const OutlookAddinPage: React.FC = () => {
 
                 {lookupData.matchedCustomer && (
                   <div className="flex items-center gap-2 px-2 py-1 text-gray-600 dark:text-gray-300">
-                    <Building2 size={12} className="text-[#00B0B9] shrink-0" />
+                    <Building2 size={12} className="text-dts-secondary shrink-0" />
                     <span className="font-medium truncate">{lookupData.matchedCustomer.name}</span>
                     <span className="text-[9px] px-1 py-0.2 rounded bg-gray-100 dark:bg-white/10 text-gray-500 font-mono">
                       {lookupData.matchedCustomer.clientId}
@@ -514,7 +547,7 @@ export const OutlookAddinPage: React.FC = () => {
               <div className="space-y-2">
                 <div className="p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 space-y-1">
                   <div className="text-blue-900 dark:text-blue-300 text-[11px] font-bold flex items-center gap-1.5">
-                    <Building2 size={13} className="text-[#00B0B9] shrink-0" />
+                    <Building2 size={13} className="text-dts-secondary shrink-0" />
                     <span className="truncate">Empresa: {lookupData.matchedCustomer.name}</span>
                     <span className="text-[9px] px-1 py-0.2 rounded bg-blue-100 dark:bg-white/10 text-blue-700 dark:text-gray-300 font-mono shrink-0">
                       {lookupData.matchedCustomer.clientId}
@@ -547,7 +580,7 @@ export const OutlookAddinPage: React.FC = () => {
                         placeholder="Buscar empresa cliente (mín. 2 letras)..."
                         value={companySearchQuery}
                         onChange={(e) => handleCompanySearch(e.target.value)}
-                        className="w-full pl-7 pr-2.5 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-xs outline-none focus:border-[#00B0B9]"
+                        className="w-full pl-7 pr-2.5 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-xs outline-none focus:border-dts-secondary"
                       />
                     </div>
 
@@ -561,7 +594,7 @@ export const OutlookAddinPage: React.FC = () => {
                               setCompanyResults([]);
                               setCompanySearchQuery('');
                             }}
-                            className="p-2 hover:bg-[#00B0B9]/15 cursor-pointer text-[11px] flex justify-between items-center transition-colors"
+                            className="p-2 hover:bg-dts-secondary/15 cursor-pointer text-[11px] flex justify-between items-center transition-colors"
                           >
                             <span className="font-semibold text-gray-800 dark:text-gray-100 truncate">{c.name}</span>
                             <span className="text-[9px] text-gray-400 font-mono ml-2 shrink-0">{c.city || c.client_id}</span>
@@ -571,10 +604,10 @@ export const OutlookAddinPage: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="p-2.5 rounded-lg bg-[#00B0B9]/10 border border-[#00B0B9]/30 flex justify-between items-center">
+                  <div className="p-2.5 rounded-lg bg-dts-secondary/10 border border-dts-secondary/30 flex justify-between items-center">
                     <div className="truncate">
                       <span className="text-[9px] text-gray-400 block uppercase font-bold">Empresa asignada</span>
-                      <span className="font-bold text-[#003E51] dark:text-[#00B0B9] text-xs truncate block">{selectedCompany.name}</span>
+                      <span className="font-bold text-dts-primary dark:text-dts-secondary text-xs truncate block">{selectedCompany.name}</span>
                       <span className="text-[10px] text-gray-500 block font-mono">{selectedCompany.client_id}</span>
                     </div>
                     <button
@@ -609,7 +642,7 @@ export const OutlookAddinPage: React.FC = () => {
                 <select
                   value={selectedQuoteDocNo}
                   onChange={(e) => setSelectedQuoteDocNo(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-xs text-gray-800 dark:text-gray-200 outline-none focus:border-[#00B0B9]"
+                  className="w-full px-2 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-xs text-gray-800 dark:text-gray-200 outline-none focus:border-dts-secondary"
                 >
                   <option value="">(Sin vincular a oferta - Solo ficha cliente)</option>
                   {lookupData.openQuotes.map((q) => (
@@ -637,7 +670,7 @@ export const OutlookAddinPage: React.FC = () => {
                       onClick={() => setSelectedCategory(cat.id as any)}
                       className={`p-1.5 rounded-lg border text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-[#00B0B9] bg-[#00B0B9]/15 text-[#003E51] dark:text-[#00B0B9] shadow-2xs'
+                          ? 'border-dts-secondary bg-dts-secondary/15 text-dts-primary dark:text-dts-secondary shadow-2xs'
                           : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/2 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300'
                       }`}
                     >
@@ -655,10 +688,10 @@ export const OutlookAddinPage: React.FC = () => {
                 type="checkbox"
                 checked={cleanBody}
                 onChange={(e) => setCleanBody(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-[#00B0B9] focus:ring-[#00B0B9]"
+                className="w-3.5 h-3.5 rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary"
               />
               <span className="text-[10px] flex items-center gap-1">
-                <Sparkles size={11} className="text-[#00B0B9]" />
+                <Sparkles size={11} className="text-dts-secondary" />
                 Limpiar avisos legales RGPD y firmas pesadas
               </span>
             </label>
@@ -696,7 +729,7 @@ export const OutlookAddinPage: React.FC = () => {
                 type="button"
                 onClick={handleLogEmail}
                 disabled={isSaving || (!lookupData?.matchedCustomer && !selectedCompany)}
-                className="w-full py-2.5 px-4 bg-[#003E51] hover:bg-[#002f3d] dark:bg-[#00B0B9] dark:hover:brightness-110 text-white dark:text-[#071318] font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-2.5 px-4 bg-dts-primary hover:bg-dts-primary/90 dark:bg-dts-secondary dark:hover:brightness-110 text-white dark:text-[#071318] font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? (
                   <>
@@ -705,7 +738,7 @@ export const OutlookAddinPage: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 size={14} className="text-[#00B0B9] dark:text-[#071318]" />
+                    <CheckCircle2 size={14} className="text-dts-secondary dark:text-[#071318]" />
                     <span>Guardar Correo en dTS CRM</span>
                   </>
                 )}

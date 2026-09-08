@@ -86,7 +86,10 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [setSession]);
 
-  if (loading) return null;
+  // En las rutas de Outlook Add-in (/outlook-crm y /outlook-addin) no bloqueamos con pantalla en blanco por Supabase
+  const isOutlookRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/outlook-');
+
+  if (loading && !isOutlookRoute) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
