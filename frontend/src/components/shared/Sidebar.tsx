@@ -37,7 +37,7 @@ const navItems: NavItem[] = [
   { 
     name: 'CRM', 
     icon: Briefcase, 
-    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES'],
+    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'TESTER'],
     children: [
       { name: 'Clientes', path: '/crm/customers' },
       { name: 'Contactos', path: '/crm/contacts' },
@@ -60,7 +60,7 @@ const navItems: NavItem[] = [
   { 
     name: 'Ventas', 
     icon: TrendingUp, 
-    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES'],
+    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'TESTER'],
     children: [
       { name: 'Clientes', path: '/sales/customers' },
       { name: 'Productos', path: '/sales/products' },
@@ -75,7 +75,7 @@ const navItems: NavItem[] = [
   { 
     name: 'Compras', 
     icon: Building2, 
-    roles: ['ADMIN', 'DIRECCION', 'OPERACIONES'],
+    roles: ['ADMIN', 'DIRECCION', 'OPERACIONES', 'TESTER'],
     children: [
       { name: 'Proveedores', path: '/purchases/vendors' },
       { name: 'Pedidos de Compra', path: '/purchases/orders' },
@@ -83,8 +83,8 @@ const navItems: NavItem[] = [
   },
   { 
     name: 'Configuración', 
-    icon: Sliders,
-    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES'],
+    icon: Sliders, 
+    roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'TESTER'],
     children: [
       { name: 'Gestión de Usuarios', path: '/users', roles: ['ADMIN'] },
       { name: 'Ajustes Generales', path: '/settings' },

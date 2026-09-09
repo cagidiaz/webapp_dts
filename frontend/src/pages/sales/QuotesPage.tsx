@@ -383,7 +383,7 @@ export const QuotesPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <KPISkeleton /><KPISkeleton /><KPISkeleton /><KPISkeleton />
         </div>
-        <div className="bg-white dark:bg-surface-card-dark rounded-xl h-[500px]">
+        <div className="bg-white dark:bg-surface-card-dark rounded-xl h-125">
           <TableSkeleton rows={15} columns={8} />
         </div>
       </div>
@@ -516,7 +516,7 @@ export const QuotesPage: React.FC = () => {
       )}
 
       {/* Main Container */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-320px)] min-h-[480px]">
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-320px)] min-h-120">
         {/* Filters Header */}
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
@@ -621,8 +621,8 @@ export const QuotesPage: React.FC = () => {
         {/* --- BARRA DE FILTRADO POR CIERRE PREVISTO (OPCIÓN 1 CON SELECTOR HABILITAR/DESHABILITAR) --- */}
         <div className={`border-b transition-all duration-300 px-4 py-2.5 text-xs ${
           enableCierreFilter 
-            ? 'bg-gradient-to-r from-teal-50/50 via-slate-50 to-teal-50/30 dark:from-teal-950/20 dark:via-dts-primary-dark/40 dark:to-slate-900/60 border-teal-200/70 dark:border-teal-900/50' 
-            : 'bg-gray-50/40 dark:bg-white/[0.02] border-gray-200/60 dark:border-gray-800/60'
+            ? 'bg-linear-to-r from-teal-50/50 via-slate-50 to-teal-50/30 dark:from-teal-950/20 dark:via-dts-primary-dark/40 dark:to-slate-900/60 border-teal-200/70 dark:border-teal-900/50' 
+            : 'bg-gray-50/40 dark:bg-white/2 border-gray-200/60 dark:border-gray-800/60'
         }`}>
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             
@@ -941,7 +941,7 @@ export const QuotesPage: React.FC = () => {
                   <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
                     {quote.document_date ? new Date(quote.document_date).toLocaleDateString() : '---'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap max-w-[200px] truncate">
+                  <td className="px-4 py-3 whitespace-nowrap max-w-50 truncate">
                     <div className="flex flex-col">
                       <span className="font-medium text-gray-900 dark:text-white text-xs">{quote.customer?.name || '---'}</span>
                       <span className="text-[10px] text-gray-500 font-mono">{quote.customer_no}</span>

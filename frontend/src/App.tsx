@@ -114,8 +114,8 @@ const App: React.FC = () => {
                 <Route path="simulations" element={<SimulationsPage />} />
               </Route>
 
-              {/* Modulo Ventas: Todos los roles (ADMIN, DIRECCION, VENTAS, OPERACIONES) */}
-              <Route path="sales" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']}><Outlet /></RoleGuard>}>
+              {/* Modulo Ventas: Todos los roles (ADMIN, DIRECCION, VENTAS, OPERACIONES, TESTER) */}
+              <Route path="sales" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'TESTER']}><Outlet /></RoleGuard>}>
                 <Route index element={<Navigate to="customers" replace />} />
                 <Route path="customers" element={<CustomersPage />} />
                 <Route path="products" element={<ProductsPage />} />
@@ -128,21 +128,21 @@ const App: React.FC = () => {
 
               </Route>
               
-              {/* Modulo Compras: ADMIN, DIRECCION, OPERACIONES */}
-              <Route path="purchases" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'OPERACIONES']}><Outlet /></RoleGuard>}>
+              {/* Modulo Compras: ADMIN, DIRECCION, OPERACIONES, TESTER */}
+              <Route path="purchases" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'OPERACIONES', 'TESTER']}><Outlet /></RoleGuard>}>
                 <Route index element={<Navigate to="vendors" replace />} />
                 <Route path="vendors" element={<VendorsPage />} />
                 <Route path="orders" element={<PurchaseOrdersPage />} />
               </Route>
 
-              <Route path="crm" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']}><Outlet /></RoleGuard>}>
+              <Route path="crm" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'TESTER']}><Outlet /></RoleGuard>}>
                 <Route index element={<CrmIndexRedirect />} />
                 <Route path="customers" element={<CrmPage mode="customers" />} />
                 <Route path="contacts" element={<CrmPage mode="contacts" />} />
                 <Route path="pipeline" element={<CrmPage mode="pipeline" />} />
               </Route>
               <Route path="users" element={<RoleGuard allowedRoles={['ADMIN']}><UsersPage /></RoleGuard>} />
-              <Route path="settings" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES']}><SettingsPage /></RoleGuard>} />
+              <Route path="settings" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'TESTER']}><SettingsPage /></RoleGuard>} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

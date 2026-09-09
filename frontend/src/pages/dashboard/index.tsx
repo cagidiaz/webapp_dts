@@ -9,9 +9,9 @@ export const DashboardPage: React.FC = () => {
 
   // Role-based routing for Dashboard content
   // ADMIN and DIRECCION see the Financial Dashboard
-  // VENTAS sees the Sales Dashboard
+  // VENTAS, OPERACIONES and TESTER see the Sales Dashboard
   
-  if (userRole === 'VENTAS' || userRole === 'OPERACIONES') {
+  if (userRole === 'VENTAS' || userRole === 'OPERACIONES' || userRole === 'TESTER') {
     return <SalesDashboard />;
   }
 
