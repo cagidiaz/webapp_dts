@@ -469,4 +469,308 @@ export class CustomersService {
       throw new InternalServerErrorException('Error al actualizar el tipo de cliente');
     }
   }
+
+  /**
+   * Obtiene las fechas del calendario para un año dado, con soporte opcional de corte día a día (YTD vs LYTD).
+   */
+  private async getDatesForYear(year: number, limitToToday: boolean = false): Promise<Date[]> {
+    const where: any = { year };
+    if (limitToToday) {
+      const today = new Date();
+      if (year <= today.getFullYear()) {
+        const currentMonth = today.getMonth() + 1;
+        const currentDay = today.getDate();
+        where.OR = [
+          { month: { lt: currentMonth } },
+          { 
+            month: currentMonth,
+            day: { lte: currentDay }
+          }
+        ];
+      }
+    }
+
+    const dates = await this.prisma.calendar.findMany({
+      where,
+      select: { date: true }
+    });
+    return dates.map(d => d.date);
+  }
+
+  /**
+   * Obtiene la Matriz de Relación de Clientes por tipo (A, B, C, D, E, F)
+   * con facturación del ejercicio, comparativa con año anterior,
+   * recuento de clientes, porcentajes relativos y subtotales Pareto (A+B vs C+D+E+F).
+   */
+  async getRelationshipMatrix(params: {
+    year?: number;
+    salespersonCode?: string;
+    limitToToday?: boolean;
+  }) {
+    try {
+      const year = params.year ? Number(params.year) : new Date().getFullYear();
+      const prevYear = year - 1;
+      const limitToToday = params.limitToToday !== undefined ? Boolean(params.limitToToday) : true;
+      const salespersonFilter = params.salespersonCode ? params.salespersonCode.trim() : undefined;
+
+      const SALES_DOC_TYPES = ['Sales Invoice', 'Sales Credit Memo'];
+
+      // 1. Obtener fechas de los calendarios para año en curso y año anterior
+      const [currentDates, prevDates] = await Promise.all([
+        this.getDatesForYear(year, limitToToday),
+        this.getDatesForYear(prevYear, limitToToday),
+      ]);
+
+      // 2. Obtener lista de comerciales y clientes
+      const [salesReps, allCustomers] = await Promise.all([
+        this.prisma.sales_reps.findMany({
+          select: { code: true, name: true },
+          orderBy: { name: 'asc' }
+        }),
+        this.prisma.customers.findMany({
+          select: {
+            client_id: true,
+            name: true,
+            salesperson_code: true,
+            client_type: true,
+          }
+        })
+      ]);
+
+      const salesRepMap = new Map<string, string>();
+      salesReps.forEach(sr => salesRepMap.set(sr.code, sr.name));
+
+      // 3. Obtener sumatorio de ventas de value_entries por cliente para el año y el año anterior
+      const [salesCurrentRaw, salesPrevRaw] = await Promise.all([
+        currentDates.length > 0
+          ? this.prisma.value_entries.groupBy({
+              by: ['source_no'],
+              _sum: { sales_amount: true },
+              where: {
+                document_type: { in: SALES_DOC_TYPES },
+                reg_date: { in: currentDates }
+              }
+            })
+          : Promise.resolve([] as any[]),
+        prevDates.length > 0
+          ? this.prisma.value_entries.groupBy({
+              by: ['source_no'],
+              _sum: { sales_amount: true },
+              where: {
+                document_type: { in: SALES_DOC_TYPES },
+                reg_date: { in: prevDates }
+              }
+            })
+          : Promise.resolve([] as any[])
+      ]);
+
+      const salesMapCurrent = new Map<string, number>();
+      salesCurrentRaw.forEach(s => {
+        if (s.source_no) {
+          salesMapCurrent.set(s.source_no, Number(s._sum.sales_amount || 0));
+        }
+      });
+
+      const salesMapPrev = new Map<string, number>();
+      salesPrevRaw.forEach(s => {
+        if (s.source_no) {
+          salesMapPrev.set(s.source_no, Number(s._sum.sales_amount || 0));
+        }
+      });
+
+      // 4. Función generadora de bloques de matriz
+      const labelsMap: Record<string, string> = {
+        A: 'Cautivos',
+        B: 'Habituales',
+        C: 'Ocasionales',
+        D: 'Nuevos',
+        E: 'Potenciales',
+        F: 'Inactivos',
+        SIN_CLASIFICAR: 'Sin Clasificar',
+      };
+
+      const codes = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+      const buildBlock = (
+        salespersonCode: string,
+        salespersonName: string,
+        customersList: typeof allCustomers
+      ) => {
+        const accumulators: Record<string, { numClientes: number; facturacion: number; facturacionPrev: number }> = {};
+        codes.forEach(c => {
+          accumulators[c] = { numClientes: 0, facturacion: 0, facturacionPrev: 0 };
+        });
+        accumulators['SIN_CLASIFICAR'] = { numClientes: 0, facturacion: 0, facturacionPrev: 0 };
+
+        customersList.forEach(c => {
+          const rawType = c.client_type ? c.client_type.trim().toUpperCase() : null;
+          const typeCode = (rawType && codes.includes(rawType)) ? rawType : 'SIN_CLASIFICAR';
+
+          accumulators[typeCode].numClientes += 1;
+          accumulators[typeCode].facturacion += salesMapCurrent.get(c.client_id) || 0;
+          accumulators[typeCode].facturacionPrev += salesMapPrev.get(c.client_id) || 0;
+        });
+
+        let totalFacturacion = 0;
+        let totalFacturacionPrev = 0;
+        let totalClientes = 0;
+
+        Object.values(accumulators).forEach(acc => {
+          totalFacturacion += acc.facturacion;
+          totalFacturacionPrev += acc.facturacionPrev;
+          totalClientes += acc.numClientes;
+        });
+
+        const rows = codes.map(code => {
+          const acc = accumulators[code];
+          const facturacionPct = totalFacturacion > 0 ? (acc.facturacion / totalFacturacion) * 100 : 0;
+          const clientesPct = totalClientes > 0 ? (acc.numClientes / totalClientes) * 100 : 0;
+          const variacionYoYPct = acc.facturacionPrev > 0
+            ? ((acc.facturacion - acc.facturacionPrev) / acc.facturacionPrev) * 100
+            : (acc.facturacion > 0 ? 100 : 0);
+
+          return {
+            code,
+            label: labelsMap[code],
+            facturacion: Math.round(acc.facturacion * 100) / 100,
+            facturacionPct: Math.round(facturacionPct * 10) / 10,
+            facturacionPrevYear: Math.round(acc.facturacionPrev * 100) / 100,
+            variacionYoYPct: Math.round(variacionYoYPct * 10) / 10,
+            numClientes: acc.numClientes,
+            clientesPct: Math.round(clientesPct * 10) / 10,
+          };
+        });
+
+        if (accumulators['SIN_CLASIFICAR'].numClientes > 0 || accumulators['SIN_CLASIFICAR'].facturacion > 0) {
+          const acc = accumulators['SIN_CLASIFICAR'];
+          const facturacionPct = totalFacturacion > 0 ? (acc.facturacion / totalFacturacion) * 100 : 0;
+          const clientesPct = totalClientes > 0 ? (acc.numClientes / totalClientes) * 100 : 0;
+          const variacionYoYPct = acc.facturacionPrev > 0
+            ? ((acc.facturacion - acc.facturacionPrev) / acc.facturacionPrev) * 100
+            : (acc.facturacion > 0 ? 100 : 0);
+
+          rows.push({
+            code: 'SIN_CLASIFICAR',
+            label: labelsMap['SIN_CLASIFICAR'],
+            facturacion: Math.round(acc.facturacion * 100) / 100,
+            facturacionPct: Math.round(facturacionPct * 10) / 10,
+            facturacionPrevYear: Math.round(acc.facturacionPrev * 100) / 100,
+            variacionYoYPct: Math.round(variacionYoYPct * 10) / 10,
+            numClientes: acc.numClientes,
+            clientesPct: Math.round(clientesPct * 10) / 10,
+          });
+        }
+
+        // Subtotal Grupo 1: Cautivos + Habituales (A + B)
+        const loyaltyRows = rows.filter(r => r.code === 'A' || r.code === 'B');
+        const loyaltyFact = loyaltyRows.reduce((sum, r) => sum + r.facturacion, 0);
+        const loyaltyFactPrev = loyaltyRows.reduce((sum, r) => sum + r.facturacionPrevYear, 0);
+        const loyaltyClients = loyaltyRows.reduce((sum, r) => sum + r.numClientes, 0);
+        const loyaltyFactPct = totalFacturacion > 0 ? (loyaltyFact / totalFacturacion) * 100 : 0;
+        const loyaltyClientsPct = totalClientes > 0 ? (loyaltyClients / totalClientes) * 100 : 0;
+        const loyaltyYoY = loyaltyFactPrev > 0
+          ? ((loyaltyFact - loyaltyFactPrev) / loyaltyFactPrev) * 100
+          : (loyaltyFact > 0 ? 100 : 0);
+
+        const subtotalLoyalty = {
+          label: 'Subtotal Cautivos + Habituales',
+          categories: ['A', 'B'],
+          facturacion: Math.round(loyaltyFact * 100) / 100,
+          facturacionPct: Math.round(loyaltyFactPct * 10) / 10,
+          facturacionPrevYear: Math.round(loyaltyFactPrev * 100) / 100,
+          variacionYoYPct: Math.round(loyaltyYoY * 10) / 10,
+          numClientes: loyaltyClients,
+          clientesPct: Math.round(loyaltyClientsPct * 10) / 10,
+        };
+
+        // Subtotal Grupo 2: Ocasionales + Nuevos + Potenciales + Inactivos (C + D + E + F + SIN_CLASIFICAR)
+        const oppRows = rows.filter(r => ['C', 'D', 'E', 'F', 'SIN_CLASIFICAR'].includes(r.code));
+        const oppFact = oppRows.reduce((sum, r) => sum + r.facturacion, 0);
+        const oppFactPrev = oppRows.reduce((sum, r) => sum + r.facturacionPrevYear, 0);
+        const oppClients = oppRows.reduce((sum, r) => sum + r.numClientes, 0);
+        const oppFactPct = totalFacturacion > 0 ? (oppFact / totalFacturacion) * 100 : 0;
+        const oppClientsPct = totalClientes > 0 ? (oppClients / totalClientes) * 100 : 0;
+        const oppYoY = oppFactPrev > 0
+          ? ((oppFact - oppFactPrev) / oppFactPrev) * 100
+          : (oppFact > 0 ? 100 : 0);
+
+        const subtotalOpportunity = {
+          label: 'Subtotal Ocasionales + Nuevos + Potenciales + Inactivos',
+          categories: ['C', 'D', 'E', 'F'],
+          facturacion: Math.round(oppFact * 100) / 100,
+          facturacionPct: Math.round(oppFactPct * 10) / 10,
+          facturacionPrevYear: Math.round(oppFactPrev * 100) / 100,
+          variacionYoYPct: Math.round(oppYoY * 10) / 10,
+          numClientes: oppClients,
+          clientesPct: Math.round(oppClientsPct * 10) / 10,
+        };
+
+        const totalVariacionYoYPct = totalFacturacionPrev > 0
+          ? ((totalFacturacion - totalFacturacionPrev) / totalFacturacionPrev) * 100
+          : (totalFacturacion > 0 ? 100 : 0);
+
+        return {
+          salespersonCode,
+          salespersonName,
+          rows,
+          subtotalLoyalty,
+          subtotalOpportunity,
+          total: {
+            facturacion: Math.round(totalFacturacion * 100) / 100,
+            facturacionPrevYear: Math.round(totalFacturacionPrev * 100) / 100,
+            variacionYoYPct: Math.round(totalVariacionYoYPct * 10) / 10,
+            numClientes: totalClientes,
+          }
+        };
+      };
+
+      // 5. Construir Bloque TOTAL GLOBAL (dTS)
+      const totalGlobal = buildBlock('TOTAL', 'dTS', allCustomers);
+
+      // 6. Construir Bloques por Comercial
+      // Agrupar clientes por salesperson_code
+      const customersByRep = new Map<string, typeof allCustomers>();
+      allCustomers.forEach(c => {
+        const repCode = c.salesperson_code ? c.salesperson_code.trim() : 'SIN_ASIGNAR';
+        if (!customersByRep.has(repCode)) {
+          customersByRep.set(repCode, []);
+        }
+        customersByRep.get(repCode)!.push(c);
+      });
+
+      const commercialBlocks: ReturnType<typeof buildBlock>[] = [];
+
+      // Incluir todos los comerciales que tengan clientes o estén en sales_reps (excluyendo SIN_ASIGNAR y Joaquim Pla 'JPL')
+      const repCodes = Array.from(new Set([
+        ...salesReps.map(r => r.code),
+        ...Array.from(customersByRep.keys())
+      ])).filter(code => code !== 'SIN_ASIGNAR' && code !== 'JPL');
+
+      repCodes.forEach(code => {
+        if (salespersonFilter && salespersonFilter !== code) return;
+        const repCustomers = customersByRep.get(code) || [];
+        const repName = salesRepMap.get(code) || code;
+        commercialBlocks.push(buildBlock(code, repName, repCustomers));
+      });
+
+      // Incluir sin asignar si tiene clientes y no hay filtro específico
+      if (!salespersonFilter && customersByRep.has('SIN_ASIGNAR')) {
+        commercialBlocks.push(buildBlock('SIN_ASIGNAR', 'Sin Asignar', customersByRep.get('SIN_ASIGNAR')!));
+      }
+
+      // Ordenar comerciales: los que tienen mayor facturación primero
+      commercialBlocks.sort((a, b) => b.total.facturacion - a.total.facturacion);
+
+      return {
+        year,
+        prevYear,
+        limitToToday,
+        totalGlobal,
+        commercials: commercialBlocks,
+      };
+    } catch (error) {
+      console.error('Error en CustomersService.getRelationshipMatrix:', error);
+      throw new InternalServerErrorException(error.message);
+    }
+  }
 }

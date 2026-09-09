@@ -69,6 +69,23 @@ export class CustomersController {
     return this.customersService.getSalespersons();
   }
 
+  @Get('relationship-matrix')
+  @ApiOperation({ summary: 'Obtener matriz de análisis de clientes por tipo de relación (A, B, C, D, E, F) con comparativa anual' })
+  @ApiQuery({ name: 'year', required: false, type: Number })
+  @ApiQuery({ name: 'salespersonCode', required: false, type: String })
+  @ApiQuery({ name: 'limitToToday', required: false, type: Boolean })
+  async getRelationshipMatrix(
+    @Query('year') year?: number,
+    @Query('salespersonCode') salespersonCode?: string,
+    @Query('limitToToday') limitToToday?: string,
+  ) {
+    return this.customersService.getRelationshipMatrix({
+      year: year ? Number(year) : undefined,
+      salespersonCode,
+      limitToToday: limitToToday === 'false' ? false : true,
+    });
+  }
+
   @Get('by-email/:email')
   @ApiOperation({ summary: 'Obtener cliente por dirección de email (del cliente o de sus contactos)' })
   async getByEmail(@Param('email') email: string) {

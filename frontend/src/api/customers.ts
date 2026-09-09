@@ -183,3 +183,57 @@ export const updateCustomerClientType = async (clientId: string, clientType: str
   return data;
 };
 
+export interface CustomerRelationshipRow {
+  code: string;
+  label: string;
+  facturacion: number;
+  facturacionPct: number;
+  facturacionPrevYear: number;
+  variacionYoYPct: number;
+  numClientes: number;
+  clientesPct: number;
+}
+
+export interface CustomerRelationshipSubtotal {
+  label: string;
+  categories: string[];
+  facturacion: number;
+  facturacionPct: number;
+  facturacionPrevYear: number;
+  variacionYoYPct: number;
+  numClientes: number;
+  clientesPct: number;
+}
+
+export interface CustomerRelationshipBlock {
+  salespersonCode: string;
+  salespersonName: string;
+  rows: CustomerRelationshipRow[];
+  subtotalLoyalty: CustomerRelationshipSubtotal;
+  subtotalOpportunity: CustomerRelationshipSubtotal;
+  total: {
+    facturacion: number;
+    facturacionPrevYear: number;
+    variacionYoYPct: number;
+    numClientes: number;
+  };
+}
+
+export interface CustomerRelationshipMatrixResponse {
+  year: number;
+  prevYear: number;
+  limitToToday: boolean;
+  totalGlobal: CustomerRelationshipBlock;
+  commercials: CustomerRelationshipBlock[];
+}
+
+export const getCustomerRelationshipMatrix = async (params: {
+  year?: number;
+  salespersonCode?: string;
+  limitToToday?: boolean;
+}): Promise<CustomerRelationshipMatrixResponse> => {
+  const { data } = await apiClient.get('/customers/relationship-matrix', { params });
+  return data;
+};
+
+

@@ -24,6 +24,14 @@ import { ExchangeSyncModule } from './modules/exchange-sync/exchange-sync.module
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: [
+        join(process.cwd(), '.env'),
+        join(process.cwd(), 'backend', '.env'),
+        join(__dirname, '..', '.env'),
+        join(__dirname, '..', '..', '.env'),
+        '.env',
+        'backend/.env',
+      ],
     }),
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'frontend', 'dist'),

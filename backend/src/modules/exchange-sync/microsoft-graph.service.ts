@@ -37,16 +37,33 @@ export class MicrosoftGraphService {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    this.clientId = this.configService.get<string>('AZURE_CLIENT_ID') || process.env.AZURE_CLIENT_ID || '';
-    this.clientSecret = this.configService.get<string>('AZURE_CLIENT_SECRET') || process.env.AZURE_CLIENT_SECRET || '';
-    this.tenantId = this.configService.get<string>('AZURE_TENANT_ID') || process.env.AZURE_TENANT_ID || 'common';
-    this.defaultRedirectUri = this.configService.get<string>('EXCHANGE_REDIRECT_URI') || process.env.EXCHANGE_REDIRECT_URI || 'http://localhost:5173/crm?exchange_auth=callback';
+    const rawClientId = this.configService.get<string>('AZURE_CLIENT_ID') || process.env.AZURE_CLIENT_ID || '';
+    const rawSecret = this.configService.get<string>('AZURE_CLIENT_SECRET') || process.env.AZURE_CLIENT_SECRET || '';
+    const rawTenant = this.configService.get<string>('AZURE_TENANT_ID') || process.env.AZURE_TENANT_ID || 'common';
+    const rawRedirect = this.configService.get<string>('EXCHANGE_REDIRECT_URI') || process.env.EXCHANGE_REDIRECT_URI || 'http://localhost:5173/crm?exchange_auth=callback';
+
+    this.clientId = rawClientId.replace(/^["']|["']$/g, '').trim();
+    this.clientSecret = rawSecret.replace(/^["']|["']$/g, '').trim();
+    this.tenantId = rawTenant.replace(/^["']|["']$/g, '').trim();
+    this.defaultRedirectUri = rawRedirect.replace(/^["']|["']$/g, '').trim();
+
+    if (this.clientId) {
+      this.logger.log(`MicrosoftGraphService configurado con Client ID: ${this.clientId.substring(0, 8)}... (Tenant: ${this.tenantId})`);
+    } else {
+      this.logger.warn('MicrosoftGraphService: AZURE_CLIENT_ID no está definido en las variables de entorno.');
+    }
   }
 
   /**
    * Genera la URL de autorización OAuth 2.0 para que el empleado conecte su cuenta de Microsoft 365 / Exchange.
    */
   getAuthorizationUrl(userId: string, customRedirectUri?: string): string {
+    if (!this.clientId) {
+      throw new BadRequestException(
+        'La integración con Microsoft 365 no está configurada en el servidor: falta la variable AZURE_CLIENT_ID en el archivo .env.',
+      );
+    }
+
     const redirectUri = customRedirectUri || this.defaultRedirectUri;
     const scopes = [
       'openid',

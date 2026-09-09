@@ -4,16 +4,18 @@ import { getAllCustomers } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
   Search, Building2, Euro, 
-  Clock, AlertCircle, X, ChevronDown
+  Clock, AlertCircle, X, ChevronDown, BarChart3
 } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { getCustomerSalespersons, CLIENT_TYPES, updateCustomerClientType } from '../../../api/customers';
+import { CustomerRelationshipMatrix } from './CustomerRelationshipMatrix';
 
 interface CrmCustomersProps {}
 
 export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
   const queryClient = useQueryClient();
   const { profile } = useAuthStore();
+  const [activeSubTab, setActiveSubTab] = useState<'directory' | 'matrix'>('directory');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [salespersonFilter, setSalespersonFilter] = useState('');
@@ -114,26 +116,74 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
     }
   };
 
+  // Drill-down desde la Matriz hacia el Directorio de Clientes
+  const handleDrillDown = ({ clientType, salespersonCode }: { clientType?: string; salespersonCode?: string }) => {
+    if (clientType !== undefined) {
+      setClientTypeFilter(clientType);
+    }
+    if (salespersonCode !== undefined && !isCommercial) {
+      setSalespersonFilter(salespersonCode);
+    }
+    setActiveSubTab('directory');
+  };
+
   // KPIs
   const activeAccountsCount = totalItems;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-3.5 animate-in fade-in duration-500 pb-10">
       
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Ventas Totales</span>
-            <Euro size={18} className="text-gray-400" />
-          </div>
-          <div className="text-2xl font-black font-mono text-dts-primary dark:text-white">
-            {formatCurrency(pipelineTotal, 0)}
-          </div>
-          <div className="text-[10px] text-emerald-500 mt-1 font-semibold flex items-center gap-1">
-            Facturación acumulada global
-          </div>
-        </div>
+      {/* Selector de Sub-Pestañas */}
+      <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('directory')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'directory'
+              ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20'
+              : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/80 dark:border-gray-800'
+          }`}
+        >
+          <Building2 size={16} className={activeSubTab === 'directory' ? 'text-[#00B0B9]' : 'text-gray-400'} />
+          <span>Directorio de Clientes</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('matrix')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'matrix'
+              ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20'
+              : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/80 dark:border-gray-800'
+          }`}
+        >
+          <BarChart3 size={16} className={activeSubTab === 'matrix' ? 'text-[#00B0B9]' : 'text-gray-400'} />
+          <span>Matriz de Relación / Análisis YTD</span>
+        </button>
+      </div>
+
+      {activeSubTab === 'matrix' ? (
+        <CustomerRelationshipMatrix
+          onDrillDown={handleDrillDown}
+          defaultSalesperson={salespersonFilter}
+          isCommercialUser={isCommercial}
+        />
+      ) : (
+        <>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Ventas Totales</span>
+                <Euro size={18} className="text-gray-400" />
+              </div>
+              <div className="text-2xl font-black font-mono text-dts-primary dark:text-white">
+                {formatCurrency(pipelineTotal, 0)}
+              </div>
+              <div className="text-[10px] text-emerald-500 mt-1 font-semibold flex items-center gap-1">
+                Facturación acumulada global
+              </div>
+            </div>
 
         <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
           <div className="flex justify-between items-start mb-2">
@@ -350,6 +400,8 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
           </table>
         </div>
       </div>
+      </>
+      )}
 
       {/* Sync/Create Explanation Modal */}
       {showSyncModal && (

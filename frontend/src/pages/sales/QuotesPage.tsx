@@ -63,14 +63,6 @@ export const QuotesPage: React.FC = () => {
     return list;
   }, [currentYear]);
 
-  // Años disponibles para cierre previsto (desde el pasado hasta 2 años en el futuro)
-  const availableCierreYears = useMemo(() => {
-    const list = [];
-    for (let y = currentYear + 2; y >= currentYear - 2; y--) {
-      list.push(y);
-    }
-    return list;
-  }, [currentYear]);
 
   const observerTarget = useRef<HTMLTableRowElement>(null);
   const pageSize = 50;
@@ -677,7 +669,7 @@ export const QuotesPage: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
                   <div className="h-5 w-px bg-gray-200 dark:bg-gray-700 mx-0.5"></div>
 
-                  {/* Selector de Año con flechas */}
+                  {/* Selector de Año con flechas laterales */}
                   <div className="flex items-center bg-white dark:bg-surface-card-dark border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xs overflow-hidden">
                     <button
                       type="button"
@@ -687,15 +679,9 @@ export const QuotesPage: React.FC = () => {
                     >
                       <ChevronLeft size={13} />
                     </button>
-                    <select
-                      value={cierrePrevYear}
-                      onChange={(e) => setCierrePrevYear(Number(e.target.value))}
-                      className="bg-transparent text-center font-black text-xs text-gray-900 dark:text-white py-1 px-1 focus:outline-none cursor-pointer"
-                    >
-                      {availableCierreYears.map(y => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
+                    <span className="font-black text-xs text-gray-900 dark:text-white py-1 px-2 select-none tabular-nums">
+                      {cierrePrevYear}
+                    </span>
                     <button
                       type="button"
                       onClick={() => setCierrePrevYear(prev => prev + 1)}
