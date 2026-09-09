@@ -125,7 +125,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [showEmailModal, setShowEmailModal] = useState(false);
 
   // Form states (Unified Event Modal)
-  const [activityType, setActivityType] = useState<'TASK' | 'NOTE' | 'REUNION' | 'VIDEOLLAMADA' | 'CALL' | 'EVENT'>('TASK');
+  const [activityType, setActivityType] = useState<'TASK' | 'NOTE' | 'REUNION' | 'VIDEOLLAMADA' | 'VISITA' | 'CALL' | 'EVENT'>('TASK');
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
@@ -1828,7 +1828,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   onChange={(e) => {
                     const nextType = e.target.value as any;
                     setActivityType(nextType);
-                    if (nextType === 'REUNION' && !newLocation.trim()) {
+                    if ((nextType === 'REUNION' || nextType === 'VISITA') && !newLocation.trim()) {
                       const addr = getCompanyAddress();
                       if (addr) setNewLocation(addr);
                     }
@@ -1838,6 +1838,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   <option value="TASK">Tarea</option>
                   <option value="NOTE">Nota Interna</option>
                   <option value="REUNION">Reunión Presencial</option>
+                  <option value="VISITA">Visita a Cliente</option>
                   <option value="VIDEOLLAMADA">Videollamada Teams / Online</option>
                   <option value="CALL">Llamada Telefónica</option>
                   <option value="EVENT">Evento / Otro</option>
@@ -1880,7 +1881,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 </div>
               )}
 
-              {activityType === 'REUNION' && (
+              {(activityType === 'REUNION' || activityType === 'VISITA') && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>

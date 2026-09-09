@@ -17,16 +17,29 @@ export class CrmActivitiesController {
     @Req() req: any,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('salespersonId') salespersonId?: string,
+    @Query('types') types?: string,
   ) {
     const userId = req.user?.userId;
     const userRole = req.user?.role?.toUpperCase();
     const isAdminOrDireccion = userRole === 'ADMIN' || userRole === 'DIRECCION';
 
+    const parsedTypes = types
+      ? (types.split(',').map((t) => t.trim().toUpperCase()).filter(Boolean) as CrmActivityType[])
+      : undefined;
+
     return this.crmActivitiesService.getAgenda({
-      userId: isAdminOrDireccion ? undefined : userId,
+      userId: isAdminOrDireccion ? (salespersonId || undefined) : userId,
       startDate,
       endDate,
+      types: parsedTypes,
     });
+  }
+
+  @Get('creators')
+  @ApiOperation({ summary: 'Obtener lista de creadores/comerciales de actividades' })
+  async getCreators() {
+    return this.crmActivitiesService.getActivityCreators();
   }
 
   @Get('contact/:contactId')

@@ -15,6 +15,7 @@ export interface CrmActivity {
   is_completed: boolean;
   email?: string;
   conclusions?: string | null;
+  location?: string | null;
   created_at: string;
   updated_at: string;
   customer?: {
@@ -22,7 +23,23 @@ export interface CrmActivity {
     client_id: string;
     company_name: string;
     erp_code?: string;
+    city?: string;
     [key: string]: any;
+  };
+  contact?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone_no?: string;
+    mobile_no?: string;
+    position?: string;
+    [key: string]: any;
+  };
+  creator?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
   };
 }
 
@@ -43,13 +60,45 @@ export const getCrmActivitiesByContact = async (contactId: string): Promise<CrmA
 };
 
 /**
- * Obtiene la agenda semanal de actividades comerciales filtradas por rango de fechas
+ * Obtiene la agenda de actividades comerciales filtradas con soporte de tipos y comercial
  */
-export const getWeeklyAgenda = async (startDate?: string, endDate?: string): Promise<CrmActivity[]> => {
+export const getCrmActivitiesAgenda = async (params: {
+  startDate?: string;
+  endDate?: string;
+  salespersonId?: string;
+  types?: string[];
+}): Promise<CrmActivity[]> => {
   const { data } = await apiClient.get('/crm-activities', {
-    params: { startDate, endDate },
+    params: {
+      startDate: params.startDate,
+      endDate: params.endDate,
+      salespersonId: params.salespersonId,
+      types: params.types?.join(','),
+    },
   });
   return data;
+};
+
+export interface CrmCreator {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+}
+
+/**
+ * Obtiene la lista de usuarios/comerciales que han creado actividades
+ */
+export const getCrmActivityCreators = async (): Promise<CrmCreator[]> => {
+  const { data } = await apiClient.get('/crm-activities/creators');
+  return data;
+};
+
+/**
+ * Obtiene la agenda semanal de actividades comerciales (compatibilidad)
+ */
+export const getWeeklyAgenda = async (startDate?: string, endDate?: string): Promise<CrmActivity[]> => {
+  return getCrmActivitiesAgenda({ startDate, endDate });
 };
 
 /**

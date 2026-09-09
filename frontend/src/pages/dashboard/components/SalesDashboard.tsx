@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
+import { CrmActivityReportModal } from '../../crm/components/CrmActivityReportModal';
 import { useUIStore } from '../../../store/uiStore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -129,6 +130,7 @@ export const SalesDashboard: React.FC = () => {
   // Drawer state
   const [selectedCustCode, setSelectedCustCode] = React.useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
 
   const currentMonth = new Date().getMonth() + 1;
   const initialMonths = React.useMemo(() => Array.from({ length: currentMonth }, (_, i) => i + 1), [currentMonth]);
@@ -353,14 +355,25 @@ export const SalesDashboard: React.FC = () => {
         
         {/* Agenda Semanal CRM (Timeline Style) */}
         <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 space-y-6 flex flex-col h-full min-h-[460px]">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0 gap-2">
             <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-dts-primary dark:text-white">
               <Activity size={16} className="text-dts-secondary" />
               Agenda Semanal CRM
             </h3>
-            <span className="text-[11px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wide">
-              Semana del {monday.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} al {sunday.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="hidden sm:inline text-[11px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wide">
+                Semana del {monday.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} al {sunday.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsReportModalOpen(true)}
+                className="px-2.5 py-1 text-[11px] font-bold rounded-lg text-white bg-dts-primary hover:bg-dts-primary/90 dark:bg-dts-secondary dark:text-dts-primary-dark flex items-center gap-1.5 shadow-sm transition-all active:scale-[0.98]"
+                title="Exportar informe de eventos y reuniones en PDF o Excel"
+              >
+                <FileText size={12} />
+                <span>Exportar Informe</span>
+              </button>
+            </div>
           </div>
 
           {isLoadingAgenda ? (
@@ -587,6 +600,12 @@ export const SalesDashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de Informe Histórico de Eventos PDF / Excel */}
+      <CrmActivityReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+      />
     </div>
   );
 };

@@ -72,14 +72,18 @@ export class CrmActivitiesService {
   }
 
   /**
-   * Obtiene las actividades comerciales (agenda) filtradas por usuario y/o rango de fechas.
+   * Obtiene las actividades comerciales (agenda) filtradas por usuario, tipos y/o rango de fechas.
    */
-  async getAgenda(params: { userId?: string; startDate?: string; endDate?: string }) {
-    const { userId, startDate, endDate } = params;
+  async getAgenda(params: { userId?: string; startDate?: string; endDate?: string; types?: CrmActivityType[] }) {
+    const { userId, startDate, endDate, types } = params;
     const whereClause: any = {};
 
     if (userId) {
       whereClause.created_by = userId;
+    }
+
+    if (types && types.length > 0) {
+      whereClause.type = { in: types };
     }
 
     if (startDate || endDate) {
@@ -97,7 +101,15 @@ export class CrmActivitiesService {
         where: whereClause,
         include: {
           customer: true,
-          contact: true
+          contact: true,
+          creator: {
+            select: {
+              id: true,
+              first_name: true,
+              last_name: true,
+              email: true,
+            },
+          },
         },
         orderBy: {
           due_date: 'asc'
@@ -260,6 +272,33 @@ export class CrmActivitiesService {
       if (error instanceof NotFoundException) throw error;
       console.error('Error en CrmActivitiesService.delete:', error);
       throw new InternalServerErrorException('Error al eliminar la actividad');
+    }
+  }
+
+  /**
+   * Obtiene la lista de comerciales / creadores de actividades para filtros de reportes.
+   */
+  async getActivityCreators() {
+    try {
+      const users = await this.prisma.profiles.findMany({
+        where: {
+          is_active: true,
+        },
+        select: {
+          id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          code: true,
+        },
+        orderBy: {
+          first_name: 'asc',
+        },
+      });
+      return users;
+    } catch (error) {
+      console.error('Error en CrmActivitiesService.getActivityCreators:', error);
+      throw new InternalServerErrorException('Error al obtener creadores de actividades');
     }
   }
 }
