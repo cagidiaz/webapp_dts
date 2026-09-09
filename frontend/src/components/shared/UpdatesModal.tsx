@@ -35,32 +35,38 @@ export const UpdatesModal: React.FC = () => {
         </div>
 
         <div className="p-6 max-h-[60vh] overflow-y-auto bg-white dark:bg-surface-dark">
-          <div className="space-y-4">
-            {commits.map((commit, index) => {
-              const isNew = index === 0; // Highlight the latest commit
-              const date = new Date(commit.commit.author.date).toLocaleDateString('es-ES', {
-                year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-              });
-              
-              return (
-                <div key={commit.sha} className={`relative pl-6 pb-6 border-l-2 last:border-l-0 last:pb-0 ${isNew ? 'border-dts-secondary' : 'border-gray-200 dark:border-white/10'}`}>
-                  <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white dark:border-surface-dark ${isNew ? 'bg-dts-secondary' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400">{date}</span>
-                    <a href={commit.html_url} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-dts-secondary transition-colors" title="Ver en GitHub">
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
+          <div className="relative">
+            {/* Línea vertical continua que atraviesa el centro exacto de todos los nodos */}
+            <div className="absolute left-[7px] top-2 bottom-4 w-0.5 bg-gray-200 dark:bg-zinc-500" />
+
+            <div className="space-y-6">
+              {commits.map((commit, index) => {
+                const isNew = index === 0; // Highlight the latest commit
+                const date = new Date(commit.commit.author.date).toLocaleDateString('es-ES', {
+                  year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+                
+                return (
+                  <div key={commit.sha} className="relative pl-7">
+                    {/* Indicador circular centrado con precisión: w-4 (16px) en left-0 (centro x=8px) alineado con la línea en left-[7px] (w-0.5=2px, centro x=8px) */}
+                    <div className={`absolute left-0 top-0.5 w-4 h-4 rounded-full border-2 border-white dark:border-surface-card-dark ${isNew ? 'bg-dts-secondary ring-2 ring-dts-secondary/30' : 'bg-gray-300 dark:bg-zinc-600'}`} />
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400">{date}</span>
+                      <a href={commit.html_url} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-dts-secondary transition-colors" title="Ver en GitHub">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                      {commit.commit.message}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      <Github className="w-3.5 h-3.5" />
+                      <span>{commit.commit.author.name}</span>
+                    </div>
                   </div>
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                    {commit.commit.message}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    <Github className="w-3.5 h-3.5" />
-                    <span>{commit.commit.author.name}</span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
 

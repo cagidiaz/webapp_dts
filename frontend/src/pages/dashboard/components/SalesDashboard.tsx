@@ -389,7 +389,7 @@ export const SalesDashboard: React.FC = () => {
           ) : (
             <div className="relative space-y-4 overflow-y-auto pr-2 scrollbar-thin flex-1 max-h-[380px]">
               {/* Vertical timeline connector line */}
-              <div className="absolute left-[16px] md:left-[144px] top-2 bottom-4 w-0.5 bg-gray-150 dark:bg-white/10"></div>
+              <div className="absolute left-[16px] md:left-[144px] top-2 bottom-4 w-0.5 bg-gray-200 dark:bg-zinc-500"></div>
               
               {sortedWeeklyActivities.map(act => {
                 const typeIconMap = {

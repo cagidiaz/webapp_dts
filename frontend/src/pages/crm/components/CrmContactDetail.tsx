@@ -1338,12 +1338,15 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   ) : timelineActivities.length === 0 ? (
                     <div className="text-center py-6 text-gray-400 italic text-xs">No hay actividades registradas.</div>
                   ) : (
-                    <div className="relative pl-6 ml-2.5 space-y-4 overflow-y-auto max-h-47.5 pr-1 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-gray-150 dark:before:bg-zinc-800/60">
+                    <div className="relative space-y-4 overflow-y-auto max-h-47.5 pr-1 ml-1">
+                      {/* Línea vertical centrada exactamente en x=10px */}
+                      <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-zinc-500" />
+
                       {timelineActivities.slice(0, 3).map(act => (
-                        <div key={act.id} className="relative animate-in slide-in-from-left duration-300">
-                          {/* Icon Outside Card */}
-                          <div className={`absolute -left-6 top-1.5 w-4.5 h-4.5 rounded-full ${act.iconBg} text-white flex items-center justify-center border border-white dark:border-zinc-900 shadow-sm`} title={act.type}>
-                            <act.icon size={9} />
+                        <div key={act.id} className="relative pl-7 animate-in slide-in-from-left duration-300">
+                          {/* Icon Outside Card: w-5 (20px) en left-0 -> centro exacto en x=10px */}
+                          <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full ${act.iconBg} text-white flex items-center justify-center border border-white dark:border-zinc-900 shadow-sm z-10`} title={act.type}>
+                            <act.icon size={10} />
                           </div>
                           
                           {/* Card */}
@@ -1367,19 +1370,23 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
           {/* Timeline Tab */}
           {activeTab === 'timeline' && (
-            <div className="relative ml-3 space-y-6 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-gray-150 dark:before:bg-zinc-800">
+            <div className="relative space-y-6 ml-1">
               {timelineActivities.length === 0 ? (
                 <p className="text-xs text-gray-400 italic pl-2">No hay historial registrado para este contacto.</p>
               ) : (
-                timelineActivities.map(act => (
-                  <div key={act.id} className="relative pl-8 animate-in slide-in-from-left duration-300">
-                    {/* Activity Icon Indicator on Timeline */}
-                    <div className={`absolute -left-4 top-1.5 w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900 ${act.iconBg} flex items-center justify-center shadow-md text-white transition-transform hover:scale-110 duration-200`}>
-                      <act.icon size={13} />
-                    </div>
-                    
-                    {/* Activity Card */}
-                    <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-white/5 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-dts-secondary/40 transition-all duration-200 space-y-3">
+                <>
+                  {/* Línea vertical centrada exactamente en x=16px */}
+                  <div className="absolute left-[15px] top-3 bottom-4 w-0.5 bg-gray-200 dark:bg-zinc-500" />
+
+                  {timelineActivities.map(act => (
+                    <div key={act.id} className="relative pl-11 animate-in slide-in-from-left duration-300">
+                      {/* Activity Icon Indicator on Timeline: w-8 (32px) en left-0 -> centro exacto en x=16px */}
+                      <div className={`absolute left-0 top-1.5 w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900 ${act.iconBg} flex items-center justify-center shadow-md text-white transition-transform hover:scale-110 duration-200 z-10`}>
+                        <act.icon size={13} />
+                      </div>
+                      
+                      {/* Activity Card */}
+                      <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-white/5 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-dts-secondary/40 transition-all duration-200 space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-50 dark:border-white/5 pb-2">
                         <div className="flex items-center gap-2">
                           <h4 className="text-xs font-bold text-gray-900 dark:text-zinc-100">{act.title}</h4>
@@ -1436,8 +1443,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       )}
                     </div>
                   </div>
-                ))
-              )}
+                ))}
+              </>
+            )}
             </div>
           )}
 
