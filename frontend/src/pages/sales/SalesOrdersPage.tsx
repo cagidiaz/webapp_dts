@@ -582,12 +582,14 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: 
           </div>
           <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
         </div>
-        <div className={`text-2xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
-        {accountValue !== undefined && accountValue > 0 && (
-          <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
-            ({formatCurrency(accountValue, decimalPlaces)}) cuentas
-          </div>
-        )}
+        <div className="flex items-baseline justify-between gap-1.5 flex-wrap sm:flex-nowrap">
+          <div className={`text-2xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
+          {accountValue !== undefined && accountValue > 0 && (
+            <div className="text-[11px] font-medium text-dts-secondary dark:text-cyan-400 whitespace-nowrap text-right ml-auto">
+              ({formatCurrency(accountValue, decimalPlaces)}) cuentas
+            </div>
+          )}
+        </div>
       </div>
       {infoText && (
         <div className="mt-2 pt-1.5 border-t border-gray-100 dark:border-white/5 flex items-center gap-1 text-[9px] text-gray-400 font-medium">
