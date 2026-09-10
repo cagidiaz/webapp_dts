@@ -297,7 +297,7 @@ export const SalesDashboard: React.FC = () => {
             }}
           />
 
-          <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group min-h-[160px]">
+          <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group min-h-40">
             {isLoadingGlobalPerf || isLoadingGlobalEvol ? (
               <div className="w-full h-full animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
             ) : (
@@ -422,7 +422,7 @@ export const SalesDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Agenda Semanal CRM (Timeline Style) */}
-        <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 space-y-6 flex flex-col h-full min-h-[460px]">
+        <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 space-y-6 flex flex-col h-full min-h-115">
           <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0 gap-2">
             <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-dts-primary dark:text-white">
               <Activity size={16} className="text-dts-secondary" />
@@ -455,9 +455,9 @@ export const SalesDashboard: React.FC = () => {
               No hay actividades comerciales registradas para esta semana.
             </div>
           ) : (
-            <div className="relative space-y-4 overflow-y-auto pr-2 scrollbar-thin flex-1 max-h-[380px]">
+            <div className="relative space-y-4 overflow-y-auto pr-2 scrollbar-thin flex-1 max-h-95">
               {/* Vertical timeline connector line */}
-              <div className="absolute left-[16px] md:left-[144px] top-2 bottom-4 w-0.5 bg-gray-200 dark:bg-zinc-500"></div>
+              <div className="absolute left-4 md:left-36 top-2 bottom-4 w-0.5 bg-gray-200 dark:zinc-500"></div>
               
               {sortedWeeklyActivities.map(act => {
                 const typeIconMap = {
@@ -560,7 +560,7 @@ export const SalesDashboard: React.FC = () => {
         {/* Right Column: Top Customers and Top Products stacked vertically */}
         <div className="flex flex-col gap-6 h-full justify-between">
           {/* Top Customers */}
-          <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex-1 flex flex-col justify-between min-h-[217px]">
+          <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex-1 flex flex-col justify-between min-h-54.25">
             <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0">
               <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                 <Users size={16} className="text-dts-secondary" />
@@ -599,7 +599,7 @@ export const SalesDashboard: React.FC = () => {
           </div>
 
           {/* Top Products */}
-          <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex-1 flex flex-col justify-between min-h-[217px]">
+          <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex-1 flex flex-col justify-between min-h-54.25">
             <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0">
               <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                 <Package size={16} className="text-dts-secondary" />
@@ -643,7 +643,7 @@ export const SalesDashboard: React.FC = () => {
             iconSize={16}
           />
         </div>
-        <div className="w-full min-w-0 h-[300px]">
+        <div className="w-full min-w-0 h-75">
           {isLoadingEvol ? (
              <div className="h-full w-full animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
           ) : (

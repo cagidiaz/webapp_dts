@@ -146,7 +146,7 @@ export const ProductsPage: React.FC = () => {
     <div className="space-y-8 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6"><KPISkeleton /><KPISkeleton /><KPISkeleton /><KPISkeleton /></div>
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl h-[550px]"><TableSkeleton rows={15} columns={9} /></div>
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl h-137.5"><TableSkeleton rows={15} columns={9} /></div>
     </div>
   );
 
@@ -238,7 +238,7 @@ export const ProductsPage: React.FC = () => {
 
       </div>
 
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-410px)] min-h-[400px]">
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-410px)] min-h-100">
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
           <div className="flex flex-wrap items-center gap-4 justify-between">
             {/* Left side: Search & Filter elements in one continuous row */}

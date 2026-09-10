@@ -588,12 +588,12 @@ export const SalesBudgetPage: React.FC = () => {
         </div>
 
       {/* Evolution Chart */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 h-[400px] flex flex-col">
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 h-100 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold uppercase tracking-wider">Evolución Comercial {year}</h3>
           <InfoPopover title="Evolución Mensual" description="Comparativa temporal de la facturación frente al presupuesto mes a mes." objective="Detectar meses de estacionalidad o desviaciones recurrentes en el cumplimiento del presupuesto anual." iconSize={16} />
         </div>
-        <div className="flex-1 w-full min-h-[300px]">
+        <div className="flex-1 w-full min-h-75">
           <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={(evolutionData || []).filter(d => selectedMonths.length === 0 || selectedMonths.includes(d.month))}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />

@@ -138,7 +138,7 @@ export const FinancialDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[1,2,3,4].map(i => <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl"></div>)}
       </div>
-      <div className="h-[400px] bg-gray-100 dark:bg-gray-800 rounded-2xl w-full"></div>
+      <div className="h-100 bg-gray-100 dark:bg-gray-800 rounded-2xl w-full"></div>
     </div>
   );
 
@@ -327,7 +327,7 @@ export const FinancialDashboard: React.FC = () => {
               <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700"></span> <span>Ppto</span></div>
             </div>
           </div>
-          <div className="h-[350px] w-full min-w-0" style={{ height: 350, minHeight: 350 }}>
+          <div className="h-87.5 w-full min-w-0" style={{ height: 350, minHeight: 350 }}>
             {isMounted && (
               <ResponsiveContainer width="100%" height={350} initialDimension={{ width: 500, height: 350 }}>
                 <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>

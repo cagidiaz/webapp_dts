@@ -1107,7 +1107,7 @@ export const QuotesPage: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <label className="text-gray-400 block font-medium mb-1 flex items-center justify-between">
+                  <label className="text-gray-400 font-medium mb-1 flex items-center justify-between">
                     <span>Cierre Previsto (CRM):</span>
                     {editingCierreDate !== (selectedQuote.cierreprev_date ? selectedQuote.cierreprev_date.split('T')[0] : '') && (
                       <span className="text-[10px] text-amber-500 font-semibold animate-pulse">Sin guardar</span>

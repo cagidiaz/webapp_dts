@@ -108,14 +108,14 @@ export const ValueEntriesPage: React.FC = () => {
   if (isLoading && !data) return (
     <div className="space-y-8 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl h-[550px]"><TableSkeleton rows={15} columns={8} /></div>
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl h-137.5"><TableSkeleton rows={15} columns={8} /></div>
     </div>
   );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-200px)] min-h-125">
         {/* Toolbar */}
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent space-y-4">
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
@@ -205,7 +205,7 @@ export const ValueEntriesPage: React.FC = () => {
                   <td className="px-6 py-3 font-mono font-bold text-gray-600 dark:text-gray-300">{entry.item_no}</td>
                   <td className="px-6 py-3 font-medium text-gray-500">
                     <div className="flex flex-col">
-                      <span className="truncate max-w-[200px]" title={entry.source_description || undefined}>
+                      <span className="truncate max-w-50" title={entry.source_description || undefined}>
                         {entry.source_description || '---'}
                       </span>
                       <span className="text-[9px] font-mono">{entry.source_no}</span>

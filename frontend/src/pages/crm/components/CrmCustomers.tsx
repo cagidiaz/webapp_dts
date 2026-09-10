@@ -146,7 +146,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
               : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/80 dark:border-gray-800'
           }`}
         >
-          <Building2 size={16} className={activeSubTab === 'directory' ? 'text-[#00B0B9]' : 'text-gray-400'} />
+          <Building2 size={16} className={activeSubTab === 'directory' ? 'text-dts-secondary' : 'text-gray-400'} />
           <span>Directorio de Clientes</span>
         </button>
 
@@ -159,7 +159,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
               : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/80 dark:border-gray-800'
           }`}
         >
-          <BarChart3 size={16} className={activeSubTab === 'matrix' ? 'text-[#00B0B9]' : 'text-gray-400'} />
+          <BarChart3 size={16} className={activeSubTab === 'matrix' ? 'text-dts-secondary' : 'text-gray-400'} />
           <span>Matriz de Relación / Análisis YTD</span>
         </button>
       </div>
@@ -228,7 +228,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
       </div>
 
       {/* Combined Filters Bar & Customers Table */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-200/60 dark:border-white/5 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-320px)] min-h-[350px]">
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-200/60 dark:border-white/5 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-320px)] min-h-87.5">
         {/* Filters Bar */}
         <div className="p-4 border-b border-gray-150 dark:border-white/5 bg-gray-50/50 dark:bg-zinc-800/10 flex flex-wrap items-center justify-between gap-4 shrink-0">
           {/* Search */}
@@ -336,7 +336,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
                           <div className="w-8 h-8 rounded bg-dts-primary/10 text-dts-primary dark:text-white dark:bg-white/10 flex items-center justify-center font-bold text-xs font-mono shrink-0">
                             {c.name.slice(0, 2).toUpperCase()}
                           </div>
-                          <div className="flex flex-col truncate max-w-[250px]">
+                          <div className="flex flex-col truncate max-w-62.5">
                             <span className="font-semibold text-gray-900 dark:text-white text-xs">{c.name}</span>
                             {c.home_page && <span className="text-[10px] text-gray-400">{c.home_page}</span>}
                           </div>

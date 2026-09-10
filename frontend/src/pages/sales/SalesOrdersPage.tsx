@@ -191,7 +191,7 @@ export const SalesOrdersPage: React.FC = () => {
     <div className="space-y-8 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><KPISkeleton /><KPISkeleton /><KPISkeleton /></div>
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl h-[500px]"><TableSkeleton rows={15} columns={6} /></div>
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl h-125"><TableSkeleton rows={15} columns={6} /></div>
     </div>
   );
 
@@ -285,7 +285,7 @@ export const SalesOrdersPage: React.FC = () => {
       )}
 
 
-      <div className={`bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col ${agedPrepayments && agedPrepayments.length > 0 ? 'h-[calc(100vh-320px)]' : 'h-[calc(100vh-280px)]'} min-h-[350px]`}>
+      <div className={`bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col ${agedPrepayments && agedPrepayments.length > 0 ? 'h-[calc(100vh-320px)]' : 'h-[calc(100vh-280px)]'} min-h-87.5`}>
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="w-full max-w-md relative group">
@@ -391,7 +391,7 @@ export const SalesOrdersPage: React.FC = () => {
                                </span>
                              )}
                           </div>
-                          <span className="font-medium text-gray-900 dark:text-white uppercase text-[10px] sm:text-xs truncate max-w-[120px] sm:max-w-none">{order.customer?.name || '---'}</span>
+                          <span className="font-medium text-gray-900 dark:text-white uppercase text-[10px] sm:text-xs truncate max-w-30 sm:max-w-none">{order.customer?.name || '---'}</span>
                           <span className="text-[9px] text-gray-500 font-mono tracking-wider hidden sm:inline">{order.customer_code}</span>
                         </div>
                       </td>
@@ -412,7 +412,7 @@ export const SalesOrdersPage: React.FC = () => {
 
                     {/* Detailed Lines (Expanded) */}
                     {isExpanded && order.lines.map((line: any) => (
-                      <tr key={line.id} className="bg-gray-50/50 dark:bg-white/[0.02] border-l-2 border-dts-secondary/30">
+                      <tr key={line.id} className="bg-gray-50/50 dark:bg-white/2 border-l-2 border-dts-secondary/30">
                         <td className="hidden sm:table-cell"></td>
                         <td className="hidden md:table-cell"></td>
                         <td className="px-2 sm:px-4 lg:px-6 py-2" colSpan={1}></td>
@@ -426,7 +426,7 @@ export const SalesOrdersPage: React.FC = () => {
                                 <span className="px-1 py-0 rounded-[3px] text-[7px] font-bold uppercase bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-500 border border-blue-100 dark:border-blue-800/30">Item</span>
                               )}
                             </div>
-                            <span className="text-[10px] text-gray-400 truncate max-w-[200px] leading-tight italic">{line.description || '---'}</span>
+                            <span className="text-[10px] text-gray-400 truncate max-w-50 leading-tight italic">{line.description || '---'}</span>
                           </div>
                         </td>
                         <td className="px-2 sm:px-4 lg:px-6 py-2 text-right font-mono text-[10px] hidden lg:table-cell text-gray-500">{formatNumber(Number(line.quantity), 0)}</td>
@@ -505,7 +505,7 @@ export const SalesOrdersPage: React.FC = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
-                            <span className="font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[150px]">
+                            <span className="font-semibold text-gray-900 dark:text-gray-100 truncate max-w-37.5">
                               {p.customer_name}
                             </span>
                             <span className="text-[10px] font-mono text-gray-400">{p.customer_no}</span>
@@ -519,7 +519,7 @@ export const SalesOrdersPage: React.FC = () => {
                             {p.agingDays} días
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-mono text-gray-500 italic max-w-[120px] truncate">
+                        <td className="px-4 py-3 font-mono text-gray-500 italic max-w-30 truncate">
                           {p.external_doc_no || '---'}
                         </td>
                         <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">

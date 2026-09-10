@@ -784,7 +784,7 @@ export const SalesInvoicesPage: React.FC = () => {
       )}
 
       {/* Detailed Table (Original Functionality and Filters) */}
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-340px)] min-h-[400px] overflow-hidden">
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-340px)] min-h-100 overflow-hidden">
         {/* Toolbar */}
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent space-y-4">
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
@@ -938,13 +938,13 @@ export const SalesInvoicesPage: React.FC = () => {
                           </td>
                           <td className="px-6 py-3 font-medium text-gray-500">
                             <div className="flex flex-col">
-                              <span className="truncate max-w-[180px] font-bold text-gray-700 dark:text-gray-300">
+                              <span className="truncate max-w-45 font-bold text-gray-700 dark:text-gray-300">
                                 {doc.customer?.name || '---'}
                               </span>
                               <span className="text-[9px] font-mono">{doc.customer_no}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-3 text-gray-500 italic max-w-[150px] truncate" title={doc.your_reference || undefined}>
+                          <td className="px-6 py-3 text-gray-500 italic max-w-37.5 truncate" title={doc.your_reference || undefined}>
                             {doc.your_reference || '---'}
                           </td>
                           <td className={`px-6 py-3 text-right font-mono font-bold ${isAbono ? 'text-rose-500' : 'text-emerald-500'}`}>
@@ -999,7 +999,7 @@ export const SalesInvoicesPage: React.FC = () => {
                                         <tr key={`${line.id}-${lIdx}`} className="hover:bg-gray-50/70 dark:hover:bg-white/5 transition-colors">
                                           <td className="px-4 py-2.5 text-gray-400 text-left">{line.line_no !== null && line.line_no !== undefined ? line.line_no : '---'}</td>
                                           <td className="px-4 py-2.5 font-bold text-dts-primary dark:text-dts-secondary">{line.product_no || '---'}</td>
-                                          <td className="px-4 py-2.5 text-left font-sans text-xs text-gray-700 dark:text-gray-200 max-w-[250px] truncate" title={line.product?.description || undefined}>
+                                          <td className="px-4 py-2.5 text-left font-sans text-xs text-gray-700 dark:text-gray-200 max-w-62.5 truncate" title={line.product?.description || undefined}>
                                             {line.product?.description || '---'}
                                           </td>
                                           <td className="px-4 py-2.5 text-left font-sans text-[10px] text-gray-400">{line.type || 'Item'}</td>
