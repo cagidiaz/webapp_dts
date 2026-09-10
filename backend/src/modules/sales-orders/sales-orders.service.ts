@@ -161,14 +161,15 @@ export class SalesOrdersService {
       }
 
       const totalCarteraBruta = totalCartera;
-      const totalCarteraNeta = Math.max(0, totalCartera - totalPrepagosDescontados);
+      const totalEnviadoNoFacturadoBruto = totalEnviadoNoFacturado;
+      const totalEnviadoNoFacturadoNeto = Math.max(0, totalEnviadoNoFacturadoBruto - totalPrepagosDescontados);
 
       return { 
         data, 
         total,
         summary: {
           totalOrders: uniqueOrderNumbers.size,
-          totalAmount: totalCarteraNeta,
+          totalAmount: totalCarteraBruta,
           totalAmountBruto: totalCarteraBruta,
           prepagosDescontados: totalPrepagosDescontados,
           totalAmountAccounts: totalCarteraAccounts,
@@ -178,7 +179,8 @@ export class SalesOrdersService {
             if (totalQty > 0 && (lineAmount / totalQty) === 0) return acc;
             return acc + Number(curr.outstanding_quantity || 0);
           }, 0),
-          totalEnviadoNoFacturado: totalEnviadoNoFacturado,
+          totalEnviadoNoFacturado: totalEnviadoNoFacturadoNeto,
+          totalEnviadoNoFacturadoBruto: totalEnviadoNoFacturadoBruto,
           totalEnviadoNoFacturadoAccounts: totalEnviadoNoFacturadoAccounts,
         }
       };

@@ -263,6 +263,8 @@ export const SalesBudgetPage: React.FC = () => {
       ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
       carteraVentas: 0, carteraVentasAccounts: 0,
       enviadosFacturar: 0, enviadosFacturarAccounts: 0,
+      enviadosFacturarBruto: 0,
+      prepagosDescontadosFacturar: 0,
       facturacionNuevos: 0,
       facturasOrdinarias: 0,
       prepagosFacturados: 0,
@@ -387,20 +389,34 @@ export const SalesBudgetPage: React.FC = () => {
           type="currency" 
           icon={Package} 
           isLoading={isLoadingPerf} 
-          infoText={performanceKPIs.prepagosDescontadosCartera ? `Cartera neta: descontados ${formatCurrency(performanceKPIs.prepagosDescontadosCartera, 0)} por prepagos` : undefined}
           infoProps={{ 
-            title: "Cartera de Pedidos Neta",
-            description: "Importe total neto de los pedidos de venta abiertos. Se descuentan automáticamente los prepagos ya facturados asociados a pedidos abiertos para evitar duplicar ventas.", 
-            formulas: "Cartera Pedidos Bruta - Prepagos Facturados Pendientes",
-            source: "sales_orders menos PFV activos",
+            title: "Cartera de Pedidos",
+            description: "Importe total de los pedidos de venta abiertos y pendientes de servir. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", 
+            formulas: "Sumatorio Pedidos Abiertos (Sales Orders)",
+            source: "Tabla sales_orders"
+          }} 
+        />
+        <KPICard 
+          title="Pend. Facturar" 
+          value={performanceKPIs.enviadosFacturar} 
+          accountValue={performanceKPIs.enviadosFacturarAccounts} 
+          type="currency" 
+          icon={DollarSign} 
+          status="warning" 
+          isLoading={isLoadingPerf} 
+          infoText={performanceKPIs.prepagosDescontadosFacturar ? `Descontados ${formatCurrency(performanceKPIs.prepagosDescontadosFacturar, 0)} prepagos` : undefined}
+          infoProps={{ 
+            title: "Pendiente de Facturar (Neto)", 
+            description: "Importe de la mercancía ya enviada o pedidos pendientes de emitir factura definitiva, descontando los anticipos/prepagos ya facturados para evitar duplicidades con la facturación anticipada.", 
+            formulas: "Enviado no facturado bruto - Prepagos facturados",
+            source: "sales_orders & sales_documents (PFV)",
             breakdown: [
-              { label: "Cartera Pedidos Bruta", value: formatCurrency(performanceKPIs.carteraVentasBruta || performanceKPIs.carteraVentas || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
-              { label: "Prepagos ya Facturados", value: formatCurrency(performanceKPIs.prepagosDescontadosCartera || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
-              { label: "Cartera Neta Pendiente", value: formatCurrency(performanceKPIs.carteraVentas || 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+              { label: "Enviado no facturado bruto", value: formatCurrency(performanceKPIs.enviadosFacturarBruto || performanceKPIs.enviadosFacturar || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+              { label: "Prepagos ya facturados", value: formatCurrency(performanceKPIs.prepagosDescontadosFacturar || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+              { label: "Total Pend. por Facturar", value: formatCurrency(performanceKPIs.enviadosFacturar || 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
             ]
           }} 
         />
-        <KPICard title="Pend. Facturar" value={performanceKPIs.enviadosFacturar} accountValue={performanceKPIs.enviadosFacturarAccounts} type="currency" icon={DollarSign} status="warning" isLoading={isLoadingPerf} infoProps={{ title: "Pendiente de Facturar", description: "Importe de la mercancía ya enviada al cliente pero que aún no ha sido facturada. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", formulas: "Sumatorio(Qty. Shipped Not Invoiced * Net Price)" }} />
       </div>
 
       {/* Main Analysis Section */}

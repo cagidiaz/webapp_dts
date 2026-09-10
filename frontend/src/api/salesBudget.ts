@@ -29,6 +29,8 @@ export interface SalesBudgetPerformanceKPIs {
   prepagosDescontadosCartera?: number;
   carteraVentasAccounts: number;
   enviadosFacturar: number;
+  enviadosFacturarBruto?: number;
+  prepagosDescontadosFacturar?: number;
   enviadosFacturarAccounts: number;
   facturacionNuevos: number;
   countNuevos: number;

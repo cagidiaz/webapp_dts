@@ -116,7 +116,7 @@ export const SalesOrdersPage: React.FC = () => {
     exportToXlsx(result.data, columns, 'pedidos_venta');
   };
 
-  const { groupedOrders, totalOrders, totalAmount, totalAmountBruto, prepagosDescontados, totalAmountAccounts, totalOutstanding, totalEnviadoNoFacturado, totalEnviadoNoFacturadoAccounts } = useMemo(() => {
+  const { groupedOrders, totalOrders, totalAmount, prepagosDescontados, totalAmountAccounts, totalOutstanding, totalEnviadoNoFacturado, totalEnviadoNoFacturadoBruto, totalEnviadoNoFacturadoAccounts } = useMemo(() => {
     const allItems = data?.pages.flatMap(page => page.data) || [];
     
     // Grouping by document_number
@@ -152,6 +152,7 @@ export const SalesOrdersPage: React.FC = () => {
       totalAmountAccounts: 0,
       totalOutstandingUnits: 0, 
       totalEnviadoNoFacturado: 0,
+      totalEnviadoNoFacturadoBruto: 0,
       totalEnviadoNoFacturadoAccounts: 0
     };
     
@@ -164,6 +165,7 @@ export const SalesOrdersPage: React.FC = () => {
       totalAmountAccounts: summary.totalAmountAccounts,
       totalOutstanding: summary.totalOutstandingUnits, 
       totalEnviadoNoFacturado: summary.totalEnviadoNoFacturado,
+      totalEnviadoNoFacturadoBruto: summary.totalEnviadoNoFacturadoBruto || summary.totalEnviadoNoFacturado,
       totalEnviadoNoFacturadoAccounts: summary.totalEnviadoNoFacturadoAccounts
     };
 
@@ -220,17 +222,11 @@ export const SalesOrdersPage: React.FC = () => {
           type="currency" 
           icon={Euro} 
           isLoading={isLoading} 
-          infoText={prepagosDescontados ? `Cartera neta: descontados ${formatCurrency(prepagosDescontados, 0)} por prepagos` : undefined}
           infoProps={{
             title: "Cartera Total de Pedidos",
-            description: "Valor económico neto de la mercancía pendiente de procesar en la cartera de pedidos. Se descuentan automáticamente los prepagos ya facturados pendientes de compensar para evitar duplicidades con las ventas YTD. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
-            formulas: "Cartera Pedidos Bruta - Prepagos Facturados Pendientes",
-            source: "sales_orders menos PFV activos",
-            breakdown: [
-              { label: "Cartera Pedidos Bruta", value: formatCurrency(totalAmountBruto || totalAmount, 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
-              { label: "Prepagos ya Facturados", value: formatCurrency(prepagosDescontados || 0, 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
-              { label: "Cartera Neta Pendiente", value: formatCurrency(totalAmount, 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
-            ]
+            description: "Valor económico total de la mercancía viva en cartera de pedidos abierta. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
+            formulas: "Sumatorio(Outstanding Quantity * Unit Price)",
+            source: "sales_orders"
           }}
         />
         <KPICard 
@@ -241,9 +237,17 @@ export const SalesOrdersPage: React.FC = () => {
           icon={DollarSign} 
           status="warning"
           isLoading={isLoading} 
+          infoText={prepagosDescontados ? `Descontados ${formatCurrency(prepagosDescontados, 0)} por prepagos` : undefined}
           infoProps={{
-            description: "Importe de la mercancía que ya ha sido entregada al cliente pero que está pendiente de emisión de factura. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
-            formulas: "Sumatorio(Qty. Shipped Not Invoiced * Unit Price)"
+            title: "Pendiente de Facturar (Neto)",
+            description: "Importe de los pedidos enviados o pendientes de facturar, deduciendo el valor de los prepagos ya facturados para evitar duplicidades.",
+            formulas: "Enviado no facturado bruto - Prepagos facturados",
+            source: "sales_orders & sales_documents (PFV)",
+            breakdown: [
+              { label: "Enviado no facturado bruto", value: formatCurrency(totalEnviadoNoFacturadoBruto, 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+              { label: "Prepagos ya facturados", value: formatCurrency(prepagosDescontados, 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+              { label: "Total Pend. por Facturar", value: formatCurrency(totalEnviadoNoFacturado, 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+            ]
           }}
         />
 

@@ -194,6 +194,8 @@ export const SalesDashboard: React.FC = () => {
     ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
     carteraVentas: 0, carteraVentasAccounts: 0,
     enviadosFacturar: 0, enviadosFacturarAccounts: 0,
+    enviadosFacturarBruto: 0,
+    prepagosDescontadosFacturar: 0,
     facturasOrdinarias: 0,
     prepagosFacturados: 0,
     abonosDevoluciones: 0,
@@ -281,16 +283,17 @@ export const SalesDashboard: React.FC = () => {
             label1="CARTE:"
             label2="PEND:"
             isLoading={isLoadingGlobalPerf}
-            infoText={globalPerf?.kpis?.prepagosDescontadosCartera ? `Cartera neta: descontados ${formatCurrency(globalPerf.kpis.prepagosDescontadosCartera, 0)} por prepagos ya facturados` : undefined}
+            infoText={globalPerf?.kpis?.prepagosDescontadosFacturar ? `Pend. facturar: descontados ${formatCurrency(globalPerf.kpis.prepagosDescontadosFacturar, 0)} por prepagos` : undefined}
             infoProps={{
-              title: "Cartera de Pedidos (Global)",
-              description: "Resumen de cartera neta (pedidos abiertos) y mercancía enviada no facturada a nivel global. Se descuentan automáticamente los prepagos ya facturados pendientes de compensar para evitar duplicar ventas.",
-              formulas: "Cartera Bruta - Prepagos Facturados Pendientes",
+              title: "Cartera y Pedidos por Facturar (Global)",
+              description: "Resumen de cartera (total pedidos abiertos) y pedidos por facturar a nivel global. El importe de las facturas prepago se descuenta del monto de pedidos por facturar para evitar duplicidades con la facturación anticipada.",
+              formulas: "CARTE: Total Pedidos | PEND: Pedidos por facturar - Prepagos Facturados",
               source: "sales_orders menos PFV activos",
               breakdown: [
-                { label: "Cartera Pedidos Bruta", value: formatCurrency(globalPerf?.kpis?.carteraVentasBruta || globalPerf?.kpis?.carteraVentas || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
-                { label: "Prepagos ya Facturados", value: formatCurrency(globalPerf?.kpis?.prepagosDescontadosCartera || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
-                { label: "Cartera Neta Pendiente", value: formatCurrency(globalPerf?.kpis?.carteraVentas || 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+                { label: "Total Cartera de Pedidos (CARTE)", value: formatCurrency(globalPerf?.kpis?.carteraVentas || 0), sign: 'i', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+                { label: "Pedidos por facturar brutos", value: formatCurrency(globalPerf?.kpis?.enviadosFacturarBruto || globalPerf?.kpis?.enviadosFacturar || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+                { label: "Prepagos ya Facturados", value: formatCurrency(globalPerf?.kpis?.prepagosDescontadosFacturar || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+                { label: "Total Pend. por Facturar (PEND)", value: formatCurrency(globalPerf?.kpis?.enviadosFacturar || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
               ]
             }}
           />
@@ -389,16 +392,10 @@ export const SalesDashboard: React.FC = () => {
           type="currency" 
           icon={Package} 
           isLoading={isLoadingPerf}
-          infoText={kpis.prepagosDescontadosCartera ? `Descontados ${formatCurrency(kpis.prepagosDescontadosCartera, 0)} prepagos` : undefined}
           infoProps={{ 
             title: "Cartera de Pedidos Comercial",
-            description: "Valor neto de pedidos abiertos pendientes de procesar para este comercial. Se descuentan prepagos ya facturados.",
-            formulas: "Cartera Bruta - Prepagos Facturados Pendientes",
-            breakdown: [
-              { label: "Cartera Bruta", value: formatCurrency(kpis.carteraVentasBruta || kpis.carteraVentas || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
-              { label: "Prepagos Facturados", value: formatCurrency(kpis.prepagosDescontadosCartera || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
-              { label: "Cartera Neta", value: formatCurrency(kpis.carteraVentas || 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
-            ]
+            description: "Valor total de pedidos abiertos pendientes de procesar para este comercial. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
+            formulas: "Suma Pedidos Abiertos Comercial"
           }}
         />
         <KPICard 
@@ -409,9 +406,16 @@ export const SalesDashboard: React.FC = () => {
           icon={Activity} 
           status="warning"
           isLoading={isLoadingPerf}
+          infoText={kpis.prepagosDescontadosFacturar ? `Descontados ${formatCurrency(kpis.prepagosDescontadosFacturar, 0)} prepagos` : undefined}
           infoProps={{ 
-            title: "Pendiente de Facturar",
-            description: "Mercancía enviada pendiente de emitir factura definitiva. El valor entre paréntesis indica la porción de líneas de tipo cuenta." 
+            title: "Pendiente de Facturar (Neto)",
+            description: "Mercancía enviada o pedidos pendientes de emitir factura definitiva, descontando el importe de las facturas prepago ya cobradas.",
+            formulas: "Pedidos por facturar brutos - Prepagos facturados",
+            breakdown: [
+              { label: "Pedidos por facturar brutos", value: formatCurrency(kpis.enviadosFacturarBruto || kpis.enviadosFacturar || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+              { label: "Prepagos facturados descontados", value: formatCurrency(kpis.prepagosDescontadosFacturar || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+              { label: "Total Pendiente por Facturar", value: formatCurrency(kpis.enviadosFacturar || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+            ]
           }}
         />
       </div>

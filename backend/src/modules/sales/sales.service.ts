@@ -515,7 +515,8 @@ export class SalesService {
     }
 
     const totalCarteraBruta = totalCartera;
-    const totalCarteraNeta = Math.max(0, totalCarteraBruta - totalPrepagosDescontados);
+    const totalEnviadoNoFacturadoBruto = totalEnviadoNoFacturado;
+    const totalEnviadoNoFacturadoNeto = Math.max(0, totalEnviadoNoFacturadoBruto - totalPrepagosDescontados);
 
     return {
       kpis: {
@@ -526,11 +527,13 @@ export class SalesService {
         objetivo: totalBudget,
         desviacionEur: devEuros,
         desviacionPct: devPct,
-        carteraVentas: totalCarteraNeta,
+        carteraVentas: totalCarteraBruta,
         carteraVentasBruta: totalCarteraBruta,
-        prepagosDescontadosCartera: totalPrepagosDescontados,
         carteraVentasAccounts: totalCarteraAccounts,
-        enviadosFacturar: totalEnviadoNoFacturado,
+        enviadosFacturar: totalEnviadoNoFacturadoNeto,
+        enviadosFacturarBruto: totalEnviadoNoFacturadoBruto,
+        prepagosDescontadosFacturar: totalPrepagosDescontados,
+        prepagosDescontadosCartera: 0,
         enviadosFacturarAccounts: totalEnviadoNoFacturadoAccounts,
         facturacionNuevos: totalNewClientsSales,
         countNuevos: countNewClients,

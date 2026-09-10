@@ -36,6 +36,7 @@ export interface SalesOrdersResponse {
     totalAmountAccounts: number;
     totalOutstandingUnits: number;
     totalEnviadoNoFacturado: number;
+    totalEnviadoNoFacturadoBruto?: number;
     totalEnviadoNoFacturadoAccounts: number;
   };
 }

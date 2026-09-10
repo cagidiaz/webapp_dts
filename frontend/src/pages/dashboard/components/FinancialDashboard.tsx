@@ -279,17 +279,17 @@ export const FinancialDashboard: React.FC = () => {
             label1="CARTE:"
             label2="PEND:"
             isLoading={isKpisLoading}
-            infoText={activeKPIs?.prepagosDescontadosCartera ? `Descontados ${formatCurrency(activeKPIs.prepagosDescontadosCartera, 0)} por prepagos` : undefined}
+            infoText={activeKPIs?.prepagosDescontadosFacturar ? `Pend. facturar: descontados ${formatCurrency(activeKPIs.prepagosDescontadosFacturar, 0)} por prepagos` : undefined}
             infoProps={{
-              title: "Cartera de Pedidos Pendiente (Neta)",
-              description: "Resumen de cartera de pedidos abiertos neta de prepagos ya facturados, y mercancía enviada pendiente de facturar. Valoración basada en precio neto efectivo (incluye descuentos). El valor entre paréntesis indica el total correspondiente a líneas de cuentas contables.",
-              formulas: "Cartera Bruta - Prepagos Vivos Facturados",
+              title: "Cartera y Pedidos por Facturar",
+              description: "Resumen de cartera (total de pedidos abiertos) y pedidos por facturar (mercancía pendiente de emitir factura neta de prepagos). El importe de las facturas prepago se descuenta del monto de pedidos por facturar para evitar duplicidades con las ventas anticipadas.",
+              formulas: "CARTE: Total Pedidos Abiertos | PEND: Pedidos por facturar - Prepagos Facturados",
               source: "sales_orders & sales_documents (PFV)",
               breakdown: [
-                { label: "Cartera Bruta de Pedidos", value: formatCurrency(activeKPIs?.carteraVentasBruta || activeKPIs?.carteraVentas || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
-                { label: "Prepagos ya Facturados", value: formatCurrency(activeKPIs?.prepagosDescontadosCartera || 0), sign: '-', color: 'text-amber-500' },
-                { label: "Cartera Neta Pendiente", value: formatCurrency(activeKPIs?.carteraVentas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
-                { label: "Mercancía Enviada no Facturada", value: formatCurrency(activeKPIs?.enviadosFacturar || 0), sign: 'i', color: 'text-gray-500' },
+                { label: "Total Cartera de Pedidos (CARTE)", value: formatCurrency(activeKPIs?.carteraVentas || 0), sign: 'i', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+                { label: "Pedidos por facturar brutos", value: formatCurrency(activeKPIs?.enviadosFacturarBruto || activeKPIs?.enviadosFacturar || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+                { label: "Prepagos facturados descontados", value: formatCurrency(activeKPIs?.prepagosDescontadosFacturar || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+                { label: "Total Pend. por Facturar (PEND)", value: formatCurrency(activeKPIs?.enviadosFacturar || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
               ]
             }}
           />
