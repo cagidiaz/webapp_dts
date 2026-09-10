@@ -21,7 +21,7 @@ import { exportToXlsx } from '../../utils/exportToXlsx';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { formatCurrency, formatNumber } from '../../api/formatters';
-import { InfoPopover } from '../../components/ui';
+import { InfoPopover, type InfoBreakdownItem } from '../../components/ui';
 import { SearchableSelect } from '../../components/ui/SearchableSelect';
 
 // --- Constants & Types ---
@@ -53,12 +53,15 @@ interface KPICardProps {
   status?: 'success' | 'danger' | 'warning' | 'normal' | null;
   decimalPlaces?: number;
   infoProps?: {
+    title?: string;
     description: string;
     formulas?: string;
     objective?: string;
     source?: string;
+    breakdown?: InfoBreakdownItem[];
   };
   accountValue?: number;
+  infoText?: string;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -104,35 +107,44 @@ const RenderCustomLegend = (props: any) => {
   );
 };
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: Icon, isLoading, status, decimalPlaces = 0, infoProps, accountValue }) => {
+const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: Icon, isLoading, status, decimalPlaces = 0, infoProps, accountValue, infoText }) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
   
   const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : 'text-dts-primary dark:text-white';
   const formattedValue = formatKpiValue(value, type, decimalPlaces);
 
   return (
-    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{title}</span>
-          {infoProps && (
-            <InfoPopover 
-              title={title} 
-              description={infoProps.description} 
-              formulas={infoProps.formulas} 
-              objective={infoProps.objective}
-              source={infoProps.source}
-              iconSize={12}
-              className="text-gray-300 group-hover:text-dts-secondary transition-colors"
-            />
-          )}
+    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
+      <div>
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{title}</span>
+            {infoProps && (
+              <InfoPopover 
+                title={infoProps.title || title} 
+                description={infoProps.description} 
+                formulas={infoProps.formulas} 
+                objective={infoProps.objective}
+                source={infoProps.source}
+                breakdown={infoProps.breakdown}
+                iconSize={12}
+                className="text-gray-300 group-hover:text-dts-secondary transition-colors"
+              />
+            )}
+          </div>
+          <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
         </div>
-        <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
+        <div className={`text-xl font-medium font-mono ${colorClass}`}>{formattedValue}</div>
+        {accountValue !== undefined && accountValue > 0 && (
+          <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
+            ({formatCurrency(accountValue, 0)})
+          </div>
+        )}
       </div>
-      <div className={`text-xl font-medium font-mono ${colorClass}`}>{formattedValue}</div>
-      {accountValue !== undefined && accountValue > 0 && (
-        <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
-          ({formatCurrency(accountValue, 0)})
+      {infoText && (
+        <div className="mt-2 pt-1.5 border-t border-gray-100 dark:border-white/5 flex items-center gap-1 text-[9px] text-gray-400 font-medium">
+          <span className="w-1 h-1 rounded-full bg-dts-secondary animate-pulse" />
+          <span className="truncate" title={infoText}>{infoText}</span>
         </div>
       )}
     </div>
@@ -251,7 +263,12 @@ export const SalesBudgetPage: React.FC = () => {
       ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
       carteraVentas: 0, carteraVentasAccounts: 0,
       enviadosFacturar: 0, enviadosFacturarAccounts: 0,
-      facturacionNuevos: 0
+      facturacionNuevos: 0,
+      facturasOrdinarias: 0,
+      prepagosFacturados: 0,
+      abonosDevoluciones: 0,
+      carteraVentasBruta: 0,
+      prepagosDescontadosCartera: 0,
     };
     return { tableData: allRows, performanceKPIs: kpis };
   }, [infiniteData]);
@@ -340,12 +357,50 @@ export const SalesBudgetPage: React.FC = () => {
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6">
-        <KPICard title="Facturación" value={performanceKPIs.ventas} type="currency" icon={TrendingUp} isLoading={isLoadingPerf} infoProps={{ description: "Total de ventas reales acumuladas (Facturas - Abonos) para el periodo y filtros actuales.", formulas: "Sumatorio(Value Entries) donde Document Type = Invoice | Credit Memo" }} />
-        <KPICard title="Objetivo" value={performanceKPIs.objetivo} type="currency" icon={Target} isLoading={isLoadingPerf} infoProps={{ description: "Cifra de ventas presupuestada como objetivo para el periodo y filtros seleccionados.", objective: "Indica la meta comercial a alcanzar." }} />
-        <KPICard title="Desviación" value={performanceKPIs.desviacionEur} type="currency" icon={DollarSign} status={performanceKPIs.desviacionEur >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ description: "Diferencia absoluta entre la facturación real y el objetivo.", formulas: "Ventas Reales - Objetivo Presupuestado" }} />
-        <KPICard title="Cumplimiento" value={performanceKPIs.desviacionPct} type="percentage" icon={Activity} status={performanceKPIs.desviacionPct >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ description: "Tasa de cumplimiento del objetivo en porcentaje.", formulas: "(Ventas Reales / Objetivo) * 100" }} />
-        <KPICard title="Cartera Pedidos" value={performanceKPIs.carteraVentas} accountValue={performanceKPIs.carteraVentasAccounts} type="currency" icon={Package} isLoading={isLoadingPerf} infoProps={{ description: "Importe total de los pedidos de venta abiertos y pendientes de completar. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", source: "Tabla de Sales Orders." }} />
-        <KPICard title="Pend. Facturar" value={performanceKPIs.enviadosFacturar} accountValue={performanceKPIs.enviadosFacturarAccounts} type="currency" icon={DollarSign} status="warning" isLoading={isLoadingPerf} infoProps={{ description: "Importe de la mercancía ya enviada al cliente pero que aún no ha sido facturada. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", formulas: "Sumatorio(Qty. Shipped Not Invoiced * Unit Price)" }} />
+        <KPICard 
+          title="Facturación" 
+          value={performanceKPIs.ventas} 
+          type="currency" 
+          icon={TrendingUp} 
+          isLoading={isLoadingPerf} 
+          infoText={performanceKPIs.prepagosFacturados ? `Incluye ${formatCurrency(performanceKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
+          infoProps={{ 
+            title: "Facturación Neta",
+            description: "Total de ventas reales acumuladas netas (Facturas Ordinarias + Prepagos - Devoluciones/Abonos) para el periodo y filtros actuales.", 
+            formulas: "Facturas Ordinarias (FV) + Facturas Prepago (PFV) - Facturas Devolución (AAV)",
+            source: "sales_documents (FV + PFV - AAV)",
+            breakdown: [
+              { label: "Facturas Ordinarias (FV)", value: formatCurrency(performanceKPIs.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: "Facturas Prepago (PFV)", value: formatCurrency(performanceKPIs.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+              { label: "Devoluciones y Abonos (AAV)", value: formatCurrency(performanceKPIs.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
+              { label: "Total Facturación Neta", value: formatCurrency(performanceKPIs.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+            ]
+          }} 
+        />
+        <KPICard title="Objetivo" value={performanceKPIs.objetivo} type="currency" icon={Target} isLoading={isLoadingPerf} infoProps={{ title: "Objetivo Presupuestado", description: "Cifra de ventas presupuestada como objetivo para el periodo y filtros seleccionados.", objective: "Indica la meta comercial a alcanzar." }} />
+        <KPICard title="Desviación" value={performanceKPIs.desviacionEur} type="currency" icon={DollarSign} status={performanceKPIs.desviacionEur >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ title: "Desviación Nominal", description: "Diferencia absoluta entre la facturación real neta y el objetivo.", formulas: "Ventas Reales - Objetivo Presupuestado" }} />
+        <KPICard title="Cumplimiento" value={performanceKPIs.desviacionPct} type="percentage" icon={Activity} status={performanceKPIs.desviacionPct >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ title: "Cumplimiento Porcentual", description: "Tasa de cumplimiento del objetivo en porcentaje.", formulas: "(Ventas Reales / Objetivo) * 100" }} />
+        <KPICard 
+          title="Cartera Pedidos" 
+          value={performanceKPIs.carteraVentas} 
+          accountValue={performanceKPIs.carteraVentasAccounts} 
+          type="currency" 
+          icon={Package} 
+          isLoading={isLoadingPerf} 
+          infoText={performanceKPIs.prepagosDescontadosCartera ? `Cartera neta: descontados ${formatCurrency(performanceKPIs.prepagosDescontadosCartera, 0)} por prepagos` : undefined}
+          infoProps={{ 
+            title: "Cartera de Pedidos Neta",
+            description: "Importe total neto de los pedidos de venta abiertos. Se descuentan automáticamente los prepagos ya facturados asociados a pedidos abiertos para evitar duplicar ventas.", 
+            formulas: "Cartera Pedidos Bruta - Prepagos Facturados Pendientes",
+            source: "sales_orders menos PFV activos",
+            breakdown: [
+              { label: "Cartera Pedidos Bruta", value: formatCurrency(performanceKPIs.carteraVentasBruta || performanceKPIs.carteraVentas || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+              { label: "Prepagos ya Facturados", value: formatCurrency(performanceKPIs.prepagosDescontadosCartera || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+              { label: "Cartera Neta Pendiente", value: formatCurrency(performanceKPIs.carteraVentas || 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+            ]
+          }} 
+        />
+        <KPICard title="Pend. Facturar" value={performanceKPIs.enviadosFacturar} accountValue={performanceKPIs.enviadosFacturarAccounts} type="currency" icon={DollarSign} status="warning" isLoading={isLoadingPerf} infoProps={{ title: "Pendiente de Facturar", description: "Importe de la mercancía ya enviada al cliente pero que aún no ha sido facturada. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", formulas: "Sumatorio(Qty. Shipped Not Invoiced * Net Price)" }} />
       </div>
 
       {/* Main Analysis Section */}

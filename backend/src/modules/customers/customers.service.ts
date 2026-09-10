@@ -199,14 +199,14 @@ export class CustomersService {
       if (clientIds.length > 0) {
         const entries = await this.prisma.$queryRawUnsafe<any[]>(`
           SELECT 
-            source_no, 
-            EXTRACT(YEAR FROM reg_date)::int AS yr, 
-            SUM(sales_amount)::numeric AS amount
-          FROM value_entries
-          WHERE source_no = ANY($1::text[])
-            AND reg_date >= '2023-01-01'
-            AND reg_date <= '2026-12-31'
-          GROUP BY source_no, EXTRACT(YEAR FROM reg_date)
+            customer_no AS source_no, 
+            EXTRACT(YEAR FROM posting_date)::int AS yr, 
+            SUM(CASE WHEN document_type = 'Abono' THEN -COALESCE(total_amount_excl_vat, 0) ELSE COALESCE(total_amount_excl_vat, 0) END)::numeric AS amount
+          FROM sales_documents
+          WHERE customer_no = ANY($1::text[])
+            AND posting_date >= '2023-01-01'
+            AND posting_date <= '2026-12-31'
+          GROUP BY customer_no, EXTRACT(YEAR FROM posting_date)
         `, clientIds);
 
         entries.forEach(e => {

@@ -124,9 +124,9 @@ export const CustomersPage: React.FC = () => {
       icon: <Users size={20} className="text-dts-secondary" />,
       infoProps: {
         title: 'Cartera de Clientes',
-        description: 'Directorio analítico de clientes con facturación multianual neta (2023-2026 YTD), márgenes y tipologías de relación con la marca.',
+        description: 'Directorio analítico de clientes con facturación multianual neta (2023-2026 YTD), márgenes y tipologías de relación con la marca. Incluye facturas ordinarias, prepagos facturados y devoluciones.',
         objective: 'Analizar la evolución de compras de los clientes, detectar oportunidades de crecimiento y controlar condiciones comerciales.',
-        source: 'Sincronizado con Dynamics Business Central (customers & value_entries).'
+        source: 'Sincronizado con Dynamics Business Central (customers & sales_documents).'
       }
     });
     return () => setPageInfo({ title: '', subtitle: '', icon: null });
@@ -852,8 +852,16 @@ export const CustomersPage: React.FC = () => {
                     onClick={() => handleSort('total_sales')} 
                     className="px-3 py-3 font-bold uppercase tracking-wider text-[10.5px] text-right cursor-pointer group hover:bg-white/10 transition-colors bg-[#002f3d] whitespace-nowrap"
                   >
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-end gap-1">
                       <span className="text-dts-secondary font-black">2026 (YTD)</span>
+                      <InfoPopover
+                        title="Ventas 2026 (YTD)"
+                        description="Facturación neta acumulada en 2026. Incluye facturas ordinarias (FV) y prepagos facturados (PFV), deduciendo las devoluciones y abonos (AAV)."
+                        formulas="FV + PFV - AAV"
+                        source="sales_documents"
+                        iconSize={11}
+                        className="text-gray-400 group-hover:text-dts-secondary transition-colors inline-flex"
+                      />
                       {getSortIcon('total_sales')}
                     </div>
                   </th>

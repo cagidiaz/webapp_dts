@@ -114,30 +114,34 @@ export class SalesService {
       },
     };
 
+    // 1. Obtener fechas exactas para el periodo
     const isTodayFilter = limitToToday || false;
+    const dates = await this.getDatesForMonths(year, months, isTodayFilter);
 
-    if (months && months.length > 0) {
-      salesWhere.reg_date = {
-        in: await this.getDatesForMonths(year, months, isTodayFilter)
-      };
+    // Where clause para sales_documents
+    const docsWhere: any = {
+      posting_date: { in: dates },
+    };
+    if (customerCode) docsWhere.customer_no = customerCode;
+    if (salespersonCode) {
+      docsWhere.customer = { salesperson_code: salespersonCode };
     }
-    if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
-    if (customerCode) salesWhere.source_no = customerCode;
 
     let itemNos: string[] = [];
-
     if (familyCode || subfamilyCode) {
-      // 1.1 Búsqueda en dos pasos: Primero obtenemos los IDs de productos que coinciden con la familia/subfamilia
       const matchingProducts = await this.prisma.products.findMany({
         where: {
           subfamily_code: subfamilyCode || undefined,
           category: familyCode ? { family_code: familyCode } : undefined,
         },
-        select: { item_no: true }
+        select: { item_no: true },
       });
-      
-      itemNos = matchingProducts.map(p => p.item_no);
-      salesWhere.item_no = { in: itemNos };
+      itemNos = matchingProducts.map((p) => p.item_no);
+      if (itemNos.length > 0) {
+        docsWhere.lines = {
+          some: { product_no: { in: itemNos } },
+        };
+      }
     }
 
     // 2. Where clause para sales_budgets
@@ -149,53 +153,108 @@ export class SalesService {
     };
     if (months && months.length > 0) {
       budgetWhere.budget_date = {
-        in: await this.getDatesForMonths(year, months, isTodayFilter)
+        in: dates,
       };
     }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
     if (customerCode) budgetWhere.customer_code = customerCode;
-
     if (familyCode || subfamilyCode) {
-
-      // Reutilizamos los itemNos obtenidos anteriormente para filtrar el presupuesto
       budgetWhere.item_no = { in: itemNos };
     }
 
-    // 3. Obtener sumatorios paralelos
+    // 3. Fechas del año anterior (LYTD)
     const prevYear = year - 1;
     const prevYearDates = await this.getDatesForMonths(prevYear, months, isTodayFilter);
 
-    const [salesRaw, budgetsRaw, prevYearSalesRaw] = await Promise.all([
-      this.prisma.value_entries.groupBy({
-        by: ['source_no'],
-        _sum: { sales_amount: true },
-        where: salesWhere,
+    const prevDocsWhere: any = {
+      posting_date: { in: prevYearDates },
+    };
+    if (customerCode) prevDocsWhere.customer_no = customerCode;
+    if (salespersonCode) {
+      prevDocsWhere.customer = { salesperson_code: salespersonCode };
+    }
+    if (itemNos.length > 0) {
+      prevDocsWhere.lines = {
+        some: { product_no: { in: itemNos } },
+      };
+    }
+
+    const [currentYearDocs, budgetsRaw, prevYearDocs] = await Promise.all([
+      this.prisma.sales_documents.findMany({
+        where: docsWhere,
+        select: {
+          document_no: true,
+          document_type: true,
+          total_amount_excl_vat: true,
+          customer_no: true,
+        },
       }),
       this.prisma.sales_budgets.groupBy({
         by: ['customer_code'],
         _sum: { monthly_budget: true },
         where: budgetWhere,
       }),
-      prevYearDates.length > 0 
-        ? this.prisma.value_entries.groupBy({
-            by: ['source_no'],
-            _sum: { sales_amount: true },
-            where: { ...salesWhere, reg_date: { in: prevYearDates } },
+      prevYearDates.length > 0
+        ? this.prisma.sales_documents.findMany({
+            where: prevDocsWhere,
+            select: {
+              document_type: true,
+              total_amount_excl_vat: true,
+              customer_no: true,
+            },
           })
-        : Promise.resolve([] as any[])
+        : Promise.resolve([] as any[]),
     ]);
+
+    // Desglose de facturación actual
+    let totalFacturasOrdinarias = 0;
+    let totalPrepagosFacturados = 0;
+    let totalAbonosDevoluciones = 0;
+
+    const currentSalesByCustomer = new Map<string, number>();
+
+    for (const doc of currentYearDocs) {
+      const amt = Number(doc.total_amount_excl_vat) || 0;
+      const isAbono = doc.document_type === 'Abono';
+      const isPrepay = doc.document_no.startsWith('PFV');
+
+      if (isAbono) {
+        totalAbonosDevoluciones += amt;
+      } else if (isPrepay) {
+        totalPrepagosFacturados += amt;
+      } else {
+        totalFacturasOrdinarias += amt;
+      }
+
+      const signedAmt = isAbono ? -amt : amt;
+      const cCode = doc.customer_no;
+      if (cCode) {
+        currentSalesByCustomer.set(cCode, (currentSalesByCustomer.get(cCode) || 0) + signedAmt);
+      }
+    }
+
+    const prevSalesByCustomer = new Map<string, number>();
+    for (const doc of prevYearDocs) {
+      const amt = Number(doc.total_amount_excl_vat) || 0;
+      const isAbono = doc.document_type === 'Abono';
+      const signedAmt = isAbono ? -amt : amt;
+      const cCode = doc.customer_no;
+      if (cCode) {
+        prevSalesByCustomer.set(cCode, (prevSalesByCustomer.get(cCode) || 0) + signedAmt);
+      }
+    }
 
     // Mejor enfoque para nombres de cliente: extraer IDs
     const customerIds = new Set<string>();
-    salesRaw.forEach(s => s.source_no && customerIds.add(s.source_no));
-    budgetsRaw.forEach(b => b.customer_code && customerIds.add(b.customer_code));
-    prevYearSalesRaw.forEach(s => s.source_no && customerIds.add(s.source_no));
+    currentSalesByCustomer.forEach((_, cCode) => customerIds.add(cCode));
+    budgetsRaw.forEach((b) => b.customer_code && customerIds.add(b.customer_code));
+    prevSalesByCustomer.forEach((_, cCode) => customerIds.add(cCode));
 
     let customersDict: Record<string, { name: string; since: Date | null }> = {};
     if (customerIds.size > 0) {
       const customers = await this.prisma.customers.findMany({
         where: { client_id: { in: Array.from(customerIds) } },
-        select: { client_id: true, name: true, created_at: true }
+        select: { client_id: true, name: true, created_at: true },
       });
       customersDict = customers.reduce((acc, c) => {
         acc[c.client_id] = { name: c.name, since: c.created_at };
@@ -206,48 +265,49 @@ export class SalesService {
     // 4. Merge data por cliente
     const mergedData = new Map<string, any>();
 
-    salesRaw.forEach(sale => {
-      if (!sale.source_no) return;
-      const cInfo = customersDict[sale.source_no];
-      mergedData.set(sale.source_no, {
-        customerCode: sale.source_no,
-        customerName: cInfo ? cInfo.name : (sale.source_no === '99999999' ? 'CLIENTE NUEVO' : sale.source_no),
+    currentSalesByCustomer.forEach((salesSum, cCode) => {
+      const cInfo = customersDict[cCode];
+      mergedData.set(cCode, {
+        customerCode: cCode,
+        customerName: cInfo ? cInfo.name : cCode === '99999999' ? 'CLIENTE NUEVO' : cCode,
         isNew: cInfo?.since ? new Date(cInfo.since).getFullYear() === new Date().getFullYear() : false,
-        salesSum: sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0,
+        salesSum,
         budgetSum: 0,
         prevYearSales: 0,
       });
     });
 
-    prevYearSalesRaw.forEach(sale => {
-      if (!sale.source_no) return;
-      if (mergedData.has(sale.source_no)) {
-        mergedData.get(sale.source_no).prevYearSales = sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
+    prevSalesByCustomer.forEach((prevYearSales, cCode) => {
+      if (mergedData.has(cCode)) {
+        mergedData.get(cCode).prevYearSales = prevYearSales;
       } else {
-        const cInfo = customersDict[sale.source_no];
-        mergedData.set(sale.source_no, {
-          customerCode: sale.source_no,
-          customerName: cInfo ? cInfo.name : (sale.source_no === '99999999' ? 'CLIENTE NUEVO' : sale.source_no),
+        const cInfo = customersDict[cCode];
+        mergedData.set(cCode, {
+          customerCode: cCode,
+          customerName: cInfo ? cInfo.name : cCode === '99999999' ? 'CLIENTE NUEVO' : cCode,
           isNew: cInfo?.since ? new Date(cInfo.since).getFullYear() === new Date().getFullYear() : false,
           salesSum: 0,
           budgetSum: 0,
-          prevYearSales: sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0,
+          prevYearSales,
         });
       }
     });
 
-    budgetsRaw.forEach(budget => {
+    budgetsRaw.forEach((budget) => {
       if (!budget.customer_code) return;
-      if (mergedData.has(budget.customer_code)) {
-        mergedData.get(budget.customer_code).budgetSum = budget._sum.monthly_budget ? Number(budget._sum.monthly_budget) : 0;
+      const bCode = budget.customer_code;
+      const bSum = budget._sum.monthly_budget ? Number(budget._sum.monthly_budget) : 0;
+      if (mergedData.has(bCode)) {
+        mergedData.get(bCode).budgetSum = bSum;
       } else {
-        const cInfo = customersDict[budget.customer_code];
-        mergedData.set(budget.customer_code, {
-          customerCode: budget.customer_code,
-          customerName: cInfo ? cInfo.name : (budget.customer_code === '99999999' ? 'CLIENTE NUEVO' : budget.customer_code),
+        const cInfo = customersDict[bCode];
+        mergedData.set(bCode, {
+          customerCode: bCode,
+          customerName: cInfo ? cInfo.name : bCode === '99999999' ? 'CLIENTE NUEVO' : bCode,
           isNew: cInfo?.since ? new Date(cInfo.since).getFullYear() === new Date().getFullYear() : false,
           salesSum: 0,
-          budgetSum: budget._sum.monthly_budget ? Number(budget._sum.monthly_budget) : 0,
+          budgetSum: bSum,
+          prevYearSales: 0,
         });
       }
     });
@@ -419,18 +479,56 @@ export class SalesService {
       }
     }
 
+    // Prepagos vivos para descontar en Cartera de pedidos:
+    // Facturas PFV registradas que aún no han sido compensadas en una factura final FV
+    const pfvs = currentYearDocs.filter((d) => d.document_no && d.document_no.startsWith('PFV'));
+    let totalPrepagosDescontados = 0;
 
+    if (pfvs.length > 0) {
+      const customerCodes = Array.from(new Set(pfvs.map((p) => p.customer_no).filter(Boolean)));
+      const compensaciones = await this.prisma.sales_document_lines.findMany({
+        where: {
+          document: {
+            customer_no: { in: customerCodes },
+            document_no: { startsWith: 'FV' },
+          },
+          product_no: { startsWith: '438' },
+          line_amount: { lt: 0 },
+        },
+        select: {
+          line_amount: true,
+          document: { select: { customer_no: true } },
+        },
+      });
 
+      for (const p of pfvs) {
+        const amt = Number(p.total_amount_excl_vat) || 0;
+        const isCompensated = compensaciones.some(
+          (c) =>
+            c.document?.customer_no === p.customer_no &&
+            Math.abs(Math.abs(Number(c.line_amount)) - amt) < 1,
+        );
+        if (!isCompensated) {
+          totalPrepagosDescontados += amt;
+        }
+      }
+    }
 
+    const totalCarteraBruta = totalCartera;
+    const totalCarteraNeta = Math.max(0, totalCarteraBruta - totalPrepagosDescontados);
 
     return {
-
       kpis: {
         ventas: totalSales,
+        facturasOrdinarias: totalFacturasOrdinarias,
+        prepagosFacturados: totalPrepagosFacturados,
+        abonosDevoluciones: totalAbonosDevoluciones,
         objetivo: totalBudget,
         desviacionEur: devEuros,
         desviacionPct: devPct,
-        carteraVentas: totalCartera,
+        carteraVentas: totalCarteraNeta,
+        carteraVentasBruta: totalCarteraBruta,
+        prepagosDescontadosCartera: totalPrepagosDescontados,
         carteraVentasAccounts: totalCarteraAccounts,
         enviadosFacturar: totalEnviadoNoFacturado,
         enviadosFacturarAccounts: totalEnviadoNoFacturadoAccounts,
@@ -460,97 +558,112 @@ export class SalesService {
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
     // 1. Where clauses
-    const salesWhere: any = {
-      document_type: { in: SALES_DOC_TYPES },
-      reg_date: { gte: startDate, lte: endDate }
+    const docsWhere: any = {
+      posting_date: { gte: startDate, lte: endDate },
     };
-    if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
-    if (customerCode) salesWhere.source_no = customerCode;
+    if (salespersonCode) docsWhere.customer = { salesperson_code: salespersonCode };
+    if (customerCode) docsWhere.customer_no = customerCode;
 
     const budgetWhere: any = {
-      budget_date: { gte: startDate, lte: endDate }
+      budget_date: { gte: startDate, lte: endDate },
     };
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
     if (customerCode) budgetWhere.customer_code = customerCode;
+
+    const prevYearStartDate = new Date(year - 1, 0, 1);
+    const prevYearEndDate = new Date(year - 1, 11, 31, 23, 59, 59);
+
+    const prevDocsWhere: any = {
+      posting_date: { gte: prevYearStartDate, lte: prevYearEndDate },
+    };
+    if (salespersonCode) prevDocsWhere.customer = { salesperson_code: salespersonCode };
+    if (customerCode) prevDocsWhere.customer_no = customerCode;
 
     if (search && search.trim() !== '') {
       const matchingCustomers = await this.prisma.customers.findMany({
         where: {
           OR: [
             { name: { contains: search, mode: 'insensitive' } },
-            { client_id: { contains: search, mode: 'insensitive' } }
-          ]
+            { client_id: { contains: search, mode: 'insensitive' } },
+          ],
         },
-        select: { client_id: true }
+        select: { client_id: true },
       });
-      const customerIds = matchingCustomers.map(c => c.client_id);
-      salesWhere.source_no = { in: customerIds };
+      const customerIds = matchingCustomers.map((c) => c.client_id);
+      docsWhere.customer_no = { in: customerIds };
+      prevDocsWhere.customer_no = { in: customerIds };
       budgetWhere.customer_code = { in: customerIds };
     }
 
+    let itemNos: string[] = [];
     if (familyCode || subfamilyCode) {
       const matchingProducts = await this.prisma.products.findMany({
         where: {
           subfamily_code: subfamilyCode || undefined,
           category: familyCode ? { family_code: familyCode } : undefined,
         },
-        select: { item_no: true }
+        select: { item_no: true },
       });
-      const itemNos = matchingProducts.map(p => p.item_no);
-      salesWhere.item_no = { in: itemNos };
-      budgetWhere.item_no = { in: itemNos };
+      itemNos = matchingProducts.map((p) => p.item_no);
+      if (itemNos.length > 0) {
+        docsWhere.lines = { some: { product_no: { in: itemNos } } };
+        prevDocsWhere.lines = { some: { product_no: { in: itemNos } } };
+        budgetWhere.item_no = { in: itemNos };
+      }
     }
 
-    const prevYearStartDate = new Date(year - 1, 0, 1);
-    const prevYearEndDate = new Date(year - 1, 11, 31, 23, 59, 59);
-
-    const [salesByDay, budgetsByDay, prevYearSalesByDay] = await Promise.all([
-      this.prisma.value_entries.groupBy({
-        by: ['reg_date'],
-        _sum: { sales_amount: true },
-        where: salesWhere,
+    const [salesDocsCurrent, budgetsByDay, salesDocsPrev] = await Promise.all([
+      this.prisma.sales_documents.findMany({
+        where: docsWhere,
+        select: {
+          posting_date: true,
+          total_amount_excl_vat: true,
+          document_type: true,
+        },
       }),
       this.prisma.sales_budgets.groupBy({
         by: ['budget_date'],
         _sum: { monthly_budget: true },
         where: budgetWhere,
       }),
-      this.prisma.value_entries.groupBy({
-        by: ['reg_date'],
-        _sum: { sales_amount: true },
-        where: {
-          ...salesWhere,
-          reg_date: { gte: prevYearStartDate, lte: prevYearEndDate }
+      this.prisma.sales_documents.findMany({
+        where: prevDocsWhere,
+        select: {
+          posting_date: true,
+          total_amount_excl_vat: true,
+          document_type: true,
         },
-      })
+      }),
     ]);
 
     const monthsData = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
       ventas: 0,
       ventasAnterior: 0,
-      objetivo: 0
+      objetivo: 0,
     }));
 
-    salesByDay.forEach(sale => {
-      if (!sale.reg_date) return;
-      const d = new Date(sale.reg_date);
-      const m = d.getMonth();
-      monthsData[m].ventas += sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
+    salesDocsCurrent.forEach((doc) => {
+      if (!doc.posting_date) return;
+      const m = new Date(doc.posting_date).getMonth();
+      const amt = Number(doc.total_amount_excl_vat) || 0;
+      const signedAmt = doc.document_type === 'Abono' ? -amt : amt;
+      monthsData[m].ventas += signedAmt;
     });
 
-    budgetsByDay.forEach(budget => {
+    budgetsByDay.forEach((budget) => {
       if (!budget.budget_date) return;
       const d = new Date(budget.budget_date);
       const m = d.getMonth();
       monthsData[m].objetivo += budget._sum.monthly_budget ? Number(budget._sum.monthly_budget) : 0;
     });
 
-    prevYearSalesByDay.forEach(sale => {
-      if (!sale.reg_date) return;
-      const d = new Date(sale.reg_date);
-      const m = d.getMonth();
-      monthsData[m].ventasAnterior += sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
+    salesDocsPrev.forEach((doc) => {
+      if (!doc.posting_date) return;
+      const m = new Date(doc.posting_date).getMonth();
+      const amt = Number(doc.total_amount_excl_vat) || 0;
+      const signedAmt = doc.document_type === 'Abono' ? -amt : amt;
+      monthsData[m].ventasAnterior += signedAmt;
     });
 
     return monthsData;

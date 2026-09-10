@@ -6,7 +6,7 @@ import {
   Search, Package, Euro, TrendingUp, Calendar, DollarSign,
   ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, type LucideIcon
 } from 'lucide-react';
-import { KPISkeleton, TableSkeleton, InfoPopover, ExportButton } from '../../components/ui';
+import { KPISkeleton, TableSkeleton, InfoPopover, type InfoBreakdownItem, ExportButton } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
 import { exportToXlsx } from '../../utils/exportToXlsx';
 
@@ -116,7 +116,7 @@ export const SalesOrdersPage: React.FC = () => {
     exportToXlsx(result.data, columns, 'pedidos_venta');
   };
 
-  const { groupedOrders, totalOrders, totalAmount, totalAmountAccounts, totalOutstanding, totalEnviadoNoFacturado, totalEnviadoNoFacturadoAccounts } = useMemo(() => {
+  const { groupedOrders, totalOrders, totalAmount, totalAmountBruto, prepagosDescontados, totalAmountAccounts, totalOutstanding, totalEnviadoNoFacturado, totalEnviadoNoFacturadoAccounts } = useMemo(() => {
     const allItems = data?.pages.flatMap(page => page.data) || [];
     
     // Grouping by document_number
@@ -147,6 +147,8 @@ export const SalesOrdersPage: React.FC = () => {
     const summary = data?.pages[0]?.summary || { 
       totalOrders: 0,
       totalAmount: 0, 
+      totalAmountBruto: 0,
+      prepagosDescontados: 0,
       totalAmountAccounts: 0,
       totalOutstandingUnits: 0, 
       totalEnviadoNoFacturado: 0,
@@ -157,6 +159,8 @@ export const SalesOrdersPage: React.FC = () => {
       groupedOrders: Array.from(groups.values()), 
       totalOrders: summary.totalOrders,
       totalAmount: summary.totalAmount, 
+      totalAmountBruto: summary.totalAmountBruto || summary.totalAmount,
+      prepagosDescontados: summary.prepagosDescontados || 0,
       totalAmountAccounts: summary.totalAmountAccounts,
       totalOutstanding: summary.totalOutstandingUnits, 
       totalEnviadoNoFacturado: summary.totalEnviadoNoFacturado,
@@ -216,9 +220,17 @@ export const SalesOrdersPage: React.FC = () => {
           type="currency" 
           icon={Euro} 
           isLoading={isLoading} 
+          infoText={prepagosDescontados ? `Cartera neta: descontados ${formatCurrency(prepagosDescontados, 0)} por prepagos` : undefined}
           infoProps={{
-            description: "Valor económico total de la mercancía pendiente de procesar en la cartera de pedidos. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
-            formulas: "Sumatorio(Outstanding Quantity * Unit Price)"
+            title: "Cartera Total de Pedidos",
+            description: "Valor económico neto de la mercancía pendiente de procesar en la cartera de pedidos. Se descuentan automáticamente los prepagos ya facturados pendientes de compensar para evitar duplicidades con las ventas YTD. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
+            formulas: "Cartera Pedidos Bruta - Prepagos Facturados Pendientes",
+            source: "sales_orders menos PFV activos",
+            breakdown: [
+              { label: "Cartera Pedidos Bruta", value: formatCurrency(totalAmountBruto || totalAmount, 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+              { label: "Prepagos ya Facturados", value: formatCurrency(prepagosDescontados || 0, 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+              { label: "Cartera Neta Pendiente", value: formatCurrency(totalAmount, 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+            ]
           }}
         />
         <KPICard 
@@ -396,33 +408,44 @@ interface KPICardProps {
   status?: 'success' | 'danger' | 'warning' | 'normal' | null;
   decimalPlaces?: number;
   infoProps?: {
+    title?: string;
     description: string;
     formulas?: string;
     objective?: string;
     source?: string;
+    breakdown?: InfoBreakdownItem[];
   };
   accountValue?: number;
+  infoText?: string;
 }
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: Icon, isLoading, status, decimalPlaces = 0, infoProps, accountValue }) => {
+const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: Icon, isLoading, status, decimalPlaces = 0, infoProps, accountValue, infoText }) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
   
   const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : 'text-dts-primary dark:text-white';
   const formattedValue = type === 'currency' ? formatCurrency(value, decimalPlaces) : formatNumber(value, decimalPlaces);
 
   return (
-    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{title}</span>
-          {infoProps && <InfoPopover title={title} {...infoProps} iconSize={12} />}
+    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
+      <div>
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{title}</span>
+            {infoProps && <InfoPopover title={infoProps.title || title} {...infoProps} iconSize={12} />}
+          </div>
+          <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
         </div>
-        <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
+        <div className={`text-2xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
+        {accountValue !== undefined && accountValue > 0 && (
+          <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
+            ({formatCurrency(accountValue, decimalPlaces)})
+          </div>
+        )}
       </div>
-      <div className={`text-2xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
-      {accountValue !== undefined && accountValue > 0 && (
-        <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
-          ({formatCurrency(accountValue, decimalPlaces)})
+      {infoText && (
+        <div className="mt-2 pt-1.5 border-t border-gray-100 dark:border-white/5 flex items-center gap-1 text-[9px] text-gray-400 font-medium">
+          <span className="w-1 h-1 rounded-full bg-dts-secondary animate-pulse" />
+          <span className="truncate" title={infoText}>{infoText}</span>
         </div>
       )}
     </div>

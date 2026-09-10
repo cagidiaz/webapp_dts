@@ -112,12 +112,65 @@ export class SalesOrdersService {
         if (order.document_number) uniqueOrderNumbers.add(order.document_number);
       });
 
+      // Descontar prepagos facturados pendientes de compensación
+      let totalPrepagosDescontados = 0;
+      try {
+        const pfvs = await this.prisma.sales_documents.findMany({
+          where: {
+            document_no: { startsWith: 'PFV' },
+            ...(customerCode ? { customer_no: customerCode } : {}),
+          },
+          select: {
+            document_no: true,
+            customer_no: true,
+            total_amount_excl_vat: true,
+          },
+        });
+
+        if (pfvs.length > 0) {
+          const customerCodes = Array.from(new Set(pfvs.map((p) => p.customer_no).filter(Boolean)));
+          const compensaciones = await this.prisma.sales_document_lines.findMany({
+            where: {
+              document: {
+                customer_no: { in: customerCodes },
+                document_no: { startsWith: 'FV' },
+              },
+              product_no: { startsWith: '438' },
+              line_amount: { lt: 0 },
+            },
+            select: {
+              line_amount: true,
+              document: { select: { customer_no: true } },
+            },
+          });
+
+          for (const p of pfvs) {
+            const amt = Number(p.total_amount_excl_vat) || 0;
+            const isCompensated = compensaciones.some(
+              (c) =>
+                c.document?.customer_no === p.customer_no &&
+                Math.abs(Math.abs(Number(c.line_amount)) - amt) < 1,
+            );
+            if (!isCompensated) {
+              totalPrepagosDescontados += amt;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Error calculando deducción de prepagos en pedidos:', err);
+      }
+
+      const totalCarteraBruta = totalCartera;
+      const totalCarteraNeta = Math.max(0, totalCartera - totalPrepagosDescontados);
+
       return { 
         data, 
         total,
         summary: {
           totalOrders: uniqueOrderNumbers.size,
-          totalAmount: totalCartera,
+          totalAmount: totalCarteraNeta,
+          totalAmountBruto: totalCarteraBruta,
+          prepagosDescontados: totalPrepagosDescontados,
           totalAmountAccounts: totalCarteraAccounts,
           totalOutstandingUnits: allRelevantOrders.reduce((acc, curr) => {
             const totalQty = Number(curr.quantity || 0);

@@ -193,7 +193,12 @@ export const SalesDashboard: React.FC = () => {
   const kpis = perfData?.kpis || { 
     ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
     carteraVentas: 0, carteraVentasAccounts: 0,
-    enviadosFacturar: 0, enviadosFacturarAccounts: 0
+    enviadosFacturar: 0, enviadosFacturarAccounts: 0,
+    facturasOrdinarias: 0,
+    prepagosFacturados: 0,
+    abonosDevoluciones: 0,
+    carteraVentasBruta: 0,
+    prepagosDescontadosCartera: 0,
   };
   const topCustomers = perfData?.rows || [];
 
@@ -211,7 +216,7 @@ export const SalesDashboard: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <GlobalKPICard 
-            title="Ventas TTD vs Ppto YTD (Global)" 
+            title="Ventas YTD vs Ppto YTD (Global)" 
             value={globalPerf?.kpis?.ventas || 0} 
             subValue={globalPerf?.kpis?.objetivo || 0}
             deviation={globalPerf?.kpis?.desviacionPct || 0}
@@ -220,9 +225,18 @@ export const SalesDashboard: React.FC = () => {
             color="blue"
             variant="comparison"
             isLoading={isLoadingGlobalPerf}
+            infoText={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
             infoProps={{
-              description: "Comparativa de facturación real global acumulada frente al presupuesto global a fecha de hoy.",
-              formulas: "Ventas YTD Global vs Presupuesto YTD Global"
+              title: "Ventas YTD vs Presupuesto YTD (Global)",
+              description: "Comparativa de facturación real global neta acumulada frente al presupuesto global a fecha de hoy.",
+              formulas: "Facturas Ordinarias (FV) + Facturas Prepago (PFV) - Facturas Devolución (AAV)",
+              source: "sales_documents (FV + PFV - AAV)",
+              breakdown: [
+                { label: "Facturas Ordinarias (FV)", value: formatCurrency(globalPerf?.kpis?.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
+                { label: "Facturas Prepago (PFV)", value: formatCurrency(globalPerf?.kpis?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+                { label: "Devoluciones y Abonos (AAV)", value: formatCurrency(globalPerf?.kpis?.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
+                { label: "Total Ventas Netas YTD", value: formatCurrency(globalPerf?.kpis?.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+              ]
             }}
           />
           <GlobalKPICard 
@@ -239,9 +253,18 @@ export const SalesDashboard: React.FC = () => {
             label1={`${year}:`}
             label2={`${year-1}:`}
             isLoading={isLoadingGlobalPerf}
+            infoText={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
             infoProps={{
-              description: "Facturación global del ejercicio actual comparada con el mismo periodo del año anterior.",
-              formulas: "Ventas Globales Actuales vs Ventas Globales Año Anterior (Hasta hoy)"
+              title: "Ventas Actual vs Anterior (Global)",
+              description: "Facturación global del ejercicio actual comparada con el mismo periodo del año anterior (hasta hoy).",
+              formulas: "Ventas Globales Actuales vs Ventas Globales Año Anterior (Hasta hoy)",
+              source: "sales_documents (Facturas + Prepagos - Devoluciones)",
+              breakdown: [
+                { label: `Facturas Ordinarias (${year})`, value: formatCurrency(globalPerf?.kpis?.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
+                { label: `Facturas Prepago (${year})`, value: formatCurrency(globalPerf?.kpis?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+                { label: `Devoluciones/Abonos (${year})`, value: formatCurrency(globalPerf?.kpis?.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
+                { label: `Total Ventas Netas ${year}`, value: formatCurrency(globalPerf?.kpis?.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+              ]
             }}
           />
           
@@ -258,9 +281,17 @@ export const SalesDashboard: React.FC = () => {
             label1="CARTE:"
             label2="PEND:"
             isLoading={isLoadingGlobalPerf}
+            infoText={globalPerf?.kpis?.prepagosDescontadosCartera ? `Cartera neta: descontados ${formatCurrency(globalPerf.kpis.prepagosDescontadosCartera, 0)} por prepagos ya facturados` : undefined}
             infoProps={{
-              description: "Resumen de cartera (pedidos abiertos) y mercancía enviada no facturada (Pendientes) a nivel global de la compañía. Valoración basada en precio neto efectivo (incluye descuentos) y excluyendo líneas a cero. El valor entre paréntesis indica el total correspondiente a líneas de cuentas contables.",
-              formulas: "Suma(Cantidad * (Importe Neto / Cantidad Total))"
+              title: "Cartera de Pedidos (Global)",
+              description: "Resumen de cartera neta (pedidos abiertos) y mercancía enviada no facturada a nivel global. Se descuentan automáticamente los prepagos ya facturados pendientes de compensar para evitar duplicar ventas.",
+              formulas: "Cartera Bruta - Prepagos Facturados Pendientes",
+              source: "sales_orders menos PFV activos",
+              breakdown: [
+                { label: "Cartera Pedidos Bruta", value: formatCurrency(globalPerf?.kpis?.carteraVentasBruta || globalPerf?.kpis?.carteraVentas || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+                { label: "Prepagos ya Facturados", value: formatCurrency(globalPerf?.kpis?.prepagosDescontadosCartera || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+                { label: "Cartera Neta Pendiente", value: formatCurrency(globalPerf?.kpis?.carteraVentas || 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+              ]
             }}
           />
 
@@ -300,7 +331,18 @@ export const SalesDashboard: React.FC = () => {
           type="currency" 
           icon={TrendingUp} 
           isLoading={isLoadingPerf}
-          infoProps={{ description: "Total de ventas reales acumuladas netas de abonos." }}
+          infoText={kpis.prepagosFacturados ? `Incluye ${formatCurrency(kpis.prepagosFacturados, 0)} en prepagos` : undefined}
+          infoProps={{ 
+            title: "Facturación Real Comercial",
+            description: "Total de ventas reales acumuladas netas de abonos asignadas al comercial.",
+            formulas: "Facturas Ordinarias (FV) + Prepagos (PFV) - Devoluciones (AAV)",
+            breakdown: [
+              { label: "Facturas Ordinarias", value: formatCurrency(kpis.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: "Facturas Prepago", value: formatCurrency(kpis.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+              { label: "Devoluciones/Abonos", value: formatCurrency(kpis.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
+              { label: "Total Real Comercial", value: formatCurrency(kpis.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+            ]
+          }}
         />
         <KPICard 
           title="Objetivo Ventas" 
@@ -309,7 +351,10 @@ export const SalesDashboard: React.FC = () => {
           icon={Target} 
           isLoading={isLoadingPerf || isLoadingEvol}
           footerText={annualTarget > 0 ? `Total anual: ${formatCurrency(annualTarget, 0)}` : undefined}
-          infoProps={{ description: "Meta de facturación presupuestada para el periodo acumulado (YTD). En pequeño se muestra el total anual." }}
+          infoProps={{ 
+            title: "Objetivo Ventas Comercial",
+            description: "Meta de facturación presupuestada para el periodo acumulado (YTD). En pequeño se muestra el total anual." 
+          }}
         />
         <KPICard 
           title="Cumplimiento" 
@@ -318,7 +363,11 @@ export const SalesDashboard: React.FC = () => {
           icon={Activity} 
           status={kpis.desviacionPct >= 0 ? 'success' : 'danger'}
           isLoading={isLoadingPerf}
-          infoProps={{ description: "Porcentaje de consecución del objetivo presupuestado." }}
+          infoProps={{ 
+            title: "Cumplimiento Presupuesto",
+            description: "Porcentaje de consecución del objetivo presupuestado.",
+            formulas: "(Ventas Reales / Presupuesto) * 100"
+          }}
         />
         <KPICard 
           title="Desviación" 
@@ -327,7 +376,11 @@ export const SalesDashboard: React.FC = () => {
           icon={BarChart2} 
           status={kpis.desviacionEur >= 0 ? 'success' : 'danger'}
           isLoading={isLoadingPerf}
-          infoProps={{ description: "Diferencia nominal entre ventas reales y presupuesto." }}
+          infoProps={{ 
+            title: "Desviación Presupuestaria",
+            description: "Diferencia nominal en euros entre las ventas reales y el presupuesto acumulado.",
+            formulas: "Ventas Reales - Presupuesto Objetivo"
+          }}
         />
         <KPICard 
           title="Cartera de Pedidos" 
@@ -336,7 +389,17 @@ export const SalesDashboard: React.FC = () => {
           type="currency" 
           icon={Package} 
           isLoading={isLoadingPerf}
-          infoProps={{ description: "Valor de los pedidos abiertos pendientes de procesar. El valor entre paréntesis indica la porción de líneas de tipo cuenta." }}
+          infoText={kpis.prepagosDescontadosCartera ? `Descontados ${formatCurrency(kpis.prepagosDescontadosCartera, 0)} prepagos` : undefined}
+          infoProps={{ 
+            title: "Cartera de Pedidos Comercial",
+            description: "Valor neto de pedidos abiertos pendientes de procesar para este comercial. Se descuentan prepagos ya facturados.",
+            formulas: "Cartera Bruta - Prepagos Facturados Pendientes",
+            breakdown: [
+              { label: "Cartera Bruta", value: formatCurrency(kpis.carteraVentasBruta || kpis.carteraVentas || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+              { label: "Prepagos Facturados", value: formatCurrency(kpis.prepagosDescontadosCartera || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+              { label: "Cartera Neta", value: formatCurrency(kpis.carteraVentas || 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+            ]
+          }}
         />
         <KPICard 
           title="Pend. de Facturar" 
@@ -346,7 +409,10 @@ export const SalesDashboard: React.FC = () => {
           icon={Activity} 
           status="warning"
           isLoading={isLoadingPerf}
-          infoProps={{ description: "Mercancía enviada pendiente de factura. El valor entre paréntesis indica la porción de líneas de tipo cuenta." }}
+          infoProps={{ 
+            title: "Pendiente de Facturar",
+            description: "Mercancía enviada pendiente de emitir factura definitiva. El valor entre paréntesis indica la porción de líneas de tipo cuenta." 
+          }}
         />
       </div>
 
@@ -610,7 +676,7 @@ export const SalesDashboard: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, accountValue, footerText }: any) => {
+const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, accountValue, footerText, infoText }: any) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
   
   const isPositive = value >= 0;
@@ -618,46 +684,54 @@ const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status,
   const formattedValue = type === 'currency' ? formatCurrency(value, 0) : type === 'percentage' ? `${formatNumber(value, 1)}%` : formatNumber(value, 0);
 
   return (
-    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{title}</span>
-          {infoProps && (
-            <InfoPopover 
-              title={title} 
-              description={infoProps.description} 
-              iconSize={12}
-              className="text-gray-300 group-hover:text-dts-secondary transition-colors"
-            />
-          )}
+    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
+      <div>
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{title}</span>
+            {infoProps && (
+              <InfoPopover 
+                title={title} 
+                {...infoProps}
+                iconSize={12}
+                className="text-gray-300 group-hover:text-dts-secondary transition-colors"
+              />
+            )}
+          </div>
+          <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
         </div>
-        <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
-      </div>
-      <div className="flex flex-col">
-        <div className="flex items-baseline gap-2">
-          <div className={`text-xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
-          {type === 'percentage' && (
-            <div className={`text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-              {isPositive ? <TrendingUp size={10} className="inline mr-0.5"/> : <TrendingDown size={10} className="inline mr-0.5"/>}
+        <div className="flex flex-col">
+          <div className="flex items-baseline gap-2">
+            <div className={`text-xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
+            {type === 'percentage' && (
+              <div className={`text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                {isPositive ? <TrendingUp size={10} className="inline mr-0.5"/> : <TrendingDown size={10} className="inline mr-0.5"/>}
+              </div>
+            )}
+          </div>
+          {accountValue !== undefined && accountValue > 0 && (
+            <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
+              ({formatCurrency(accountValue, 0)})
+            </div>
+          )}
+          {footerText && (
+            <div className="text-[10px] text-gray-400 mt-0.5 font-medium">
+              {footerText}
             </div>
           )}
         </div>
-        {accountValue !== undefined && accountValue > 0 && (
-          <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
-            ({formatCurrency(accountValue, 0)})
-          </div>
-        )}
-        {footerText && (
-          <div className="text-[10px] text-gray-400 mt-0.5 font-medium">
-            {footerText}
-          </div>
-        )}
       </div>
+      {infoText && (
+        <div className="mt-2 pt-1.5 border-t border-gray-100 dark:border-white/5 flex items-center gap-1 text-[9px] text-gray-400 font-medium">
+          <span className="w-1 h-1 rounded-full bg-dts-secondary animate-pulse" />
+          <span className="truncate" title={infoText}>{infoText}</span>
+        </div>
+      )}
     </div>
   );
 };
 
-const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "", isLoading }: any) => {
+const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "", isLoading, infoText }: any) => {
   if (isLoading) return <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 h-40 animate-pulse" />;
 
   const colorMap: any = {
@@ -671,67 +745,76 @@ const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accou
   const formattedSubValue = type === 'currency' ? formatCurrency(subValue, 0) : subValue;
 
   return (
-    <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-card-hover group">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
-          <span className="text-[10px] font-bold uppercase tracking-wider">{title}</span>
-          {infoProps && <InfoPopover title={title} {...infoProps} iconSize={12} />}
-        </div>
-        <div className={`p-2 rounded-xl transition-transform group-hover:scale-110 duration-300 ${colorMap[color] || colorMap.blue}`}>
-          <Icon size={18} />
-        </div>
-      </div>
-      
-      {variant === 'comparison' ? (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 w-12">{label1}</span>
-            <div className="flex flex-col">
-              <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">
-                {formattedValue}
-              </div>
-              {accountValue !== undefined && accountValue > 0 && (
-                <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
-                  ({formatCurrency(accountValue, 0)})
-                </span>
-              )}
-            </div>
+    <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
+      <div>
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+            <span className="text-[10px] font-bold uppercase tracking-wider">{title}</span>
+            {infoProps && <InfoPopover title={title} {...infoProps} iconSize={12} />}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 w-12">{label2}</span>
-            <div className="flex flex-col">
-              <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">
-                {label2 === 'TOTAL:' || label2 === 'CANT:' ? `${subValue}${suffix}` : formattedSubValue}
-              </div>
-              {accountSubValue !== undefined && accountSubValue > 0 && (
-                <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
-                  ({formatCurrency(accountSubValue, 0)})
-                </span>
-              )}
-            </div>
+          <div className={`p-2 rounded-xl transition-transform group-hover:scale-110 duration-300 ${colorMap[color] || colorMap.blue}`}>
+            <Icon size={18} />
           </div>
-          {extraValue !== undefined && (
+        </div>
+        
+        {variant === 'comparison' ? (
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-gray-400 w-12">{label3}</span>
-              <div className="text-2xl font-light text-red-400 tracking-tight">
-                {extraValue}{suffix}
+              <span className="text-[10px] font-bold text-gray-400 w-12">{label1}</span>
+              <div className="flex flex-col">
+                <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">
+                  {formattedValue}
+                </div>
+                {accountValue !== undefined && accountValue > 0 && (
+                  <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
+                    ({formatCurrency(accountValue, 0)})
+                  </span>
+                )}
               </div>
             </div>
-          )}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-gray-400 w-12">{label2}</span>
+              <div className="flex flex-col">
+                <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">
+                  {label2 === 'TOTAL:' || label2 === 'CANT:' ? `${subValue}${suffix}` : formattedSubValue}
+                </div>
+                {accountSubValue !== undefined && accountSubValue > 0 && (
+                  <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
+                    ({formatCurrency(accountSubValue, 0)})
+                  </span>
+                )}
+              </div>
+            </div>
+            {extraValue !== undefined && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-gray-400 w-12">{label3}</span>
+                <div className="text-2xl font-light text-red-400 tracking-tight">
+                  {extraValue}{suffix}
+                </div>
+              </div>
+            )}
+            </div>
+        ) : (
+          <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+        )}
+        
+        {deviation !== undefined && (
+          <div className="mt-0.5 flex items-center justify-between pt-0">
+            {variant !== 'comparison' && (
+              <span className="text-[10px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>
+            )}
+            <div className={`flex items-center gap-1 text-xl font-light ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'} ${variant === 'comparison' ? 'ml-auto' : ''}`}>
+              {deviation >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+              {deviation > 0 ? '+' : ''}{deviation.toFixed(1)}%
+            </div>
           </div>
-      ) : (
-        <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
-      )}
-      
-      {deviation !== undefined && (
-        <div className="mt-0.5 flex items-center justify-between pt-0">
-          {variant !== 'comparison' && (
-            <span className="text-[10px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>
-          )}
-          <div className={`flex items-center gap-1 text-xl font-light ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'} ${variant === 'comparison' ? 'ml-auto' : ''}`}>
-            {deviation >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
-            {deviation > 0 ? '+' : ''}{deviation.toFixed(1)}%
-          </div>
+        )}
+      </div>
+
+      {infoText && (
+        <div className="mt-3 pt-2 border-t border-gray-200/50 dark:border-white/5 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-dts-secondary animate-pulse" />
+          <span className="truncate" title={infoText}>{infoText}</span>
         </div>
       )}
     </div>

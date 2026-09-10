@@ -2,12 +2,20 @@ import React, { useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import { Info, X } from 'lucide-react';
 
+export interface InfoBreakdownItem {
+  label: string;
+  value: string;
+  sign?: '+' | '-' | '=' | 'i';
+  color?: string;
+}
+
 interface InfoPopoverProps {
   title: string;
   description: React.ReactNode;
   source?: string;
   formulas?: string | string[];
   objective?: string;
+  breakdown?: InfoBreakdownItem[];
   iconSize?: number;
   className?: string; // Additional classes for the button
 }
@@ -18,6 +26,7 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
   source,
   formulas,
   objective,
+  breakdown,
   iconSize = 18,
   className = "",
 }) => {
@@ -109,6 +118,32 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
                               {formulas}
                             </code>
                           )}
+                        </div>
+                      </div>
+                    )}
+
+                    {breakdown && breakdown.length > 0 && (
+                      <div className="pt-3 border-t border-gray-100 dark:border-gray-800/50">
+                        <span className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Desglose de Importes</span>
+                        <div className="space-y-1.5 bg-gray-50 dark:bg-black/20 p-2.5 rounded-xl border border-gray-150 dark:border-gray-800">
+                          {breakdown.map((item, idx) => (
+                            <div key={idx} className={`flex items-center justify-between text-xs py-0.5 ${item.sign === '=' ? 'font-bold border-t border-gray-200 dark:border-gray-700 pt-1.5 mt-1 text-dts-primary dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
+                              <div className="flex items-center gap-1.5">
+                                {item.sign && (
+                                  <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-mono font-bold ${
+                                    item.sign === '+' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' :
+                                    item.sign === '-' ? 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400' :
+                                    item.sign === '=' ? 'bg-dts-secondary/20 text-dts-secondary' :
+                                    'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                                  }`}>
+                                    {item.sign}
+                                  </span>
+                                )}
+                                <span>{item.label}</span>
+                              </div>
+                              <span className={`font-mono font-medium ${item.color || ''}`}>{item.value}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}

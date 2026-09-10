@@ -203,9 +203,18 @@ export const FinancialDashboard: React.FC = () => {
             color="blue"
             variant="comparison"
             isLoading={isKpisLoading}
+            infoText={activeKPIs?.prepagosFacturados ? `Incluye ${formatCurrency(activeKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
             infoProps={{
-              description: "Comparativa de facturación real acumulada frente al presupuesto acumulado a fecha de hoy.",
-              formulas: "Ventas YTD vs Presupuesto YTD"
+              title: "Ventas YTD vs Presupuesto YTD",
+              description: "Comparativa de facturación real neta acumulada frente al presupuesto acumulado a fecha de hoy.",
+              formulas: "Facturas Ordinarias (FV) + Facturas Prepago (PFV) - Facturas Devolución (AAV)",
+              source: "sales_documents (FV + PFV - AAV)",
+              breakdown: [
+                { label: "Facturas Ordinarias (FV)", value: formatCurrency(activeKPIs?.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
+                { label: "Facturas Prepago (PFV)", value: formatCurrency(activeKPIs?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+                { label: "Devoluciones y Abonos (AAV)", value: formatCurrency(activeKPIs?.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
+                { label: "Total Ventas Netas YTD", value: formatCurrency(activeKPIs?.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+              ]
             }}
           />
           <KPICard 
@@ -219,12 +228,22 @@ export const FinancialDashboard: React.FC = () => {
             icon={BarChart2} 
             color="indigo"
             variant="comparison"
-            label1="2026:"
-            label2="2025:"
+            label1={`${currentYear}:`}
+            label2={`${currentYear - 1}:`}
             isLoading={isKpisLoading}
+            infoText={activeKPIs?.prepagosFacturados ? `Incluye ${formatCurrency(activeKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
             infoProps={{
-              description: "Facturación total del ejercicio actual comparada con el mismo periodo del año anterior (comparativa día a día).",
-              formulas: "Ventas Actuales vs Ventas Año Anterior (Hasta hoy)"
+              title: "Ventas YTD vs Ventas LYTD",
+              description: "Facturación neta total del ejercicio actual comparada con el mismo periodo del año anterior (comparativa día a día).",
+              formulas: "Ventas Actuales vs Ventas Año Anterior (Hasta hoy)",
+              source: "sales_documents (Facturas + Prepagos - Devoluciones)",
+              breakdown: [
+                { label: `Facturas Ordinarias (${currentYear})`, value: formatCurrency(activeKPIs?.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
+                { label: `Facturas Prepago (${currentYear})`, value: formatCurrency(activeKPIs?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+                { label: `Devoluciones/Abonos (${currentYear})`, value: formatCurrency(activeKPIs?.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
+                { label: `Total Ventas Netas ${currentYear}`, value: formatCurrency(activeKPIs?.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+                { label: `Total Ventas Netas ${currentYear - 1}`, value: formatCurrency(activeKPIs?.facturacionAnioAnterior || 0), sign: 'i', color: 'text-gray-500 font-medium' },
+              ]
             }}
           />
           
@@ -260,9 +279,18 @@ export const FinancialDashboard: React.FC = () => {
             label1="CARTE:"
             label2="PEND:"
             isLoading={isKpisLoading}
+            infoText={activeKPIs?.prepagosDescontadosCartera ? `Descontados ${formatCurrency(activeKPIs.prepagosDescontadosCartera, 0)} por prepagos` : undefined}
             infoProps={{
-              description: "Resumen de cartera (pedidos abiertos) y mercancía enviada no facturada (Pendientes). Valoración basada en precio neto efectivo (incluye descuentos) y excluyendo líneas a cero. El valor entre paréntesis indica el total correspondiente a líneas de cuentas contables.",
-              formulas: "Suma(Cantidad * (Importe Neto / Cantidad Total))"
+              title: "Cartera de Pedidos Pendiente (Neta)",
+              description: "Resumen de cartera de pedidos abiertos neta de prepagos ya facturados, y mercancía enviada pendiente de facturar. Valoración basada en precio neto efectivo (incluye descuentos). El valor entre paréntesis indica el total correspondiente a líneas de cuentas contables.",
+              formulas: "Cartera Bruta - Prepagos Vivos Facturados",
+              source: "sales_orders & sales_documents (PFV)",
+              breakdown: [
+                { label: "Cartera Bruta de Pedidos", value: formatCurrency(activeKPIs?.carteraVentasBruta || activeKPIs?.carteraVentas || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
+                { label: "Prepagos ya Facturados", value: formatCurrency(activeKPIs?.prepagosDescontadosCartera || 0), sign: '-', color: 'text-amber-500' },
+                { label: "Cartera Neta Pendiente", value: formatCurrency(activeKPIs?.carteraVentas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+                { label: "Mercancía Enviada no Facturada", value: formatCurrency(activeKPIs?.enviadosFacturar || 0), sign: 'i', color: 'text-gray-500' },
+              ]
             }}
           />
           <KPICard 
@@ -420,7 +448,7 @@ export const FinancialDashboard: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "" }: any) => {
+const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "", infoText }: any) => {
   const colorMap: any = {
     blue: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
     emerald: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20',
@@ -432,86 +460,95 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
   const formattedSubValue = type === 'currency' ? formatCurrency(subValue, 0) : subValue;
 
   return (
-    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm transition-all hover:shadow-card-hover group">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
-          <span className="text-[10px] font-bold uppercase tracking-wider">{title}</span>
-          {infoProps && <InfoPopover title={title} {...infoProps} iconSize={12} />}
-        </div>
-        <div className={`p-1.5 rounded-xl transition-transform group-hover:scale-110 duration-300 ${colorMap[color] || colorMap.blue}`}>
-          <Icon size={16} />
-        </div>
-      </div>
-      
-      {variant === 'comparison' ? (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 w-16">{label1}</span>
-            <div className="flex flex-col">
-              <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">
-                {formattedValue}
-              </div>
-              {accountValue !== undefined && accountValue > 0 && (
-                <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
-                  ({formatCurrency(accountValue, 0)})
-                </span>
-              )}
-            </div>
+    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
+      <div>
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+            <span className="text-[10px] font-bold uppercase tracking-wider">{title}</span>
+            {infoProps && <InfoPopover title={title} {...infoProps} iconSize={12} />}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 w-16">{label2}</span>
-            <div className="flex flex-col">
-              <div className={`text-lg font-light tracking-tight ${
-                label2 === 'DESV:' 
-                  ? (subValue >= 0 ? 'text-emerald-500' : 'text-red-500')
-                  : label2 === 'CUMPLIM:' 
-                    ? (subValue >= 100 ? 'text-emerald-500' : 'text-red-500')
-                    : 'text-gray-500 dark:text-gray-400'
-              }`}>
-                {label2 === 'TOTAL:' || label2 === 'CANT:' 
-                  ? `${subValue}${suffix}` 
-                  : label2 === 'CUMPLIM:'
-                    ? `${Number(subValue).toFixed(1)}%`
-                    : formattedSubValue}
-              </div>
-              {accountSubValue !== undefined && accountSubValue > 0 && (
-                <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
-                  ({formatCurrency(accountSubValue, 0)})
-                </span>
-              )}
-            </div>
+          <div className={`p-1.5 rounded-xl transition-transform group-hover:scale-110 duration-300 ${colorMap[color] || colorMap.blue}`}>
+            <Icon size={16} />
           </div>
-          {extraValue !== undefined && (
+        </div>
+        
+        {variant === 'comparison' ? (
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-gray-400 w-12">{label3}</span>
-              <div className="text-2xl font-light text-red-400 tracking-tight">
-                {extraValue}{suffix}
+              <span className="text-[10px] font-bold text-gray-400 w-16">{label1}</span>
+              <div className="flex flex-col">
+                <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">
+                  {formattedValue}
+                </div>
+                {accountValue !== undefined && accountValue > 0 && (
+                  <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
+                    ({formatCurrency(accountValue, 0)})
+                  </span>
+                )}
               </div>
             </div>
-          )}
-          </div>
-      ) : (
-        <div className="flex flex-col">
-          <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
-          {accountValue !== undefined && accountValue > 0 && (
-            <div className="text-[10px] text-gray-400 mt-1 italic font-normal">
-              ({formatCurrency(accountValue, 0)})
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-gray-400 w-16">{label2}</span>
+              <div className="flex flex-col">
+                <div className={`text-lg font-light tracking-tight ${
+                  label2 === 'DESV:' 
+                    ? (subValue >= 0 ? 'text-emerald-500' : 'text-red-500')
+                    : label2 === 'CUMPLIM:' 
+                      ? (subValue >= 100 ? 'text-emerald-500' : 'text-red-500')
+                      : 'text-gray-500 dark:text-gray-400'
+                }`}>
+                  {label2 === 'TOTAL:' || label2 === 'CANT:' 
+                    ? `${subValue}${suffix}` 
+                    : label2 === 'CUMPLIM:'
+                      ? `${Number(subValue).toFixed(1)}%`
+                      : formattedSubValue}
+                </div>
+                {accountSubValue !== undefined && accountSubValue > 0 && (
+                  <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
+                    ({formatCurrency(accountSubValue, 0)})
+                  </span>
+                )}
+              </div>
             </div>
-          )}
-        </div>
-      )}
-      
-      {/* Deviation and Footer */}
-
-      {deviation !== undefined && (
-        <div className="mt-0.5 flex items-center justify-between pt-0">
-          {variant !== 'comparison' && (
-            <span className="text-[10px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>
-          )}
-          <div className={`flex items-center gap-1 text-xl font-light ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'} ${variant === 'comparison' ? 'ml-auto' : ''}`}>
-            {deviation >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
-            {deviation > 0 ? '+' : ''}{deviation.toFixed(1)}%
+            {extraValue !== undefined && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-gray-400 w-12">{label3}</span>
+                <div className="text-2xl font-light text-red-400 tracking-tight">
+                  {extraValue}{suffix}
+                </div>
+              </div>
+            )}
+            </div>
+        ) : (
+          <div className="flex flex-col">
+            <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+            {accountValue !== undefined && accountValue > 0 && (
+              <div className="text-[10px] text-gray-400 mt-1 italic font-normal">
+                ({formatCurrency(accountValue, 0)})
+              </div>
+            )}
           </div>
+        )}
+        
+        {/* Deviation and Footer */}
+        {deviation !== undefined && (
+          <div className="mt-0.5 flex items-center justify-between pt-0">
+            {variant !== 'comparison' && (
+              <span className="text-[10px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>
+            )}
+            <div className={`flex items-center gap-1 text-xl font-light ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'} ${variant === 'comparison' ? 'ml-auto' : ''}`}>
+              {deviation >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+              {deviation > 0 ? '+' : ''}{deviation.toFixed(1)}%
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Linea informativa opcional */}
+      {infoText && (
+        <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-gray-800/60 flex items-center gap-1.5 text-[10.5px] font-medium text-dts-secondary dark:text-cyan-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-dts-secondary shrink-0 animate-pulse" />
+          <span className="truncate" title={infoText}>{infoText}</span>
         </div>
       )}
     </div>

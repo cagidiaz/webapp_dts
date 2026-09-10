@@ -18,10 +18,15 @@ export interface SalesBudgetPerformanceFilters {
 
 export interface SalesBudgetPerformanceKPIs {
   ventas: number;
+  facturasOrdinarias?: number;
+  prepagosFacturados?: number;
+  abonosDevoluciones?: number;
   objetivo: number;
   desviacionEur: number;
   desviacionPct: number;
   carteraVentas: number;
+  carteraVentasBruta?: number;
+  prepagosDescontadosCartera?: number;
   carteraVentasAccounts: number;
   enviadosFacturar: number;
   enviadosFacturarAccounts: number;
