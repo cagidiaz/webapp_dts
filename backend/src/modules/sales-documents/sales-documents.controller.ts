@@ -21,6 +21,7 @@ export class SalesDocumentsController {
   @ApiQuery({ name: 'sortDir', required: false, type: String })
   @ApiQuery({ name: 'years', required: false, type: String })
   @ApiQuery({ name: 'months', required: false, type: String })
+  @ApiQuery({ name: 'docCategory', required: false, type: String })
   async getAll(
     @Query('take') take?: number,
     @Query('skip') skip?: number,
@@ -31,10 +32,11 @@ export class SalesDocumentsController {
     @Query('sortDir') sortDir?: 'asc' | 'desc',
     @Query('years') years?: string,
     @Query('months') months?: string,
+    @Query('docCategory') docCategory?: string,
   ) {
     const parsedYears = years ? years.split(',').map(y => Number(y.trim())).filter(y => !isNaN(y)) : undefined;
     const parsedMonths = months ? months.split(',').map(m => Number(m.trim())).filter(m => !isNaN(m)) : undefined;
-    return this.salesDocumentsService.getAll({ take, skip, search, customerCode, type, sortBy, sortDir, years: parsedYears, months: parsedMonths });
+    return this.salesDocumentsService.getAll({ take, skip, search, customerCode, type, sortBy, sortDir, years: parsedYears, months: parsedMonths, docCategory });
   }
 
   @Get('billing-history/dashboard')

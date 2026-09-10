@@ -114,6 +114,26 @@ export class SalesOrdersService {
 
       // Descontar prepagos facturados pendientes de compensación
       let totalPrepagosDescontados = 0;
+      const customerPrepaymentsMap: Record<string, {
+        totalAmount: number;
+        documents: string[];
+        details: Array<{
+          document_no: string;
+          amount: number;
+          posting_date: string | null;
+          external_doc_no: string | null;
+        }>;
+      }> = {};
+      const agedPrepayments: Array<{
+        document_no: string;
+        customer_no: string;
+        customer_name: string;
+        posting_date: string | null;
+        amount: number;
+        agingDays: number;
+        external_doc_no: string | null;
+      }> = [];
+
       try {
         const pfvs = await this.prisma.sales_documents.findMany({
           where: {
@@ -123,7 +143,14 @@ export class SalesOrdersService {
           select: {
             document_no: true,
             customer_no: true,
+            posting_date: true,
+            external_doc_no: true,
             total_amount_excl_vat: true,
+            customer: {
+              select: {
+                name: true,
+              },
+            },
           },
         });
 
@@ -153,6 +180,38 @@ export class SalesOrdersService {
             );
             if (!isCompensated) {
               totalPrepagosDescontados += amt;
+
+              if (!customerPrepaymentsMap[p.customer_no]) {
+                customerPrepaymentsMap[p.customer_no] = {
+                  totalAmount: 0,
+                  documents: [],
+                  details: [],
+                };
+              }
+              customerPrepaymentsMap[p.customer_no].totalAmount += amt;
+              customerPrepaymentsMap[p.customer_no].documents.push(p.document_no);
+              customerPrepaymentsMap[p.customer_no].details.push({
+                document_no: p.document_no,
+                amount: amt,
+                posting_date: p.posting_date ? p.posting_date.toISOString() : null,
+                external_doc_no: p.external_doc_no || null,
+              });
+
+              if (p.posting_date) {
+                const diffTime = Date.now() - new Date(p.posting_date).getTime();
+                const agingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                if (agingDays >= 60) {
+                  agedPrepayments.push({
+                    document_no: p.document_no,
+                    customer_no: p.customer_no,
+                    customer_name: p.customer?.name || p.customer_no,
+                    posting_date: p.posting_date.toISOString(),
+                    amount: amt,
+                    agingDays,
+                    external_doc_no: p.external_doc_no || null,
+                  });
+                }
+              }
             }
           }
         }
@@ -160,12 +219,21 @@ export class SalesOrdersService {
         console.warn('Error calculando deducción de prepagos en pedidos:', err);
       }
 
+      // Ordenar prepagos con antigüedad mayor de mayor a menor días
+      agedPrepayments.sort((a, b) => b.agingDays - a.agingDays);
+
       const totalCarteraBruta = totalCartera;
       const totalEnviadoNoFacturadoBruto = totalEnviadoNoFacturado;
       const totalEnviadoNoFacturadoNeto = Math.max(0, totalEnviadoNoFacturadoBruto - totalPrepagosDescontados);
 
+      // Enriquecer cada pedido con información de prepagos de su cliente si existe
+      const enrichedData = data.map((item) => {
+        const prepay = customerPrepaymentsMap[item.customer_code];
+        return prepay ? { ...item, prepaymentInfo: prepay } : item;
+      });
+
       return { 
-        data, 
+        data: enrichedData, 
         total,
         summary: {
           totalOrders: uniqueOrderNumbers.size,
@@ -182,6 +250,8 @@ export class SalesOrdersService {
           totalEnviadoNoFacturado: totalEnviadoNoFacturadoNeto,
           totalEnviadoNoFacturadoBruto: totalEnviadoNoFacturadoBruto,
           totalEnviadoNoFacturadoAccounts: totalEnviadoNoFacturadoAccounts,
+          customerPrepayments: customerPrepaymentsMap,
+          agedPrepayments,
         }
       };
 

@@ -23,6 +23,26 @@ export interface SalesOrderData {
     name: string;
     salesperson_code: string | null;
   };
+  prepaymentInfo?: {
+    totalAmount: number;
+    documents: string[];
+    details: Array<{
+      document_no: string;
+      amount: number;
+      posting_date: string | null;
+      external_doc_no: string | null;
+    }>;
+  };
+}
+
+export interface AgedPrepayment {
+  document_no: string;
+  customer_no: string;
+  customer_name: string;
+  posting_date: string | null;
+  amount: number;
+  agingDays: number;
+  external_doc_no: string | null;
 }
 
 export interface SalesOrdersResponse {
@@ -38,6 +58,12 @@ export interface SalesOrdersResponse {
     totalEnviadoNoFacturado: number;
     totalEnviadoNoFacturadoBruto?: number;
     totalEnviadoNoFacturadoAccounts: number;
+    customerPrepayments?: Record<string, {
+      totalAmount: number;
+      documents: string[];
+      details: any[];
+    }>;
+    agedPrepayments?: AgedPrepayment[];
   };
 }
 

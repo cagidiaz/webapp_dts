@@ -78,6 +78,7 @@ export const getAllSalesDocuments = async (params: {
   sortDir?: string;
   years?: number[];
   months?: number[];
+  docCategory?: string;
 }): Promise<SalesDocumentsResponse> => {
   const queryParams = {
     ...params,

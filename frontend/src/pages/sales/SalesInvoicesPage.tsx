@@ -45,6 +45,7 @@ export const SalesInvoicesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [docTypeFilter, setDocTypeFilter] = useState('');
+  const [docCategoryFilter, setDocCategoryFilter] = useState('');
   const [sortBy, setSortBy] = useState<string>('posting_date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [expandedDocNos, setExpandedDocNos] = useState<Record<string, boolean>>({});
@@ -134,10 +135,11 @@ export const SalesInvoicesPage: React.FC = () => {
     isFetchingNextPage, 
     isLoading: isLoadingList 
   } = useInfiniteQuery({
-    queryKey: ['salesDocuments', debouncedSearch, docTypeFilter, selectedYears, selectedMonths, sortBy, sortDir],
+    queryKey: ['salesDocuments', debouncedSearch, docTypeFilter, docCategoryFilter, selectedYears, selectedMonths, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getAllSalesDocuments({ 
       take: pageSize, skip: pageParam as number, search: debouncedSearch,
       type: docTypeFilter || undefined,
+      docCategory: docCategoryFilter || undefined,
       years: selectedYears,
       months: selectedMonths,
       sortBy, sortDir
@@ -401,6 +403,7 @@ export const SalesInvoicesPage: React.FC = () => {
         skip: 0,
         search: debouncedSearch,
         type: docTypeFilter || undefined,
+        docCategory: docCategoryFilter || undefined,
         years: selectedYears,
         months: selectedMonths,
         sortBy,
@@ -464,6 +467,7 @@ export const SalesInvoicesPage: React.FC = () => {
         skip: 0,
         search: debouncedSearch,
         type: docTypeFilter || undefined,
+        docCategory: docCategoryFilter || undefined,
         years: selectedYears,
         months: selectedMonths,
         sortBy,
@@ -796,17 +800,31 @@ export const SalesInvoicesPage: React.FC = () => {
                 />
               </div>
               {viewType === 'detail' && (
-                <SearchableSelect 
-                  options={[
-                    { value: '', label: 'Todos los tipos' },
-                    { value: 'Item', label: 'Productos (Item)' },
-                    { value: 'G/L Account', label: 'Servicios (G/L Account)' },
-                  ]} 
-                  value={docTypeFilter} 
-                  onChange={setDocTypeFilter} 
-                  placeholder="Tipo de Línea" 
-                  showIcon={false}
-                />
+                <>
+                  <SearchableSelect 
+                    options={[
+                      { value: '', label: 'Todos los docs' },
+                      { value: 'FV', label: 'Facturas (FV)' },
+                      { value: 'PFV', label: 'Prepagos (PFV)' },
+                      { value: 'AAV', label: 'Abonos (AAV)' },
+                    ]} 
+                    value={docCategoryFilter} 
+                    onChange={setDocCategoryFilter} 
+                    placeholder="Tipo Doc" 
+                    showIcon={false}
+                  />
+                  <SearchableSelect 
+                    options={[
+                      { value: '', label: 'Todas las líneas' },
+                      { value: 'Item', label: 'Productos (Item)' },
+                      { value: 'G/L Account', label: 'Servicios (G/L Account)' },
+                    ]} 
+                    value={docTypeFilter} 
+                    onChange={setDocTypeFilter} 
+                    placeholder="Tipo de Línea" 
+                    showIcon={false}
+                  />
+                </>
               )}
             </div>
             
@@ -878,7 +896,8 @@ export const SalesInvoicesPage: React.FC = () => {
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-xs">
                   {documents.map((doc, idx) => {
                     const isExpanded = !!expandedDocNos[doc.document_no];
-                    const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB');
+                    const isPrepago = doc.document_no?.toUpperCase().startsWith('PFV');
+                    const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB') || doc.document_no?.toUpperCase().startsWith('AAV');
                     return (
                       <React.Fragment key={`${doc.id}-${idx}`}>
                         <tr 
@@ -896,13 +915,19 @@ export const SalesInvoicesPage: React.FC = () => {
                           <td className="px-6 py-3 font-semibold text-dts-primary dark:text-dts-secondary">
                             <div className="flex items-center gap-2">
                               <span>{doc.document_no}</span>
-                              <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide ${
-                                isAbono 
-                                  ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' 
-                                  : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                              }`}>
-                                {isAbono ? 'Abono' : 'Factura'}
-                              </span>
+                              {isPrepago ? (
+                                <span className="text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                                  Prepago
+                                </span>
+                              ) : isAbono ? (
+                                <span className="text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                  Abono
+                                </span>
+                              ) : (
+                                <span className="text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                  Factura
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-3 font-medium text-gray-500">

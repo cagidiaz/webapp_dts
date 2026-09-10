@@ -4,11 +4,12 @@ import { getAllSalesOrders } from '../../api/salesOrders';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
   Search, Package, Euro, TrendingUp, Calendar, DollarSign,
-  ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, type LucideIcon
+  ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, AlertTriangle, Clock, X, type LucideIcon
 } from 'lucide-react';
 import { KPISkeleton, TableSkeleton, InfoPopover, type InfoBreakdownItem, ExportButton } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
 import { exportToXlsx } from '../../utils/exportToXlsx';
+import type { AgedPrepayment } from '../../api/salesOrders';
 
 
 export const SalesOrdersPage: React.FC = () => {
@@ -21,6 +22,7 @@ export const SalesOrdersPage: React.FC = () => {
   const [sortBy, setSortBy] = useState('document_number');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [showAgedPrepaymentsModal, setShowAgedPrepaymentsModal] = useState(false);
 
   const observerTarget = useRef<HTMLTableRowElement>(null);
   const pageSize = 50;
@@ -116,8 +118,21 @@ export const SalesOrdersPage: React.FC = () => {
     exportToXlsx(result.data, columns, 'pedidos_venta');
   };
 
-  const { groupedOrders, totalOrders, totalAmount, prepagosDescontados, totalAmountAccounts, totalOutstanding, totalEnviadoNoFacturado, totalEnviadoNoFacturadoBruto, totalEnviadoNoFacturadoAccounts } = useMemo(() => {
+  const { groupedOrders, totalOrders, totalAmount, prepagosDescontados, totalAmountAccounts, totalOutstanding, totalEnviadoNoFacturado, totalEnviadoNoFacturadoBruto, totalEnviadoNoFacturadoAccounts, agedPrepayments } = useMemo(() => {
     const allItems = data?.pages.flatMap(page => page.data) || [];
+    const summary = data?.pages[0]?.summary || { 
+      totalOrders: 0,
+      totalAmount: 0, 
+      totalAmountBruto: 0,
+      prepagosDescontados: 0,
+      totalAmountAccounts: 0,
+      totalOutstandingUnits: 0, 
+      totalEnviadoNoFacturado: 0,
+      totalEnviadoNoFacturadoBruto: 0,
+      totalEnviadoNoFacturadoAccounts: 0,
+      customerPrepayments: {},
+      agedPrepayments: []
+    };
     
     // Grouping by document_number
     const groups = new Map();
@@ -133,6 +148,7 @@ export const SalesOrdersPage: React.FC = () => {
           outstanding_quantity: 0,
           qty_shipped_not_invoiced: 0,
           line_amount: 0,
+          prepaymentInfo: (line as any).prepaymentInfo || (summary?.customerPrepayments?.[line.customer_code]) || null,
           lines: []
         });
       }
@@ -143,18 +159,6 @@ export const SalesOrdersPage: React.FC = () => {
       group.line_amount += Number(line.line_amount);
       group.lines.push(line);
     });
-
-    const summary = data?.pages[0]?.summary || { 
-      totalOrders: 0,
-      totalAmount: 0, 
-      totalAmountBruto: 0,
-      prepagosDescontados: 0,
-      totalAmountAccounts: 0,
-      totalOutstandingUnits: 0, 
-      totalEnviadoNoFacturado: 0,
-      totalEnviadoNoFacturadoBruto: 0,
-      totalEnviadoNoFacturadoAccounts: 0
-    };
     
     return { 
       groupedOrders: Array.from(groups.values()), 
@@ -166,7 +170,8 @@ export const SalesOrdersPage: React.FC = () => {
       totalOutstanding: summary.totalOutstandingUnits, 
       totalEnviadoNoFacturado: summary.totalEnviadoNoFacturado,
       totalEnviadoNoFacturadoBruto: summary.totalEnviadoNoFacturadoBruto || summary.totalEnviadoNoFacturado,
-      totalEnviadoNoFacturadoAccounts: summary.totalEnviadoNoFacturadoAccounts
+      totalEnviadoNoFacturadoAccounts: summary.totalEnviadoNoFacturadoAccounts,
+      agedPrepayments: summary.agedPrepayments || []
     };
 
   }, [data]);
@@ -253,6 +258,38 @@ export const SalesOrdersPage: React.FC = () => {
 
       </div>
 
+      {/* Alerta de Prepagos Antiguos (> 60 días sin cerrar) */}
+      {agedPrepayments && agedPrepayments.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 dark:text-amber-200 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-500/20 rounded-lg text-amber-600 dark:text-amber-400 shrink-0">
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold flex items-center gap-2">
+                <span>Alerta de Prepagos con Antigüedad &gt; 60 días</span>
+                <span className="px-2 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-mono font-bold">
+                  {agedPrepayments.length} {agedPrepayments.length === 1 ? 'prepago pendiente' : 'prepagos pendientes'}
+                </span>
+              </h4>
+              <p className="text-[11px] text-amber-700/80 dark:text-amber-300/70 mt-0.5">
+                Existen facturas prepago emitidas hace más de 2 meses pendientes de entrega o compensación por un valor total de{' '}
+                <strong className="font-semibold text-amber-900 dark:text-amber-100 font-mono">
+                  {formatCurrency(agedPrepayments.reduce((acc, p) => acc + p.amount, 0), 0)}
+                </strong>.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowAgedPrepaymentsModal(true)}
+            className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer shadow-xs"
+          >
+            <Clock size={14} />
+            Ver Detalle de Prepagos
+          </button>
+        </div>
+      )}
+
 
       <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-320px)] min-h-[450px]">
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
@@ -322,7 +359,16 @@ export const SalesOrdersPage: React.FC = () => {
                       <td className="px-2 sm:px-4 lg:px-6 py-3 font-bold font-mono text-[10px] text-dts-primary dark:text-dts-secondary hidden sm:table-cell whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <ChevronRight size={14} className={`shrink-0 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
-                          {order.document_number}
+                          <span>{order.document_number}</span>
+                          {order.prepaymentInfo && order.prepaymentInfo.totalAmount > 0 && (
+                            <span 
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 shrink-0 shadow-xs cursor-help" 
+                              title={`Prepago facturado asociado: ${formatCurrency(order.prepaymentInfo.totalAmount, 0)} (${order.prepaymentInfo.documents.join(', ')})`}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse"></span>
+                              Prepago {formatCurrency(order.prepaymentInfo.totalAmount, 0)}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-2 sm:px-4 lg:px-6 py-3 items-center gap-1.5 whitespace-nowrap hidden md:table-cell">
@@ -335,9 +381,15 @@ export const SalesOrdersPage: React.FC = () => {
                       </td>
                       <td className="px-2 sm:px-4 lg:px-6 py-3">
                         <div className="flex flex-col">
-                          <div className="sm:hidden flex items-center gap-2 mb-0.5">
+                          <div className="sm:hidden flex items-center gap-2 mb-0.5 flex-wrap">
                              <ChevronRight size={12} className={`shrink-0 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
                              <span className="font-mono text-[10px] font-bold text-dts-primary dark:text-dts-secondary">{order.document_number}</span>
+                             {order.prepaymentInfo && order.prepaymentInfo.totalAmount > 0 && (
+                               <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[8px] font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                                 <span className="w-1 h-1 rounded-full bg-cyan-500"></span>
+                                 Prepago {formatCurrency(order.prepaymentInfo.totalAmount, 0)}
+                               </span>
+                             )}
                           </div>
                           <span className="font-medium text-gray-900 dark:text-white uppercase text-[10px] sm:text-xs truncate max-w-[120px] sm:max-w-none">{order.customer?.name || '---'}</span>
                           <span className="text-[9px] text-gray-500 font-mono tracking-wider hidden sm:inline">{order.customer_code}</span>
@@ -400,6 +452,104 @@ export const SalesOrdersPage: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal de Detalle de Prepagos Antiguos (> 60 días) */}
+      {showAgedPrepaymentsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+          <div 
+            className="bg-white dark:bg-surface-card-dark rounded-2xl max-w-2xl w-full border border-gray-100 dark:border-gray-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-amber-500/5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                    Prepagos con Antigüedad &gt; 60 Días
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Facturas de prepago emitidas sin compensar con entrega de pedido
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowAgedPrepaymentsModal(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content Table */}
+            <div className="p-5 overflow-y-auto custom-scrollbar flex-1">
+              <div className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 dark:bg-white/5 text-gray-500 uppercase text-[10px] font-bold">
+                    <tr>
+                      <th className="px-4 py-3">Doc. Prepago</th>
+                      <th className="px-4 py-3">Cliente</th>
+                      <th className="px-4 py-3">Fecha Reg.</th>
+                      <th className="px-4 py-3 text-center">Antigüedad</th>
+                      <th className="px-4 py-3">Ref. Pedido</th>
+                      <th className="px-4 py-3 text-right">Importe Neto</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {agedPrepayments.map((p: AgedPrepayment) => (
+                      <tr key={p.document_no} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                        <td className="px-4 py-3 font-mono font-bold text-dts-primary dark:text-dts-secondary whitespace-nowrap">
+                          {p.document_no}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[150px]">
+                              {p.customer_name}
+                            </span>
+                            <span className="text-[10px] font-mono text-gray-400">{p.customer_no}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                          {p.posting_date ? new Date(p.posting_date).toLocaleDateString('es-ES') : '---'}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50">
+                            {p.agingDays} días
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-gray-500 italic max-w-[120px] truncate">
+                          {p.external_doc_no || '---'}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                          {formatCurrency(p.amount, 2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-transparent flex items-center justify-between">
+              <div className="text-xs text-gray-500">
+                Total acumulado:{' '}
+                <strong className="font-mono font-bold text-gray-900 dark:text-white">
+                  {formatCurrency(agedPrepayments.reduce((acc: number, p: AgedPrepayment) => acc + p.amount, 0), 2)}
+                </strong>
+              </div>
+              <button
+                onClick={() => setShowAgedPrepaymentsModal(false)}
+                className="px-4 py-2 bg-dts-primary text-white rounded-lg text-xs font-semibold hover:bg-dts-primary/90 transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -34,8 +34,9 @@ export class SalesDocumentsService {
     sortDir?: 'asc' | 'desc';
     years?: number[];
     months?: number[];
+    docCategory?: string;
   } = {}) {
-    const { skip, take, search, customerCode, type, sortBy = 'posting_date', sortDir = 'desc', years, months } = params;
+    const { skip, take, search, customerCode, type, sortBy = 'posting_date', sortDir = 'desc', years, months, docCategory } = params;
 
     const where: any = {};
     const and: any[] = [];
@@ -100,6 +101,22 @@ export class SalesDocumentsService {
           }
         }
       });
+    }
+
+    // Filtrado por categoría de documento (FV, PFV, AAV)
+    if (docCategory) {
+      if (docCategory === 'PFV') {
+        and.push({ document_no: { startsWith: 'PFV' } });
+      } else if (docCategory === 'FV') {
+        and.push({ document_no: { startsWith: 'FV' } });
+      } else if (docCategory === 'AAV') {
+        and.push({
+          OR: [
+            { document_no: { startsWith: 'AAV' } },
+            { document_no: { startsWith: 'AB' } },
+          ],
+        });
+      }
     }
 
     if (and.length > 0) {
