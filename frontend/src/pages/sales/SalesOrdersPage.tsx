@@ -195,8 +195,8 @@ export const SalesOrdersPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="space-y-3.5 animate-in fade-in duration-500 pb-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard 
           title="Total Pedidos" 
           value={totalOrders} 
@@ -259,38 +259,32 @@ export const SalesOrdersPage: React.FC = () => {
 
       {/* Alerta de Prepagos Antiguos (> 60 días sin cerrar) */}
       {agedPrepayments && agedPrepayments.length > 0 && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 dark:text-amber-200 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/20 rounded-lg text-amber-600 dark:text-amber-400 shrink-0">
-              <AlertTriangle size={20} />
-            </div>
-            <div>
-              <h4 className="text-xs sm:text-sm font-bold flex items-center gap-2">
-                <span>Alerta de Prepagos con Antigüedad &gt; 60 días</span>
-                <span className="px-2 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-mono font-bold">
-                  {agedPrepayments.length} {agedPrepayments.length === 1 ? 'prepago pendiente' : 'prepagos pendientes'}
-                </span>
-              </h4>
-              <p className="text-[11px] text-amber-700/80 dark:text-amber-300/70 mt-0.5">
-                Existen facturas prepago emitidas hace más de 2 meses pendientes de entrega o compensación por un valor total de{' '}
-                <strong className="font-semibold text-amber-900 dark:text-amber-100 font-mono">
-                  {formatCurrency(agedPrepayments.reduce((acc, p) => acc + p.amount, 0), 0)}
-                </strong>.
-              </p>
-            </div>
+        <div className="bg-amber-500/10 border border-amber-500/25 rounded-lg px-3.5 py-1.5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 text-amber-900 dark:text-amber-200 shadow-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertTriangle size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="text-xs font-bold whitespace-nowrap">Alerta Prepagos &gt; 60 días:</span>
+            <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-800 dark:text-amber-200 rounded text-[10px] font-mono font-bold shrink-0">
+              {agedPrepayments.length} {agedPrepayments.length === 1 ? 'prepago' : 'prepagos'}
+            </span>
+            <span className="text-[11px] text-amber-700/80 dark:text-amber-300/70 hidden md:inline truncate">
+              — Total sin compensar:{' '}
+              <strong className="font-semibold text-amber-900 dark:text-amber-100 font-mono">
+                {formatCurrency(agedPrepayments.reduce((acc, p) => acc + p.amount, 0), 0)}
+              </strong>
+            </span>
           </div>
           <button
             onClick={() => setShowAgedPrepaymentsModal(true)}
-            className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer shadow-xs"
+            className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200 rounded-md text-[11px] font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
           >
-            <Clock size={14} />
-            Ver Detalle de Prepagos
+            <Clock size={12} />
+            Ver Detalle
           </button>
         </div>
       )}
 
 
-      <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col h-[calc(100vh-320px)] min-h-[450px]">
+      <div className={`bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col ${agedPrepayments && agedPrepayments.length > 0 ? 'h-[calc(100vh-270px)]' : 'h-[calc(100vh-230px)]'} min-h-[350px]`}>
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="w-full max-w-md relative group">
@@ -579,7 +573,7 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: 
   const formattedValue = type === 'currency' ? formatCurrency(value, decimalPlaces) : formatNumber(value, decimalPlaces);
 
   return (
-    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
+    <div className="bg-white dark:bg-surface-card-dark p-3.5 sm:p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
       <div>
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-1.5">
