@@ -50,3 +50,11 @@ Este archivo contiene las directrices críticas y reglas de desarrollo específi
   * `OBJETIVO FACTURACIÓN ANUAL`: Para el seguimiento del presupuesto anual.
   * `CARTERA DE PEDIDOS`: Título general para el bloque de pedidos abiertos.
 * **Responsividad:** El menú lateral (`Sidebar`) debe colapsarse automáticamente en pantallas de ancho inferior a 1024px.
+
+---
+
+## 7. BÚSQUEDAS EN TABLAS Y EXPERIENCIA DE USUARIO (UX) 🔍
+* **Persistencia de Foco en Buscadores (`keepPreviousData`):**
+  * Al implementar búsquedas o filtros en tablas con React Query (`useQuery` o `useInfiniteQuery`), **SIEMPRE** se debe configurar `placeholderData: keepPreviousData`.
+  * **Causa del problema:** Si no se incluye `placeholderData: keepPreviousData`, al cambiar el término de búsqueda se genera un nuevo `queryKey`, dejando `data` como `undefined` durante la carga. Esto activa condiciones de guarda como `if (isLoading && !data) return <Skeleton />`, lo que desmonta el componente y destruye el elemento `<input>` del DOM, provocando que el usuario pierda el foco y el cursor con cada letra que escribe.
+  * **Feedback Visual:** Utilizar indicadores no destructivos durante la búsqueda (ej. spinner `Loader2` en el propio icono de la lupa con `isFetching && debouncedSearch`) para informar al usuario de la consulta en curso sin desmontar el input ni entorpecer la escritura.
