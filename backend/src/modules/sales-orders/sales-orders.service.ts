@@ -27,7 +27,9 @@ export class SalesOrdersService {
       and.push({
         OR: [
           { document_number: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
+          { customer: { name: { contains: search, mode: 'insensitive' } } },
+          { customer_code: { contains: search, mode: 'insensitive' } },
+          { item_code: { contains: search, mode: 'insensitive' } },
         ],
       });
     }
