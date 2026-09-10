@@ -144,7 +144,6 @@ export const FinancialDashboard: React.FC = () => {
 
   const activeKPIs = selectedSalesperson ? salespersonPerf?.kpis : salesPerf?.kpis;
   const isKpisLoading = selectedSalesperson ? spLoading : pLoading;
-  const kpis = salesPerf?.kpis;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
@@ -411,32 +410,48 @@ export const FinancialDashboard: React.FC = () => {
             <div className="space-y-5">
               <InsightItem 
                 title="Cumplimiento de Ventas" 
-                status={kpis?.desviacionPct && kpis.desviacionPct >= 0 ? 'success' : 'warning'}
-                message={kpis?.desviacionPct && kpis.desviacionPct >= 0 
-                  ? `Estamos superando el presupuesto anual en un ${kpis.desviacionPct.toFixed(1)}%.`
-                  : `Existe una desviación negativa del ${Math.abs(kpis?.desviacionPct || 0).toFixed(1)}% respecto al objetivo.`}
+                status={activeKPIs?.desviacionPct && activeKPIs.desviacionPct >= 0 ? 'success' : 'warning'}
+                message={activeKPIs?.desviacionPct && activeKPIs.desviacionPct >= 0 
+                  ? `Estamos superando el presupuesto anual en un ${activeKPIs.desviacionPct.toFixed(1)}%.`
+                  : `Existe una desviación negativa del ${Math.abs(activeKPIs?.desviacionPct || 0).toFixed(1)}% respecto al objetivo.`}
               />
               <InsightItem 
                 title="Cartera de Pedidos" 
                 status="info"
-                message={`Disponemos de ${formatCurrency(kpis?.carteraVentas || 0)} en cartera pendientes de procesar.`}
+                message={`Disponemos de ${formatCurrency(activeKPIs?.carteraVentas || 0)} en cartera pendientes de procesar.`}
               />
               <InsightItem 
                 title="Nuevos Clientes" 
                 status="info"
-                message={`Se han incorporado ${kpis?.countNuevos || 0} clientes nuevos este año, aportando ${formatCurrency(kpis?.facturacionNuevos || 0)}.`}
+                message={`Se han incorporado ${activeKPIs?.countNuevos || 0} clientes nuevos este año, aportando ${formatCurrency(activeKPIs?.facturacionNuevos || 0)}.`}
               />
             </div>
           </div>
 
           <div className="bg-dts-primary dark:bg-dts-primary-dark p-6 rounded-2xl text-white shadow-xl relative overflow-hidden group">
             <div className="relative z-10">
-              <h3 className="text-sm font-bold uppercase tracking-widest opacity-60 mb-1">Previsión Cierre</h3>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-bold uppercase tracking-widest opacity-60">Previsión Cierre</h3>
+                <InfoPopover 
+                  title="Previsión de Cierre Anual"
+                  description="Proyección acumulada de cierre de ventas del ejercicio considerando lo ya facturado, la mercancía pendiente de emitir factura y la cartera de pedidos viva."
+                  formulas="Ventas Real YTD + Pedidos por Facturar (Neto) + Cartera de Pedidos"
+                  source="sales_documents (Ventas YTD) + sales_orders (Cartera y Pend. Facturar)"
+                  iconSize={13}
+                  className="text-white/60 hover:text-white"
+                  breakdown={[
+                    { label: "Ventas Netas YTD", value: formatCurrency(activeKPIs?.ventas || 0), sign: '+', color: 'text-emerald-400' },
+                    { label: "Pedidos por Facturar (Neto)", value: formatCurrency(activeKPIs?.enviadosFacturar || 0), sign: '+', color: 'text-cyan-400' },
+                    { label: "Cartera de Pedidos (Vivos)", value: formatCurrency(activeKPIs?.carteraVentas || 0), sign: '+', color: 'text-blue-300' },
+                    { label: "Total Previsión Cierre", value: formatCurrency((activeKPIs?.ventas || 0) + (activeKPIs?.enviadosFacturar || 0) + (activeKPIs?.carteraVentas || 0)), sign: '=', color: 'text-white font-bold' },
+                  ]}
+                />
+              </div>
               <div className="text-3xl font-black mb-4">
-                {formatCurrency((kpis?.ventas || 0) + (kpis?.carteraVentas || 0))}
+                {formatCurrency((activeKPIs?.ventas || 0) + (activeKPIs?.enviadosFacturar || 0) + (activeKPIs?.carteraVentas || 0))}
               </div>
               <p className="text-xs opacity-80 leading-relaxed">
-                Considerando la facturación actual YTD y la cartera de pedidos abierta, la proyección mínima de cierre se sitúa en este valor.
+                Considerando la facturación actual YTD, los pedidos por facturar y la cartera de pedidos abierta, la proyección de cierre se sitúa en este valor.
               </p>
             </div>
             <Euro size={120} className="absolute -bottom-10 -right-10 opacity-5 group-hover:scale-110 transition-transform duration-700" />
