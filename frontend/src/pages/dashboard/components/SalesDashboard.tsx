@@ -227,7 +227,7 @@ export const SalesDashboard: React.FC = () => {
             color="blue"
             variant="comparison"
             isLoading={isLoadingGlobalPerf}
-            infoText={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
+            subtext1={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
             infoProps={{
               title: "Ventas YTD vs Presupuesto YTD (Global)",
               description: "Comparativa de facturación real global neta acumulada frente al presupuesto global a fecha de hoy.",
@@ -255,7 +255,7 @@ export const SalesDashboard: React.FC = () => {
             label1={`${year}:`}
             label2={`${year-1}:`}
             isLoading={isLoadingGlobalPerf}
-            infoText={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
+            subtext1={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
             infoProps={{
               title: "Ventas Actual vs Anterior (Global)",
               description: "Facturación global del ejercicio actual comparada con el mismo periodo del año anterior (hasta hoy).",
@@ -283,7 +283,6 @@ export const SalesDashboard: React.FC = () => {
             label1="CARTE:"
             label2="PEND:"
             isLoading={isLoadingGlobalPerf}
-            infoText={globalPerf?.kpis?.prepagosDescontadosFacturar ? `Pend. facturar: descontados ${formatCurrency(globalPerf.kpis.prepagosDescontadosFacturar, 0)} por prepagos` : undefined}
             infoProps={{
               title: "Cartera y Pedidos por Facturar (Global)",
               description: "Resumen de cartera (total pedidos abiertos) y pedidos por facturar a nivel global. El importe de las facturas prepago se descuenta del monto de pedidos por facturar para evitar duplicidades con la facturación anticipada.",
@@ -334,7 +333,7 @@ export const SalesDashboard: React.FC = () => {
           type="currency" 
           icon={TrendingUp} 
           isLoading={isLoadingPerf}
-          infoText={kpis.prepagosFacturados ? `Incluye ${formatCurrency(kpis.prepagosFacturados, 0)} en prepagos` : undefined}
+          subtext={kpis.prepagosFacturados ? `Incluye ${formatCurrency(kpis.prepagosFacturados, 0)} en prepagos` : undefined}
           infoProps={{ 
             title: "Facturación Real Comercial",
             description: "Total de ventas reales acumuladas netas de abonos asignadas al comercial.",
@@ -406,7 +405,6 @@ export const SalesDashboard: React.FC = () => {
           icon={Activity} 
           status="warning"
           isLoading={isLoadingPerf}
-          infoText={kpis.prepagosDescontadosFacturar ? `Descontados ${formatCurrency(kpis.prepagosDescontadosFacturar, 0)} prepagos` : undefined}
           infoProps={{ 
             title: "Pendiente de Facturar (Neto)",
             description: "Mercancía enviada o pedidos pendientes de emitir factura definitiva, descontando el importe de las facturas prepago ya cobradas.",
@@ -680,7 +678,7 @@ export const SalesDashboard: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, accountValue, footerText, infoText }: any) => {
+const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, accountValue, footerText, infoText, subtext }: any) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
   
   const isPositive = value >= 0;
@@ -713,6 +711,11 @@ const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status,
               </div>
             )}
           </div>
+          {subtext && (
+            <div className="text-[10px] text-dts-secondary dark:text-cyan-400 font-medium leading-tight mt-0.5">
+              {subtext}
+            </div>
+          )}
           {accountValue !== undefined && accountValue > 0 && (
             <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
               ({formatCurrency(accountValue, 0)})
@@ -735,7 +738,7 @@ const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status,
   );
 };
 
-const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "", isLoading, infoText }: any) => {
+const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "", isLoading, infoText, subtext1 }: any) => {
   if (isLoading) return <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 h-40 animate-pulse" />;
 
   const colorMap: any = {
@@ -769,6 +772,11 @@ const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accou
                 <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">
                   {formattedValue}
                 </div>
+                {subtext1 && (
+                  <span className="text-[10px] text-dts-secondary dark:text-cyan-400 font-medium leading-tight">
+                    {subtext1}
+                  </span>
+                )}
                 {accountValue !== undefined && accountValue > 0 && (
                   <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
                     ({formatCurrency(accountValue, 0)})

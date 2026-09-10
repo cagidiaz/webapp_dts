@@ -242,7 +242,6 @@ export const SalesOrdersPage: React.FC = () => {
           icon={DollarSign} 
           status="warning"
           isLoading={isLoading} 
-          infoText={prepagosDescontados ? `Descontados ${formatCurrency(prepagosDescontados, 0)} por prepagos` : undefined}
           infoProps={{
             title: "Pendiente de Facturar (Neto)",
             description: "Importe de los pedidos enviados o pendientes de facturar, deduciendo el valor de los prepagos ya facturados para evitar duplicidades.",

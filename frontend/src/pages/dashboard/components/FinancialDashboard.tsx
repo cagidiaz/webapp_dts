@@ -203,7 +203,7 @@ export const FinancialDashboard: React.FC = () => {
             color="blue"
             variant="comparison"
             isLoading={isKpisLoading}
-            infoText={activeKPIs?.prepagosFacturados ? `Incluye ${formatCurrency(activeKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
+            subtext1={activeKPIs?.prepagosFacturados ? `Incluye ${formatCurrency(activeKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
             infoProps={{
               title: "Ventas YTD vs Presupuesto YTD",
               description: "Comparativa de facturación real neta acumulada frente al presupuesto acumulado a fecha de hoy.",
@@ -231,7 +231,7 @@ export const FinancialDashboard: React.FC = () => {
             label1={`${currentYear}:`}
             label2={`${currentYear - 1}:`}
             isLoading={isKpisLoading}
-            infoText={activeKPIs?.prepagosFacturados ? `Incluye ${formatCurrency(activeKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
+            subtext1={activeKPIs?.prepagosFacturados ? `Incluye ${formatCurrency(activeKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
             infoProps={{
               title: "Ventas YTD vs Ventas LYTD",
               description: "Facturación neta total del ejercicio actual comparada con el mismo periodo del año anterior (comparativa día a día).",
@@ -279,7 +279,6 @@ export const FinancialDashboard: React.FC = () => {
             label1="CARTE:"
             label2="PEND:"
             isLoading={isKpisLoading}
-            infoText={activeKPIs?.prepagosDescontadosFacturar ? `Pend. facturar: descontados ${formatCurrency(activeKPIs.prepagosDescontadosFacturar, 0)} por prepagos` : undefined}
             infoProps={{
               title: "Cartera y Pedidos por Facturar",
               description: "Resumen de cartera (total de pedidos abiertos) y pedidos por facturar (mercancía pendiente de emitir factura neta de prepagos). El importe de las facturas prepago se descuenta del monto de pedidos por facturar para evitar duplicidades con las ventas anticipadas.",
@@ -448,7 +447,7 @@ export const FinancialDashboard: React.FC = () => {
   );
 };
 
-const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "", infoText }: any) => {
+const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "", infoText, subtext1 }: any) => {
   const colorMap: any = {
     blue: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
     emerald: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20',
@@ -480,6 +479,11 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
                 <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">
                   {formattedValue}
                 </div>
+                {subtext1 && (
+                  <span className="text-[10px] text-dts-secondary dark:text-cyan-400 font-medium leading-tight">
+                    {subtext1}
+                  </span>
+                )}
                 {accountValue !== undefined && accountValue > 0 && (
                   <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
                     ({formatCurrency(accountValue, 0)})
@@ -522,6 +526,11 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
         ) : (
           <div className="flex flex-col">
             <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+            {subtext1 && (
+              <span className="text-[10px] text-dts-secondary dark:text-cyan-400 font-medium mt-0.5 leading-tight">
+                {subtext1}
+              </span>
+            )}
             {accountValue !== undefined && accountValue > 0 && (
               <div className="text-[10px] text-gray-400 mt-1 italic font-normal">
                 ({formatCurrency(accountValue, 0)})

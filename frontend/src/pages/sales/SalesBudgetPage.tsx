@@ -62,6 +62,7 @@ interface KPICardProps {
   };
   accountValue?: number;
   infoText?: string;
+  subtext?: string;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -107,7 +108,7 @@ const RenderCustomLegend = (props: any) => {
   );
 };
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: Icon, isLoading, status, decimalPlaces = 0, infoProps, accountValue, infoText }) => {
+const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: Icon, isLoading, status, decimalPlaces = 0, infoProps, accountValue, infoText, subtext }) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
   
   const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : 'text-dts-primary dark:text-white';
@@ -135,6 +136,11 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: 
           <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
         </div>
         <div className={`text-xl font-medium font-mono ${colorClass}`}>{formattedValue}</div>
+        {subtext && (
+          <div className="text-[10px] text-dts-secondary dark:text-cyan-400 font-medium leading-tight mt-0.5">
+            {subtext}
+          </div>
+        )}
         {accountValue !== undefined && accountValue > 0 && (
           <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
             ({formatCurrency(accountValue, 0)})
@@ -365,7 +371,7 @@ export const SalesBudgetPage: React.FC = () => {
           type="currency" 
           icon={TrendingUp} 
           isLoading={isLoadingPerf} 
-          infoText={performanceKPIs.prepagosFacturados ? `Incluye ${formatCurrency(performanceKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
+          subtext={performanceKPIs.prepagosFacturados ? `Incluye ${formatCurrency(performanceKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
           infoProps={{ 
             title: "Facturación Neta",
             description: "Total de ventas reales acumuladas netas (Facturas Ordinarias + Prepagos - Devoluciones/Abonos) para el periodo y filtros actuales.", 
@@ -404,7 +410,6 @@ export const SalesBudgetPage: React.FC = () => {
           icon={DollarSign} 
           status="warning" 
           isLoading={isLoadingPerf} 
-          infoText={performanceKPIs.prepagosDescontadosFacturar ? `Descontados ${formatCurrency(performanceKPIs.prepagosDescontadosFacturar, 0)} prepagos` : undefined}
           infoProps={{ 
             title: "Pendiente de Facturar (Neto)", 
             description: "Importe de la mercancía ya enviada o pedidos pendientes de emitir factura definitiva, descontando los anticipos/prepagos ya facturados para evitar duplicidades con la facturación anticipada.", 
