@@ -84,7 +84,7 @@ export class MicrosoftGraphService {
       response_mode: 'query',
       scope: scopes,
       state: userId,
-      prompt: 'consent',
+      prompt: 'select_account',
     });
 
     return `https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
