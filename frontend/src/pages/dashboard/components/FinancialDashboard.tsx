@@ -501,7 +501,7 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
                 )}
                 {accountValue !== undefined && accountValue > 0 && (
                   <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
-                    ({formatCurrency(accountValue, 0)})
+                    ({formatCurrency(accountValue, 0)}) cuentas
                   </span>
                 )}
               </div>
@@ -524,7 +524,7 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
                 </div>
                 {accountSubValue !== undefined && accountSubValue > 0 && (
                   <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
-                    ({formatCurrency(accountSubValue, 0)})
+                    ({formatCurrency(accountSubValue, 0)}) cuentas
                   </span>
                 )}
               </div>
@@ -548,7 +548,7 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
             )}
             {accountValue !== undefined && accountValue > 0 && (
               <div className="text-[10px] text-gray-400 mt-1 italic font-normal">
-                ({formatCurrency(accountValue, 0)})
+                ({formatCurrency(accountValue, 0)}) cuentas
               </div>
             )}
           </div>

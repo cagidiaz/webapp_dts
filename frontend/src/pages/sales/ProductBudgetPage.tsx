@@ -132,7 +132,7 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: 
       <div className={`text-xl font-medium font-mono ${colorClass}`}>{formattedValue}</div>
       {accountValue !== undefined && accountValue > 0 && (
         <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
-          ({formatCurrency(accountValue, 0)})
+          ({formatCurrency(accountValue, 0)}) cuentas
         </div>
       )}
     </div>

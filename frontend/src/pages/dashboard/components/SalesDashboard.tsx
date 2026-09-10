@@ -718,7 +718,7 @@ const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status,
           )}
           {accountValue !== undefined && accountValue > 0 && (
             <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
-              ({formatCurrency(accountValue, 0)})
+              ({formatCurrency(accountValue, 0)}) cuentas
             </div>
           )}
           {footerText && (
@@ -779,7 +779,7 @@ const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accou
                 )}
                 {accountValue !== undefined && accountValue > 0 && (
                   <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
-                    ({formatCurrency(accountValue, 0)})
+                    ({formatCurrency(accountValue, 0)}) cuentas
                   </span>
                 )}
               </div>
@@ -792,7 +792,7 @@ const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accou
                 </div>
                 {accountSubValue !== undefined && accountSubValue > 0 && (
                   <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
-                    ({formatCurrency(accountSubValue, 0)})
+                    ({formatCurrency(accountSubValue, 0)}) cuentas
                   </span>
                 )}
               </div>
