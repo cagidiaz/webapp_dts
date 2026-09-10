@@ -137,7 +137,7 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: 
         </div>
         <div className={`text-xl font-medium font-mono ${colorClass}`}>{formattedValue}</div>
         {subtext && (
-          <div className="text-[10px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight mt-0.5">
+          <div className="text-[9px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight mt-0.5">
             {subtext}
           </div>
         )}

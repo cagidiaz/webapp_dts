@@ -712,7 +712,7 @@ const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status,
             )}
           </div>
           {subtext && (
-            <div className="text-[10px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight mt-0.5">
+            <div className="text-[9px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight mt-0.5">
               {subtext}
             </div>
           )}
@@ -773,7 +773,7 @@ const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accou
                   {formattedValue}
                 </div>
                 {subtext1 && (
-                  <span className="text-[10px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight">
+                  <span className="text-[9px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight">
                     {subtext1}
                   </span>
                 )}

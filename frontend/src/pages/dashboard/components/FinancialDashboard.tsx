@@ -480,7 +480,7 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
                   {formattedValue}
                 </div>
                 {subtext1 && (
-                  <span className="text-[10px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight">
+                  <span className="text-[9px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight">
                     {subtext1}
                   </span>
                 )}
@@ -527,7 +527,7 @@ const KPICard = ({ title, value, subValue, extraValue, accountValue, accountSubV
           <div className="flex flex-col">
             <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
             {subtext1 && (
-              <span className="text-[10px] text-dts-secondary dark:text-cyan-400 font-normal mt-0.5 leading-tight">
+              <span className="text-[9px] text-dts-secondary dark:text-cyan-400 font-normal mt-0.5 leading-tight">
                 {subtext1}
               </span>
             )}
