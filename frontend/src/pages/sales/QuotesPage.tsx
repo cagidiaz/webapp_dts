@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getAllQuotes, getQuoteById, updateCrmQuote, type SalesQuote } from '../../api/quotes';
 import { getCustomerSalespersons } from '../../api/customers';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
   Search, FileText, Euro, CheckCircle, Percent, ArrowUpDown, 
   ChevronUp, ChevronDown, Sparkles, BarChart3, Calendar,
-  AlertTriangle, ChevronLeft, ChevronRight, Check, X, Clock, HelpCircle
+  AlertTriangle, ChevronLeft, ChevronRight, Check, X, Clock, HelpCircle, Loader2
 } from 'lucide-react';
 import { KPISkeleton, TableSkeleton, InfoPopover, ExportButton } from '../../components/ui';
 import { Drawer } from '../../components/shared';
@@ -111,7 +111,7 @@ export const QuotesPage: React.FC = () => {
   });
 
   // Query quotes with infinite scroll
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } = useInfiniteQuery({
     queryKey: [
       'sales-quotes', 
       debouncedSearch, 
@@ -145,6 +145,7 @@ export const QuotesPage: React.FC = () => {
       const nextSkip = allPages.length * pageSize;
       return nextSkip < lastPage.total ? nextSkip : undefined;
     },
+    placeholderData: keepPreviousData,
   });
 
   // Query detail for selected quote
@@ -524,7 +525,11 @@ export const QuotesPage: React.FC = () => {
             {/* Search Input */}
             <div className="w-full max-w-md relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <Search size={16} />
+                {isFetching && debouncedSearch ? (
+                  <Loader2 size={16} className="animate-spin text-dts-secondary" />
+                ) : (
+                  <Search size={16} />
+                )}
               </div>
               <input 
                 type="text" 

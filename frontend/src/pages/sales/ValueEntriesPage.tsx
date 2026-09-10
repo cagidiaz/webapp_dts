@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { getValueEntries } from '../../api';
 import { formatCurrency } from '../../api/formatters';
 import { 
@@ -39,7 +39,7 @@ export const ValueEntriesPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } = useInfiniteQuery({
     queryKey: ['valueEntries', debouncedSearch, docTypeFilter, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getValueEntries({ 
       take: pageSize, skip: pageParam as number, search: debouncedSearch,
@@ -51,6 +51,7 @@ export const ValueEntriesPage: React.FC = () => {
       const nextSkip = allPages.length * pageSize;
       return nextSkip < lastPage.total ? nextSkip : undefined;
     },
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
@@ -120,7 +121,11 @@ export const ValueEntriesPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
             <div className="w-full sm:max-w-md relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <Search className="h-4 w-4" />
+                {isFetching && debouncedSearch ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-dts-secondary" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
               </div>
               <input 
                 type="text" 

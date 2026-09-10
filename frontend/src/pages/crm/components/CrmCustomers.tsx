@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getAllCustomers } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
   Search, Building2, Euro, 
-  Clock, AlertCircle, X, ChevronDown, BarChart3
+  Clock, AlertCircle, X, ChevronDown, BarChart3, Loader2
 } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { getCustomerSalespersons, CLIENT_TYPES, updateCustomerClientType } from '../../../api/customers';
@@ -65,7 +65,8 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage, 
-    isLoading 
+    isLoading,
+    isFetching
   } = useInfiniteQuery({
     queryKey: ['crm-customers-infinite', debouncedSearch, salespersonFilter, clientTypeFilter],
     queryFn: ({ pageParam = 0 }) => getAllCustomers({
@@ -82,6 +83,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
       const nextSkip = allPages.length * itemsPerPage;
       return nextSkip < lastPage.total ? nextSkip : undefined;
     },
+    placeholderData: keepPreviousData,
   });
 
   // Intersection Observer for Infinite Scroll
@@ -232,7 +234,11 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
           {/* Search */}
           <div className="w-full sm:max-w-xs relative">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-              <Search size={16} />
+              {isFetching && debouncedSearch ? (
+                <Loader2 size={16} className="animate-spin text-dts-secondary" />
+              ) : (
+                <Search size={16} />
+              )}
             </span>
             <input 
               type="text" 

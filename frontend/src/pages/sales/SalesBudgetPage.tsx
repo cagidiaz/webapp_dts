@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
@@ -221,7 +221,7 @@ export const SalesBudgetPage: React.FC = () => {
 
   // Queries
   const { 
-    data: infiniteData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading: isLoadingPerf 
+    data: infiniteData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading: isLoadingPerf, isFetching: isFetchingPerf 
   } = useInfiniteQuery({
     queryKey: ['salesBudgetPerf', year, selectedMonths, salespersonFilter, debouncedSearch, familyFilter, subfamilyFilter, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getSalesBudgetPerformance({ 
@@ -236,6 +236,7 @@ export const SalesBudgetPage: React.FC = () => {
       const nextSkip = allPages.length * pageSize;
       return nextSkip < lastPage.total ? nextSkip : undefined;
     },
+    placeholderData: keepPreviousData,
   });
 
   const { data: evolutionData } = useQuery({
@@ -473,7 +474,11 @@ export const SalesBudgetPage: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="w-full max-w-md relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <Search size={16} />
+                  {isFetchingPerf && debouncedSearch ? (
+                    <Loader2 size={16} className="animate-spin text-dts-secondary" />
+                  ) : (
+                    <Search size={16} />
+                  )}
                 </div>
                 <input 
                   type="text" 

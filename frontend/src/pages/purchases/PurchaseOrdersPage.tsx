@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { getAllPurchaseOrders } from '../../api/purchaseOrders';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
   Search, ShoppingBag, Euro, TrendingUp, Calendar, DollarSign,
-  ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, type LucideIcon
+  ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, Loader2, type LucideIcon
 } from 'lucide-react';
 import { KPISkeleton, TableSkeleton, InfoPopover, ExportButton } from '../../components/ui';
 import { useUIStore } from '../../store/uiStore';
@@ -44,7 +44,7 @@ export const PurchaseOrdersPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } = useInfiniteQuery({
     queryKey: ['purchase-orders', debouncedSearch, vendorFilter, typeFilter, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getAllPurchaseOrders({ 
       take: pageSize, 
@@ -60,6 +60,7 @@ export const PurchaseOrdersPage: React.FC = () => {
       const nextSkip = allPages.length * pageSize;
       return nextSkip < lastPage.total ? nextSkip : undefined;
     },
+    placeholderData: keepPreviousData,
   });
 
   const handleSort = (key: string) => {
@@ -257,7 +258,13 @@ export const PurchaseOrdersPage: React.FC = () => {
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="w-full max-w-md relative group">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Search className="h-4 w-4" /></div>
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                {isFetching && debouncedSearch ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-dts-secondary" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </div>
               <input 
                 type="text" 
                 className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-sm" 

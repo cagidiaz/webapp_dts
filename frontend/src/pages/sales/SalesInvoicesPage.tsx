@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { getBillingHistoryDashboard, getAllSalesDocuments } from '../../api/salesDocuments';
 import { formatCurrency } from '../../api/formatters';
 import { 
@@ -133,7 +133,8 @@ export const SalesInvoicesPage: React.FC = () => {
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage, 
-    isLoading: isLoadingList 
+    isLoading: isLoadingList,
+    isFetching: isFetchingList
   } = useInfiniteQuery({
     queryKey: ['salesDocuments', debouncedSearch, docTypeFilter, docCategoryFilter, selectedYears, selectedMonths, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getAllSalesDocuments({ 
@@ -149,6 +150,7 @@ export const SalesInvoicesPage: React.FC = () => {
       const nextSkip = allPages.length * pageSize;
       return nextSkip < lastPage.total ? nextSkip : undefined;
     },
+    placeholderData: keepPreviousData,
   });
 
   const documents = useMemo(() => {
@@ -789,7 +791,11 @@ export const SalesInvoicesPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:max-w-2xl">
               <div className="w-full sm:max-w-md relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <Search className="h-4 w-4" />
+                  {isFetchingList && debouncedSearch ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-dts-secondary" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
                 </div>
                 <input 
                   type="text" 

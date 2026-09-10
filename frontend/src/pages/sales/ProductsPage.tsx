@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
   getAllProducts, 
   getProductFamilies, 
@@ -49,7 +49,7 @@ export const ProductsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } = useInfiniteQuery({
     queryKey: ['products', debouncedSearch, familyFilter, vendorFilter, showOnlyWithStock, hideBlocked, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getAllProducts({ 
       take: pageSize, skip: pageParam as number, search: debouncedSearch,
@@ -61,6 +61,7 @@ export const ProductsPage: React.FC = () => {
       const nextSkip = allPages.length * pageSize;
       return nextSkip < lastPage.total ? nextSkip : undefined;
     },
+    placeholderData: keepPreviousData,
   });
 
   const { data: families = [] } = useQuery({ queryKey: ['productFamilies'], queryFn: getProductFamilies });
@@ -243,7 +244,13 @@ export const ProductsPage: React.FC = () => {
             {/* Left side: Search & Filter elements in one continuous row */}
             <div className="flex flex-wrap items-center gap-4 flex-1">
               <div className="w-full sm:max-w-xs relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Search className="h-4 w-4" /></div>
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  {isFetching && debouncedSearch ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-dts-secondary" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </div>
                 <input type="text" className="block w-full pl-10 pr-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-xs" placeholder="Buscar producto..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
 

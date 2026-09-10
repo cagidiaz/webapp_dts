@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { getAllVendors, type VendorDataRow } from '../../api/vendors';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import {
   Search, Building2, Wallet, AlertTriangle, CreditCard, ShieldAlert,
-  ArrowUpDown, ChevronUp, ChevronDown
+  ArrowUpDown, ChevronUp, ChevronDown, Loader2
 } from 'lucide-react';
 import { InfoPopover, KPISkeleton, TableSkeleton, ExportButton } from '../../components/ui';
 import { VendorDetailDrawer } from './components/VendorDetailDrawer';
@@ -45,7 +45,7 @@ export const VendorsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } = useInfiniteQuery({
     queryKey: ['vendors', debouncedSearch, blockedFilter, sortBy, sortDir],
     queryFn: ({ pageParam = 0 }) => getAllVendors({
       take: pageSize,
@@ -60,6 +60,7 @@ export const VendorsPage: React.FC = () => {
       const nextSkip = allPages.length * pageSize;
       return nextSkip < lastPage.total ? nextSkip : undefined;
     },
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
@@ -196,7 +197,11 @@ export const VendorsPage: React.FC = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="w-full max-w-md relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <Search className="h-4 w-4" />
+                {isFetching && debouncedSearch ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-dts-secondary" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
               </div>
               <input
                 type="text"
