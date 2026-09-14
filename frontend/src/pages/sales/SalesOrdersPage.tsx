@@ -145,6 +145,7 @@ export const SalesOrdersPage: React.FC = () => {
           id: `order-${line.document_number}`,
           document_number: line.document_number,
           posting_date: line.posting_date,
+          customer: line.customer,
           customer_code: line.customer_code,
           customer_name: line.customer?.name || line.customer_code,
           item_code: line.item_code,
@@ -162,6 +163,10 @@ export const SalesOrdersPage: React.FC = () => {
         group.outstanding_quantity += Number(line.outstanding_quantity);
         group.qty_shipped_not_invoiced += Number(line.qty_shipped_not_invoiced);
         group.line_amount += Number(line.line_amount);
+        if (line.customer && !group.customer) {
+          group.customer = line.customer;
+          group.customer_name = line.customer.name || group.customer_name;
+        }
         if (line.prepaymentInfo && !group.prepaymentInfo) {
           group.prepaymentInfo = line.prepaymentInfo;
         }
@@ -351,14 +356,14 @@ export const SalesOrdersPage: React.FC = () => {
             <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
               <tr>
                 {[
-                  { label: 'Documento', key: 'document_number', className: 'hidden sm:table-cell text-[10px]' },
-                  { label: 'Fecha', key: 'posting_date', className: 'hidden md:table-cell text-[10px]' },
-                  { label: 'Cliente', key: 'customer_code' },
-                  { label: 'Producto / Cuenta', key: 'item_code', className: 'hidden xl:table-cell' },
-                  { label: 'Cant.', key: 'quantity', align: 'right', className: 'hidden lg:table-cell text-[10px]' },
-                  { label: 'Pend.', key: 'outstanding_quantity', align: 'right', className: 'text-[10px]' },
-                  { label: 'Env x Fact.', key: 'qty_shipped_not_invoiced', align: 'right', className: 'text-[10px]' },
-                  { label: 'Importe', key: 'line_amount', align: 'right', className: 'hidden xs:table-cell text-[10px]' }
+                  { label: 'Documento', key: 'document_number', className: 'hidden sm:table-cell text-[10px] w-32 sm:w-44' },
+                  { label: 'Fecha', key: 'posting_date', className: 'hidden md:table-cell text-[10px] w-24' },
+                  { label: 'Cliente', key: 'customer_code', className: 'w-auto min-w-[240px] sm:min-w-[320px] lg:min-w-[380px]' },
+                  { label: 'Producto / Cuenta', key: 'item_code', className: 'hidden xl:table-cell w-28' },
+                  { label: 'Cant.', key: 'quantity', align: 'right', className: 'hidden lg:table-cell text-[10px] w-20' },
+                  { label: 'Pend.', key: 'outstanding_quantity', align: 'right', className: 'text-[10px] w-20' },
+                  { label: 'Env x Fact.', key: 'qty_shipped_not_invoiced', align: 'right', className: 'text-[10px] w-24' },
+                  { label: 'Importe', key: 'line_amount', align: 'right', className: 'hidden xs:table-cell text-[10px] w-24' }
                 ].map(col => (
                   <th 
                     key={col.key} 
@@ -383,22 +388,22 @@ export const SalesOrdersPage: React.FC = () => {
                       onClick={() => toggleExpand(order.document_number)}
                       className={`cursor-pointer transition-colors ${isExpanded ? 'bg-blue-50/30 dark:bg-blue-500/5' : 'hover:bg-gray-50 dark:hover:bg-white/5'}`}
                     >
-                      <td className="px-2 sm:px-4 lg:px-6 py-3 font-bold font-mono text-[10px] text-dts-primary dark:text-dts-secondary hidden sm:table-cell whitespace-nowrap">
-                        <div className="flex items-center gap-2">
+                      <td className="px-2 sm:px-4 py-3 font-bold font-mono text-[10px] text-dts-primary dark:text-dts-secondary hidden sm:table-cell whitespace-nowrap w-32 sm:w-44">
+                        <div className="flex items-center gap-1.5">
                           <ChevronRight size={14} className={`shrink-0 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
-                          <span>{order.document_number}</span>
+                          <span className="shrink-0">{order.document_number}</span>
                           {order.prepaymentInfo && order.prepaymentInfo.totalAmount > 0 && (
                             <span 
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 shrink-0 shadow-xs cursor-help" 
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 shrink-0 shadow-xs cursor-help" 
                               title={`Prepago facturado asociado: ${formatCurrency(order.prepaymentInfo.totalAmount, 0)} (${order.prepaymentInfo.documents.join(', ')})`}
                             >
                               <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse"></span>
-                              Prepago {formatCurrency(order.prepaymentInfo.totalAmount, 0)}
+                              PFV {formatCurrency(order.prepaymentInfo.totalAmount, 0)}
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-2 sm:px-4 lg:px-6 py-3 items-center gap-1.5 whitespace-nowrap hidden md:table-cell">
+                      <td className="px-2 sm:px-4 py-3 items-center gap-1.5 whitespace-nowrap hidden md:table-cell w-24">
                         <div className="flex items-center gap-1.5">
                           <Calendar size={12} className="text-gray-400 hidden lg:inline" />
                           <span className="text-gray-700 dark:text-gray-300 text-[10px]">
@@ -406,20 +411,27 @@ export const SalesOrdersPage: React.FC = () => {
                           </span>
                         </div>
                       </td>
-                      <td className="px-2 sm:px-4 lg:px-6 py-3">
+                      <td className="px-2 sm:px-4 lg:px-6 py-3 min-w-[240px] sm:min-w-[320px] lg:min-w-[380px]">
                         <div className="flex flex-col">
-                          <div className="sm:hidden flex items-center gap-2 mb-0.5 flex-wrap">
+                          <div className="sm:hidden flex items-center gap-1.5 mb-1 flex-wrap">
                              <ChevronRight size={12} className={`shrink-0 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
                              <span className="font-mono text-[10px] font-bold text-dts-primary dark:text-dts-secondary">{order.document_number}</span>
                              {order.prepaymentInfo && order.prepaymentInfo.totalAmount > 0 && (
-                               <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[8px] font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                               <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[8px] font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
                                  <span className="w-1 h-1 rounded-full bg-cyan-500"></span>
-                                 Prepago {formatCurrency(order.prepaymentInfo.totalAmount, 0)}
+                                 PFV {formatCurrency(order.prepaymentInfo.totalAmount, 0)}
                                </span>
                              )}
                           </div>
-                          <span className="font-medium text-gray-900 dark:text-white uppercase text-[10px] sm:text-xs truncate max-w-30 sm:max-w-none">{order.customer?.name || '---'}</span>
-                          <span className="text-[9px] text-gray-500 font-mono tracking-wider hidden sm:inline">{order.customer_code}</span>
+                          <span 
+                            className="font-semibold text-gray-900 dark:text-white uppercase text-[11px] sm:text-xs leading-snug break-words"
+                            title={order.customer?.name || order.customer_name || order.customer_code}
+                          >
+                            {order.customer?.name || order.customer_name || '---'}
+                          </span>
+                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-mono tracking-wider">
+                            {order.customer_code}
+                          </span>
                         </div>
                       </td>
                       <td className="px-2 sm:px-4 lg:px-6 py-3 hidden xl:table-cell">
