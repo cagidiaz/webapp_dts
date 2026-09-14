@@ -36,6 +36,11 @@ Este archivo contiene las directrices críticas y reglas de desarrollo específi
 * **Exclusión de Ceros:** Excluir del cálculo de KPIs cualquier línea cuyo precio efectivo o cantidad sea igual a cero.
 * **Comparativas YTD:** Las comparativas temporales de ventas acumuladas anuales deben ser "día a día" (YTD vs LYTD, soportando el parámetro `limitToToday` en consultas) para evitar sesgos con meses incompletos.
 * **Desglose de Cuentas (G/L Accounts):** En los KPIs de pedidos, mostrar de forma desglosada el total correspondiente a líneas de cuentas contables.
+* **Deducción de Prepagos (PFV) en Pedidos:**
+  * **Deducción Cliente a Cliente:** Los prepagos vivos de un cliente solo deben deducirse de los pedidos vivos de ese mismo cliente; está prohibido restar prepagos de un cliente sobre los pedidos de otros clientes.
+  * **Orden de Imputación:** El prepago vivo de un cliente compensa primero sus pedidos enviados pendientes de facturar (`qty_shipped_not_invoiced`). Si existe remanente, compensa su cartera de pedidos abierta (`outstanding_quantity`).
+  * **Compensaciones Parciales Acumuladas:** La verificación de liquidación de prepagos debe evaluar la suma acumulada de líneas de anticipo (`438%` en `FV`), ya que un prepago puede compensarse en varias entregas/facturas parciales.
+  * **Consistencia en Cuentas Contables:** El desglose de líneas de cuenta contable nunca debe exceder el valor neto total resultante del KPI ($\min(\text{cuentas}, \text{totalNeto})$), evitando incongruencias visuales donde las cuentas superen al total.
 
 ---
 

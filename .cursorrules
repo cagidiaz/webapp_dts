@@ -28,6 +28,8 @@ Este archivo contiene las directrices críticas que la Inteligencia Artificial y
 * **Precio Efectivo (Neto):** No utilizar `unit_price` directamente para valorar pedidos si existen descuentos. La fórmula correcta es `(line_amount / quantity)`.
 * **Exclusión de Ceros:** Excluir del cálculo de KPIs cualquier línea cuyo precio efectivo o cantidad sea igual a cero.
 * **Comparativas YTD:** Las comparativas temporales de ventas acumuladas anuales deben ser "día a día" (YTD vs LYTD) para evitar sesgos con meses incompletos.
+* **Desglose de Cuentas (G/L Accounts):** Mostrar el total de cuentas contables desglosado en KPIs de pedidos, garantizando que nunca supere el valor neto del bloque.
+* **Deducción de Prepagos (PFV):** Los prepagos vivos se deducen cliente a cliente (primero de pedidos enviados pendientes de facturar y, si hay remanente, de cartera abierta). Las compensaciones de anticipos en facturas `FV` deben acumularse para reconocer liquidaciones en múltiples facturas parciales.
 
 ---
 

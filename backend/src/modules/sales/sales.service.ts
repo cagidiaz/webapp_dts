@@ -440,6 +440,7 @@ export class SalesService {
     const ordersRaw = await this.prisma.sales_orders.findMany({
       where: ordersWhere,
       select: { 
+        customer_code: true,
         quantity: true,
         outstanding_quantity: true, 
         qty_shipped_not_invoiced: true, 
@@ -452,6 +453,7 @@ export class SalesService {
     let totalCarteraAccounts = 0;
     let totalEnviadoNoFacturado = 0;
     let totalEnviadoNoFacturadoAccounts = 0;
+    const ordersByCustomer: Record<string, { shipped: number; cartera: number }> = {};
 
     if (ordersRaw && ordersRaw.length > 0) {
       for (const order of ordersRaw) {
@@ -476,13 +478,42 @@ export class SalesService {
 
         totalEnviadoNoFacturado += lineShippedNotInv;
         if (isAccount) totalEnviadoNoFacturadoAccounts += lineShippedNotInv;
+
+        const cust = order.customer_code;
+        if (cust) {
+          if (!ordersByCustomer[cust]) {
+            ordersByCustomer[cust] = { shipped: 0, cartera: 0 };
+          }
+          ordersByCustomer[cust].shipped += lineShippedNotInv;
+          ordersByCustomer[cust].cartera += lineCartera;
+        }
       }
     }
 
-    // Prepagos vivos para descontar en Cartera de pedidos:
-    // Facturas PFV registradas que aún no han sido compensadas en una factura final FV
-    const pfvs = currentYearDocs.filter((d) => d.document_no && d.document_no.startsWith('PFV'));
-    let totalPrepagosDescontados = 0;
+    // Prepagos vivos para descontar:
+    // Consultar facturas PFV del ejercicio ordenadas cronológicamente
+    const pfvWhere: any = {
+      document_no: { startsWith: 'PFV' },
+    };
+    if (customerCode && String(customerCode).trim() !== '') {
+      pfvWhere.customer_no = String(customerCode).trim();
+    } else if (salespersonCode && String(salespersonCode).trim() !== '') {
+      pfvWhere.customer = { salesperson_code: String(salespersonCode).trim() };
+    }
+
+    const pfvs = await this.prisma.sales_documents.findMany({
+      where: pfvWhere,
+      select: {
+        document_no: true,
+        customer_no: true,
+        total_amount_excl_vat: true,
+        posting_date: true,
+      },
+      orderBy: { posting_date: 'asc' },
+    });
+
+    let totalPrepagosDescontadosFacturar = 0;
+    let totalPrepagosDescontadosCartera = 0;
 
     if (pfvs.length > 0) {
       const customerCodes = Array.from(new Set(pfvs.map((p) => p.customer_no).filter(Boolean)));
@@ -501,22 +532,61 @@ export class SalesService {
         },
       });
 
-      for (const p of pfvs) {
-        const amt = Number(p.total_amount_excl_vat) || 0;
-        const isCompensated = compensaciones.some(
-          (c) =>
-            c.document?.customer_no === p.customer_no &&
-            Math.abs(Math.abs(Number(c.line_amount)) - amt) < 1,
-        );
-        if (!isCompensated) {
-          totalPrepagosDescontados += amt;
+      // Compensaciones acumuladas por cliente
+      const compByCustomer: Record<string, number> = {};
+      for (const comp of compensaciones) {
+        const cust = comp.document?.customer_no;
+        if (!cust) continue;
+        compByCustomer[cust] = (compByCustomer[cust] || 0) + Math.abs(Number(comp.line_amount) || 0);
+      }
+
+      // Asignar en FIFO a las PFVs de cada cliente para calcular saldo vivo
+      const prepaymentsByCustomer: Record<string, number> = {};
+      for (const cust of customerCodes) {
+        let compRestante = compByCustomer[cust] || 0;
+        const custPfvs = pfvs.filter((p) => p.customer_no === cust);
+
+        for (const p of custPfvs) {
+          const amt = Number(p.total_amount_excl_vat) || 0;
+          let saldoVivo = 0;
+
+          if (compRestante >= amt) {
+            compRestante -= amt;
+            saldoVivo = 0;
+          } else if (compRestante > 0) {
+            saldoVivo = amt - compRestante;
+            compRestante = 0;
+          } else {
+            saldoVivo = amt;
+          }
+
+          if (saldoVivo > 0.01) {
+            prepaymentsByCustomer[cust] = (prepaymentsByCustomer[cust] || 0) + saldoVivo;
+          }
         }
+      }
+
+      // Descontar cliente a cliente: primero de enviados por facturar y luego de cartera
+      for (const [cust, vivo] of Object.entries(prepaymentsByCustomer)) {
+        const custOrders = ordersByCustomer[cust] || { shipped: 0, cartera: 0 };
+
+        const descFacturar = Math.min(vivo, custOrders.shipped);
+        totalPrepagosDescontadosFacturar += descFacturar;
+
+        const remanente = vivo - descFacturar;
+        const descCartera = Math.min(remanente, custOrders.cartera);
+        totalPrepagosDescontadosCartera += descCartera;
       }
     }
 
     const totalCarteraBruta = totalCartera;
     const totalEnviadoNoFacturadoBruto = totalEnviadoNoFacturado;
-    const totalEnviadoNoFacturadoNeto = Math.max(0, totalEnviadoNoFacturadoBruto - totalPrepagosDescontados);
+    const totalEnviadoNoFacturadoNeto = Math.max(0, totalEnviadoNoFacturadoBruto - totalPrepagosDescontadosFacturar);
+    const totalCarteraNeta = Math.max(0, totalCarteraBruta - totalPrepagosDescontadosCartera);
+
+    // Salvaguarda de consistencia: las cuentas contables nunca deben superar el neto
+    const totalEnviadoNoFacturadoAccountsNeto = Math.min(totalEnviadoNoFacturadoAccounts, totalEnviadoNoFacturadoNeto);
+    const totalCarteraAccountsNeta = Math.min(totalCarteraAccounts, totalCarteraNeta);
 
     return {
       kpis: {
@@ -527,14 +597,14 @@ export class SalesService {
         objetivo: totalBudget,
         desviacionEur: devEuros,
         desviacionPct: devPct,
-        carteraVentas: totalCarteraBruta,
+        carteraVentas: totalCarteraNeta,
         carteraVentasBruta: totalCarteraBruta,
-        carteraVentasAccounts: totalCarteraAccounts,
+        carteraVentasAccounts: totalCarteraAccountsNeta,
         enviadosFacturar: totalEnviadoNoFacturadoNeto,
         enviadosFacturarBruto: totalEnviadoNoFacturadoBruto,
-        prepagosDescontadosFacturar: totalPrepagosDescontados,
-        prepagosDescontadosCartera: 0,
-        enviadosFacturarAccounts: totalEnviadoNoFacturadoAccounts,
+        prepagosDescontadosFacturar: totalPrepagosDescontadosFacturar,
+        prepagosDescontadosCartera: totalPrepagosDescontadosCartera,
+        enviadosFacturarAccounts: totalEnviadoNoFacturadoAccountsNeto,
         facturacionNuevos: totalNewClientsSales,
         countNuevos: countNewClients,
         countNuevosSinVenta: countNewClientsNoSales,
@@ -1065,9 +1135,9 @@ export class SalesService {
         desviacionEur: devEuros,
         desviacionPct: devPct,
         carteraVentas: totalCartera,
-        carteraVentasAccounts: totalCarteraAccounts,
+        carteraVentasAccounts: Math.min(totalCarteraAccounts, totalCartera),
         enviadosFacturar: totalEnviadoNoFacturado,
-        enviadosFacturarAccounts: totalEnviadoNoFacturadoAccounts,
+        enviadosFacturarAccounts: Math.min(totalEnviadoNoFacturadoAccounts, totalEnviadoNoFacturado),
         facturacionAnioAnterior: totalPrevYear,
       },
       rows: results.slice(skip ? Number(skip) : 0, take ? (Number(skip) || 0) + Number(take) : undefined),

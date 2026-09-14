@@ -53,6 +53,8 @@ export interface SalesOrdersResponse {
     totalAmount: number;
     totalAmountBruto?: number;
     prepagosDescontados?: number;
+    prepagosDescontadosFacturar?: number;
+    prepagosDescontadosCartera?: number;
     totalAmountAccounts: number;
     totalOutstandingUnits: number;
     totalEnviadoNoFacturado: number;

@@ -75,6 +75,7 @@ export class SalesOrdersService {
           where,
           select: {
             document_number: true,
+            customer_code: true,
             quantity: true,
             outstanding_quantity: true,
             qty_shipped_not_invoiced: true,
@@ -84,12 +85,13 @@ export class SalesOrdersService {
         }),
       ]);
 
-      // Calcular sumatorios globales
+      // Calcular sumatorios globales y agrupar por cliente
       let totalCartera = 0;
       let totalCarteraAccounts = 0;
       let totalEnviadoNoFacturado = 0;
       let totalEnviadoNoFacturadoAccounts = 0;
       const uniqueOrderNumbers = new Set<string>();
+      const ordersByCustomer: Record<string, { shipped: number; cartera: number }> = {};
 
       allRelevantOrders.forEach(order => {
         const totalQty = Number(order.quantity || 0);
@@ -112,16 +114,25 @@ export class SalesOrdersService {
         if (isAccount) totalEnviadoNoFacturadoAccounts += lineShippedNotInv;
 
         if (order.document_number) uniqueOrderNumbers.add(order.document_number);
+
+        const cust = order.customer_code;
+        if (cust) {
+          if (!ordersByCustomer[cust]) {
+            ordersByCustomer[cust] = { shipped: 0, cartera: 0 };
+          }
+          ordersByCustomer[cust].shipped += lineShippedNotInv;
+          ordersByCustomer[cust].cartera += lineCartera;
+        }
       });
 
-      // Descontar prepagos facturados pendientes de compensación
-      let totalPrepagosDescontados = 0;
+      // Prepagos facturados pendientes de compensación
       const customerPrepaymentsMap: Record<string, {
         totalAmount: number;
         documents: string[];
         details: Array<{
           document_no: string;
           amount: number;
+          originalAmount: number;
           posting_date: string | null;
           external_doc_no: string | null;
         }>;
@@ -135,6 +146,9 @@ export class SalesOrdersService {
         agingDays: number;
         external_doc_no: string | null;
       }> = [];
+
+      let totalPrepagosDescontadosFacturar = 0;
+      let totalPrepagosDescontadosCartera = 0;
 
       try {
         const pfvs = await this.prisma.sales_documents.findMany({
@@ -154,6 +168,7 @@ export class SalesOrdersService {
               },
             },
           },
+          orderBy: { posting_date: 'asc' },
         });
 
         if (pfvs.length > 0) {
@@ -173,48 +188,81 @@ export class SalesOrdersService {
             },
           });
 
-          for (const p of pfvs) {
-            const amt = Number(p.total_amount_excl_vat) || 0;
-            const isCompensated = compensaciones.some(
-              (c) =>
-                c.document?.customer_no === p.customer_no &&
-                Math.abs(Math.abs(Number(c.line_amount)) - amt) < 1,
-            );
-            if (!isCompensated) {
-              totalPrepagosDescontados += amt;
+          // Total compensado acumulado por cliente en facturas FV
+          const compByCustomer: Record<string, number> = {};
+          for (const comp of compensaciones) {
+            const cust = comp.document?.customer_no;
+            if (!cust) continue;
+            compByCustomer[cust] = (compByCustomer[cust] || 0) + Math.abs(Number(comp.line_amount) || 0);
+          }
 
-              if (!customerPrepaymentsMap[p.customer_no]) {
-                customerPrepaymentsMap[p.customer_no] = {
-                  totalAmount: 0,
-                  documents: [],
-                  details: [],
-                };
+          // Asignar compensaciones en FIFO a las PFVs de cada cliente para obtener saldo vivo real
+          for (const cust of customerCodes) {
+            let compRestante = compByCustomer[cust] || 0;
+            const custPfvs = pfvs.filter((p) => p.customer_no === cust);
+
+            for (const p of custPfvs) {
+              const amt = Number(p.total_amount_excl_vat) || 0;
+              let saldoVivo = 0;
+
+              if (compRestante >= amt) {
+                compRestante -= amt;
+                saldoVivo = 0;
+              } else if (compRestante > 0) {
+                saldoVivo = amt - compRestante;
+                compRestante = 0;
+              } else {
+                saldoVivo = amt;
               }
-              customerPrepaymentsMap[p.customer_no].totalAmount += amt;
-              customerPrepaymentsMap[p.customer_no].documents.push(p.document_no);
-              customerPrepaymentsMap[p.customer_no].details.push({
-                document_no: p.document_no,
-                amount: amt,
-                posting_date: p.posting_date ? p.posting_date.toISOString() : null,
-                external_doc_no: p.external_doc_no || null,
-              });
 
-              if (p.posting_date) {
-                const diffTime = Date.now() - new Date(p.posting_date).getTime();
-                const agingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                if (agingDays >= 60) {
-                  agedPrepayments.push({
-                    document_no: p.document_no,
-                    customer_no: p.customer_no,
-                    customer_name: p.customer?.name || p.customer_no,
-                    posting_date: p.posting_date.toISOString(),
-                    amount: amt,
-                    agingDays,
-                    external_doc_no: p.external_doc_no || null,
-                  });
+              if (saldoVivo > 0.01) {
+                if (!customerPrepaymentsMap[cust]) {
+                  customerPrepaymentsMap[cust] = {
+                    totalAmount: 0,
+                    documents: [],
+                    details: [],
+                  };
+                }
+                customerPrepaymentsMap[cust].totalAmount += saldoVivo;
+                customerPrepaymentsMap[cust].documents.push(p.document_no);
+                customerPrepaymentsMap[cust].details.push({
+                  document_no: p.document_no,
+                  amount: saldoVivo,
+                  originalAmount: amt,
+                  posting_date: p.posting_date ? p.posting_date.toISOString() : null,
+                  external_doc_no: p.external_doc_no || null,
+                });
+
+                if (p.posting_date) {
+                  const diffTime = Date.now() - new Date(p.posting_date).getTime();
+                  const agingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                  if (agingDays >= 60) {
+                    agedPrepayments.push({
+                      document_no: p.document_no,
+                      customer_no: cust,
+                      customer_name: p.customer?.name || cust,
+                      posting_date: p.posting_date.toISOString(),
+                      amount: saldoVivo,
+                      agingDays,
+                      external_doc_no: p.external_doc_no || null,
+                    });
+                  }
                 }
               }
             }
+          }
+
+          // Descontar cliente a cliente: primero de pedidos por facturar y luego de cartera
+          for (const [cust, prepay] of Object.entries(customerPrepaymentsMap)) {
+            const custOrders = ordersByCustomer[cust] || { shipped: 0, cartera: 0 };
+            const vivo = prepay.totalAmount;
+
+            const descFacturar = Math.min(vivo, custOrders.shipped);
+            totalPrepagosDescontadosFacturar += descFacturar;
+
+            const remanente = vivo - descFacturar;
+            const descCartera = Math.min(remanente, custOrders.cartera);
+            totalPrepagosDescontadosCartera += descCartera;
           }
         }
       } catch (err) {
@@ -226,7 +274,12 @@ export class SalesOrdersService {
 
       const totalCarteraBruta = totalCartera;
       const totalEnviadoNoFacturadoBruto = totalEnviadoNoFacturado;
-      const totalEnviadoNoFacturadoNeto = Math.max(0, totalEnviadoNoFacturadoBruto - totalPrepagosDescontados);
+      const totalEnviadoNoFacturadoNeto = Math.max(0, totalEnviadoNoFacturadoBruto - totalPrepagosDescontadosFacturar);
+      const totalCarteraNeta = Math.max(0, totalCarteraBruta - totalPrepagosDescontadosCartera);
+
+      // Salvaguarda: las cuentas contables no deben exceder el neto ni mostrar incoherencias
+      const totalEnviadoNoFacturadoAccountsNeto = Math.min(totalEnviadoNoFacturadoAccounts, totalEnviadoNoFacturadoNeto);
+      const totalCarteraAccountsNeta = Math.min(totalCarteraAccounts, totalCarteraNeta);
 
       // Enriquecer cada pedido con información de prepagos de su cliente si existe
       const enrichedData = data.map((item) => {
@@ -239,10 +292,12 @@ export class SalesOrdersService {
         total,
         summary: {
           totalOrders: uniqueOrderNumbers.size,
-          totalAmount: totalCarteraBruta,
+          totalAmount: totalCarteraNeta,
           totalAmountBruto: totalCarteraBruta,
-          prepagosDescontados: totalPrepagosDescontados,
-          totalAmountAccounts: totalCarteraAccounts,
+          prepagosDescontados: totalPrepagosDescontadosFacturar + totalPrepagosDescontadosCartera,
+          prepagosDescontadosFacturar: totalPrepagosDescontadosFacturar,
+          prepagosDescontadosCartera: totalPrepagosDescontadosCartera,
+          totalAmountAccounts: totalCarteraAccountsNeta,
           totalOutstandingUnits: allRelevantOrders.reduce((acc, curr) => {
             const totalQty = Number(curr.quantity || 0);
             const lineAmount = Number(curr.line_amount || 0);
@@ -251,7 +306,7 @@ export class SalesOrdersService {
           }, 0),
           totalEnviadoNoFacturado: totalEnviadoNoFacturadoNeto,
           totalEnviadoNoFacturadoBruto: totalEnviadoNoFacturadoBruto,
-          totalEnviadoNoFacturadoAccounts: totalEnviadoNoFacturadoAccounts,
+          totalEnviadoNoFacturadoAccounts: totalEnviadoNoFacturadoAccountsNeto,
           customerPrepayments: customerPrepaymentsMap,
           agedPrepayments,
         }

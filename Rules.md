@@ -35,6 +35,11 @@
     * Para el año actual, las consultas deben soportar el parámetro `limitToToday` para realizar comparaciones "día a día" (YTD vs LYTD) y evitar comparativas injustas con meses incompletos.
 * **Desglose de Cuentas (G/L Accounts):**
     * En los KPIs de pedidos, se debe mostrar de forma desglosada (generalmente debajo o al lado de la cifra principal) el total correspondiente a líneas de cuentas contables.
+    * El valor de cuentas contables nunca debe superar el importe neto total del bloque ($\min(\text{cuentas}, \text{totalNeto})$).
+* **Deducción de Prepagos (PFV) en Pedidos:**
+    * **Por Cliente:** Los prepagos solo pueden deducirse de los pedidos vivos del mismo cliente; nunca deducir prepagos de un cliente sobre pedidos de terceros.
+    * **Prioridad:** El prepago vivo de un cliente compensa primero sus pedidos enviados pendientes de facturar (`qty_shipped_not_invoiced`). Si queda remanente, compensa su cartera abierta (`outstanding_quantity`).
+    * **Compensaciones Parciales:** Acumular las líneas de compensación (`438%` en facturas `FV`) para evaluar el saldo vivo real, soportando que un prepago se liquide en múltiples facturas.
 
 ### 2.3 Seguridad
 * **Validación:** Uso obligatorio de `ValidationPipe` con `class-validator`.

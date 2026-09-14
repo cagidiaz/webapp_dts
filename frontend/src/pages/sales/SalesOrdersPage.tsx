@@ -119,13 +119,15 @@ export const SalesOrdersPage: React.FC = () => {
     exportToXlsx(result.data, columns, 'pedidos_venta');
   };
 
-  const { groupedOrders, totalOrders, totalAmount, prepagosDescontados, totalAmountAccounts, totalOutstanding, totalEnviadoNoFacturado, totalEnviadoNoFacturadoBruto, totalEnviadoNoFacturadoAccounts, agedPrepayments } = useMemo(() => {
+  const { groupedOrders, totalOrders, totalAmount, totalAmountBruto, prepagosDescontadosFacturar, prepagosDescontadosCartera, totalAmountAccounts, totalOutstanding, totalEnviadoNoFacturado, totalEnviadoNoFacturadoBruto, totalEnviadoNoFacturadoAccounts, agedPrepayments } = useMemo(() => {
     const allItems = data?.pages.flatMap(page => page.data) || [];
     const summary = data?.pages[0]?.summary || { 
       totalOrders: 0,
       totalAmount: 0, 
       totalAmountBruto: 0,
       prepagosDescontados: 0,
+      prepagosDescontadosFacturar: 0,
+      prepagosDescontadosCartera: 0,
       totalAmountAccounts: 0,
       totalOutstandingUnits: 0, 
       totalEnviadoNoFacturado: 0,
@@ -143,22 +145,28 @@ export const SalesOrdersPage: React.FC = () => {
           id: `order-${line.document_number}`,
           document_number: line.document_number,
           posting_date: line.posting_date,
-          customer: line.customer,
           customer_code: line.customer_code,
-          quantity: 0,
-          outstanding_quantity: 0,
-          qty_shipped_not_invoiced: 0,
-          line_amount: 0,
-          prepaymentInfo: (line as any).prepaymentInfo || (summary?.customerPrepayments?.[line.customer_code]) || null,
-          lines: []
+          customer_name: line.customer?.name || line.customer_code,
+          item_code: line.item_code,
+          description: line.description,
+          quantity: Number(line.quantity),
+          outstanding_quantity: Number(line.outstanding_quantity),
+          qty_shipped_not_invoiced: Number(line.qty_shipped_not_invoiced),
+          line_amount: Number(line.line_amount),
+          prepaymentInfo: line.prepaymentInfo,
+          lines: [line]
         });
+      } else {
+        const group = groups.get(line.document_number);
+        group.quantity += Number(line.quantity);
+        group.outstanding_quantity += Number(line.outstanding_quantity);
+        group.qty_shipped_not_invoiced += Number(line.qty_shipped_not_invoiced);
+        group.line_amount += Number(line.line_amount);
+        if (line.prepaymentInfo && !group.prepaymentInfo) {
+          group.prepaymentInfo = line.prepaymentInfo;
+        }
+        group.lines.push(line);
       }
-      const group = groups.get(line.document_number);
-      group.quantity += Number(line.quantity);
-      group.outstanding_quantity += Number(line.outstanding_quantity);
-      group.qty_shipped_not_invoiced += Number(line.qty_shipped_not_invoiced);
-      group.line_amount += Number(line.line_amount);
-      group.lines.push(line);
     });
     
     return { 
@@ -167,6 +175,8 @@ export const SalesOrdersPage: React.FC = () => {
       totalAmount: summary.totalAmount, 
       totalAmountBruto: summary.totalAmountBruto || summary.totalAmount,
       prepagosDescontados: summary.prepagosDescontados || 0,
+      prepagosDescontadosFacturar: summary.prepagosDescontadosFacturar ?? summary.prepagosDescontados ?? 0,
+      prepagosDescontadosCartera: summary.prepagosDescontadosCartera ?? 0,
       totalAmountAccounts: summary.totalAmountAccounts,
       totalOutstanding: summary.totalOutstandingUnits, 
       totalEnviadoNoFacturado: summary.totalEnviadoNoFacturado,
@@ -196,8 +206,18 @@ export const SalesOrdersPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-3.5 animate-in fade-in duration-500 pb-2">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-dts-primary dark:text-white">Pedidos de Venta</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Gestión y seguimiento de pedidos de venta vivos sincronizados desde Business Central
+          </p>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard 
           title="Total Pedidos" 
           value={totalOrders} 
@@ -205,8 +225,8 @@ export const SalesOrdersPage: React.FC = () => {
           icon={Package} 
           isLoading={isLoading} 
           infoProps={{
-            description: "Número total de pedidos de venta únicos (cabeceras de documento) con líneas de mercancía abierta.",
-            formulas: "Count(Distinct Document_No)",
+            description: "Número total de pedidos de venta que tienen líneas vivas abiertas.",
+            formulas: "Contar(Distintos Document Number)",
             source: "Sincronizado desde Navision / Business Central."
           }}
         />
@@ -231,8 +251,15 @@ export const SalesOrdersPage: React.FC = () => {
           infoProps={{
             title: "Cartera Total de Pedidos",
             description: "Valor económico total de la mercancía viva en cartera de pedidos abierta. El valor entre paréntesis indica la porción de líneas de tipo cuenta.",
-            formulas: "Sumatorio(Outstanding Quantity * Unit Price)",
-            source: "sales_orders"
+            formulas: "Sumatorio(Outstanding Quantity * Unit Price) - Prepagos aplicables",
+            source: "sales_orders",
+            ...(prepagosDescontadosCartera > 0 ? {
+              breakdown: [
+                { label: "Cartera abierta bruta", value: formatCurrency(totalAmountBruto, 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+                { label: "Prepagos vivos descontados", value: formatCurrency(prepagosDescontadosCartera, 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+                { label: "Cartera Total Neta", value: formatCurrency(totalAmount, 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+              ]
+            } : undefined)
           }}
         />
         <KPICard 
@@ -245,12 +272,12 @@ export const SalesOrdersPage: React.FC = () => {
           isLoading={isLoading} 
           infoProps={{
             title: "Pendiente de Facturar (Neto)",
-            description: "Importe de los pedidos enviados o pendientes de facturar, deduciendo el valor de los prepagos ya facturados para evitar duplicidades.",
-            formulas: "Enviado no facturado bruto - Prepagos facturados",
+            description: "Importe de los pedidos enviados o pendientes de facturar, deduciendo el valor de los prepagos ya facturados vivos del cliente para evitar duplicidades.",
+            formulas: "Enviado no facturado bruto - Prepagos facturados vivos",
             source: "sales_orders & sales_documents (PFV)",
             breakdown: [
               { label: "Enviado no facturado bruto", value: formatCurrency(totalEnviadoNoFacturadoBruto, 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
-              { label: "Prepagos ya facturados", value: formatCurrency(prepagosDescontados, 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+              { label: "Prepagos ya facturados", value: formatCurrency(prepagosDescontadosFacturar, 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
               { label: "Total Pend. por Facturar", value: formatCurrency(totalEnviadoNoFacturado, 0), sign: '=', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
             ]
           }}
