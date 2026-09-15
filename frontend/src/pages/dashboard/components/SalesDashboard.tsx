@@ -1,6 +1,5 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { 
   getSalesBudgetPerformance, 
   getSalesBudgetEvolution, 
@@ -98,7 +97,6 @@ const OutlookIcon: React.FC<{ size?: number; className?: string }> = ({ size = 1
 export const SalesDashboard: React.FC = () => {
   const { setPageInfo } = useUIStore();
   const { profile } = useAuthStore();
-  const navigate = useNavigate();
   const year = new Date().getFullYear();
   const salespersonCode = profile?.code;
 
@@ -461,7 +459,7 @@ export const SalesDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsReportModalOpen(true)}
-                className="px-2.5 py-1 text-[11px] font-bold rounded-lg text-white bg-dts-primary hover:bg-dts-primary/90 dark:bg-dts-secondary dark:text-dts-primary-dark dark:hover:bg-dts-secondary/90 dark:hover:brightness-110 dark:hover:text-dts-primary-dark flex items-center gap-1.5 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                className="px-2.5 py-1 text-[11px] font-bold rounded-lg text-white bg-dts-primary hover:bg-[#005e7a] hover:shadow-md dark:bg-dts-secondary dark:text-[#00222e] dark:hover:bg-[#3be3ec] dark:hover:text-black dark:hover:shadow-md dark:hover:shadow-cyan-500/30 flex items-center gap-1.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 cursor-pointer"
                 title="Exportar informe de eventos y reuniones en PDF o Excel"
               >
                 <FileText size={12} />
@@ -559,18 +557,17 @@ export const SalesDashboard: React.FC = () => {
 
                     <div className="flex-1 pb-4">
                       <div 
-                        onClick={() => navigate(`/crm/customers?clientId=${act.client_id}`)}
-                        className={`group/box p-3.5 rounded-xl border transition-all duration-200 shadow-xs cursor-pointer ${
+                        className={`group/box p-3.5 rounded-xl border transition-all duration-200 shadow-xs ${
                           needsConclusions
-                            ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300/80 dark:border-amber-500/40 hover:border-amber-400'
+                            ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300/80 dark:border-amber-500/40'
                             : act.is_completed
                             ? 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 opacity-75'
-                            : 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35'
+                            : 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5'
                         }`}
                       >
                         <div className="flex justify-between items-start gap-2 mb-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
+                            <span className={`font-bold text-xs ${
                               act.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
                             }`}>
                               {act.title}
