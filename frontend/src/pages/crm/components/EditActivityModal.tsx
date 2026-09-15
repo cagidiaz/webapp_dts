@@ -169,31 +169,27 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
 
         {/* Contenido del formulario con scroll */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
-          {/* Selector de Tipo de Actividad */}
-          <div className="space-y-1.5">
+          {/* Tipo de Actividad (Solo Lectura) */}
+          <div className="space-y-1">
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
               Tipo de Actividad
             </label>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
-              {ACTIVITY_TYPES.map((t) => {
-                const Icon = t.icon;
-                const isSelected = activityType === t.type;
-                return (
-                  <button
-                    key={t.type}
-                    type="button"
-                    onClick={() => setActivityType(t.type)}
-                    className={`px-2.5 py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-dts-primary text-white dark:bg-dts-secondary dark:text-dts-primary-dark border-transparent shadow-xs ring-1 ring-dts-secondary/50'
-                        : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
-                    }`}
-                  >
-                    <Icon size={12} className={isSelected ? 'text-white dark:text-dts-primary-dark' : 'text-gray-400'} />
-                    <span>{t.label}</span>
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200/80 dark:border-white/10 text-gray-800 dark:text-gray-200 text-xs font-bold shadow-2xs">
+                {(() => {
+                  const typeCfg = ACTIVITY_TYPES.find(t => t.type === activityType);
+                  const Icon = typeCfg?.icon || Calendar;
+                  return (
+                    <>
+                      <Icon size={14} className="text-dts-secondary" />
+                      <span>{typeCfg?.label || activityType}</span>
+                    </>
+                  );
+                })()}
+              </div>
+              <span className="text-[10px] text-gray-400 italic">
+                (El tipo de evento no se puede modificar)
+              </span>
             </div>
           </div>
 
