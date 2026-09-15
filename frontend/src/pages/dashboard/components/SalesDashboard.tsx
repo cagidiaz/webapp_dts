@@ -13,7 +13,7 @@ import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
   TrendingUp, Target, Activity, Users, Package, BarChart2,
   TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock, MapPin, Video,
-  Edit2, Plus, User
+  Edit2, Plus, User, ChevronDown, Building2
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
@@ -154,6 +154,7 @@ export const SalesDashboard: React.FC = () => {
   const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
   const [activityToEdit, setActivityToEdit] = React.useState<CrmActivity | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [isGlobalKpisExpanded, setIsGlobalKpisExpanded] = React.useState(false);
   const preferredOutlook = getPreferredOutlookClient();
 
   const currentMonth = new Date().getMonth() + 1;
@@ -236,115 +237,185 @@ export const SalesDashboard: React.FC = () => {
         customerCode={selectedCustCode} 
       />
       
-      {/* Global Company KPIs Section */}
-      <div className="bg-white dark:bg-surface-card-dark p-8 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
+      {/* Global Company KPIs Section (Collapsible - Default: Minimized) */}
+      <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden transition-all duration-300">
+        {/* Collapsed Header / Summary Bar */}
+        <div 
+          onClick={() => setIsGlobalKpisExpanded(prev => !prev)}
+          className="px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 cursor-pointer select-none hover:bg-gray-50/75 dark:hover:bg-white/[0.02] transition-colors"
+        >
+          {/* Left: Title & Badge */}
+          <div className="flex items-center gap-2.5 min-w-[200px]">
+            <div className="p-1.5 rounded-lg bg-dts-primary/5 dark:bg-white/5 text-dts-primary dark:text-[#00B0B9]">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                KPIs Globales de Empresa
+              </span>
+              <span className="ml-2 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+                Global
+              </span>
+            </div>
+          </div>
 
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <GlobalKPICard 
-            title="Ventas YTD vs Ppto YTD (Global)" 
-            value={globalPerf?.kpis?.ventas || 0} 
-            subValue={globalPerf?.kpis?.objetivo || 0}
-            deviation={globalPerf?.kpis?.desviacionPct || 0}
-            type="currency" 
-            icon={Euro} 
-            color="blue"
-            variant="comparison"
-            isLoading={isLoadingGlobalPerf}
-            subtext1={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
-            infoProps={{
-              title: "Ventas YTD vs Presupuesto YTD (Global)",
-              description: "Comparativa de facturación real global neta acumulada frente al presupuesto global a fecha de hoy.",
-              formulas: "Facturas Ordinarias (FV) + Facturas Prepago (PFV) - Facturas Devolución (AAV)",
-              source: "sales_documents (FV + PFV - AAV)",
-              breakdown: [
-                { label: "Facturas Ordinarias (FV)", value: formatCurrency(globalPerf?.kpis?.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
-                { label: "Facturas Prepago (PFV)", value: formatCurrency(globalPerf?.kpis?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
-                { label: "Devoluciones y Abonos (AAV)", value: formatCurrency(globalPerf?.kpis?.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
-                { label: "Total Ventas Netas YTD", value: formatCurrency(globalPerf?.kpis?.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
-              ]
-            }}
-          />
-          <GlobalKPICard 
-            title="Ventas Actual vs Anterior (Global)" 
-            value={globalPerf?.kpis?.ventas || 0} 
-            subValue={globalPerf?.kpis?.facturacionAnioAnterior || 0}
-            deviation={globalPerf?.kpis?.facturacionAnioAnterior && globalPerf.kpis.facturacionAnioAnterior > 0 
-              ? ((globalPerf.kpis.ventas - globalPerf.kpis.facturacionAnioAnterior) / globalPerf.kpis.facturacionAnioAnterior) * 100 
-              : 0}
-            type="currency" 
-            icon={BarChart2} 
-            color="indigo"
-            variant="comparison"
-            label1={`${year}:`}
-            label2={`${year-1}:`}
-            isLoading={isLoadingGlobalPerf}
-            subtext1={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
-            infoProps={{
-              title: "Ventas Actual vs Anterior (Global)",
-              description: "Facturación global del ejercicio actual comparada con el mismo periodo del año anterior (hasta hoy).",
-              formulas: "Ventas Globales Actuales vs Ventas Globales Año Anterior (Hasta hoy)",
-              source: "sales_documents (Facturas + Prepagos - Devoluciones)",
-              breakdown: [
-                { label: `Facturas Ordinarias (${year})`, value: formatCurrency(globalPerf?.kpis?.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
-                { label: `Facturas Prepago (${year})`, value: formatCurrency(globalPerf?.kpis?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
-                { label: `Devoluciones/Abonos (${year})`, value: formatCurrency(globalPerf?.kpis?.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
-                { label: `Total Ventas Netas ${year}`, value: formatCurrency(globalPerf?.kpis?.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
-              ]
-            }}
-          />
-          
-          <GlobalKPICard 
-            title="CARTERA DE PEDIDOS" 
-            value={globalPerf?.kpis?.carteraVentas || 0} 
-            subValue={globalPerf?.kpis?.enviadosFacturar || 0}
-            accountValue={globalPerf?.kpis?.carteraVentasAccounts}
-            accountSubValue={globalPerf?.kpis?.enviadosFacturarAccounts}
-            type="currency" 
-            icon={Package} 
-            color="emerald"
-            variant="comparison"
-            label1="CARTE:"
-            label2="PEND:"
-            isLoading={isLoadingGlobalPerf}
-            infoProps={{
-              title: "Cartera y Pedidos por Facturar (Global)",
-              description: "Resumen de cartera (total pedidos abiertos) y pedidos por facturar a nivel global. El importe de las facturas prepago se descuenta del monto de pedidos por facturar para evitar duplicidades con la facturación anticipada.",
-              formulas: "CARTE: Total Pedidos | PEND: Pedidos por facturar - Prepagos Facturados",
-              source: "sales_orders menos PFV activos",
-              breakdown: [
-                { label: "Total Cartera de Pedidos (CARTE)", value: formatCurrency(globalPerf?.kpis?.carteraVentas || 0), sign: 'i', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
-                { label: "Pedidos por facturar brutos", value: formatCurrency(globalPerf?.kpis?.enviadosFacturarBruto || globalPerf?.kpis?.enviadosFacturar || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
-                { label: "Prepagos ya Facturados", value: formatCurrency(globalPerf?.kpis?.prepagosDescontadosFacturar || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
-                { label: "Total Pend. por Facturar (PEND)", value: formatCurrency(globalPerf?.kpis?.enviadosFacturar || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
-              ]
-            }}
-          />
+          {/* Center: Key Inline Metrics */}
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-gray-600 dark:text-gray-300">
+            {/* Ventas YTD */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Ventas YTD:</span>
+              <span className="font-bold text-gray-800 dark:text-gray-100">
+                {isLoadingGlobalPerf ? '...' : formatCurrency(globalPerf?.kpis?.ventas || 0, 0)}
+              </span>
+              {globalPerf?.kpis?.desviacionPct !== undefined && !isLoadingGlobalPerf && (
+                <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${
+                  (globalPerf.kpis.desviacionPct || 0) >= 0
+                    ? 'text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40'
+                    : 'text-rose-700 bg-rose-50 dark:text-rose-400 dark:bg-rose-950/40'
+                }`}>
+                  {(globalPerf.kpis.desviacionPct || 0) >= 0 ? '+' : ''}{(globalPerf.kpis.desviacionPct || 0).toFixed(1)}%
+                </span>
+              )}
+            </div>
 
-          <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group min-h-40">
-            {isLoadingGlobalPerf || isLoadingGlobalEvol ? (
-              <div className="w-full h-full animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
-            ) : (
-              <>
-                <div className="absolute top-4 left-6 flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Facturación Anual</span>
-                  <InfoPopover 
-                    title="Objetivo Facturación Anual" 
-                    description="Porcentaje de consecución del presupuesto total global de ventas para el ejercicio completo."
-                    formulas="(Ventas Actuales / Presupuesto Anual) * 100"
-                    iconSize={12} 
-                  />
-                </div>
-                <div className="w-full h-24 mt-4">
-                  <GaugeChart value={globalAnnualStats.pctAchievement} />
-                </div>
-                <div className="text-center mt-2">
-                  <span className="text-2xl font-light text-dts-primary dark:text-white">{globalAnnualStats.pctAchievement.toFixed(1)}%</span>
-                </div>
-              </>
-            )}
+            {/* Cartera */}
+            <div className="hidden sm:flex items-center gap-1.5">
+              <span className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Cartera:</span>
+              <span className="font-bold text-gray-800 dark:text-gray-100">
+                {isLoadingGlobalPerf ? '...' : formatCurrency(globalPerf?.kpis?.carteraVentas || 0, 0)}
+              </span>
+            </div>
+
+            {/* Objetivo Anual */}
+            <div className="hidden md:flex items-center gap-1.5">
+              <span className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Obj. Anual:</span>
+              <span className="font-bold text-dts-primary dark:text-[#00B0B9]">
+                {isLoadingGlobalPerf || isLoadingGlobalEvol ? '...' : `${(globalAnnualStats.pctAchievement || 0).toFixed(1)}%`}
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Toggle Button */}
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-dts-primary dark:hover:text-[#00B0B9] transition-colors">
+            <span className="hidden sm:inline">
+              {isGlobalKpisExpanded ? 'Ocultar detalle' : 'Ver detalle'}
+            </span>
+            <ChevronDown 
+              className={`w-4 h-4 transition-transform duration-300 ${isGlobalKpisExpanded ? 'rotate-180 text-dts-secondary' : ''}`} 
+            />
           </div>
         </div>
+
+        {/* Expanded Grid */}
+        {isGlobalKpisExpanded && (
+          <div className="p-6 pt-2 border-t border-gray-100 dark:border-gray-800/80 animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
+              <GlobalKPICard 
+                title="Ventas YTD vs Ppto YTD (Global)" 
+                value={globalPerf?.kpis?.ventas || 0} 
+                subValue={globalPerf?.kpis?.objetivo || 0}
+                deviation={globalPerf?.kpis?.desviacionPct || 0}
+                type="currency" 
+                icon={Euro} 
+                color="blue"
+                variant="comparison"
+                isLoading={isLoadingGlobalPerf}
+                subtext1={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
+                infoProps={{
+                  title: "Ventas YTD vs Presupuesto YTD (Global)",
+                  description: "Comparativa de facturación real global neta acumulada frente al presupuesto global a fecha de hoy.",
+                  formulas: "Facturas Ordinarias (FV) + Facturas Prepago (PFV) - Facturas Devolución (AAV)",
+                  source: "sales_documents (FV + PFV - AAV)",
+                  breakdown: [
+                    { label: "Facturas Ordinarias (FV)", value: formatCurrency(globalPerf?.kpis?.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
+                    { label: "Facturas Prepago (PFV)", value: formatCurrency(globalPerf?.kpis?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+                    { label: "Devoluciones y Abonos (AAV)", value: formatCurrency(globalPerf?.kpis?.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
+                    { label: "Total Ventas Netas YTD", value: formatCurrency(globalPerf?.kpis?.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+                  ]
+                }}
+              />
+              <GlobalKPICard 
+                title="Ventas Actual vs Anterior (Global)" 
+                value={globalPerf?.kpis?.ventas || 0} 
+                subValue={globalPerf?.kpis?.facturacionAnioAnterior || 0}
+                deviation={globalPerf?.kpis?.facturacionAnioAnterior && globalPerf.kpis.facturacionAnioAnterior > 0 
+                  ? ((globalPerf.kpis.ventas - globalPerf.kpis.facturacionAnioAnterior) / globalPerf.kpis.facturacionAnioAnterior) * 100 
+                  : 0}
+                type="currency" 
+                icon={BarChart2} 
+                color="indigo"
+                variant="comparison"
+                label1={`${year}:`}
+                label2={`${year-1}:`}
+                isLoading={isLoadingGlobalPerf}
+                subtext1={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
+                infoProps={{
+                  title: "Ventas Actual vs Anterior (Global)",
+                  description: "Facturación global del ejercicio actual comparada con el mismo periodo del año anterior (hasta hoy).",
+                  formulas: "Ventas Globales Actuales vs Ventas Globales Año Anterior (Hasta hoy)",
+                  source: "sales_documents (Facturas + Prepagos - Devoluciones)",
+                  breakdown: [
+                    { label: `Facturas Ordinarias (${year})`, value: formatCurrency(globalPerf?.kpis?.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
+                    { label: `Facturas Prepago (${year})`, value: formatCurrency(globalPerf?.kpis?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+                    { label: `Devoluciones/Abonos (${year})`, value: formatCurrency(globalPerf?.kpis?.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
+                    { label: `Total Ventas Netas ${year}`, value: formatCurrency(globalPerf?.kpis?.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+                  ]
+                }}
+              />
+              
+              <GlobalKPICard 
+                title="CARTERA DE PEDIDOS" 
+                value={globalPerf?.kpis?.carteraVentas || 0} 
+                subValue={globalPerf?.kpis?.enviadosFacturar || 0}
+                accountValue={globalPerf?.kpis?.carteraVentasAccounts}
+                accountSubValue={globalPerf?.kpis?.enviadosFacturarAccounts}
+                type="currency" 
+                icon={Package} 
+                color="emerald"
+                variant="comparison"
+                label1="CARTE:"
+                label2="PEND:"
+                isLoading={isLoadingGlobalPerf}
+                infoProps={{
+                  title: "Cartera y Pedidos por Facturar (Global)",
+                  description: "Resumen de cartera (total pedidos abiertos) y pedidos por facturar a nivel global. El importe de las facturas prepago se descuenta del monto de pedidos por facturar para evitar duplicidades con la facturación anticipada.",
+                  formulas: "CARTE: Total Pedidos | PEND: Pedidos por facturar - Prepagos Facturados",
+                  source: "sales_orders menos PFV activos",
+                  breakdown: [
+                    { label: "Total Cartera de Pedidos (CARTE)", value: formatCurrency(globalPerf?.kpis?.carteraVentas || 0), sign: 'i', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+                    { label: "Pedidos por facturar brutos", value: formatCurrency(globalPerf?.kpis?.enviadosFacturarBruto || globalPerf?.kpis?.enviadosFacturar || 0), sign: 'i', color: 'text-gray-600 dark:text-gray-300' },
+                    { label: "Prepagos ya Facturados", value: formatCurrency(globalPerf?.kpis?.prepagosDescontadosFacturar || 0), sign: '-', color: 'text-cyan-600 dark:text-cyan-400' },
+                    { label: "Total Pend. por Facturar (PEND)", value: formatCurrency(globalPerf?.kpis?.enviadosFacturar || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+                  ]
+                }}
+              />
+
+              <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group min-h-40">
+                {isLoadingGlobalPerf || isLoadingGlobalEvol ? (
+                  <div className="w-full h-full animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
+                ) : (
+                  <>
+                    <div className="absolute top-4 left-6 flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Facturación Anual</span>
+                      <InfoPopover 
+                        title="Objetivo Facturación Anual" 
+                        description="Porcentaje de consecución del presupuesto total global de ventas para el ejercicio completo."
+                        formulas="(Ventas Actuales / Presupuesto Anual) * 100"
+                        iconSize={12} 
+                      />
+                    </div>
+                    <div className="w-full h-24 mt-4">
+                      <GaugeChart value={globalAnnualStats.pctAchievement} />
+                    </div>
+                    <div className="text-center mt-2">
+                      <span className="text-2xl font-light text-dts-primary dark:text-white">{globalAnnualStats.pctAchievement.toFixed(1)}%</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
 
