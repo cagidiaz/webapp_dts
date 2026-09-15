@@ -4,35 +4,75 @@ import {
   X, Calendar, Clock, MapPin, FileText, CheckSquare, 
   Users, Video, Phone, Check, Loader2 
 } from 'lucide-react';
-import { CrmActivity, CrmActivityType, updateCrmActivity } from '../../../api/crmActivities';
+import { CrmActivityType, updateCrmActivity } from '../../../api/crmActivities';
 
-interface EditAgendaActivityModalProps {
+export interface EditableActivityData {
+  id: string;
+  type?: string;
+  title: string;
+  description?: string | null;
+  due_date?: string | null;
+  created_at?: string;
+  time_scheduled?: string | null;
+  conclusions?: string | null;
+  location?: string | null;
+  is_completed?: boolean;
+  date?: string; // compatibilidad con listas de timeline
+  time?: string;
+  done?: boolean;
+  customer?: {
+    company_name?: string;
+    name?: string;
+    client_id?: string;
+    address?: string;
+    city?: string;
+    [key: string]: any;
+  };
+}
+
+interface EditActivityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  activity: CrmActivity | null;
+  activity: EditableActivityData | null;
+  defaultLocation?: string;
+  contactId?: string;
   onSuccess?: () => void;
 }
 
-const ACTIVITY_TYPES: { type: CrmActivityType; label: string; icon: any; color: string }[] = [
-  { type: 'REUNION', label: 'Reunión', icon: Users, color: 'text-teal-600 bg-teal-50 border-teal-200 dark:bg-teal-950/30 dark:border-teal-800 dark:text-teal-300' },
-  { type: 'VIDEOLLAMADA', label: 'Videollamada', icon: Video, color: 'text-indigo-600 bg-indigo-50 border-indigo-200 dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-300' },
-  { type: 'VISITA', label: 'Visita', icon: MapPin, color: 'text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800 dark:text-orange-300' },
-  { type: 'TASK', label: 'Tarea', icon: CheckSquare, color: 'text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-300' },
-  { type: 'CALL', label: 'Llamada', icon: Phone, color: 'text-cyan-600 bg-cyan-50 border-cyan-200 dark:bg-cyan-950/30 dark:border-cyan-800 dark:text-cyan-300' },
-  { type: 'EVENT', label: 'Evento', icon: Calendar, color: 'text-rose-600 bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800 dark:text-rose-300' },
-  { type: 'NOTE', label: 'Nota', icon: FileText, color: 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300' },
+const ACTIVITY_TYPES: { type: CrmActivityType; label: string; icon: any }[] = [
+  { type: 'REUNION', label: 'Reunión', icon: Users },
+  { type: 'VIDEOLLAMADA', label: 'Videollamada', icon: Video },
+  { type: 'VISITA', label: 'Visita', icon: MapPin },
+  { type: 'TASK', label: 'Tarea', icon: CheckSquare },
+  { type: 'CALL', label: 'Llamada', icon: Phone },
+  { type: 'EVENT', label: 'Evento', icon: Calendar },
+  { type: 'NOTE', label: 'Nota', icon: FileText },
 ];
 
-export const EditAgendaActivityModal: React.FC<EditAgendaActivityModalProps> = ({
+const normalizeType = (type?: string): CrmActivityType => {
+  if (!type) return 'EVENT';
+  const upper = type.toUpperCase();
+  if (upper === 'TASK' || upper === 'TAREA') return 'TASK';
+  if (upper === 'NOTE' || upper === 'NOTA') return 'NOTE';
+  if (upper === 'REUNION' || upper === 'REUNIÓN') return 'REUNION';
+  if (upper === 'VIDEOLLAMADA' || upper === 'VIDEO') return 'VIDEOLLAMADA';
+  if (upper === 'VISITA') return 'VISITA';
+  if (upper === 'CALL' || upper === 'LLAMADA') return 'CALL';
+  return 'EVENT';
+};
+
+export const EditActivityModal: React.FC<EditActivityModalProps> = ({
   isOpen,
   onClose,
   activity,
+  defaultLocation,
+  contactId,
   onSuccess,
 }) => {
   const queryClient = useQueryClient();
 
   const [title, setTitle] = useState('');
-  const [activityType, setActivityType] = useState<CrmActivityType>('REUNION');
+  const [activityType, setActivityType] = useState<CrmActivityType>('EVENT');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('10:00');
   const [location, setLocation] = useState('');
@@ -43,14 +83,15 @@ export const EditAgendaActivityModal: React.FC<EditAgendaActivityModalProps> = (
   useEffect(() => {
     if (activity) {
       setTitle(activity.title || '');
-      setActivityType(activity.type || 'REUNION');
-      const actDate = activity.due_date || activity.created_at;
-      setDate(actDate ? actDate.split('T')[0] : '');
-      setTime(activity.time_scheduled ? activity.time_scheduled.substring(0, 5) : '10:00');
+      setActivityType(normalizeType(activity.type));
+      const rawDate = activity.due_date || activity.date || activity.created_at;
+      setDate(rawDate ? rawDate.split('T')[0] : '');
+      const rawTime = activity.time_scheduled || activity.time;
+      setTime(rawTime ? rawTime.substring(0, 5) : '10:00');
       setLocation(activity.location || '');
       setDescription(activity.description || '');
       setConclusions(activity.conclusions || '');
-      setIsCompleted(!!activity.is_completed);
+      setIsCompleted(activity.is_completed !== undefined ? !!activity.is_completed : !!activity.done);
     }
   }, [activity]);
 
@@ -64,6 +105,9 @@ export const EditAgendaActivityModal: React.FC<EditAgendaActivityModalProps> = (
       queryClient.invalidateQueries({ queryKey: ['crmActivities'] });
       queryClient.invalidateQueries({ queryKey: ['crmActivitiesAgenda'] });
       queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
+      if (contactId) {
+        queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      }
       onSuccess?.();
       onClose();
     },
@@ -91,6 +135,9 @@ export const EditAgendaActivityModal: React.FC<EditAgendaActivityModalProps> = (
     updateMutation.mutate(payload);
   };
 
+  const customerName = activity.customer?.company_name || activity.customer?.name;
+  const customerId = activity.customer?.client_id;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
@@ -102,12 +149,12 @@ export const EditAgendaActivityModal: React.FC<EditAgendaActivityModalProps> = (
           <div>
             <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white flex items-center gap-2">
               <Calendar size={16} className="text-dts-secondary" />
-              Editar Evento de Agenda
+              Editar Actividad / Evento
             </h3>
-            {activity.customer && (
+            {customerName && (
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 font-medium flex items-center gap-1">
-                <span>🏢 {activity.customer.company_name}</span>
-                <span className="text-[10px] text-gray-400 font-mono">({activity.customer.client_id})</span>
+                <span>🏢 {customerName}</span>
+                {customerId && <span className="text-[10px] text-gray-400 font-mono">({customerId})</span>}
               </p>
             )}
           </div>
@@ -153,7 +200,7 @@ export const EditAgendaActivityModal: React.FC<EditAgendaActivityModalProps> = (
           {/* Título */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              Título / Asunto <span className="text-rose-500">*</span>
+              Título / Concepto <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -192,12 +239,25 @@ export const EditAgendaActivityModal: React.FC<EditAgendaActivityModalProps> = (
             </div>
           </div>
 
-          {/* Ubicación (no aplicable a notas) */}
+          {/* Ubicación */}
           {activityType !== 'NOTE' && (
             <div className="space-y-1">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                <MapPin size={11} /> Ubicación / Lugar
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                  <MapPin size={11} /> Ubicación / Lugar
+                </label>
+                {defaultLocation && !location && (
+                  <button
+                    type="button"
+                    onClick={() => setLocation(defaultLocation)}
+                    className="text-[10px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Rellenar con la dirección de la empresa"
+                  >
+                    <MapPin size={11} />
+                    <span>Usar dirección empresa</span>
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 value={location}
@@ -211,7 +271,7 @@ export const EditAgendaActivityModal: React.FC<EditAgendaActivityModalProps> = (
           {/* Descripción / Notas */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              Descripción / Orden del día
+              Descripción / Notas
             </label>
             <textarea
               rows={3}
@@ -223,18 +283,20 @@ export const EditAgendaActivityModal: React.FC<EditAgendaActivityModalProps> = (
           </div>
 
           {/* Conclusiones (para reuniones o actividades realizadas) */}
-          <div className="space-y-1">
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              Conclusiones / Acuerdos
-            </label>
-            <textarea
-              rows={2}
-              value={conclusions}
-              onChange={(e) => setConclusions(e.target.value)}
-              placeholder="Resultado de la reunión, próximos pasos acordados..."
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none font-medium leading-relaxed"
-            />
-          </div>
+          {activityType !== 'NOTE' && (
+            <div className="space-y-1">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Conclusiones / Acuerdos
+              </label>
+              <textarea
+                rows={2}
+                value={conclusions}
+                onChange={(e) => setConclusions(e.target.value)}
+                placeholder="Resultado de la reunión, próximos pasos acordados..."
+                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none font-medium leading-relaxed"
+              />
+            </div>
+          )}
 
           {/* Checkbox de Estado Completado */}
           <div className="pt-2 border-t border-gray-100 dark:border-white/5">

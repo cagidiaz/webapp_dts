@@ -19,7 +19,7 @@ import {
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
 import { CrmActivityReportModal } from '../../crm/components/CrmActivityReportModal';
-import { EditAgendaActivityModal } from './EditAgendaActivityModal';
+import { EditActivityModal } from '../../crm/components/EditActivityModal';
 import { useUIStore } from '../../../store/uiStore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -725,7 +725,7 @@ export const SalesDashboard: React.FC = () => {
       />
 
       {/* Modal de Edición de Evento de la Agenda Semanal */}
-      <EditAgendaActivityModal
+      <EditActivityModal
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false);

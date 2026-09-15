@@ -18,6 +18,7 @@ import {
   Copy, CheckCheck, Laptop, Globe, RefreshCw, Building2, PhoneCall
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
+import { EditActivityModal } from './EditActivityModal';
 
 // For local endpoint fetching since contact lookup is on contacts API
 import apiClient from '../../../api/apiClient';
@@ -141,15 +142,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [outlookTarget, setOutlookTarget] = useState<'desktop' | 'web'>(getPreferredOutlookClient());
   const [isCopied, setIsCopied] = useState(false);
 
-  // Edit states
-  const [editActivityId, setEditActivityId] = useState<string | null>(null);
-  const [editActivityType, setEditActivityType] = useState<any>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editDate, setEditDate] = useState('');
-  const [editTime, setEditTime] = useState('');
-  const [editConclusions, setEditConclusions] = useState('');
-  const [editLocation, setEditLocation] = useState('');
+  // Edit state (unificado)
+  const [editingActivity, setEditingActivity] = useState<any | null>(null);
 
   // Filter chips in Eventos Tab
   const [eventFilter, setEventFilter] = useState<string>('ALL');
@@ -813,34 +807,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     setShowEventModal(false);
   };
 
-  // Edit activity handler
-  const handleEditActivity = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editTitle.trim() && editActivityType !== 'NOTE') return;
 
-    const payload: any = {
-      title: editActivityType === 'NOTE' ? 'Nota Comercial Registrada' : editTitle,
-      description: editDescription || null,
-      conclusions: editConclusions || null,
-      location: editLocation || null,
-    };
-
-    if (editActivityType !== 'NOTE') {
-      payload.dueDate = editDate ? new Date(editDate).toISOString() : null;
-      payload.timeScheduled = editTime || null;
-    }
-
-    updateActivityMutation.mutate({
-      id: editActivityId!,
-      payload
-    }, {
-      onSuccess: () => {
-        setShowEditModal(false);
-        setEditActivityId(null);
-        setEditActivityType(null);
-      }
-    });
-  };
 
   // Prepare and open email in Outlook handler
   const handlePrepareEmail = (e: React.FormEvent) => {
@@ -1684,24 +1651,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                           )}
                           <button
                             onClick={() => {
-                              setEditActivityId(act.id);
-                              setEditActivityType(
-                                act.type === 'task' ? 'TASK' :
-                                act.type === 'note' ? 'NOTE' :
-                                act.type === 'reunion' ? 'REUNION' :
-                                act.type === 'videollamada' ? 'VIDEOLLAMADA' :
-                                act.type === 'visita' ? 'VISITA' :
-                                act.type === 'call' ? 'CALL' : 'EVENT'
-                              );
-                              setEditTitle(act.title);
-                              setEditDescription(act.description || '');
-                              setEditDate(act.date ? act.date.split('T')[0] : '');
-                              setEditTime(act.time || '10:00');
-                              setEditConclusions(act.conclusions || '');
-                              setEditLocation(act.location || '');
+                              setEditingActivity(act);
                               setShowEditModal(true);
                             }}
                             className="p-1 text-gray-400 hover:text-dts-secondary cursor-pointer"
+                            title="Editar actividad"
                           >
                             <Edit2 size={12} />
                           </button>
@@ -2128,121 +2082,17 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         </div>
       )}
 
-      {/* MODAL: Editar Actividad */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 max-w-md w-full shadow-xl space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">Editar Actividad</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"><X size={16} /></button>
-            </div>
-
-            <form onSubmit={handleEditActivity} className="space-y-4 text-xs">
-              {editActivityType !== 'NOTE' && (
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Título / Concepto</label>
-                  <input
-                    type="text"
-                    required
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                  />
-                </div>
-              )}
-
-              {editActivityType !== 'NOTE' && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fecha</label>
-                    <input
-                      type="date"
-                      required
-                      value={editDate}
-                      onChange={(e) => setEditDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hora</label>
-                    <input
-                      type="time"
-                      value={editTime}
-                      onChange={(e) => setEditTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {editActivityType !== 'NOTE' && editActivityType !== 'TASK' && (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
-                    {getCompanyAddress() && (
-                      <button
-                        type="button"
-                        onClick={() => setEditLocation(getCompanyAddress())}
-                        className="text-[10px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer transition-colors"
-                        title="Rellenar con la dirección de la empresa del contacto"
-                      >
-                        <MapPin size={11} />
-                        <span>Usar dirección de la empresa</span>
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    value={editLocation}
-                    onChange={(e) => setEditLocation(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Descripción</label>
-                <textarea
-                  required={editActivityType === 'NOTE'}
-                  rows={4}
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
-                />
-              </div>
-
-              {editActivityType !== 'NOTE' && editActivityType !== 'TASK' && (
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Conclusiones</label>
-                  <textarea
-                    placeholder="Escribe conclusiones o acuerdos..."
-                    rows={2}
-                    value={editConclusions}
-                    onChange={(e) => setEditConclusions(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
-                  />
-                </div>
-              )}
-
-              <div className="flex gap-3 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 font-bold cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer"
-                >
-                  Guardar Cambios
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* MODAL: Editar Actividad (Unificado) */}
+      <EditActivityModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingActivity(null);
+        }}
+        activity={editingActivity}
+        defaultLocation={getCompanyAddress()}
+        contactId={contactId}
+      />
 
       {/* DRAWER: Detalle de Oferta CRM */}
       <Drawer isOpen={isQuoteDrawerOpen} onClose={() => setIsQuoteDrawerOpen(false)} title={`Oportunidad: ${selectedQuote?.document_no || ''}`} size="2xl">
