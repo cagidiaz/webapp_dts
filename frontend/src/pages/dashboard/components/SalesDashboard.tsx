@@ -14,7 +14,7 @@ import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
   TrendingUp, Target, Activity, Users, Package, BarChart2,
   TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock, MapPin, Video,
-  Edit2
+  Edit2, Plus
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
@@ -522,6 +522,21 @@ export const SalesDashboard: React.FC = () => {
                 const IconComponent = typeIconMap[act.type] || FileText;
                 const style = typeColors[act.type] || { bg: 'bg-gray-100', color: 'text-gray-600' };
                 const actDateStr = act.due_date || act.created_at;
+                const isPastDate = (() => {
+                  if (!actDateStr) return false;
+                  const dateObj = new Date(actDateStr);
+                  if (act.time_scheduled) {
+                    const [hh, mm] = act.time_scheduled.split(':');
+                    dateObj.setHours(Number(hh) || 0, Number(mm) || 0, 0, 0);
+                  } else {
+                    dateObj.setHours(23, 59, 59, 999);
+                  }
+                  return dateObj.getTime() < new Date().getTime();
+                })();
+
+                const isFinished = act.is_completed || isPastDate;
+                const hasConclusions = Boolean(act.conclusions && act.conclusions.trim());
+                const needsConclusions = isFinished && !hasConclusions;
 
                 return (
                   <div key={act.id} className="flex md:flex-row flex-col gap-2 md:gap-4 relative pl-10 md:pl-0 text-xs">
@@ -545,16 +560,36 @@ export const SalesDashboard: React.FC = () => {
                     <div className="flex-1 pb-4">
                       <div 
                         onClick={() => navigate(`/crm/customers?clientId=${act.client_id}`)}
-                        className={`group/box bg-gray-50/50 dark:bg-white/2 p-3.5 rounded-xl border border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35 transition-all duration-200 shadow-xs cursor-pointer ${
-                          act.is_completed ? 'opacity-65' : ''
+                        className={`group/box p-3.5 rounded-xl border transition-all duration-200 shadow-xs cursor-pointer ${
+                          needsConclusions
+                            ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300/80 dark:border-amber-500/40 hover:border-amber-400'
+                            : act.is_completed
+                            ? 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 opacity-75'
+                            : 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35'
                         }`}
                       >
                         <div className="flex justify-between items-start gap-2 mb-1">
-                          <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
-                            act.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
-                          }`}>
-                            {act.title}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
+                              act.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
+                            }`}>
+                              {act.title}
+                            </span>
+                            {isFinished && (
+                              <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold border ${
+                                act.is_completed 
+                                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                                  : 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                              }`}>
+                                {act.is_completed ? 'TERMINADO' : 'VENCIDO'}
+                              </span>
+                            )}
+                            {hasConclusions && (
+                              <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800">
+                                Conclusiones
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-white dark:bg-white/5 text-gray-400 font-bold border border-gray-100 dark:border-white/5">
                               {typeLabel[act.type]}
@@ -589,6 +624,30 @@ export const SalesDashboard: React.FC = () => {
                           <p className="text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed text-[11px] whitespace-pre-wrap">
                             {act.description}
                           </p>
+                        )}
+
+                        {hasConclusions && (
+                          <div className="mt-2 text-[11px] border-l-2 border-teal-500 pl-2.5 py-1 bg-teal-50/40 dark:bg-teal-950/20 rounded-r-md text-gray-700 dark:text-gray-300">
+                            <span className="text-teal-700 dark:text-teal-400 font-bold block text-[10px] uppercase tracking-wide">
+                              Conclusiones:
+                            </span>
+                            <p className="whitespace-pre-wrap leading-relaxed mt-0.5">{act.conclusions}</p>
+                          </div>
+                        )}
+
+                        {needsConclusions && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActivityToEdit(act);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="mt-2.5 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 font-black text-[10px] rounded-lg border border-amber-300/80 dark:border-amber-500/40 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-2xs"
+                          >
+                            <Plus size={12} className="stroke-[3] group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
+                            <span>AGREGAR CONCLUSIONES</span>
+                          </button>
                         )}
 
                         {act.customer && (
