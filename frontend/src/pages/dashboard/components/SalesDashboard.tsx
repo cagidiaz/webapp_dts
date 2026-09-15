@@ -14,7 +14,7 @@ import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
   TrendingUp, Target, Activity, Users, Package, BarChart2,
   TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock, MapPin, Video,
-  Edit2, Plus
+  Edit2, Plus, User
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
@@ -650,12 +650,22 @@ export const SalesDashboard: React.FC = () => {
                           </button>
                         )}
 
-                        {act.customer && (
-                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-white/5 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500 font-semibold">
-                            <span>🏢</span>
-                            <span className="hover:text-dts-secondary transition-colors">
-                              {act.customer.company_name} ({act.customer.client_id})
-                            </span>
+                        {(act.customer || act.contact) && (
+                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-white/5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-500 dark:text-gray-400 font-semibold">
+                            {act.customer && (
+                              <span className="flex items-center gap-1.5 hover:text-dts-secondary transition-colors" title="Empresa / Cliente">
+                                <span>🏢</span>
+                                <span className="text-gray-800 dark:text-gray-200 font-bold">
+                                  {act.customer.company_name || act.customer.name}
+                                </span>
+                              </span>
+                            )}
+                            {act.contact?.name && (
+                              <span className="flex items-center gap-1 text-gray-600 dark:text-gray-300 font-medium" title="Persona de Contacto">
+                                <User size={11} className="text-dts-secondary shrink-0" />
+                                <span>{act.contact.name}</span>
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
