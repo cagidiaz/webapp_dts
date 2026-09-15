@@ -5,16 +5,21 @@ import {
   getSalesBudgetPerformance, 
   getSalesBudgetEvolution, 
   getTopProducts,
-  getWeeklyAgenda
+  getWeeklyAgenda,
+  openCalendarEventInOutlook,
+  getPreferredOutlookClient,
+  CrmActivity
 } from '../../../api';
 import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
   TrendingUp, Target, Activity, Users, Package, BarChart2,
-  TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock, MapPin, Video
+  TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock, MapPin, Video,
+  Edit2
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
 import { CrmActivityReportModal } from '../../crm/components/CrmActivityReportModal';
+import { EditAgendaActivityModal } from './EditAgendaActivityModal';
 import { useUIStore } from '../../../store/uiStore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -70,7 +75,23 @@ const renderCustomLegend = (props: any) => {
       ))}
     </div>
   );
-};
+const OutlookIcon: React.FC<{ size?: number; className?: string }> = ({ size = 14, className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+    style={{ minWidth: size, minHeight: size }}
+  >
+    <path d="M22 6.5v11a2.5 2.5 0 0 1-2.5 2.5H9.5a2.5 2.5 0 0 1-2.5-2.5V17h7.5A2.5 2.5 0 0 0 17 14.5V7h2.5A2.5 2.5 0 0 1 22 6.5z" opacity="0.4" fill="#0078D4"/>
+    <path d="M14.5 5H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5.5V5z" fill="#0078D4"/>
+    <path d="M2 7.5A2.5 2.5 0 0 1 4.5 5h8A2.5 2.5 0 0 1 15 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-8A2.5 2.5 0 0 1 2 16.5v-9z" fill="#106EBE"/>
+    <circle cx="8.5" cy="12" r="2.5" fill="#FFFFFF"/>
+    <circle cx="8.5" cy="12" r="1.3" fill="#106EBE"/>
+  </svg>
+);
+
 
 export const SalesDashboard: React.FC = () => {
   const { setPageInfo } = useUIStore();
@@ -127,10 +148,13 @@ export const SalesDashboard: React.FC = () => {
     return () => setPageInfo({ title: '', subtitle: '', icon: null });
   }, [setPageInfo, year]);
 
-  // Drawer state
+  // Drawer and Modals state
   const [selectedCustCode, setSelectedCustCode] = React.useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
+  const [activityToEdit, setActivityToEdit] = React.useState<CrmActivity | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const preferredOutlook = getPreferredOutlookClient();
 
   const currentMonth = new Date().getMonth() + 1;
   const initialMonths = React.useMemo(() => Array.from({ length: currentMonth }, (_, i) => i + 1), [currentMonth]);
@@ -529,9 +553,34 @@ export const SalesDashboard: React.FC = () => {
                           }`}>
                             {act.title}
                           </span>
-                          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-white dark:bg-white/5 text-gray-400 font-bold border border-gray-100 dark:border-white/5">
-                            {typeLabel[act.type]}
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-white dark:bg-white/5 text-gray-400 font-bold border border-gray-100 dark:border-white/5">
+                              {typeLabel[act.type]}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openCalendarEventInOutlook({ webLink: act.exchange_web_link });
+                              }}
+                              className="p-1 rounded-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
+                              title={`Abrir en Outlook (${preferredOutlook === 'desktop' ? 'Escritorio' : 'Web'})`}
+                            >
+                              <OutlookIcon size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActivityToEdit(act);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1 rounded-md text-gray-400 hover:text-dts-secondary hover:bg-cyan-500/10 dark:hover:bg-cyan-500/20 transition-colors cursor-pointer"
+                              title="Editar evento"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                          </div>
                         </div>
                         
                         {act.description && (
@@ -673,6 +722,16 @@ export const SalesDashboard: React.FC = () => {
       <CrmActivityReportModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
+      />
+
+      {/* Modal de Edición de Evento de la Agenda Semanal */}
+      <EditAgendaActivityModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setActivityToEdit(null);
+        }}
+        activity={activityToEdit}
       />
     </div>
   );

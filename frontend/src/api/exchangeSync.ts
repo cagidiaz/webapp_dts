@@ -170,3 +170,23 @@ export const openExistingEmailInOutlook = (options: {
     }
   }
 };
+
+/**
+ * Abre un evento o calendario en Outlook respetando la preferencia del usuario (Escritorio o Web)
+ */
+export const openCalendarEventInOutlook = (options: {
+  webLink?: string | null;
+  target?: 'desktop' | 'web';
+}) => {
+  const target = options.target || getPreferredOutlookClient();
+
+  if (target === 'desktop') {
+    // Protocolo registrado en Windows para la app nativa de Outlook en la vista de calendario
+    window.location.href = 'outlook:calendar';
+  } else {
+    // Modo Web (M365): si el evento tiene un webLink directo generado por Exchange, lo abre; de lo contrario abre el calendario general
+    const url = options.webLink || 'https://outlook.office.com/calendar';
+    window.open(url, '_blank');
+  }
+};
+
