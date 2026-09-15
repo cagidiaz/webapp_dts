@@ -559,15 +559,15 @@ export const SalesDashboard: React.FC = () => {
                       <div 
                         className={`group/box p-3.5 rounded-xl border transition-all duration-200 shadow-xs ${
                           needsConclusions
-                            ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300/80 dark:border-amber-500/40'
+                            ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300/80 dark:border-amber-500/40 hover:border-amber-400'
                             : act.is_completed
-                            ? 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 opacity-75'
-                            : 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5'
+                            ? 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 opacity-75 hover:border-dts-secondary/35'
+                            : 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35'
                         }`}
                       >
                         <div className="flex justify-between items-start gap-2 mb-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`font-bold text-xs ${
+                            <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
                               act.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
                             }`}>
                               {act.title}
