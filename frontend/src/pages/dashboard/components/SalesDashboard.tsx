@@ -8,7 +8,7 @@ import {
   getWeeklyAgenda,
   openCalendarEventInOutlook,
   getPreferredOutlookClient,
-  CrmActivity
+  type CrmActivity
 } from '../../../api';
 import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
@@ -75,6 +75,8 @@ const renderCustomLegend = (props: any) => {
       ))}
     </div>
   );
+};
+
 const OutlookIcon: React.FC<{ size?: number; className?: string }> = ({ size = 14, className = '' }) => (
   <svg
     width={size}

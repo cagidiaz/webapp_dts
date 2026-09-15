@@ -4,7 +4,7 @@ import {
   X, Calendar, Clock, MapPin, FileText, CheckSquare, 
   Users, Video, Phone, Check, Loader2 
 } from 'lucide-react';
-import { CrmActivityType, updateCrmActivity } from '../../../api/crmActivities';
+import { type CrmActivityType, updateCrmActivity } from '../../../api/crmActivities';
 
 export interface EditableActivityData {
   id: string;
