@@ -119,12 +119,13 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
     e.preventDefault();
     if (!title.trim() && activityType !== 'NOTE') return;
 
+    const hasConclusions = Boolean(conclusions.trim());
     const payload: any = {
       title: activityType === 'NOTE' ? (title.trim() || 'Nota Comercial') : title.trim(),
       description: description.trim() || null,
       conclusions: conclusions.trim() || null,
       location: location.trim() || null,
-      isCompleted,
+      isCompleted: hasConclusions ? true : isCompleted,
     };
 
     if (activityType !== 'NOTE') {
@@ -287,7 +288,13 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
               <textarea
                 rows={2}
                 value={conclusions}
-                onChange={(e) => setConclusions(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setConclusions(val);
+                  if (val.trim() && !isCompleted) {
+                    setIsCompleted(true);
+                  }
+                }}
                 placeholder="Resultado de la reunión, próximos pasos acordados..."
                 className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none font-medium leading-relaxed"
               />

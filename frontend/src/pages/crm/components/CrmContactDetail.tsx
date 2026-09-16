@@ -881,6 +881,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     }
     if (activityType !== 'NOTE' && activityType !== 'TASK') {
       payload.conclusions = newConclusions || undefined;
+      if (newConclusions && newConclusions.trim()) {
+        payload.isCompleted = true;
+      }
     }
 
     createActivityMutation.mutate(payload);
@@ -1395,7 +1398,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   ) : (
                     <div className="relative space-y-4 overflow-y-auto max-h-47.5 pr-1 ml-1">
                       {/* Línea vertical centrada exactamente en x=10px */}
-                      <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-zinc-500" />
+                      <div className="absolute left-2.25 top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-zinc-500" />
 
                       {timelineActivities.slice(0, 3).map(act => (
                         <div key={act.id} className="relative pl-7 animate-in slide-in-from-left duration-300">
@@ -1438,7 +1441,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
               ) : (
                 <>
                   {/* Línea vertical centrada exactamente en x=15px */}
-                  <div className="absolute left-[15px] top-3 bottom-4 w-0.5 bg-gray-200 dark:bg-zinc-500" />
+                  <div className="absolute left-3.75 top-3 bottom-4 w-0.5 bg-gray-200 dark:bg-zinc-500" />
 
                   {timelineActivities.map(act => (
                     <div key={act.id} className="relative pl-11 animate-in slide-in-from-left duration-300">

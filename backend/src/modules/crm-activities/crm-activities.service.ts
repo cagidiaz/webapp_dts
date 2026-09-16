@@ -164,6 +164,102 @@ export class CrmActivitiesService {
   }
 
   /**
+   * Obtiene el resumen diario (Briefing) de actividades para el usuario logueado:
+   * - Actividades del día de hoy
+   * - Actividades pasadas no completadas
+   * - Conteo global del equipo si es directivo/admin
+   */
+  async getDailyBriefing(userId: string) {
+    try {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+
+      const todayStart = new Date(`${todayStr}T00:00:00.000Z`);
+      const todayEnd = new Date(`${todayStr}T23:59:59.999Z`);
+
+      // 1. Actividades del día de hoy para el usuario
+      const todayActivities = await this.prisma.crm_activities.findMany({
+        where: {
+          created_by: userId,
+          due_date: {
+            gte: todayStart,
+            lte: todayEnd,
+          },
+        },
+        include: {
+          customer: true,
+          contact: true,
+        },
+        orderBy: [
+          { time_scheduled: 'asc' },
+          { created_at: 'asc' },
+        ],
+      });
+
+      // 2. Actividades pasadas pendientes de completar (due_date < hoy e is_completed = false)
+      const pendingActivities = await this.prisma.crm_activities.findMany({
+        where: {
+          created_by: userId,
+          is_completed: false,
+          due_date: {
+            lt: todayStart,
+          },
+        },
+        include: {
+          customer: true,
+          contact: true,
+        },
+        orderBy: {
+          due_date: 'desc',
+        },
+        take: 20,
+      });
+
+      // 3. Obtener rol para estadísticas de equipo si es Admin o Gerencia
+      const userProfile = await this.prisma.profiles.findUnique({
+        where: { id: userId },
+        include: { roles: true },
+      });
+      const roleName = userProfile?.roles?.name?.toUpperCase() || '';
+      const isAdminOrDireccion = roleName === 'ADMIN' || roleName === 'DIRECCION' || roleName === 'GERENCIA';
+
+      let teamTodayTotal = 0;
+      if (isAdminOrDireccion) {
+        teamTodayTotal = await this.prisma.crm_activities.count({
+          where: {
+            due_date: {
+              gte: todayStart,
+              lte: todayEnd,
+            },
+          },
+        });
+      }
+
+      const todayCompleted = todayActivities.filter(a => a.is_completed).length;
+
+      return {
+        todayStr,
+        todayActivities,
+        pendingActivities,
+        stats: {
+          todayTotal: todayActivities.length,
+          todayPending: todayActivities.length - todayCompleted,
+          todayCompleted,
+          pastPendingTotal: pendingActivities.length,
+          teamTodayTotal: isAdminOrDireccion ? teamTodayTotal : undefined,
+          isAdminOrDireccion,
+        },
+      };
+    } catch (error) {
+      console.error('Error en CrmActivitiesService.getDailyBriefing:', error);
+      throw new InternalServerErrorException('Error al obtener el briefing diario de actividades');
+    }
+  }
+
+  /**
    * Crea una nueva actividad comercial en la base de datos y la sincroniza con Outlook si corresponde.
    */
   async create(data: {
@@ -220,7 +316,8 @@ export class CrmActivitiesService {
           due_date: dueDate ? new Date(dueDate) : null,
           time_scheduled: timeScheduled || null,
           email: email || null,
-          conclusions: conclusions || null,
+          conclusions: conclusions ? conclusions.trim() : null,
+          is_completed: Boolean(conclusions && conclusions.trim()),
           location: location || null,
           created_at: createdAt ? new Date(createdAt) : undefined
         }
@@ -255,7 +352,13 @@ export class CrmActivitiesService {
       if (data.isCompleted !== undefined) prismaData.is_completed = data.isCompleted;
       if (data.dueDate !== undefined) prismaData.due_date = data.dueDate ? new Date(data.dueDate) : null;
       if (data.timeScheduled !== undefined) prismaData.time_scheduled = data.timeScheduled || null;
-      if (data.conclusions !== undefined) prismaData.conclusions = data.conclusions || null;
+      if (data.conclusions !== undefined) {
+        prismaData.conclusions = data.conclusions ? data.conclusions.trim() : null;
+        // Al guardar conclusiones (no vacías), marcar automáticamente como completado
+        if (prismaData.conclusions && prismaData.conclusions !== '') {
+          prismaData.is_completed = true;
+        }
+      }
       if (data.location !== undefined) prismaData.location = data.location || null;
 
       const updated = await this.prisma.crm_activities.update({

@@ -97,6 +97,28 @@ export const getCrmActivityCreators = async (): Promise<CrmCreator[]> => {
   return data;
 };
 
+export interface CrmDailyBriefing {
+  todayStr: string;
+  todayActivities: CrmActivity[];
+  pendingActivities: CrmActivity[];
+  stats: {
+    todayTotal: number;
+    todayPending: number;
+    todayCompleted: number;
+    pastPendingTotal: number;
+    teamTodayTotal?: number;
+    isAdminOrDireccion: boolean;
+  };
+}
+
+/**
+ * Obtiene el briefing diario y actividades pendientes del usuario logueado
+ */
+export const getCrmDailyBriefing = async (): Promise<CrmDailyBriefing> => {
+  const { data } = await apiClient.get('/crm-activities/briefing');
+  return data;
+};
+
 /**
  * Obtiene la agenda semanal de actividades comerciales (compatibilidad)
  */
@@ -118,6 +140,7 @@ export const createCrmActivity = async (payload: {
   email?: string;
   conclusions?: string;
   location?: string;
+  isCompleted?: boolean;
 }): Promise<CrmActivity> => {
   const { data } = await apiClient.post('/crm-activities', payload);
   return data;

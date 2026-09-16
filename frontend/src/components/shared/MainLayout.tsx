@@ -9,7 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 
 export const MainLayout: React.FC = () => {
   const { theme } = useUIStore();
-  const { fetchUpdates } = useUpdatesStore();
+  const { fetchUpdates, fetchBriefing } = useUpdatesStore();
   const { profile } = useAuthStore();
 
   useEffect(() => {
@@ -19,7 +19,10 @@ export const MainLayout: React.FC = () => {
   useEffect(() => {
     const role = profile?.roles?.name;
     fetchUpdates(role);
-  }, [profile?.roles?.name]);
+    if (profile?.id) {
+      fetchBriefing();
+    }
+  }, [profile?.id, profile?.roles?.name]);
 
   return (
     <div className="min-h-screen flex transition-colors duration-300">
@@ -30,7 +33,7 @@ export const MainLayout: React.FC = () => {
         className="flex-1 transition-all duration-300 pt-topbar"
         style={{ marginLeft: 'var(--spacing-sidebar-collapsed)' }}
       >
-        <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
+        <div className="p-6 md:p-8 max-w-400 mx-auto">
           <Outlet />
         </div>
       </main>

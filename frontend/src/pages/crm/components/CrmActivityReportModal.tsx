@@ -194,7 +194,7 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
         onClick={e => e.stopPropagation()}
       >
         {/* Cabecera del Modal */}
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-white/10 bg-gradient-to-r from-dts-primary/5 via-transparent to-dts-secondary/5 dark:from-white/[0.02] flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-white/10 bg-linear-to-r from-dts-primary/5 via-transparent to-dts-secondary/5 dark:from-white/2 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-dts-primary/10 dark:bg-dts-secondary/10 flex items-center justify-center text-dts-primary dark:text-dts-secondary shadow-inner">
               <FileText size={22} />
@@ -220,7 +220,7 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
         </div>
 
         {/* Panel de Filtros y Configuración */}
-        <div className="p-5 border-b border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.01] space-y-4 shrink-0">
+        <div className="p-5 border-b border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-white/1 space-y-4 shrink-0">
           {/* Selector de Período */}
           <div>
             <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
@@ -442,7 +442,7 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
 
         {/* Tarjetas de Resumen / KPIs */}
         <div className="px-6 py-3 bg-white dark:bg-surface-card-dark border-b border-gray-100 dark:border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
-          <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+          <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-white/2 border border-gray-100 dark:border-white/5">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Eventos</span>
             <div className="text-xl font-black font-mono text-dts-primary dark:text-white mt-0.5">
               {stats.total}
@@ -483,7 +483,7 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
               <p className="text-xs font-medium">Consultando eventos del período seleccionado...</p>
             </div>
           ) : activities.length === 0 ? (
-            <div className="py-16 text-center border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl bg-white/50 dark:bg-white/[0.01]">
+            <div className="py-16 text-center border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl bg-white/50 dark:bg-white/1">
               <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-white/5 mx-auto flex items-center justify-center text-gray-400 mb-3">
                 <Calendar size={24} />
               </div>
@@ -605,7 +605,7 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
 
                   {/* Detalle / Descripción */}
                   {act.description && (
-                    <div className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50/70 dark:bg-white/[0.02] p-2.5 rounded-lg border border-gray-150 dark:border-white/5 leading-relaxed">
+                    <div className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50/70 dark:bg-white/2 p-2.5 rounded-lg border border-gray-150 dark:border-white/5 leading-relaxed">
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">
                         Detalle / Temas tratados:
                       </span>
@@ -616,7 +616,7 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
                   {/* Conclusiones / Acuerdos */}
                   {act.conclusions && (
                     <div className="text-xs text-dts-primary dark:text-teal-200 bg-teal-50/60 dark:bg-teal-950/20 p-2.5 rounded-lg border border-teal-200 dark:border-teal-800/40 leading-relaxed">
-                      <span className="text-[10px] font-bold text-teal-700 dark:text-teal-400 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-teal-700 dark:text-teal-400 uppercase tracking-wider mb-0.5 flex items-center gap-1">
                         <Sparkles size={11} /> Conclusiones y Acuerdos:
                       </span>
                       {act.conclusions}

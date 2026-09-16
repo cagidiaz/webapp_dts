@@ -35,6 +35,13 @@ export class CrmActivitiesController {
     });
   }
 
+  @Get('briefing')
+  @ApiOperation({ summary: 'Obtener briefing diario y actividades pendientes del usuario' })
+  async getDailyBriefing(@Req() req: any) {
+    const userId = req.user?.userId;
+    return this.crmActivitiesService.getDailyBriefing(userId);
+  }
+
   @Get('creators')
   @ApiOperation({ summary: 'Obtener lista de creadores/comerciales de actividades' })
   async getCreators() {
