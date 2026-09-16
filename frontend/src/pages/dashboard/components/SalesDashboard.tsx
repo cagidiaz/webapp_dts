@@ -242,33 +242,33 @@ export const SalesDashboard: React.FC = () => {
         {/* Collapsed Header / Summary Bar */}
         <div 
           onClick={() => setIsGlobalKpisExpanded(prev => !prev)}
-          className="px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 cursor-pointer select-none hover:bg-gray-50/75 dark:hover:bg-white/[0.02] transition-colors"
+          className="px-4 py-1.5 sm:py-2 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 cursor-pointer select-none hover:bg-gray-50/75 dark:hover:bg-white/2 transition-colors"
         >
           {/* Left: Title & Badge */}
-          <div className="flex items-center gap-2.5 min-w-[200px]">
-            <div className="p-1.5 rounded-lg bg-dts-primary/5 dark:bg-white/5 text-dts-primary dark:text-[#00B0B9]">
-              <Building2 className="w-4 h-4" />
+          <div className="flex items-center gap-2 min-w-44">
+            <div className="p-1 rounded-md bg-dts-primary/5 dark:bg-white/5 text-dts-primary dark:text-dts-secondary">
+              <Building2 className="w-3.5 h-3.5" />
             </div>
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
                 KPIs Globales de Empresa
               </span>
-              <span className="ml-2 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+              <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
                 Global
               </span>
             </div>
           </div>
 
           {/* Center: Key Inline Metrics */}
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-gray-600 dark:text-gray-300">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-5 text-xs text-gray-600 dark:text-gray-300">
             {/* Ventas YTD */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Ventas YTD:</span>
+              <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Ventas YTD:</span>
               <span className="font-bold text-gray-800 dark:text-gray-100">
                 {isLoadingGlobalPerf ? '...' : formatCurrency(globalPerf?.kpis?.ventas || 0, 0)}
               </span>
               {globalPerf?.kpis?.desviacionPct !== undefined && !isLoadingGlobalPerf && (
-                <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
                   (globalPerf.kpis.desviacionPct || 0) >= 0
                     ? 'text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40'
                     : 'text-rose-700 bg-rose-50 dark:text-rose-400 dark:bg-rose-950/40'
@@ -280,7 +280,7 @@ export const SalesDashboard: React.FC = () => {
 
             {/* Cartera */}
             <div className="hidden sm:flex items-center gap-1.5">
-              <span className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Cartera:</span>
+              <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Cartera:</span>
               <span className="font-bold text-gray-800 dark:text-gray-100">
                 {isLoadingGlobalPerf ? '...' : formatCurrency(globalPerf?.kpis?.carteraVentas || 0, 0)}
               </span>
@@ -288,28 +288,28 @@ export const SalesDashboard: React.FC = () => {
 
             {/* Objetivo Anual */}
             <div className="hidden md:flex items-center gap-1.5">
-              <span className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Obj. Anual:</span>
-              <span className="font-bold text-dts-primary dark:text-[#00B0B9]">
+              <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Obj. Anual:</span>
+              <span className="font-bold text-dts-primary dark:text-dts-secondary">
                 {isLoadingGlobalPerf || isLoadingGlobalEvol ? '...' : `${(globalAnnualStats.pctAchievement || 0).toFixed(1)}%`}
               </span>
             </div>
           </div>
 
           {/* Right: Toggle Button */}
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-dts-primary dark:hover:text-[#00B0B9] transition-colors">
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:text-dts-primary dark:hover:text-dts-secondary transition-colors">
             <span className="hidden sm:inline">
               {isGlobalKpisExpanded ? 'Ocultar detalle' : 'Ver detalle'}
             </span>
             <ChevronDown 
-              className={`w-4 h-4 transition-transform duration-300 ${isGlobalKpisExpanded ? 'rotate-180 text-dts-secondary' : ''}`} 
+              className={`w-3.5 h-3.5 transition-transform duration-300 ${isGlobalKpisExpanded ? 'rotate-180 text-dts-secondary' : ''}`} 
             />
           </div>
         </div>
 
         {/* Expanded Grid */}
         {isGlobalKpisExpanded && (
-          <div className="p-6 pt-2 border-t border-gray-100 dark:border-gray-800/80 animate-in fade-in duration-300">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
+          <div className="p-3 sm:p-3.5 pt-1.5 border-t border-gray-100 dark:border-gray-800/80 animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5 pt-1">
               <GlobalKPICard 
                 title="Ventas YTD vs Ppto YTD (Global)" 
                 value={globalPerf?.kpis?.ventas || 0} 
@@ -390,25 +390,25 @@ export const SalesDashboard: React.FC = () => {
                 }}
               />
 
-              <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group min-h-40">
+              <div className="bg-slate-50 dark:bg-white/5 p-3 rounded-lg border border-gray-100 dark:border-white/10 shadow-sm flex flex-col items-center justify-between relative overflow-hidden group min-h-28">
                 {isLoadingGlobalPerf || isLoadingGlobalEvol ? (
                   <div className="w-full h-full animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
                 ) : (
                   <>
-                    <div className="absolute top-4 left-6 flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
-                      <span className="text-[10px] font-bold uppercase tracking-wider">Objetivo Facturación Anual</span>
+                    <div className="w-full flex items-center justify-between text-gray-400 dark:text-gray-500">
+                      <span className="text-[9.5px] font-bold uppercase tracking-wider">Objetivo Facturación Anual</span>
                       <InfoPopover 
                         title="Objetivo Facturación Anual" 
                         description="Porcentaje de consecución del presupuesto total global de ventas para el ejercicio completo."
                         formulas="(Ventas Actuales / Presupuesto Anual) * 100"
-                        iconSize={12} 
+                        iconSize={11} 
                       />
                     </div>
-                    <div className="w-full h-24 mt-4">
+                    <div className="w-full h-16 my-0.5">
                       <GaugeChart value={globalAnnualStats.pctAchievement} />
                     </div>
-                    <div className="text-center mt-2">
-                      <span className="text-2xl font-light text-dts-primary dark:text-white">{globalAnnualStats.pctAchievement.toFixed(1)}%</span>
+                    <div className="text-center">
+                      <span className="text-xl font-light text-dts-primary dark:text-white">{globalAnnualStats.pctAchievement.toFixed(1)}%</span>
                     </div>
                   </>
                 )}
@@ -421,7 +421,7 @@ export const SalesDashboard: React.FC = () => {
 
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <KPICard 
           title="Facturación Real" 
           value={kpis.ventas} 
@@ -517,8 +517,8 @@ export const SalesDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Agenda Semanal CRM (Timeline Style) */}
-        <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 space-y-6 flex flex-col h-full min-h-115">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0 gap-2">
+        <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex flex-col lg:h-[570px] lg:max-h-[570px] h-[570px]">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 mb-4 shrink-0 gap-2">
             <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-dts-primary dark:text-white">
               <Activity size={16} className="text-dts-secondary" />
               Agenda Semanal CRM
@@ -550,11 +550,9 @@ export const SalesDashboard: React.FC = () => {
               No hay actividades comerciales registradas para esta semana.
             </div>
           ) : (
-            <div className="relative space-y-4 overflow-y-auto pr-2 scrollbar-thin flex-1 max-h-95">
-              {/* Vertical timeline connector line */}
-              <div className="absolute left-4 md:left-36 top-2 bottom-4 w-0.5 bg-gray-200 dark:zinc-500"></div>
-              
-              {sortedWeeklyActivities.map(act => {
+            <div className="relative space-y-4 overflow-y-auto pr-2 scrollbar-thin flex-1 min-h-0">
+              {sortedWeeklyActivities.map((act, idx) => {
+                const isLast = idx === sortedWeeklyActivities.length - 1;
                 const typeIconMap = {
                   NOTE: FileText,
                   TASK: CheckSquare,
@@ -608,9 +606,9 @@ export const SalesDashboard: React.FC = () => {
                 const needsConclusions = isFinished && !hasConclusions;
 
                 return (
-                  <div key={act.id} className="flex md:flex-row flex-col gap-2 md:gap-4 relative pl-10 md:pl-0 text-xs">
-                    <div className="w-full md:w-28 shrink-0 md:text-right pt-0.5 flex md:flex-col items-center md:items-end gap-2 md:gap-0.5">
-                      <span className="font-black text-[11px] md:text-[12px] text-dts-secondary uppercase tracking-wider">
+                  <div key={act.id} className="flex md:flex-row flex-col gap-2 md:gap-2.5 relative pl-9 md:pl-0 text-xs">
+                    <div className="w-full md:w-18 shrink-0 md:text-right pt-0.5 flex md:flex-col items-center md:items-end gap-2 md:gap-0.5">
+                      <span className="font-black text-[11px] md:text-[11.5px] text-dts-secondary uppercase tracking-wider">
                         {new Date(actDateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                       </span>
                       {act.time_scheduled && (
@@ -620,13 +618,16 @@ export const SalesDashboard: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="absolute left-0 md:relative md:left-auto flex flex-col items-center w-8 shrink-0">
-                      <span className={`p-1.5 rounded-xl ${style.bg} ${style.color} z-10 border-2 border-white dark:border-surface-card-dark shadow-xs flex items-center justify-center`}>
+                    <div className="absolute left-0 top-0 bottom-0 md:relative md:left-auto md:top-auto md:bottom-auto md:self-stretch flex flex-col items-center w-7 shrink-0">
+                      <span className={`p-1.5 rounded-xl ${style.bg} ${style.color} z-10 border-2 border-white dark:border-surface-card-dark shadow-xs flex items-center justify-center shrink-0`}>
                         <IconComponent size={13} />
                       </span>
+                      {!isLast && (
+                        <div className="w-0 border-l border-dashed border-gray-300 dark:border-white/20 flex-1 my-1" />
+                      )}
                     </div>
 
-                    <div className="flex-1 pb-4">
+                    <div className="flex-1 pb-3">
                       <div 
                         className={`group/box p-3.5 rounded-xl border transition-all duration-200 shadow-xs ${
                           needsConclusions
@@ -713,7 +714,7 @@ export const SalesDashboard: React.FC = () => {
                             }}
                             className="mt-2.5 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 font-black text-[10px] rounded-lg border border-amber-300/80 dark:border-amber-500/40 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-2xs"
                           >
-                            <Plus size={12} className="stroke-[3] group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
+                            <Plus size={12} className="stroke-3 group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
                             <span>AGREGAR CONCLUSIONES</span>
                           </button>
                         )}
@@ -746,16 +747,16 @@ export const SalesDashboard: React.FC = () => {
         </div>
 
         {/* Right Column: Top Customers and Top Products stacked vertically */}
-        <div className="flex flex-col gap-6 h-full justify-between">
+        <div className="flex flex-col gap-5 h-full lg:h-[570px] lg:max-h-[570px] justify-between">
           {/* Top Customers */}
-          <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex-1 flex flex-col justify-between min-h-54.25">
-            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0">
+          <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-5 flex-1 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2 border-b border-gray-100 dark:border-gray-800 pb-2 shrink-0">
               <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                 <Users size={16} className="text-dts-secondary" />
                 Top 5 Clientes
               </h3>
             </div>
-            <div className="space-y-4 flex-1 flex flex-col justify-center">
+            <div className="space-y-2.5 flex-1 flex flex-col justify-center">
               {isLoadingPerf ? (
                 <div className="h-28 animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
               ) : topCustomers.length === 0 ? (
@@ -768,7 +769,7 @@ export const SalesDashboard: React.FC = () => {
                       setSelectedCustCode(customer.customerCode);
                       setIsDrawerOpen(true);
                     }}
-                    className="flex flex-col gap-1 border-b border-gray-50 dark:border-white/5 pb-2 last:border-0 last:pb-0 cursor-pointer group/item"
+                    className="flex flex-col gap-1 border-b border-gray-50 dark:border-white/5 pb-1.5 last:border-0 last:pb-0 cursor-pointer group/item"
                   >
                     <div className="flex justify-between items-center text-dts-primary dark:text-gray-200 group-hover/item:text-dts-secondary transition-colors">
                       <span className="text-xs font-bold truncate pr-4">{customer.customerName}</span>
@@ -787,21 +788,21 @@ export const SalesDashboard: React.FC = () => {
           </div>
 
           {/* Top Products */}
-          <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex-1 flex flex-col justify-between min-h-54.25">
-            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-800 pb-3 shrink-0">
+          <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-5 flex-1 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2 border-b border-gray-100 dark:border-gray-800 pb-2 shrink-0">
               <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                 <Package size={16} className="text-dts-secondary" />
                 Top 5 Productos
               </h3>
             </div>
-            <div className="space-y-4 flex-1 flex flex-col justify-center">
+            <div className="space-y-2.5 flex-1 flex flex-col justify-center">
               {isLoadingProducts ? (
                 <div className="h-28 animate-pulse bg-gray-50 dark:bg-white/5 rounded-lg" />
               ) : !topProducts || topProducts.length === 0 ? (
                 <p className="text-center py-4 text-gray-400 text-sm italic">Sin datos de productos</p>
               ) : (
                 topProducts.map((product, idx) => (
-                  <div key={idx} className="flex flex-col gap-1 border-b border-gray-50 dark:border-white/5 pb-2 last:border-0 last:pb-0">
+                  <div key={idx} className="flex flex-col gap-1 border-b border-gray-50 dark:border-white/5 pb-1.5 last:border-0 last:pb-0">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-bold text-dts-primary dark:text-gray-200 truncate pr-4">{product.description}</span>
                       <span className="text-xs font-mono font-bold text-dts-secondary">{formatCurrency(product.totalSales, 0)}</span>
@@ -877,57 +878,61 @@ export const SalesDashboard: React.FC = () => {
 };
 
 const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps, accountValue, footerText, infoText, subtext }: any) => {
-  if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
+  if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 h-22 animate-pulse" />;
   
   const isPositive = value >= 0;
   const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : status === 'warning' ? 'text-amber-500' : 'text-dts-primary dark:text-white';
   const formattedValue = type === 'currency' ? formatCurrency(value, 0) : type === 'percentage' ? `${formatNumber(value, 1)}%` : formatNumber(value, 0);
 
   return (
-    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
+    <div className="bg-white dark:bg-surface-card-dark px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
       <div>
-        <div className="flex justify-between items-start mb-2">
+        <div className="flex justify-between items-start mb-1">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{title}</span>
             {infoProps && (
               <InfoPopover 
                 title={title} 
                 {...infoProps}
-                iconSize={12}
+                iconSize={11}
                 className="text-gray-300 group-hover:text-dts-secondary transition-colors"
               />
             )}
           </div>
-          <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
+          <Icon size={16} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
         </div>
         <div className="flex flex-col">
           <div className="flex items-baseline gap-2">
-            <div className={`text-xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
+            <div className={`text-xl font-black font-mono tracking-tight leading-tight ${colorClass}`}>{formattedValue}</div>
             {type === 'percentage' && (
               <div className={`text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
                 {isPositive ? <TrendingUp size={10} className="inline mr-0.5"/> : <TrendingDown size={10} className="inline mr-0.5"/>}
               </div>
             )}
           </div>
-          {subtext && (
-            <div className="text-[9px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight mt-0.5">
-              {subtext}
-            </div>
-          )}
-          {accountValue !== undefined && accountValue > 0 && (
-            <div className="text-[10px] text-gray-400 mt-1 italic font-medium">
-              ({formatCurrency(accountValue, 0)}) cuentas
-            </div>
-          )}
-          {footerText && (
-            <div className="text-[10px] text-gray-400 mt-0.5 font-medium">
-              {footerText}
+          {(subtext || (accountValue !== undefined && accountValue > 0) || footerText) && (
+            <div className="flex flex-col mt-0.5 space-y-0.5 leading-none">
+              {subtext && (
+                <div className="text-[9px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight">
+                  {subtext}
+                </div>
+              )}
+              {accountValue !== undefined && accountValue > 0 && (
+                <div className="text-[9px] text-gray-400 italic font-medium leading-tight">
+                  ({formatCurrency(accountValue, 0)}) cuentas
+                </div>
+              )}
+              {footerText && (
+                <div className="text-[9px] text-gray-400 font-medium leading-tight">
+                  {footerText}
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
       {infoText && (
-        <div className="mt-2 pt-1.5 border-t border-gray-100 dark:border-white/5 flex items-center gap-1 text-[9px] text-gray-400 font-medium">
+        <div className="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5 flex items-center gap-1 text-[9px] text-gray-400 font-medium">
           <span className="w-1 h-1 rounded-full bg-dts-secondary animate-pulse" />
           <span className="truncate" title={infoText}>{infoText}</span>
         </div>
@@ -937,7 +942,7 @@ const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status,
 };
 
 const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accountSubValue, deviation, type = 'number', icon: Icon, color, infoProps, variant, label1 = "REAL:", label2 = "PPTO:", label3 = "EXTRA:", suffix = "", isLoading, infoText, subtext1 }: any) => {
-  if (isLoading) return <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 h-40 animate-pulse" />;
+  if (isLoading) return <div className="bg-slate-50 dark:bg-white/5 p-3 rounded-lg border border-gray-100 dark:border-white/10 h-28 animate-pulse" />;
 
   const colorMap: any = {
     blue: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
@@ -950,71 +955,71 @@ const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accou
   const formattedSubValue = type === 'currency' ? formatCurrency(subValue, 0) : subValue;
 
   return (
-    <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
+    <div className="bg-slate-50 dark:bg-white/5 p-3 rounded-lg border border-gray-100 dark:border-white/10 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between min-h-28">
       <div>
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
-            <span className="text-[10px] font-bold uppercase tracking-wider">{title}</span>
-            {infoProps && <InfoPopover title={title} {...infoProps} iconSize={12} />}
+        <div className="flex justify-between items-start mb-1.5">
+          <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500">
+            <span className="text-[9.5px] font-bold uppercase tracking-wider">{title}</span>
+            {infoProps && <InfoPopover title={title} {...infoProps} iconSize={11} />}
           </div>
-          <div className={`p-2 rounded-xl transition-transform group-hover:scale-110 duration-300 ${colorMap[color] || colorMap.blue}`}>
-            <Icon size={18} />
+          <div className={`p-1 rounded-md transition-transform group-hover:scale-105 duration-300 ${colorMap[color] || colorMap.blue}`}>
+            <Icon size={14} />
           </div>
         </div>
         
         {variant === 'comparison' ? (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-gray-400 w-12">{label1}</span>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] font-bold text-gray-400 w-11 shrink-0">{label1}</span>
               <div className="flex flex-col">
-                <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">
+                <div className="text-lg font-light text-dts-primary dark:text-white tracking-tight leading-tight">
                   {formattedValue}
                 </div>
                 {subtext1 && (
-                  <span className="text-[9px] text-dts-secondary dark:text-cyan-400 font-normal leading-tight">
+                  <span className="text-[8.5px] text-dts-secondary dark:text-cyan-400 font-normal leading-none mt-0.5">
                     {subtext1}
                   </span>
                 )}
                 {accountValue !== undefined && accountValue > 0 && (
-                  <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
+                  <span className="text-[9px] text-gray-400 italic font-normal leading-none mt-0.5">
                     ({formatCurrency(accountValue, 0)}) cuentas
                   </span>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-gray-400 w-12">{label2}</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[9px] font-bold text-gray-400 w-11 shrink-0">{label2}</span>
               <div className="flex flex-col">
-                <div className="text-2xl font-light text-gray-500 dark:text-gray-400 tracking-tight">
+                <div className="text-sm font-light text-gray-500 dark:text-gray-400 tracking-tight leading-tight">
                   {label2 === 'TOTAL:' || label2 === 'CANT:' ? `${subValue}${suffix}` : formattedSubValue}
                 </div>
                 {accountSubValue !== undefined && accountSubValue > 0 && (
-                  <span className="text-[10px] text-gray-400 italic font-normal -mt-1">
+                  <span className="text-[9px] text-gray-400 italic font-normal leading-none mt-0.5">
                     ({formatCurrency(accountSubValue, 0)}) cuentas
                   </span>
                 )}
               </div>
             </div>
             {extraValue !== undefined && (
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-gray-400 w-12">{label3}</span>
-                <div className="text-2xl font-light text-red-400 tracking-tight">
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[9px] font-bold text-gray-400 w-11 shrink-0">{label3}</span>
+                <div className="text-sm font-light text-red-400 tracking-tight leading-tight">
                   {extraValue}{suffix}
                 </div>
               </div>
             )}
-            </div>
+          </div>
         ) : (
-          <div className="text-3xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
+          <div className="text-2xl font-light text-dts-primary dark:text-white tracking-tight">{formattedValue}</div>
         )}
         
         {deviation !== undefined && (
-          <div className="mt-0.5 flex items-center justify-between pt-0">
+          <div className="mt-1 flex items-center justify-between pt-1 border-t border-gray-100 dark:border-white/5">
             {variant !== 'comparison' && (
-              <span className="text-[10px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>
+              <span className="text-[9px] text-gray-400">Ppto: {type === 'currency' ? formatCurrency(subValue) : subValue}</span>
             )}
-            <div className={`flex items-center gap-1 text-xl font-light ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'} ${variant === 'comparison' ? 'ml-auto' : ''}`}>
-              {deviation >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+            <div className={`flex items-center gap-1 text-base font-light ${deviation >= 0 ? 'text-emerald-500' : 'text-red-500'} ${variant === 'comparison' ? 'ml-auto' : ''}`}>
+              {deviation >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
               {deviation > 0 ? '+' : ''}{deviation.toFixed(1)}%
             </div>
           </div>
@@ -1022,8 +1027,8 @@ const GlobalKPICard = ({ title, value, subValue, extraValue, accountValue, accou
       </div>
 
       {infoText && (
-        <div className="mt-3 pt-2 border-t border-gray-200/50 dark:border-white/5 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-dts-secondary animate-pulse" />
+        <div className="mt-1.5 pt-1 border-t border-gray-100 dark:border-white/5 flex items-center gap-1 text-[9px] text-gray-500 dark:text-gray-400 font-medium">
+          <span className="w-1 h-1 rounded-full bg-dts-secondary animate-pulse" />
           <span className="truncate" title={infoText}>{infoText}</span>
         </div>
       )}
