@@ -8,7 +8,8 @@ import {
   getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
   getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
   createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
-  getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook
+  getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook,
+  openCalendarEventInOutlook
 } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
@@ -19,6 +20,23 @@ import {
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 import { EditActivityModal } from './EditActivityModal';
+
+const OutlookIcon: React.FC<{ size?: number; className?: string }> = ({ size = 14, className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+    style={{ minWidth: size, minHeight: size }}
+  >
+    <path d="M22 6.5v11a2.5 2.5 0 0 1-2.5 2.5H9.5a2.5 2.5 0 0 1-2.5-2.5V17h7.5A2.5 2.5 0 0 0 17 14.5V7h2.5A2.5 2.5 0 0 1 22 6.5z" opacity="0.4" fill="#0078D4"/>
+    <path d="M14.5 5H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5.5V5z" fill="#0078D4"/>
+    <path d="M2 7.5A2.5 2.5 0 0 1 4.5 5h8A2.5 2.5 0 0 1 15 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-8A2.5 2.5 0 0 1 2 16.5v-9z" fill="#106EBE"/>
+    <circle cx="8.5" cy="12" r="2.5" fill="#FFFFFF"/>
+    <circle cx="8.5" cy="12" r="1.3" fill="#106EBE"/>
+  </svg>
+);
 
 // For local endpoint fetching since contact lookup is on contacts API
 import apiClient from '../../../api/apiClient';
@@ -631,70 +649,140 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     const list: {
       id: string;
       type: 'note' | 'task' | 'email' | 'event' | 'call' | 'reunion' | 'videollamada' | 'visita';
+      rawType: string;
       title: string;
       description?: string;
       date: string;
+      time?: string;
       icon: any;
       iconBg: string;
+      iconColor: string;
+      badgeBg: string;
+      badgeColor: string;
+      typeLabel: string;
       done?: boolean;
       conclusions?: string | null;
       email?: string;
-      time?: string;
       location?: string | null;
       exchangeSyncStatus?: string | null;
       exchangeWebLink?: string | null;
+      isPastDate: boolean;
+      isFinished: boolean;
+      hasConclusions: boolean;
+      needsConclusions: boolean;
+      rawActivity: any;
     }[] = [];
 
     dbActivities.forEach((act: any) => {
+      const upperType = (act.type || '').toUpperCase();
       let icon = Calendar;
-      let iconBg = 'bg-indigo-500';
+      let iconBg = 'bg-purple-100 dark:bg-purple-950/30';
+      let iconColor = 'text-purple-600 dark:text-purple-400';
+      let badgeBg = 'bg-purple-500/10 dark:bg-purple-500/20';
+      let badgeColor = 'text-purple-700 dark:text-purple-300';
       let type: 'note' | 'task' | 'email' | 'event' | 'call' | 'reunion' | 'videollamada' | 'visita' = 'event';
+      let label = 'Evento';
 
-      if (act.type === 'NOTE') {
+      if (upperType === 'NOTE') {
         icon = FileText;
-        iconBg = 'bg-amber-500 dark:bg-amber-600/90';
+        iconBg = 'bg-amber-100 dark:bg-amber-950/30';
+        iconColor = 'text-amber-600 dark:text-amber-400';
+        badgeBg = 'bg-amber-500/10 dark:bg-amber-500/20';
+        badgeColor = 'text-amber-700 dark:text-amber-300';
         type = 'note';
-      } else if (act.type === 'TASK') {
+        label = 'Nota';
+      } else if (upperType === 'TASK') {
         icon = CheckSquare;
-        iconBg = 'bg-blue-500 dark:bg-blue-600/90';
+        iconBg = 'bg-blue-100 dark:bg-blue-950/30';
+        iconColor = 'text-blue-600 dark:text-blue-400';
+        badgeBg = 'bg-blue-500/10 dark:bg-blue-500/20';
+        badgeColor = 'text-blue-700 dark:text-blue-300';
         type = 'task';
-      } else if (act.type === 'EMAIL') {
+        label = 'Tarea';
+      } else if (upperType === 'EMAIL') {
         icon = Mail;
-        iconBg = 'bg-indigo-500 dark:bg-indigo-600/90';
+        iconBg = 'bg-emerald-100 dark:bg-emerald-950/30';
+        iconColor = 'text-emerald-600 dark:text-emerald-400';
+        badgeBg = 'bg-emerald-500/10 dark:bg-emerald-500/20';
+        badgeColor = 'text-emerald-700 dark:text-emerald-300';
         type = 'email';
-      } else if (act.type === 'CALL') {
+        label = 'Email';
+      } else if (upperType === 'CALL') {
         icon = Phone;
-        iconBg = 'bg-emerald-500 dark:bg-emerald-600/90';
+        iconBg = 'bg-teal-100 dark:bg-teal-950/30';
+        iconColor = 'text-teal-600 dark:text-teal-400';
+        badgeBg = 'bg-teal-500/10 dark:bg-teal-500/20';
+        badgeColor = 'text-teal-700 dark:text-teal-300';
         type = 'call';
-      } else if (act.type === 'REUNION') {
+        label = 'Llamada';
+      } else if (upperType === 'REUNION') {
         icon = Users;
-        iconBg = 'bg-purple-500 dark:bg-purple-600/90';
+        iconBg = 'bg-rose-100 dark:bg-rose-950/30';
+        iconColor = 'text-rose-600 dark:text-rose-400';
+        badgeBg = 'bg-rose-500/10 dark:bg-rose-500/20';
+        badgeColor = 'text-rose-700 dark:text-rose-300';
         type = 'reunion';
-      } else if (act.type === 'VIDEOLLAMADA') {
+        label = 'Reunión';
+      } else if (upperType === 'VIDEOLLAMADA') {
         icon = Video;
-        iconBg = 'bg-cyan-500 dark:bg-cyan-600/90';
+        iconBg = 'bg-indigo-100 dark:bg-indigo-950/30';
+        iconColor = 'text-indigo-600 dark:text-indigo-400';
+        badgeBg = 'bg-indigo-500/10 dark:bg-indigo-500/20';
+        badgeColor = 'text-indigo-700 dark:text-indigo-300';
         type = 'videollamada';
-      } else if (act.type === 'VISITA') {
+        label = 'Videollamada';
+      } else if (upperType === 'VISITA') {
         icon = MapPin;
-        iconBg = 'bg-rose-500 dark:bg-rose-600/90';
+        iconBg = 'bg-orange-100 dark:bg-orange-950/30';
+        iconColor = 'text-orange-600 dark:text-orange-400';
+        badgeBg = 'bg-orange-500/10 dark:bg-orange-500/20';
+        badgeColor = 'text-orange-700 dark:text-orange-300';
         type = 'visita';
+        label = 'Visita';
       }
+
+      const actDateStr = act.due_date || act.created_at;
+      const isPastDate = (() => {
+        if (!actDateStr) return false;
+        const dateObj = new Date(actDateStr);
+        if (act.time_scheduled) {
+          const [hh, mm] = act.time_scheduled.split(':');
+          dateObj.setHours(Number(hh) || 0, Number(mm) || 0, 0, 0);
+        } else {
+          dateObj.setHours(23, 59, 59, 999);
+        }
+        return dateObj.getTime() < new Date().getTime();
+      })();
+
+      const isFinished = Boolean(act.is_completed || isPastDate);
+      const hasConclusions = Boolean(act.conclusions && act.conclusions.trim());
+      const needsConclusions = Boolean(isFinished && !hasConclusions);
 
       list.push({
         id: act.id,
         type,
+        rawType: upperType,
         title: act.title,
         description: act.description || '',
-        date: act.due_date || act.created_at,
+        date: actDateStr,
+        time: act.time_scheduled || undefined,
         icon,
         iconBg,
+        iconColor,
+        badgeBg,
+        badgeColor,
+        typeLabel: label,
         done: act.is_completed,
         conclusions: act.conclusions,
         email: act.email || undefined,
-        time: act.time_scheduled || undefined,
         location: act.location || undefined,
         exchangeSyncStatus: act.exchange_sync_status || null,
         exchangeWebLink: act.exchange_web_link || null,
+        isPastDate,
+        isFinished,
+        hasConclusions,
+        needsConclusions,
+        rawActivity: act,
       });
     });
 
@@ -1312,14 +1400,21 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       {timelineActivities.slice(0, 3).map(act => (
                         <div key={act.id} className="relative pl-7 animate-in slide-in-from-left duration-300">
                           {/* Icon Outside Card: w-5 (20px) en left-0 -> centro exacto en x=10px */}
-                          <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full ${act.iconBg} text-white flex items-center justify-center border border-white dark:border-zinc-900 shadow-sm z-10`} title={act.type}>
+                          <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full ${act.iconBg} ${act.iconColor} flex items-center justify-center border border-white dark:border-zinc-900 shadow-sm z-10`} title={act.typeLabel}>
                             <act.icon size={10} />
                           </div>
                           
                           {/* Card */}
-                          <div className="p-2.5 rounded-xl border border-gray-100 dark:border-white/5 bg-gray-50/20 dark:bg-zinc-800/5 hover:border-dts-secondary/30 transition-all duration-150 flex flex-col space-y-1.5">
+                          <div 
+                            onClick={() => {
+                              setEditingActivity(act.rawActivity || act);
+                              setShowEditModal(true);
+                            }}
+                            className="p-2.5 rounded-xl border border-gray-100 dark:border-white/5 bg-gray-50/20 dark:bg-zinc-800/5 hover:border-dts-secondary/35 transition-all duration-150 flex flex-col space-y-1.5 cursor-pointer group/mini"
+                            title="Clic para ver o editar actividad"
+                          >
                             <div className="flex justify-between items-center gap-2">
-                              <span className="font-bold text-gray-900 dark:text-zinc-100 truncate text-[10px]">{act.title}</span>
+                              <span className="font-bold text-gray-900 dark:text-zinc-100 group-hover/mini:text-dts-secondary transition-colors truncate text-[10px]">{act.title}</span>
                               <span className="text-[8px] text-gray-400 dark:text-zinc-400 font-mono shrink-0">{new Date(act.date).toLocaleDateString('es-ES')}</span>
                             </div>
                             {act.description && (
@@ -1342,77 +1437,199 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 <p className="text-xs text-gray-400 italic pl-2">No hay historial registrado para este contacto.</p>
               ) : (
                 <>
-                  {/* Línea vertical centrada exactamente en x=16px */}
+                  {/* Línea vertical centrada exactamente en x=15px */}
                   <div className="absolute left-[15px] top-3 bottom-4 w-0.5 bg-gray-200 dark:bg-zinc-500" />
 
                   {timelineActivities.map(act => (
                     <div key={act.id} className="relative pl-11 animate-in slide-in-from-left duration-300">
-                      {/* Activity Icon Indicator on Timeline: w-8 (32px) en left-0 -> centro exacto en x=16px */}
-                      <div className={`absolute left-0 top-1.5 w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900 ${act.iconBg} flex items-center justify-center shadow-md text-white transition-transform hover:scale-110 duration-200 z-10`}>
+                      {/* Activity Icon Indicator on Timeline: w-7.5 (30px) centrado en x=15px */}
+                      <div className={`absolute left-0 top-1.5 w-7.5 h-7.5 rounded-xl border-2 border-white dark:border-surface-card-dark ${act.iconBg} ${act.iconColor} flex items-center justify-center shadow-xs transition-transform hover:scale-110 duration-200 z-10 shrink-0`}>
                         <act.icon size={13} />
                       </div>
                       
                       {/* Activity Card */}
-                      <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-white/5 rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-dts-secondary/40 transition-all duration-200 space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-50 dark:border-white/5 pb-2">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-gray-900 dark:text-zinc-100">{act.title}</h4>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1.5 text-[9.5px] text-gray-400 dark:text-zinc-400 font-mono">
-                            <Calendar size={11} className="text-gray-400 dark:text-zinc-450" />
-                            <span>{new Date(act.date).toLocaleDateString('es-ES')}</span>
-                            {act.time && (
-                              <>
-                                <Clock size={11} className="text-gray-400 dark:text-zinc-450 ml-1" />
-                                <span>{act.time}</span>
-                              </>
+                      <div 
+                        className={`group/box p-3.5 rounded-xl border transition-all duration-200 shadow-xs space-y-2.5 ${
+                          act.needsConclusions
+                            ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300/80 dark:border-amber-500/40 hover:border-amber-400'
+                            : act.done
+                            ? 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 opacity-75 hover:border-dts-secondary/35'
+                            : 'bg-white dark:bg-zinc-900/40 border-gray-200/60 dark:border-white/5 hover:border-dts-secondary/35'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2 border-b border-gray-100 dark:border-white/5 pb-2">
+                          <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+                            <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
+                              act.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
+                            }`}>
+                              {act.title}
+                            </span>
+                            {act.isFinished && (
+                              <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold border ${
+                                act.done 
+                                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                                  : 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                              }`}>
+                                {act.done ? 'TERMINADO' : 'VENCIDO'}
+                              </span>
+                            )}
+                            {act.hasConclusions && (
+                              <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800">
+                                Conclusiones
+                              </span>
+                            )}
+                            {act.exchangeSyncStatus === 'synced' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Sincronizado con Outlook">
+                                <Check size={9} /> Outlook
+                              </span>
                             )}
                           </div>
-                          {act.type === 'email' && (
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-1 text-[10px] font-mono text-gray-400 dark:text-gray-400">
+                              <Calendar size={11} className="text-gray-400 shrink-0" />
+                              <span className="font-bold text-dts-secondary uppercase">
+                                {new Date(act.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                              </span>
+                              {act.time && (
+                                <span className="flex items-center gap-0.5 ml-1 text-gray-400 font-bold">
+                                  <Clock size={10} />
+                                  {act.time.substring(0, 5)}
+                                </span>
+                              )}
+                            </div>
+
+                            <span className={`text-[9px] uppercase px-2 py-0.5 rounded-full font-bold border border-transparent ${act.badgeBg} ${act.badgeColor}`}>
+                              {act.typeLabel}
+                            </span>
+
+                            {/* Abrir en Outlook */}
+                            {act.type === 'email' ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openExistingEmailInOutlook({
+                                    webLink: act.exchangeWebLink,
+                                    email: act.email || contact?.email,
+                                    subject: act.title,
+                                    target: outlookTarget,
+                                    exchangeSyncStatus: act.exchangeSyncStatus,
+                                  });
+                                }}
+                                className="p-1 rounded-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
+                                title={`Abrir correo en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
+                              >
+                                <OutlookIcon size={13} />
+                              </button>
+                            ) : act.exchangeWebLink ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openCalendarEventInOutlook({ webLink: act.exchangeWebLink });
+                                }}
+                                className="p-1 rounded-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
+                                title={`Abrir evento en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
+                              >
+                                <OutlookIcon size={13} />
+                              </button>
+                            ) : null}
+
+                            {/* Editar actividad */}
                             <button
                               type="button"
-                              onClick={() => openExistingEmailInOutlook({
-                                webLink: act.exchangeWebLink,
-                                email: act.email || contact?.email,
-                                subject: act.title,
-                                target: outlookTarget,
-                                exchangeSyncStatus: act.exchangeSyncStatus,
-                              })}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9.5px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-md transition-colors cursor-pointer border border-dts-secondary/20"
-                              title={`Abrir en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingActivity(act.rawActivity || act);
+                                setShowEditModal(true);
+                              }}
+                              className="p-1 rounded-md text-gray-400 hover:text-dts-secondary hover:bg-cyan-500/10 dark:hover:bg-cyan-500/20 transition-colors cursor-pointer"
+                              title="Editar actividad"
                             >
-                              <ExternalLink size={9} />
-                              <span>Abrir en Outlook</span>
+                              <Edit2 size={13} />
                             </button>
-                          )}
+
+                            {/* Eliminar actividad */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
+                                  deleteActivityMutation.mutate(act.id);
+                                }
+                              }}
+                              className="p-1 rounded-md text-gray-400 hover:text-rose-500 hover:bg-rose-500/10 dark:hover:bg-rose-500/20 transition-colors cursor-pointer"
+                              title="Eliminar actividad"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </div>
+
+                        {/* Descripción */}
+                        {act.description && (
+                          <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-[11px] whitespace-pre-wrap">
+                            {act.description}
+                          </p>
+                        )}
+
+                        {/* Bloque Conclusiones */}
+                        {act.hasConclusions && (
+                          <div className="text-[11px] border-l-2 border-teal-500 pl-2.5 py-1 bg-teal-50/40 dark:bg-teal-950/20 rounded-r-md text-gray-700 dark:text-gray-300">
+                            <span className="text-teal-700 dark:text-teal-400 font-bold block text-[10px] uppercase tracking-wide">
+                              Conclusiones:
+                            </span>
+                            <p className="whitespace-pre-wrap leading-relaxed mt-0.5">{act.conclusions}</p>
+                          </div>
+                        )}
+
+                        {/* Botón Agregar Conclusiones */}
+                        {act.needsConclusions && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingActivity(act.rawActivity || act);
+                              setShowEditModal(true);
+                            }}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 font-black text-[10px] rounded-lg border border-amber-300/80 dark:border-amber-500/40 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-2xs"
+                          >
+                            <Plus size={12} className="stroke-3 group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
+                            <span>AGREGAR CONCLUSIONES</span>
+                          </button>
+                        )}
+
+                        {/* Pie con Ubicación, Empresa/Cliente y Correo */}
+                        {(act.location || contact?.customer || act.email) && (
+                          <div className="pt-2 border-t border-gray-100 dark:border-white/5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-500 dark:text-gray-400 font-semibold">
+                            {act.location && (
+                              <span className="flex items-center gap-1 text-gray-600 dark:text-gray-300 font-medium" title="Ubicación">
+                                <MapPin size={11} className="text-dts-secondary shrink-0" />
+                                <span>{act.location}</span>
+                              </span>
+                            )}
+                            {contact?.customer && (
+                              <span className="flex items-center gap-1.5 hover:text-dts-secondary transition-colors" title="Empresa / Cliente">
+                                <span>🏢</span>
+                                <span className="text-gray-800 dark:text-gray-200 font-bold">
+                                  {contact.customer.company_name || contact.customer.name}
+                                </span>
+                              </span>
+                            )}
+                            {act.email && (
+                              <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 font-mono text-[9.5px]" title="Correo registrado">
+                                <Mail size={10} className="text-gray-400" />
+                                <span>{act.email}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
-
-                      {act.email && (
-                        <div className="text-[10px] text-gray-450 dark:text-zinc-400 flex items-center gap-1.5 font-mono pl-0.5">
-                          <Mail size={10} className="text-gray-400 dark:text-zinc-450" />
-                          <span>Para/De: {act.email}</span>
-                        </div>
-                      )}
-
-                      {act.description && (
-                        <div className="text-xs text-gray-600 dark:text-zinc-200 leading-relaxed bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-lg border border-gray-100/50 dark:border-white/5 w-full whitespace-pre-wrap font-sans">
-                          {act.description}
-                        </div>
-                      )}
-
-                      {act.conclusions && (
-                        <div className="text-[11px] border-l-2 border-emerald-500 pl-3 bg-emerald-50/15 dark:bg-emerald-950/20 py-1.5 text-emerald-700 dark:text-emerald-300 rounded-r-md">
-                          <strong className="block text-[9px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-bold mb-0.5">Conclusiones</strong>
-                          {act.conclusions}
-                        </div>
-                      )}
                     </div>
-                  </div>
-                ))}
-              </>
-            )}
+                  ))}
+                </>
+              )}
             </div>
           )}
 
@@ -1651,7 +1868,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                           )}
                           <button
                             onClick={() => {
-                              setEditingActivity(act);
+                              setEditingActivity(act.rawActivity || act);
                               setShowEditModal(true);
                             }}
                             className="p-1 text-gray-400 hover:text-dts-secondary cursor-pointer"
@@ -2088,6 +2305,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         onClose={() => {
           setShowEditModal(false);
           setEditingActivity(null);
+        }}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
         }}
         activity={editingActivity}
         defaultLocation={getCompanyAddress()}

@@ -3,14 +3,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getContacts, updateContactLinkedin } from '../../../api';
 import { 
   Search, User, Linkedin, Edit2, Check, X, 
-  Mail, Phone, Smartphone, Users, MapPin
+  Mail, Phone, Smartphone, Users, MapPin, Briefcase
 } from 'lucide-react';
 
 interface CrmContactsProps {
   onSelectContact?: (contactId: string) => void;
+  onOpenReportModal?: () => void;
 }
 
-export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact }) => {
+export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact, onOpenReportModal }) => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -187,25 +188,38 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact }) => 
       {/* Contacts Table (Adjusted to screen viewport) */}
       <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-320px)] min-h-100">
         {/* Integrated Search Bar */}
-        <div className="p-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between gap-4 shrink-0 bg-gray-50/20 dark:bg-surface-card-dark">
-          <div className="w-full sm:max-w-md relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-              <Search size={16} />
-            </span>
-            <input 
-              type="text" 
-              placeholder="Buscar por nombre, cargo, empresa, email..." 
-              className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <div className="p-4 border-b border-gray-100 dark:border-white/5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 shrink-0 bg-gray-50/20 dark:bg-surface-card-dark">
+          <div className="flex items-center gap-3 w-full sm:max-w-md">
+            <div className="w-full relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <Search size={16} />
+              </span>
+              <input 
+                type="text" 
+                placeholder="Buscar por nombre, cargo, empresa, email..." 
+                className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')}
+                className="text-xs font-bold text-gray-400 hover:text-dts-secondary shrink-0 cursor-pointer"
+              >
+                Limpiar búsqueda
+              </button>
+            )}
           </div>
-          {searchTerm && (
-            <button 
-              onClick={() => setSearchTerm('')}
-              className="text-xs font-bold text-gray-400 hover:text-dts-secondary flex items-center gap-1 cursor-pointer"
+
+          {onOpenReportModal && (
+            <button
+              type="button"
+              onClick={onOpenReportModal}
+              className="w-full sm:w-auto px-3.5 py-1.5 text-xs font-bold rounded-xl text-white bg-dts-primary hover:bg-dts-primary/90 dark:bg-dts-secondary dark:hover:bg-dts-secondary/90 dark:text-dts-primary-dark flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98] shrink-0 cursor-pointer"
             >
-              Limpiar búsqueda
+              <Briefcase size={14} />
+              <span>Informe Histórico de Eventos</span>
             </button>
           )}
         </div>

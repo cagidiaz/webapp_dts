@@ -102,21 +102,7 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex-1">
-          <ExchangeStatusBanner />
-        </div>
-        <div className="shrink-0 flex items-center">
-          <button
-            type="button"
-            onClick={() => setIsReportModalOpen(true)}
-            className="w-full sm:w-auto px-4 py-2 text-xs font-bold rounded-xl text-white bg-dts-primary hover:bg-dts-primary/90 dark:bg-dts-secondary dark:hover:bg-dts-secondary/90 dark:text-dts-primary-dark flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98]"
-          >
-            <Briefcase size={14} />
-            Informe Histórico de Eventos
-          </button>
-        </div>
-      </div>
+      <ExchangeStatusBanner />
 
       {/* Conditionally render mode */}
       {mode === 'customers' ? (
@@ -126,6 +112,7 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
       ) : (
         <CrmContacts 
           onSelectContact={handleSelectContact} 
+          onOpenReportModal={() => setIsReportModalOpen(true)}
         />
       )}
 
