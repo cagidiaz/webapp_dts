@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
   getSalesBudgetPerformance, 
   getSalesBudgetEvolution, 
@@ -13,7 +13,7 @@ import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
   TrendingUp, Target, Activity, Users, Package, BarChart2,
   TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock, MapPin, Video,
-  Edit2, Plus, User, ChevronDown, Building2
+  Edit2, Plus, User, ChevronDown, Building2, ChevronLeft, ChevronRight, RotateCcw, Loader2
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
@@ -107,21 +107,48 @@ export const SalesDashboard: React.FC = () => {
     return `${yyyy}-${mm}-${dd}`;
   };
 
+  const [weekOffset, setWeekOffset] = React.useState<number>(0);
+
   const { monday, sunday } = React.useMemo(() => {
     const today = new Date();
     const day = today.getDay();
-    const diffToMonday = today.getDate() - day + (day === 0 ? -6 : 1);
-    const m = new Date(today.setDate(diffToMonday));
+    const diffToMonday = today.getDate() - day + (day === 0 ? -6 : 1) + (weekOffset * 7);
+    const m = new Date(today.getFullYear(), today.getMonth(), diffToMonday);
     m.setHours(0, 0, 0, 0);
     const s = new Date(m);
     s.setDate(m.getDate() + 6);
     s.setHours(23, 59, 59, 999);
     return { monday: m, sunday: s };
-  }, []);
+  }, [weekOffset]);
 
-  const { data: agendaData, isLoading: isLoadingAgenda } = useQuery({
+  const weekLabel = React.useMemo(() => {
+    const startDay = monday.getDate();
+    const endDay = sunday.getDate();
+    const startMonth = monday.toLocaleDateString('es-ES', { month: 'short' });
+    const endMonth = sunday.toLocaleDateString('es-ES', { month: 'short' });
+    const currentYr = new Date().getFullYear();
+    const yearSuffix = (monday.getFullYear() !== currentYr || sunday.getFullYear() !== currentYr) 
+      ? ` ${sunday.getFullYear()}` 
+      : '';
+    
+    if (startMonth === endMonth) {
+      return `${startDay} - ${endDay} ${startMonth}${yearSuffix}`;
+    }
+    return `${startDay} ${startMonth} - ${endDay} ${endMonth}${yearSuffix}`;
+  }, [monday, sunday]);
+
+  const relativeWeekLabel = React.useMemo(() => {
+    if (weekOffset === 0) return 'Esta semana';
+    if (weekOffset === -1) return 'Semana anterior';
+    if (weekOffset === 1) return 'Próxima semana';
+    if (weekOffset < -1) return `Hace ${Math.abs(weekOffset)} sem.`;
+    return `En ${weekOffset} sem.`;
+  }, [weekOffset]);
+
+  const { data: agendaData, isLoading: isLoadingAgenda, isFetching: isFetchingAgenda } = useQuery({
     queryKey: ['crmWeeklyAgenda', formatYYYYMMDD(monday), formatYYYYMMDD(sunday)],
-    queryFn: () => getWeeklyAgenda(formatYYYYMMDD(monday), formatYYYYMMDD(sunday))
+    queryFn: () => getWeeklyAgenda(formatYYYYMMDD(monday), formatYYYYMMDD(sunday)),
+    placeholderData: keepPreviousData
   });
 
   const sortedWeeklyActivities = React.useMemo(() => {
@@ -518,15 +545,67 @@ export const SalesDashboard: React.FC = () => {
         
         {/* Agenda Semanal CRM (Timeline Style) */}
         <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex flex-col lg:h-[570px] lg:max-h-[570px] h-[570px]">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 mb-4 shrink-0 gap-2">
-            <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-dts-primary dark:text-white">
-              <Activity size={16} className="text-dts-secondary" />
-              Agenda Semanal CRM
-            </h3>
-            <div className="flex items-center gap-3">
-              <span className="hidden sm:inline text-[11px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wide">
-                Semana del {monday.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} al {sunday.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-              </span>
+          <div className="flex flex-wrap items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 mb-4 shrink-0 gap-2.5">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-dts-primary dark:text-white">
+                <Activity size={16} className="text-dts-secondary" />
+                Agenda Semanal CRM
+              </h3>
+              {sortedWeeklyActivities.length > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/40 text-dts-secondary border border-cyan-200/50 dark:border-cyan-800/40" title={`${sortedWeeklyActivities.length} actividad${sortedWeeklyActivities.length > 1 ? 'es' : ''}`}>
+                  {sortedWeeklyActivities.length}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center flex-wrap gap-2">
+              {/* Selector y Navegación de Semana */}
+              <div className="inline-flex items-center bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/10 rounded-lg p-0.5 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setWeekOffset(prev => prev - 1)}
+                  className="p-1 rounded text-gray-500 hover:text-dts-primary dark:text-gray-400 dark:hover:text-white hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                  title="Semana anterior"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+
+                <div className="px-2 py-0.5 flex items-center gap-1.5 text-[11px] font-semibold text-gray-700 dark:text-gray-200 select-none">
+                  {isFetchingAgenda && <Loader2 size={11} className="animate-spin text-dts-secondary shrink-0" />}
+                  <span className="font-mono text-[11px]">{weekLabel}</span>
+                  <span className={`text-[9.5px] px-1.5 py-0.5 rounded font-medium ${
+                    weekOffset === 0 
+                      ? 'bg-dts-primary/10 text-dts-primary dark:bg-cyan-500/15 dark:text-cyan-300' 
+                      : 'bg-gray-200/70 dark:bg-white/10 text-gray-600 dark:text-gray-300'
+                  }`}>
+                    {relativeWeekLabel}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setWeekOffset(prev => prev + 1)}
+                  className="p-1 rounded text-gray-500 hover:text-dts-primary dark:text-gray-400 dark:hover:text-white hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer"
+                  title="Semana siguiente"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+
+              {/* Botón rápido para volver a hoy si no está en la semana actual */}
+              {weekOffset !== 0 && (
+                <button
+                  type="button"
+                  onClick={() => setWeekOffset(0)}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-dts-secondary hover:text-dts-primary dark:hover:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-200/60 dark:border-cyan-800/50 hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-all cursor-pointer active:scale-95"
+                  title="Volver a la semana actual"
+                >
+                  <RotateCcw size={10} />
+                  <span>Hoy</span>
+                </button>
+              )}
+
+              {/* Botón Exportar Informe */}
               <button
                 type="button"
                 onClick={() => setIsReportModalOpen(true)}
@@ -546,8 +625,24 @@ export const SalesDashboard: React.FC = () => {
               ))}
             </div>
           ) : sortedWeeklyActivities.length === 0 ? (
-            <div className="text-xs text-gray-400 dark:text-gray-500 italic py-10 bg-gray-50/50 dark:bg-white/2 border border-dashed border-gray-250 dark:border-white/5 rounded-xl text-center flex-1 flex items-center justify-center">
-              No hay actividades comerciales registradas para esta semana.
+            <div className="text-xs text-gray-400 dark:text-gray-500 italic py-10 bg-gray-50/50 dark:bg-white/2 border border-dashed border-gray-250 dark:border-white/5 rounded-xl text-center flex-1 flex flex-col items-center justify-center gap-2.5">
+              <span>
+                {weekOffset < 0
+                  ? 'No hubo actividades comerciales registradas en esta semana.'
+                  : weekOffset > 0
+                  ? 'No hay actividades comerciales planificadas para esta semana.'
+                  : 'No hay actividades comerciales registradas para esta semana.'}
+              </span>
+              {weekOffset !== 0 && (
+                <button
+                  type="button"
+                  onClick={() => setWeekOffset(0)}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-dts-secondary hover:underline cursor-pointer"
+                >
+                  <RotateCcw size={11} />
+                  <span>Volver a la semana actual</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="relative space-y-4 overflow-y-auto pr-2 scrollbar-thin flex-1 min-h-0">
