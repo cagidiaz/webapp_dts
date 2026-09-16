@@ -74,25 +74,53 @@ export class CrmActivitiesService {
   /**
    * Obtiene las actividades comerciales (agenda) filtradas por usuario, tipos y/o rango de fechas.
    */
-  async getAgenda(params: { userId?: string; startDate?: string; endDate?: string; types?: CrmActivityType[] }) {
-    const { userId, startDate, endDate, types } = params;
+  async getAgenda(params: {
+    requestingUserId: string;
+    salespersonId?: string;
+    startDate?: string;
+    endDate?: string;
+    types?: CrmActivityType[];
+  }) {
+    const { requestingUserId, salespersonId, startDate, endDate, types } = params;
     const whereClause: any = {};
 
-    if (userId) {
-      whereClause.created_by = userId;
+    // 1. Obtener el rol del usuario que realiza la petición desde la base de datos
+    let isAdminOrDireccion = false;
+    if (requestingUserId) {
+      const userProfile = await this.prisma.profiles.findUnique({
+        where: { id: requestingUserId },
+        include: { roles: true },
+      });
+      const roleName = userProfile?.roles?.name?.toUpperCase() || '';
+      isAdminOrDireccion = roleName === 'ADMIN' || roleName === 'DIRECCION' || roleName === 'GERENCIA';
     }
 
+    // 2. Filtro por creador / comercial
+    if (isAdminOrDireccion) {
+      // Si es administrador o gerencia, puede filtrar por un comercial específico o ver todos (consolidado)
+      if (salespersonId && salespersonId.trim() !== '' && salespersonId !== 'all') {
+        whereClause.created_by = salespersonId;
+      }
+    } else {
+      // Un comercial u otro usuario solo puede ver sus propias actividades
+      whereClause.created_by = requestingUserId;
+    }
+
+    // 3. Filtro por tipos de actividades
     if (types && types.length > 0) {
       whereClause.type = { in: types };
     }
 
+    // 4. Filtro por fechas normalizadas (evitando desfases de huso horario en @db.Date)
     if (startDate || endDate) {
       whereClause.due_date = {};
       if (startDate) {
-        whereClause.due_date.gte = new Date(startDate);
+        const cleanStart = startDate.includes('T') ? startDate.split('T')[0] : startDate;
+        whereClause.due_date.gte = new Date(`${cleanStart}T00:00:00.000Z`);
       }
       if (endDate) {
-        whereClause.due_date.lte = new Date(endDate);
+        const cleanEnd = endDate.includes('T') ? endDate.split('T')[0] : endDate;
+        whereClause.due_date.lte = new Date(`${cleanEnd}T23:59:59.999Z`);
       }
     }
 
@@ -116,10 +144,12 @@ export class CrmActivitiesService {
         }
       });
 
-      if (userId) {
-        const syncedActs = activities.filter(a => a.exchange_item_id && a.created_by === userId && a.type !== 'EMAIL');
+      // Purga de eventos eliminados en Outlook si corresponde
+      const purgeUserId = whereClause.created_by || requestingUserId;
+      if (purgeUserId) {
+        const syncedActs = activities.filter(a => a.exchange_item_id && a.created_by === purgeUserId && a.type !== 'EMAIL');
         if (syncedActs.length > 0) {
-          const deletedIds = await this.exchangeSyncService.purgeDeletedCalendarActivities(userId, syncedActs);
+          const deletedIds = await this.exchangeSyncService.purgeDeletedCalendarActivities(purgeUserId, syncedActs);
           if (deletedIds.length > 0) {
             activities = activities.filter(a => !deletedIds.includes(a.id));
           }

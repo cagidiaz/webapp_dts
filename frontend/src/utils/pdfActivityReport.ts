@@ -80,7 +80,7 @@ export const generateActivityReportHtml = (
   const onlineCount = activities.filter(a => a.type === 'VIDEOLLAMADA').length;
   
   const uniqueCompanies = new Set(
-    activities.map(a => a.customer?.company_name || a.client_id).filter(Boolean)
+    activities.map(a => a.customer?.name || a.customer?.company_name || a.client_id).filter(Boolean)
   ).size;
 
   const uniqueContacts = new Set(
@@ -107,12 +107,12 @@ export const generateActivityReportHtml = (
       const capitalizedDate = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
       const timeFormatted = act.time_scheduled ? `${act.time_scheduled.substring(0, 5)} h` : '';
 
-      const companyName = act.customer?.company_name || 'Empresa no especificada';
+      const companyName = act.customer?.name || act.customer?.company_name || 'Empresa no especificada';
       const companyCode = act.client_id ? `(${act.client_id})` : '';
       const companyCity = act.customer?.city ? ` — ${act.customer.city}` : '';
 
       const contactName = act.contact?.name || 'Contacto no vinculado';
-      const contactPosition = act.contact?.position ? ` | ${act.contact.position}` : '';
+      const contactPosition = act.contact?.job_title || act.contact?.position ? ` | ${act.contact.job_title || act.contact.position}` : '';
       const contactEmail = act.contact?.email ? ` (${act.contact.email})` : '';
       const contactPhone = act.contact?.phone_no || act.contact?.mobile_no ? ` · Tel: ${act.contact?.phone_no || act.contact?.mobile_no}` : '';
 
@@ -665,11 +665,11 @@ export const exportActivityReportToExcel = (
       'Hora': act.time_scheduled || '',
       'Tipo Evento': typeConf.label,
       'Comercial': act.creator ? `${act.creator.first_name} ${act.creator.last_name || ''}`.trim() : '',
-      'Empresa': act.customer?.company_name || '',
+      'Empresa': act.customer?.name || act.customer?.company_name || '',
       'Cód. Cliente': act.client_id || '',
       'Ciudad': act.customer?.city || '',
       'Contacto': act.contact?.name || '',
-      'Cargo Contacto': act.contact?.position || '',
+      'Cargo Contacto': act.contact?.job_title || act.contact?.position || '',
       'Email Contacto': act.contact?.email || '',
       'Teléfono Contacto': act.contact?.phone_no || act.contact?.mobile_no || '',
       'Ubicación': act.location || '',

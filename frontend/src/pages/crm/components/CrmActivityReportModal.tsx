@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   X, FileText, Download, Calendar, Users, Video, MapPin, 
-  Filter, Sparkles, Building2, User, Clock, Loader2 
+  Filter, Sparkles, Building2, User, Clock, Loader2, Phone, CheckSquare
 } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { getCrmActivitiesAgenda, getCrmActivityCreators } from '../../../api/crmActivities';
@@ -16,6 +16,13 @@ interface CrmActivityReportModalProps {
 
 type PeriodType = 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'custom';
 
+const formatYYYYMMDD = (d: Date) => {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
   isOpen,
   onClose,
@@ -23,7 +30,7 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
 }) => {
   const { profile } = useAuthStore();
   const userRole = (profile?.roles?.name || '').toUpperCase();
-  const isAdminOrDireccion = userRole === 'ADMIN' || userRole === 'DIRECCION';
+  const isAdminOrDireccion = userRole === 'ADMIN' || userRole === 'DIRECCION' || userRole === 'GERENCIA';
 
   // Período de fechas
   const [periodType, setPeriodType] = useState<PeriodType>('this_week');
@@ -35,8 +42,17 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
     initialSalespersonId || (!isAdminOrDireccion && profile?.id ? profile.id : '')
   );
 
-  // Tipos de eventos seleccionados (por defecto reuniones, videollamadas y visitas)
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(['REUNION', 'VIDEOLLAMADA', 'VISITA']);
+  // Sincronizar initialSalespersonId si cambia o al abrir el modal
+  useEffect(() => {
+    if (initialSalespersonId) {
+      setSelectedSalespersonId(initialSalespersonId);
+    }
+  }, [initialSalespersonId, isOpen]);
+
+  // Tipos de eventos seleccionados (por defecto visitas, reuniones, videollamadas, llamadas y tareas comerciales)
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([
+    'VISITA', 'REUNION', 'VIDEOLLAMADA', 'CALL', 'TASK', 'EVENT'
+  ]);
 
   // Cargar lista de comerciales para el selector
   const { data: creators = [] } = useQuery({
@@ -45,7 +61,7 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
     enabled: isOpen && isAdminOrDireccion,
   });
 
-  // Calcular fechas de inicio y fin según el período seleccionado
+  // Calcular fechas de inicio y fin según el período seleccionado en formato limpio YYYY-MM-DD
   const { startDateStr, endDateStr, periodLabel } = useMemo(() => {
     const now = new Date();
     let start = new Date(now);
@@ -56,42 +72,38 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
       const currentDay = now.getDay();
       const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
       start.setDate(now.getDate() + distanceToMonday);
-      start.setHours(0, 0, 0, 0);
       end = new Date(start);
       end.setDate(start.getDate() + 6);
-      end.setHours(23, 59, 59, 999);
       label = `Esta Semana (${start.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })})`;
     } else if (periodType === 'last_week') {
       const currentDay = now.getDay();
       const distanceToMonday = (currentDay === 0 ? -6 : 1 - currentDay) - 7;
       start.setDate(now.getDate() + distanceToMonday);
-      start.setHours(0, 0, 0, 0);
       end = new Date(start);
       end.setDate(start.getDate() + 6);
-      end.setHours(23, 59, 59, 999);
       label = `Semana Anterior (${start.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })})`;
     } else if (periodType === 'this_month') {
-      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       label = `Este Mes (${start.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })})`;
     } else if (periodType === 'last_month') {
-      start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
-      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      end = new Date(now.getFullYear(), now.getMonth(), 0);
       label = `Mes Anterior (${start.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })})`;
     } else {
       label = customStartDate && customEndDate
         ? `Personalizado (${customStartDate} a ${customEndDate})`
         : 'Período Personalizado';
       return {
-        startDateStr: customStartDate ? `${customStartDate}T00:00:00.000Z` : undefined,
-        endDateStr: customEndDate ? `${customEndDate}T23:59:59.999Z` : undefined,
+        startDateStr: customStartDate || undefined,
+        endDateStr: customEndDate || undefined,
         periodLabel: label,
       };
     }
 
     return {
-      startDateStr: start.toISOString(),
-      endDateStr: end.toISOString(),
+      startDateStr: formatYYYYMMDD(start),
+      endDateStr: formatYYYYMMDD(end),
       periodLabel: label,
     };
   }, [periodType, customStartDate, customEndDate]);
@@ -113,12 +125,15 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
   const toggleType = (type: string) => {
     setSelectedTypes(prev => {
       if (prev.includes(type)) {
-        // Evitar desmarcar todos si solo queda uno
         if (prev.length === 1) return prev;
         return prev.filter(t => t !== type);
       }
       return [...prev, type];
     });
+  };
+
+  const selectAllTypes = () => {
+    setSelectedTypes(['VISITA', 'REUNION', 'VIDEOLLAMADA', 'CALL', 'TASK', 'EVENT']);
   };
 
   // Nombre del comercial seleccionado para el encabezado
@@ -324,10 +339,29 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
 
             {/* Tipos de Eventos */}
             <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
-                <Filter size={13} className="text-dts-secondary" />
-                Tipos de Eventos a Incluir
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                  <Filter size={13} className="text-dts-secondary" />
+                  Tipos de Eventos a Incluir
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAllTypes}
+                    className="text-[10px] text-dts-secondary hover:underline font-semibold"
+                  >
+                    Todos
+                  </button>
+                  <span className="text-gray-300 dark:text-white/20 text-[10px]">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTypes(['VISITA', 'REUNION', 'VIDEOLLAMADA'])}
+                    className="text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-semibold"
+                  >
+                    Solo Reuniones
+                  </button>
+                </div>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -364,6 +398,42 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
                 >
                   <MapPin size={13} />
                   Visita a Cliente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleType('CALL')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border ${
+                    selectedTypes.includes('CALL')
+                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 shadow-sm'
+                      : 'bg-transparent text-gray-400 border-dashed border-gray-300 dark:border-white/10 opacity-60'
+                  }`}
+                >
+                  <Phone size={13} />
+                  Llamada
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleType('TASK')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border ${
+                    selectedTypes.includes('TASK')
+                      ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60 shadow-sm'
+                      : 'bg-transparent text-gray-400 border-dashed border-gray-300 dark:border-white/10 opacity-60'
+                  }`}
+                >
+                  <CheckSquare size={13} />
+                  Tarea Comercial
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleType('EVENT')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border ${
+                    selectedTypes.includes('EVENT')
+                      ? 'bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800/60 shadow-sm'
+                      : 'bg-transparent text-gray-400 border-dashed border-gray-300 dark:border-white/10 opacity-60'
+                  }`}
+                >
+                  <Calendar size={13} />
+                  Evento
                 </button>
               </div>
             </div>
@@ -438,6 +508,14 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
                 ? 'Videollamada' 
                 : act.type === 'VISITA' 
                 ? 'Visita Cliente' 
+                : act.type === 'CALL'
+                ? 'Llamada'
+                : act.type === 'TASK'
+                ? 'Tarea Comercial'
+                : act.type === 'EVENT'
+                ? 'Evento'
+                : act.type === 'NOTE'
+                ? 'Nota'
                 : 'Reunión Presencial';
 
               const creatorName = act.creator
@@ -458,6 +536,12 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
                             ? 'bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60'
                             : act.type === 'VISITA'
                             ? 'bg-cyan-100 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800/60'
+                            : act.type === 'CALL'
+                            ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
+                            : act.type === 'TASK'
+                            ? 'bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60'
+                            : act.type === 'EVENT'
+                            ? 'bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800/60'
                             : 'bg-teal-100 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800/60'
                         }`}
                       >
@@ -465,6 +549,12 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
                           <Video size={11} />
                         ) : act.type === 'VISITA' ? (
                           <MapPin size={11} />
+                        ) : act.type === 'CALL' ? (
+                          <Phone size={11} />
+                        ) : act.type === 'TASK' ? (
+                          <CheckSquare size={11} />
+                        ) : act.type === 'EVENT' ? (
+                          <Calendar size={11} />
                         ) : (
                           <Users size={11} />
                         )}
@@ -489,14 +579,14 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
                   <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-600 dark:text-gray-300">
                     <span className="flex items-center gap-1 text-dts-primary dark:text-white font-bold">
                       <Building2 size={13} className="text-dts-primary dark:text-dts-secondary" />
-                      {act.customer?.name || 'Empresa no asignada'}
+                      {act.customer?.name || act.customer?.company_name || 'Empresa no asignada'}
                     </span>
                     {act.contact && (
                       <span className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
                         <User size={13} className="text-gray-400" />
-                        {act.contact.first_name} {act.contact.last_name || ''}
-                        {act.contact.job_title && (
-                          <span className="text-gray-400 font-normal">({act.contact.job_title})</span>
+                        {act.contact.name || `${act.contact.first_name || ''} ${act.contact.last_name || ''}`.trim() || 'Contacto'}
+                        {(act.contact.job_title || act.contact.position) && (
+                          <span className="text-gray-400 font-normal">({act.contact.job_title || act.contact.position})</span>
                         )}
                       </span>
                     )}

@@ -21,15 +21,14 @@ export class CrmActivitiesController {
     @Query('types') types?: string,
   ) {
     const userId = req.user?.userId;
-    const userRole = req.user?.role?.toUpperCase();
-    const isAdminOrDireccion = userRole === 'ADMIN' || userRole === 'DIRECCION';
 
     const parsedTypes = types
       ? (types.split(',').map((t) => t.trim().toUpperCase()).filter(Boolean) as CrmActivityType[])
       : undefined;
 
     return this.crmActivitiesService.getAgenda({
-      userId: isAdminOrDireccion ? (salespersonId || undefined) : userId,
+      requestingUserId: userId,
+      salespersonId,
       startDate,
       endDate,
       types: parsedTypes,
