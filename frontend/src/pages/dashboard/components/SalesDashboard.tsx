@@ -530,10 +530,10 @@ export const SalesDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsReportModalOpen(true)}
-                className="px-2.5 py-1 text-[11px] font-bold rounded-lg text-white bg-dts-primary hover:bg-[#005e7a] hover:shadow-md dark:bg-dts-secondary dark:text-[#00222e] dark:hover:bg-[#3be3ec] dark:hover:text-black dark:hover:shadow-md dark:hover:shadow-cyan-500/30 flex items-center gap-1.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-700/50 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 hover:border-emerald-300 dark:hover:border-emerald-600 text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
                 title="Exportar informe de eventos y reuniones en PDF o Excel"
               >
-                <FileText size={12} />
+                <FileText size={12} className="shrink-0" />
                 <span>Exportar Informe</span>
               </button>
             </div>
