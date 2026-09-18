@@ -93,12 +93,14 @@ export function exportToXlsx<T extends Record<string, any>>(
     });
   }
 
-  // 8. Auto-fit column widths
+  // 8. Auto-fit column widths (safe against large datasets)
   const colWidths = columns.map((col, colIdx) => {
-    const maxLen = Math.max(
-      col.label.length,
-      ...data.map((row) => String(row[colIdx] ?? '').length)
-    );
+    let maxLen = col.label.length;
+    for (let i = 0; i < data.length; i++) {
+      const cell = data[i]?.[colIdx];
+      const len = cell != null ? String(cell).length : 0;
+      if (len > maxLen) maxLen = len;
+    }
     return { wch: Math.min(maxLen + 4, 50) };
   });
   ws['!cols'] = colWidths;

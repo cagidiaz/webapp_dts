@@ -3,7 +3,7 @@ import { Filter, X } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui/InfoPopover';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { MONTHS } from './budgetShared';
-import type { ProductCategory } from '../../../types/sales';
+import type { ProductCategory } from '../../../api/products';
 
 export interface BudgetFiltersSidebarProps {
   year: number;

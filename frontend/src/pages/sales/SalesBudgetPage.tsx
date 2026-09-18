@@ -17,7 +17,6 @@ import { exportToXlsx } from '../../utils/exportToXlsx';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { formatCurrency, formatNumber } from '../../api/formatters';
-import { InfoPopover } from '../../components/ui';
 import { KPICard, BudgetEvolutionChart } from './components/budgetShared';
 import { BudgetFiltersSidebar } from './components/BudgetFiltersSidebar';
 
@@ -185,8 +184,8 @@ export const SalesBudgetPage: React.FC = () => {
     const columns = [
       { key: 'customerCode', label: 'Código Cliente' },
       { key: 'customerName', label: 'Cliente' },
-      { key: 'facturacion', label: 'Fact. YTD (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
-      { key: 'facturacionAnioAnterior', label: 'Fact. LY (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+      { key: 'facturacion', label: `Fact. ${year} (€)`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+      { key: 'facturacionAnioAnterior', label: `Fact. ${year - 1} (€)`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
       { key: 'objetivo', label: 'Objetivo (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
       { key: 'desviacion', label: 'Desviación (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
       { key: 'desviacionPorcentaje', label: 'Desv. (%)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
@@ -204,7 +203,11 @@ export const SalesBudgetPage: React.FC = () => {
       isNew: false,
     };
 
-    exportToXlsx(result?.rows || [], columns, `ventas_presupuesto_${year}`, totalsRow);
+    const exportRows = (result?.rows || []).filter(
+      (r: any) => r.customerCode !== '99999999' && r.customerCode !== '9999999' && r.customerName !== 'CLIENTE NUEVO'
+    );
+
+    exportToXlsx(exportRows, columns, `ventas_presupuesto_${year}`, totalsRow);
   };
 
   return (
@@ -346,10 +349,10 @@ export const SalesBudgetPage: React.FC = () => {
                       <div className="flex items-center">Cliente {getSortIcon('customerName')}</div>
                     </th>
                     <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
-                      <div className="flex items-center justify-end">Fact. YTD {getSortIcon('facturacion')}</div>
+                      <div className="flex items-center justify-end">Fact. {year} {getSortIcon('facturacion')}</div>
                     </th>
                     <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionAnioAnterior')}>
-                      <div className="flex items-center justify-end">Fact. LY {getSortIcon('facturacionAnioAnterior')}</div>
+                      <div className="flex items-center justify-end">Fact. {year - 1} {getSortIcon('facturacionAnioAnterior')}</div>
                     </th>
                     <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
                       <div className="flex items-center justify-end">Objetivo {getSortIcon('objetivo')}</div>
@@ -423,7 +426,7 @@ export const SalesBudgetPage: React.FC = () => {
 
       {/* Evolution Chart */}
       <BudgetEvolutionChart
-        data={evolutionData}
+        data={evolutionData || []}
         selectedMonths={selectedMonths}
         year={year}
         title={`Evolución Comercial ${year}`}

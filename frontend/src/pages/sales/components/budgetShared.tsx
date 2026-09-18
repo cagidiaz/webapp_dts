@@ -154,15 +154,16 @@ export interface BudgetEvolutionChartProps {
   year: number;
   data: Array<{ month: number; ventas: number; objetivo: number; ventasAnterior?: number }>;
   selectedMonths?: number[];
+  title?: string;
 }
 
-export const BudgetEvolutionChart: React.FC<BudgetEvolutionChartProps> = ({ year, data, selectedMonths = [] }) => {
+export const BudgetEvolutionChart: React.FC<BudgetEvolutionChartProps> = ({ year, data, selectedMonths = [], title }) => {
   const filteredData = (data || []).filter(d => selectedMonths.length === 0 || selectedMonths.includes(d.month));
 
   return (
     <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 h-100 flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider">Evolución Comercial {year}</h3>
+        <h3 className="text-sm font-bold uppercase tracking-wider">{title || `Evolución Comercial ${year}`}</h3>
         <InfoPopover 
           title="Evolución Mensual" 
           description="Comparativa temporal de la facturación frente al presupuesto mes a mes." 
