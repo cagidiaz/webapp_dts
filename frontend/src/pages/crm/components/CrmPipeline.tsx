@@ -66,9 +66,9 @@ export const CrmPipeline: React.FC = () => {
     queryFn: getCustomerSalespersons,
   });
 
-  // Automatically restrict filter to user salesperson code if role is VENTAS/OPERACIONES
+  // Automatically restrict filter to user salesperson code if role is VENTAS/OPERACIONES/PRODUCCION
   const userRole = (profile?.roles?.name || '').toUpperCase();
-  const isCommercial = userRole === 'VENTAS' || userRole === 'OPERACIONES';
+  const isCommercial = userRole === 'VENTAS' || userRole === 'OPERACIONES' || userRole === 'PRODUCCION';
 
   useEffect(() => {
     if (isCommercial && profile?.code) {

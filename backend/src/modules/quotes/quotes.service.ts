@@ -533,8 +533,8 @@ export class QuotesService {
       const userRole = (profile.roles?.name || '').toUpperCase();
       let spCodeFilter = params.salespersonCode;
 
-      // Si el rol es VENTAS u OPERACIONES, forzar filtro de su propio código
-      if (userRole === 'VENTAS' || userRole === 'OPERACIONES') {
+      // Si el rol es VENTAS, OPERACIONES o PRODUCCION, forzar filtro de su propio código
+      if (userRole === 'VENTAS' || userRole === 'OPERACIONES' || userRole === 'PRODUCCION') {
         spCodeFilter = profile.code || 'SIN_CODIGO';
       }
 

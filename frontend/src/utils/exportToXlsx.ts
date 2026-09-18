@@ -30,8 +30,14 @@ export function exportToXlsx<T extends Record<string, any>>(
   const data = rows.map((row) =>
     columns.map((col) => {
       const raw = row[col.key];
-      if (col.format) return col.format(raw, row);
       if (raw === null || raw === undefined) return '';
+      if (col.format) {
+        try {
+          return col.format(raw, row);
+        } catch {
+          return raw;
+        }
+      }
       return raw;
     })
   );
@@ -40,8 +46,14 @@ export function exportToXlsx<T extends Record<string, any>>(
   const totals = totalsRow
     ? columns.map((col) => {
         const raw = totalsRow[col.key];
-        if (col.format && raw !== undefined) return col.format(raw, totalsRow);
         if (raw === null || raw === undefined) return '';
+        if (col.format) {
+          try {
+            return col.format(raw, totalsRow);
+          } catch {
+            return raw;
+          }
+        }
         return raw;
       })
     : null;

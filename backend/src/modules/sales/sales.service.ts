@@ -79,6 +79,63 @@ export class SalesService {
       take: 100, // Limit for safety
     });
   }
+
+  /**
+   * Resuelve de forma unificada la lista de item_no según los filtros de PM, familia, subfamilia y código de producto.
+   * Retorna:
+   * - null: si ningún filtro de producto está activo (sin restricción).
+   * - string[]: lista de item_no que cumplen los filtros (vacío [] si ninguno coincide).
+   */
+  private async resolveItemNos(filters: {
+    pmCode?: string;
+    familyCode?: string;
+    subfamilyCode?: string;
+    productCode?: string;
+  }): Promise<string[] | null> {
+    const { pmCode, familyCode, subfamilyCode, productCode } = filters;
+    const cleanPm = pmCode && String(pmCode).trim() !== '' ? String(pmCode).trim() : undefined;
+    const cleanFamily = familyCode && String(familyCode).trim() !== '' ? String(familyCode).trim() : undefined;
+    const cleanSubfamily = subfamilyCode && String(subfamilyCode).trim() !== '' ? String(subfamilyCode).trim() : undefined;
+    const cleanProduct = productCode && String(productCode).trim() !== '' ? String(productCode).trim() : undefined;
+
+    const hasFilter = Boolean(cleanPm || cleanFamily || cleanSubfamily || cleanProduct);
+    if (!hasFilter) return null;
+
+    let matchingSubfamilies: string[] | null = null;
+    if (cleanPm || cleanFamily || cleanSubfamily) {
+      const catWhere: any = {};
+      if (cleanPm) catWhere.pm_code = cleanPm;
+      if (cleanFamily) catWhere.family_code = cleanFamily;
+      if (cleanSubfamily) catWhere.subfamily_code = cleanSubfamily;
+
+      const matchingCategories = await this.prisma.product_categories.findMany({
+        where: catWhere,
+        select: { subfamily_code: true },
+      });
+      matchingSubfamilies = matchingCategories.map((c) => c.subfamily_code).filter(Boolean) as string[];
+
+      // Si se filtró por categoría y no hay ninguna que coincida, no hay productos posibles
+      if (matchingSubfamilies.length === 0) {
+        return [];
+      }
+    }
+
+    const prodWhere: any = {};
+    if (matchingSubfamilies !== null) {
+      prodWhere.subfamily_code = { in: matchingSubfamilies };
+    }
+    if (cleanProduct) {
+      prodWhere.item_no = { contains: cleanProduct, mode: 'insensitive' };
+    }
+
+    const matchingProducts = await this.prisma.products.findMany({
+      where: prodWhere,
+      select: { item_no: true },
+    });
+
+    return matchingProducts.map((p) => p.item_no);
+  }
+
   /**
    * Obtiene las métricas de rendimiento de ventas vs presupuestos
    */
@@ -127,20 +184,16 @@ export class SalesService {
       docsWhere.customer = { salesperson_code: salespersonCode };
     }
 
-    let itemNos: string[] = [];
-    if (familyCode || subfamilyCode) {
-      const matchingProducts = await this.prisma.products.findMany({
-        where: {
-          subfamily_code: subfamilyCode || undefined,
-          category: familyCode ? { family_code: familyCode } : undefined,
-        },
-        select: { item_no: true },
-      });
-      itemNos = matchingProducts.map((p) => p.item_no);
+    const itemNos = await this.resolveItemNos({ familyCode, subfamilyCode });
+    const hasCategoryFilter = itemNos !== null;
+
+    if (hasCategoryFilter) {
       if (itemNos.length > 0) {
         docsWhere.lines = {
           some: { product_no: { in: itemNos } },
         };
+      } else {
+        docsWhere.document_no = 'NO_DOCS_FOUND';
       }
     }
 
@@ -158,8 +211,8 @@ export class SalesService {
     }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
     if (customerCode) budgetWhere.customer_code = customerCode;
-    if (familyCode || subfamilyCode) {
-      budgetWhere.item_no = { in: itemNos };
+    if (hasCategoryFilter) {
+      budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
     }
 
     // 3. Fechas del año anterior (LYTD)
@@ -173,10 +226,14 @@ export class SalesService {
     if (salespersonCode) {
       prevDocsWhere.customer = { salesperson_code: salespersonCode };
     }
-    if (itemNos.length > 0) {
-      prevDocsWhere.lines = {
-        some: { product_no: { in: itemNos } },
-      };
+    if (hasCategoryFilter) {
+      if (itemNos.length > 0) {
+        prevDocsWhere.lines = {
+          some: { product_no: { in: itemNos } },
+        };
+      } else {
+        prevDocsWhere.document_no = 'NO_DOCS_FOUND';
+      }
     }
 
     const [currentYearDocs, budgetsRaw, prevYearDocs] = await Promise.all([
@@ -187,6 +244,10 @@ export class SalesService {
           document_type: true,
           total_amount_excl_vat: true,
           customer_no: true,
+          lines: (hasCategoryFilter && itemNos.length > 0) ? {
+            where: { product_no: { in: itemNos } },
+            select: { line_amount: true },
+          } : undefined,
         },
       }),
       this.prisma.sales_budgets.groupBy({
@@ -198,9 +259,14 @@ export class SalesService {
         ? this.prisma.sales_documents.findMany({
             where: prevDocsWhere,
             select: {
+              document_no: true,
               document_type: true,
               total_amount_excl_vat: true,
               customer_no: true,
+              lines: (hasCategoryFilter && itemNos.length > 0) ? {
+                where: { product_no: { in: itemNos } },
+                select: { line_amount: true },
+              } : undefined,
             },
           })
         : Promise.resolve([] as any[]),
@@ -214,7 +280,9 @@ export class SalesService {
     const currentSalesByCustomer = new Map<string, number>();
 
     for (const doc of currentYearDocs) {
-      const amt = Number(doc.total_amount_excl_vat) || 0;
+      const amt = (hasCategoryFilter && itemNos.length > 0)
+        ? ((doc as any).lines || []).reduce((sum: number, l: any) => sum + (Number(l.line_amount) || 0), 0)
+        : (Number(doc.total_amount_excl_vat) || 0);
       const isAbono = doc.document_type === 'Abono';
       const isPrepay = doc.document_no.startsWith('PFV');
 
@@ -235,7 +303,9 @@ export class SalesService {
 
     const prevSalesByCustomer = new Map<string, number>();
     for (const doc of prevYearDocs) {
-      const amt = Number(doc.total_amount_excl_vat) || 0;
+      const amt = (hasCategoryFilter && itemNos.length > 0)
+        ? ((doc as any).lines || []).reduce((sum: number, l: any) => sum + (Number(l.line_amount) || 0), 0)
+        : (Number(doc.total_amount_excl_vat) || 0);
       const isAbono = doc.document_type === 'Abono';
       const signedAmt = isAbono ? -amt : amt;
       const cCode = doc.customer_no;
@@ -361,6 +431,7 @@ export class SalesService {
         customerName: 'CLIENTE NUEVO',
         isNew: false,
         facturacion: totalNewClientsSales,
+        facturacionAnioAnterior: 0,
         objetivo: 0,
         desviacion: totalNewClientsSales,
         desviacionPorcentaje: 0,
@@ -668,20 +739,18 @@ export class SalesService {
       budgetWhere.customer_code = { in: customerIds };
     }
 
-    let itemNos: string[] = [];
-    if (familyCode || subfamilyCode) {
-      const matchingProducts = await this.prisma.products.findMany({
-        where: {
-          subfamily_code: subfamilyCode || undefined,
-          category: familyCode ? { family_code: familyCode } : undefined,
-        },
-        select: { item_no: true },
-      });
-      itemNos = matchingProducts.map((p) => p.item_no);
+    const itemNos = await this.resolveItemNos({ familyCode, subfamilyCode });
+    const hasCategoryFilter = itemNos !== null;
+
+    if (hasCategoryFilter) {
       if (itemNos.length > 0) {
         docsWhere.lines = { some: { product_no: { in: itemNos } } };
         prevDocsWhere.lines = { some: { product_no: { in: itemNos } } };
         budgetWhere.item_no = { in: itemNos };
+      } else {
+        docsWhere.document_no = 'NO_DOCS_FOUND';
+        prevDocsWhere.document_no = 'NO_DOCS_FOUND';
+        budgetWhere.item_no = { in: ['NO_PRODUCTS_FOUND'] };
       }
     }
 
@@ -692,6 +761,10 @@ export class SalesService {
           posting_date: true,
           total_amount_excl_vat: true,
           document_type: true,
+          lines: (hasCategoryFilter && itemNos.length > 0) ? {
+            where: { product_no: { in: itemNos } },
+            select: { line_amount: true },
+          } : undefined,
         },
       }),
       this.prisma.sales_budgets.groupBy({
@@ -705,6 +778,10 @@ export class SalesService {
           posting_date: true,
           total_amount_excl_vat: true,
           document_type: true,
+          lines: (hasCategoryFilter && itemNos.length > 0) ? {
+            where: { product_no: { in: itemNos } },
+            select: { line_amount: true },
+          } : undefined,
         },
       }),
     ]);
@@ -719,7 +796,9 @@ export class SalesService {
     salesDocsCurrent.forEach((doc) => {
       if (!doc.posting_date) return;
       const m = new Date(doc.posting_date).getMonth();
-      const amt = Number(doc.total_amount_excl_vat) || 0;
+      const amt = (hasCategoryFilter && itemNos.length > 0)
+        ? ((doc as any).lines || []).reduce((sum: number, l: any) => sum + (Number(l.line_amount) || 0), 0)
+        : (Number(doc.total_amount_excl_vat) || 0);
       const signedAmt = doc.document_type === 'Abono' ? -amt : amt;
       monthsData[m].ventas += signedAmt;
     });
@@ -734,7 +813,9 @@ export class SalesService {
     salesDocsPrev.forEach((doc) => {
       if (!doc.posting_date) return;
       const m = new Date(doc.posting_date).getMonth();
-      const amt = Number(doc.total_amount_excl_vat) || 0;
+      const amt = (hasCategoryFilter && itemNos.length > 0)
+        ? ((doc as any).lines || []).reduce((sum: number, l: any) => sum + (Number(l.line_amount) || 0), 0)
+        : (Number(doc.total_amount_excl_vat) || 0);
       const signedAmt = doc.document_type === 'Abono' ? -amt : amt;
       monthsData[m].ventasAnterior += signedAmt;
     });
@@ -839,37 +920,7 @@ export class SalesService {
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
     // 1. Resolver item_nos según filtros de PM / familia / subfamilia / código producto
-    let itemNos: string[] | null = null;
-
-    if (pmCode || familyCode || subfamilyCode || productCode) {
-      const catWhere: any = {};
-      if (pmCode) catWhere.pm_code = pmCode;
-      if (familyCode) catWhere.family_code = familyCode;
-      if (subfamilyCode) catWhere.subfamily_code = subfamilyCode;
-
-      let matchingSubfamilies: string[] | undefined = undefined;
-      if (pmCode || familyCode || subfamilyCode) {
-        const matchingCategories = await this.prisma.product_categories.findMany({
-          where: catWhere,
-          select: { subfamily_code: true }
-        });
-        matchingSubfamilies = matchingCategories.map(c => c.subfamily_code).filter(Boolean) as string[];
-      }
-
-      const prodWhere: any = {};
-      if (matchingSubfamilies) {
-        prodWhere.subfamily_code = { in: matchingSubfamilies };
-      }
-      if (productCode) {
-        prodWhere.item_no = { contains: productCode, mode: 'insensitive' };
-      }
-
-      const matchingProducts = await this.prisma.products.findMany({
-        where: prodWhere,
-        select: { item_no: true }
-      });
-      itemNos = matchingProducts.map(p => p.item_no);
-    }
+    const itemNos = await this.resolveItemNos({ pmCode, familyCode, subfamilyCode, productCode });
 
     // 2. Where clause para value_entries
     const salesWhere: any = {
@@ -882,7 +933,7 @@ export class SalesService {
       salesWhere.reg_date = { in: await this.getDatesForMonths(year, months, isTodayFilter) };
     }
     if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
-    if (itemNos !== null) salesWhere.item_no = { in: itemNos };
+    if (itemNos !== null) salesWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
 
     // 3. Where clause para sales_budgets
     const budgetWhere: any = {
@@ -892,7 +943,7 @@ export class SalesService {
       budgetWhere.budget_date = { in: await this.getDatesForMonths(year, months, isTodayFilter) };
     }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
-    if (itemNos !== null) budgetWhere.item_no = { in: itemNos };
+    if (itemNos !== null) budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
 
     // 4. Obtener datos agrupados por cliente+producto en paralelo
     const prevYear = year - 1;
@@ -1044,6 +1095,7 @@ export class SalesService {
         customerName: 'CLIENTE NUEVO',
         isNew: false,
         facturacion: totalNewClientsSales,
+        facturacionAnioAnterior: 0,
         objetivo: 0,
         desviacion: totalNewClientsSales,
         desviacionPorcentaje: 0,
@@ -1076,7 +1128,9 @@ export class SalesService {
     // 11. KPIs de pedidos (Cartera + Pend. Facturar)
     const ordersWhere: any = {};
     if (salespersonCode) ordersWhere.customer = { salesperson_code: salespersonCode };
-    if (itemNos !== null && itemNos.length > 0) ordersWhere.item_code = { in: itemNos };
+    if (itemNos !== null) {
+      ordersWhere.item_code = itemNos.length > 0 ? { in: itemNos } : 'NO_PRODUCTS_FOUND';
+    }
 
     const ordersRaw = await this.prisma.sales_orders.findMany({
       where: ordersWhere,
@@ -1163,49 +1217,20 @@ export class SalesService {
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
     // Resolver item_nos
-    let itemNos: string[] | null = null;
-    if (pmCode || familyCode || subfamilyCode || productCode) {
-      const catWhere: any = {};
-      if (pmCode) catWhere.pm_code = pmCode;
-      if (familyCode) catWhere.family_code = familyCode;
-      if (subfamilyCode) catWhere.subfamily_code = subfamilyCode;
-
-      let matchingSubfamilies: string[] | undefined = undefined;
-      if (pmCode || familyCode || subfamilyCode) {
-        const matchingCategories = await this.prisma.product_categories.findMany({
-          where: catWhere,
-          select: { subfamily_code: true }
-        });
-        matchingSubfamilies = matchingCategories.map(c => c.subfamily_code).filter(Boolean) as string[];
-      }
-
-      const prodWhere: any = {};
-      if (matchingSubfamilies) {
-        prodWhere.subfamily_code = { in: matchingSubfamilies };
-      }
-      if (productCode) {
-        prodWhere.item_no = { contains: productCode, mode: 'insensitive' };
-      }
-
-      const matchingProducts = await this.prisma.products.findMany({
-        where: prodWhere,
-        select: { item_no: true }
-      });
-      itemNos = matchingProducts.map(p => p.item_no);
-    }
+    const itemNos = await this.resolveItemNos({ pmCode, familyCode, subfamilyCode, productCode });
 
     const salesWhere: any = {
       document_type: { in: SALES_DOC_TYPES },
       reg_date: { gte: startDate, lte: endDate }
     };
     if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
-    if (itemNos !== null) salesWhere.item_no = { in: itemNos };
+    if (itemNos !== null) salesWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
 
     const budgetWhere: any = {
       budget_date: { gte: startDate, lte: endDate }
     };
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
-    if (itemNos !== null) budgetWhere.item_no = { in: itemNos };
+    if (itemNos !== null) budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
 
     if (search && search.trim() !== '') {
       const matchingCustomers = await this.prisma.customers.findMany({

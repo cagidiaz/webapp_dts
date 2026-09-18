@@ -41,7 +41,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
 
   // Role based filtering
   const userRole = (profile?.roles?.name || '').toUpperCase();
-  const isCommercial = userRole === 'VENTAS' || userRole === 'OPERACIONES';
+  const isCommercial = userRole === 'VENTAS' || userRole === 'OPERACIONES' || userRole === 'PRODUCCION';
 
   useEffect(() => {
     if (isCommercial && profile?.code) {
