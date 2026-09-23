@@ -16,7 +16,8 @@ import {
   ArrowLeft, Phone, Mail, MapPin, Smartphone,
   Linkedin, Edit2, Check, X, Plus, Calendar, Clock, Percent,
   Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users, ExternalLink,
-  Copy, CheckCheck, Laptop, Globe, RefreshCw, Building2, PhoneCall
+  Copy, CheckCheck, Laptop, Globe, RefreshCw, Building2, PhoneCall,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 import { EditActivityModal } from './EditActivityModal';
@@ -759,9 +760,10 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         return dateObj.getTime() < new Date().getTime();
       })();
 
-      const isFinished = Boolean(act.is_completed || isPastDate);
-      const hasConclusions = Boolean(act.conclusions && act.conclusions.trim());
-      const needsConclusions = Boolean(isFinished && !hasConclusions);
+      const isEmail = type === 'email';
+      const isFinished = !isEmail && Boolean(act.is_completed || isPastDate);
+      const hasConclusions = !isEmail && Boolean(act.conclusions && act.conclusions.trim());
+      const needsConclusions = !isEmail && Boolean(isFinished && !hasConclusions);
 
       list.push({
         id: act.id,
@@ -1519,10 +1521,17 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                         <div className="flex flex-wrap items-start justify-between gap-2 border-b border-gray-100 dark:border-white/5 pb-2">
                           <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
                             <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
-                              act.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
+                              act.type !== 'email' && act.done
+                                ? 'line-through text-gray-400'
+                                : 'text-gray-900 dark:text-white'
                             }`}>
                               {act.title}
                             </span>
+                            {act.type === 'email' && act.done && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Correo tramitado / completado">
+                                <Check size={9} className="stroke-3" /> Tramitado
+                              </span>
+                            )}
                             {act.isFinished && (
                               <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold border ${
                                 act.done 
@@ -1542,6 +1551,27 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                 <Check size={9} /> Outlook
                               </span>
                             )}
+                            {act.quoteDocumentNo && (() => {
+                              const matchingQuote = crmQuotes.find((q) => q.document_no === act.quoteDocumentNo);
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (matchingQuote) openQuoteDrawer(matchingQuote);
+                                  }}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-tight border transition-colors shadow-2xs ${
+                                    matchingQuote
+                                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 cursor-pointer'
+                                      : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10'
+                                  }`}
+                                  title={matchingQuote ? `Abrir oferta ${act.quoteDocumentNo}` : `Oferta ${act.quoteDocumentNo}`}
+                                >
+                                  <FileText size={9} className="text-blue-600 dark:text-blue-400" />
+                                  <span>Oferta: {act.quoteDocumentNo}</span>
+                                </button>
+                              );
+                            })()}
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
@@ -1626,12 +1656,48 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                           </div>
                         </div>
 
-                        {/* Descripción */}
-                        {act.description && (
-                          <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-[11px] whitespace-pre-wrap">
-                            {act.description}
-                          </p>
-                        )}
+                        {/* Descripción / Contenido */}
+                        {act.description && (() => {
+                          const isEmail = act.type === 'email';
+                          const isExpanded = expandedEmailIds.has(act.id);
+                          const bodyLines = act.description.split('\n');
+                          const hasMoreThan5Lines = isEmail && (bodyLines.length > 5 || act.description.length > 350);
+                          const visibleText = isEmail && !isExpanded && hasMoreThan5Lines
+                            ? bodyLines.slice(0, 5).join('\n')
+                            : act.description;
+
+                          return (
+                            <div className="space-y-1.5">
+                              <p className={`text-gray-600 dark:text-gray-300 leading-relaxed text-[11px] whitespace-pre-wrap ${
+                                isEmail ? 'font-mono bg-white/40 dark:bg-black/10 p-2 rounded-lg border border-gray-100 dark:border-white/5 break-words' : ''
+                              }`}>
+                                {visibleText}
+                                {isEmail && !isExpanded && hasMoreThan5Lines && '...'}
+                              </p>
+
+                              {isEmail && hasMoreThan5Lines && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleEmailExpansion(act.id);
+                                  }}
+                                  className="text-[10px] font-bold text-dts-secondary hover:text-cyan-600 dark:hover:text-cyan-400 flex items-center gap-1 cursor-pointer transition-colors"
+                                >
+                                  {isExpanded ? (
+                                    <>
+                                      <ChevronUp size={11} /> Mostrar menos
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ChevronDown size={11} /> Ver más (+{Math.max(0, bodyLines.length - 5)} líneas)
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* Bloque Conclusiones */}
                         {act.hasConclusions && (

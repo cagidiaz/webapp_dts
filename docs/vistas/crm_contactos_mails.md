@@ -13,9 +13,11 @@ La vista de detalle de contacto en el CRM (`/crm/contacts/:id`) centraliza la in
   - Al pie del mensaje aparece un botón sutil `Ver más (+N líneas)` que indica cuántas líneas adicionales contiene el cuerpo.
   - Al pulsar, expande el contenido íntegro y conmuta a `Mostrar menos` sin recargar la página.
 - **Formato Monoespaciado y Legible**: El cuerpo del correo se renderiza en bloque estilizado con tipografía monoespaciada para respetar sangrías, tablas de texto y cotizaciones.
+- **Consistencia en Pestaña Timeline**: Esta limitación de 5 líneas con botón de expansión e indicador de oferta se aplica igualmente en la cronología general (**Timeline**) para cualquier actividad de tipo correo, evitando que mensajes extensos desborden la vista secuencial.
+- **Tratamiento de Correos vs Eventos**: Los correos son registros de comunicación sincronizados desde Outlook y no son eventos que caduquen ni requieran conclusiones. En el Timeline, su título se mantiene siempre 100% legible (sin tachados `line-through`), indicando su tramitación mediante un badge nítido y discreto `✓ Tramitado`.
 
 ### 2.2 Vinculación y Badge Interactivo de Oferta Comercial
-- **Identificación de Oferta Asignada**: Si el correo fue vinculado a una cotización (desde el Add-in de Outlook o desde la WebApp), la cabecera de la tarjeta del email presenta un distintivo corporativo azul:
+- **Identificación de Oferta Asignada**: Si el correo fue vinculado a una cotización (desde el Add-in de Outlook o desde la WebApp), la cabecera de la tarjeta del email (tanto en la pestaña de Mails como en el Timeline) presenta un distintivo corporativo:
   ```
   📄 Oferta: OFT-2026-XXXX (Importe €)
   ```
