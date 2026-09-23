@@ -250,6 +250,9 @@ export const SalesDashboard: React.FC = () => {
     prepagosDescontadosFacturar: 0,
     facturasOrdinarias: 0,
     prepagosFacturados: 0,
+    cuentasFacturadas: 0,
+    ventasSinCuentas: 0,
+    ventasProducto: 0,
     abonosDevoluciones: 0,
     carteraVentasBruta: 0,
     prepagosDescontadosCartera: 0,
@@ -347,15 +350,19 @@ export const SalesDashboard: React.FC = () => {
                 color="blue"
                 variant="comparison"
                 isLoading={isLoadingGlobalPerf}
-                subtext1={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
+                subtext1={
+                  (globalPerf?.kpis?.cuentasFacturadas || globalPerf?.kpis?.prepagosFacturados)
+                    ? `(Cuentas: ${formatCurrency(globalPerf?.kpis?.cuentasFacturadas || 0, 0)} · Prepagos: ${formatCurrency(globalPerf?.kpis?.prepagosFacturados || 0, 0)})`
+                    : undefined
+                }
                 infoProps={{
                   title: "Ventas YTD vs Presupuesto YTD (Global)",
-                  description: "Comparativa de facturación real global neta acumulada frente al presupuesto global a fecha de hoy.",
-                  formulas: "Facturas Ordinarias (FV) + Facturas Prepago (PFV) - Facturas Devolución (AAV)",
-                  source: "sales_documents (FV + PFV - AAV)",
+                  description: "Comparativa de facturación real global neta acumulada por documentos (incluye producto y cuentas contables) frente al presupuesto global a fecha de hoy.",
+                  formulas: "Facturas Ordinarias (FV) + Facturas Prepago (PFV/PFC) - Facturas Devolución (AAV)",
+                  source: "sales_documents (FV + Prepagos - AAV)",
                   breakdown: [
                     { label: "Facturas Ordinarias (FV)", value: formatCurrency(globalPerf?.kpis?.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
-                    { label: "Facturas Prepago (PFV)", value: formatCurrency(globalPerf?.kpis?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+                    { label: "Facturas Prepago (PFV/PFC)", value: formatCurrency(globalPerf?.kpis?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
                     { label: "Devoluciones y Abonos (AAV)", value: formatCurrency(globalPerf?.kpis?.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
                     { label: "Total Ventas Netas YTD", value: formatCurrency(globalPerf?.kpis?.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
                   ]
@@ -375,7 +382,11 @@ export const SalesDashboard: React.FC = () => {
                 label1={`${year}:`}
                 label2={`${year-1}:`}
                 isLoading={isLoadingGlobalPerf}
-                subtext1={globalPerf?.kpis?.prepagosFacturados ? `Incluye ${formatCurrency(globalPerf.kpis.prepagosFacturados, 0)} en prepagos` : undefined}
+                subtext1={
+                  (globalPerf?.kpis?.cuentasFacturadas || globalPerf?.kpis?.prepagosFacturados)
+                    ? `(Cuentas: ${formatCurrency(globalPerf?.kpis?.cuentasFacturadas || 0, 0)} · Prepagos: ${formatCurrency(globalPerf?.kpis?.prepagosFacturados || 0, 0)})`
+                    : undefined
+                }
                 infoProps={{
                   title: "Ventas Actual vs Anterior (Global)",
                   description: "Facturación global del ejercicio actual comparada con el mismo periodo del año anterior (hasta hoy).",
@@ -455,14 +466,18 @@ export const SalesDashboard: React.FC = () => {
           type="currency" 
           icon={TrendingUp} 
           isLoading={isLoadingPerf}
-          subtext={kpis.prepagosFacturados ? `Incluye ${formatCurrency(kpis.prepagosFacturados, 0)} en prepagos` : undefined}
+          subtext={
+            (kpis.cuentasFacturadas || kpis.prepagosFacturados)
+              ? `(Cuentas: ${formatCurrency(kpis.cuentasFacturadas || 0, 0)} · Prepagos: ${formatCurrency(kpis.prepagosFacturados || 0, 0)})`
+              : undefined
+          }
           infoProps={{ 
             title: "Facturación Real Comercial",
-            description: "Total de ventas reales acumuladas netas de abonos asignadas al comercial.",
-            formulas: "Facturas Ordinarias (FV) + Prepagos (PFV) - Devoluciones (AAV)",
+            description: "Total de facturación real neta acumulada por documentos asignada al comercial (incluye producto y cuentas contables).",
+            formulas: "Facturas Ordinarias (FV) + Prepagos (PFV/PFC) - Devoluciones (AAV)",
             breakdown: [
-              { label: "Facturas Ordinarias", value: formatCurrency(kpis.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
-              { label: "Facturas Prepago", value: formatCurrency(kpis.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+              { label: "Facturas Ordinarias (FV)", value: formatCurrency(kpis.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: "Facturas Prepago (PFV/PFC)", value: formatCurrency(kpis.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
               { label: "Devoluciones/Abonos", value: formatCurrency(kpis.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
               { label: "Total Real Comercial", value: formatCurrency(kpis.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
             ]
@@ -544,7 +559,7 @@ export const SalesDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Agenda Semanal CRM (Timeline Style) */}
-        <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex flex-col lg:h-[570px] lg:max-h-[570px] h-[570px]">
+        <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex flex-col lg:h-142.5 lg:max-h-142.5 h-142.5">
           <div className="flex flex-wrap items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 mb-4 shrink-0 gap-2.5">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-dts-primary dark:text-white">
@@ -702,7 +717,7 @@ export const SalesDashboard: React.FC = () => {
 
                 return (
                   <div key={act.id} className="flex md:flex-row flex-col gap-2 md:gap-2.5 relative pl-9 md:pl-0 text-xs">
-                    <div className="w-full md:w-18 shrink-0 md:text-right pt-0.5 flex md:flex-col items-center md:items-end gap-2 md:gap-0.5">
+                    <div className="w-full md:w-sidebar-collapsed shrink-0 md:text-right pt-0.5 flex md:flex-col items-center md:items-end gap-2 md:gap-0.5">
                       <span className="font-black text-[11px] md:text-[11.5px] text-dts-secondary uppercase tracking-wider">
                         {new Date(actDateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                       </span>
@@ -842,7 +857,7 @@ export const SalesDashboard: React.FC = () => {
         </div>
 
         {/* Right Column: Top Customers and Top Products stacked vertically */}
-        <div className="flex flex-col gap-5 h-full lg:h-[570px] lg:max-h-[570px] justify-between">
+        <div className="flex flex-col gap-5 h-full lg:h-142.5 lg:max-h-142.5 justify-between">
           {/* Top Customers */}
           <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-5 flex-1 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2 border-b border-gray-100 dark:border-gray-800 pb-2 shrink-0">

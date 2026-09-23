@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
   TrendingUp, Target, DollarSign, Activity, Loader2, Package, Search,
-  PieChart as PieChartIcon, ArrowUpDown, ChevronUp, ChevronDown
+  PieChart as PieChartIcon, ArrowUpDown, ChevronUp, ChevronDown,
+  Building2, Users
 } from 'lucide-react';
 
 import { 
@@ -11,14 +12,15 @@ import {
   getSalesReps,
   getProductFamilies
 } from '../../api';
-import { getSalesBudgetPerformanceExport } from '../../api/salesBudget';
+import { getSalesBudgetPerformanceExport, type SalespersonSummaryRow } from '../../api/salesBudget';
 import { ExportButton } from '../../components/ui';
-import { exportToXlsx } from '../../utils/exportToXlsx';
+import { exportToXlsx, exportMultiSheetToXlsx } from '../../utils/exportToXlsx';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { KPICard, BudgetEvolutionChart } from './components/budgetShared';
 import { BudgetFiltersSidebar } from './components/BudgetFiltersSidebar';
+import { SalespersonPerformanceTable } from './components/SalespersonPerformanceTable';
 
 
 // --- Main Page Component ---
@@ -44,6 +46,7 @@ export const SalesBudgetPage: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('facturacion');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [activeMainTab, setActiveMainTab] = useState<'customers' | 'salespersons'>('customers');
 
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [sidebarHeight, setSidebarHeight] = useState<number>(600);
@@ -128,10 +131,10 @@ export const SalesBudgetPage: React.FC = () => {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   // Derived Data
-  const { tableData, performanceKPIs } = useMemo(() => {
+  const { tableData, performanceKPIs, salespersonSummary } = useMemo(() => {
     const allRows = infiniteData?.pages.flatMap(page => page.rows || []) || [];
     const kpis = infiniteData?.pages[0]?.kpis || { 
-      ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
+      ventas: 0, ventasSinCuentas: 0, cuentasFacturadas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
       carteraVentas: 0, carteraVentasAccounts: 0,
       enviadosFacturar: 0, enviadosFacturarAccounts: 0,
       enviadosFacturarBruto: 0,
@@ -139,11 +142,13 @@ export const SalesBudgetPage: React.FC = () => {
       facturacionNuevos: 0,
       facturasOrdinarias: 0,
       prepagosFacturados: 0,
+      prepagosVivos: 0,
       abonosDevoluciones: 0,
       carteraVentasBruta: 0,
       prepagosDescontadosCartera: 0,
     };
-    return { tableData: allRows, performanceKPIs: kpis };
+    const summary: SalespersonSummaryRow[] = infiniteData?.pages[0]?.salespersonSummary || [];
+    return { tableData: allRows, performanceKPIs: kpis, salespersonSummary: summary };
   }, [infiniteData]);
 
   // selectionTotals removed to use stable absolute totals from performanceKPIs
@@ -170,6 +175,54 @@ export const SalesBudgetPage: React.FC = () => {
   };
 
   const handleExport = async () => {
+    // Si estamos en la pestaña de comerciales, exportamos el resumen de comerciales
+    if (activeMainTab === 'salespersons') {
+      const spColumns = [
+        { key: 'code', label: 'Código' },
+        { key: 'name', label: 'Comercial' },
+        { key: 'productoFacturas', label: `FV Producto (${year})`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'productoAbonos', label: `AAV Producto (${year})`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'facturacion', label: `Fact. Neta Items (${year})`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'facturacionAnioAnterior', label: `Fact. Items (${year - 1})`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'objetivo', label: 'Objetivo (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'desviacion', label: 'Desviación (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'porcentajeCumplimiento', label: '% Cumplimiento', format: (v: number) => Number((Number(v || 0) / 100).toFixed(4)), numFmt: '0.0%' },
+        { key: 'facturacionTotal', label: 'Total Fact. Documental (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'portes', label: 'Portes 624 (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'otrasCuentas', label: 'Otras Ctas GL (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'prepagosVivos', label: 'Prepagos Vivos (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'cartera', label: 'Cartera Pedidos Neta (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'enviadosFacturar', label: 'Pend. Facturar Neto (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'countNuevosClientes', label: 'Nuevos Clientes (Cant)', format: (v: number) => Number(v || 0) },
+        { key: 'facturacionNuevos', label: 'Fact. Nuevos Clientes (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+        { key: 'previsionCierre', label: 'Previsión Cierre (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+      ];
+
+      const spTotalsRow = {
+        code: '',
+        name: 'TOTAL EQUIPO COMERCIAL',
+        productoFacturas: salespersonSummary.reduce((acc, r) => acc + (r.productoFacturas || 0), 0),
+        productoAbonos: salespersonSummary.reduce((acc, r) => acc + (r.productoAbonos || 0), 0),
+        facturacion: salespersonSummary.reduce((acc, r) => acc + (r.facturacion || 0), 0),
+        facturacionAnioAnterior: salespersonSummary.reduce((acc, r) => acc + (r.facturacionAnioAnterior || 0), 0),
+        objetivo: salespersonSummary.reduce((acc, r) => acc + (r.objetivo || 0), 0),
+        desviacion: salespersonSummary.reduce((acc, r) => acc + (r.facturacion || 0) - (r.objetivo || 0), 0),
+        porcentajeCumplimiento: (performanceKPIs.objetivo > 0 ? (salespersonSummary.reduce((acc, r) => acc + (r.facturacion || 0), 0) / performanceKPIs.objetivo) * 100 : 0),
+        facturacionTotal: salespersonSummary.reduce((acc, r) => acc + (r.facturacionTotal || 0), 0),
+        portes: salespersonSummary.reduce((acc, r) => acc + (r.portes || 0), 0),
+        otrasCuentas: salespersonSummary.reduce((acc, r) => acc + (r.otrasCuentas || 0), 0),
+        prepagosVivos: salespersonSummary.reduce((acc, r) => acc + (r.prepagosVivos || 0), 0),
+        cartera: salespersonSummary.reduce((acc, r) => acc + (r.cartera || 0), 0),
+        enviadosFacturar: salespersonSummary.reduce((acc, r) => acc + (r.enviadosFacturar || 0), 0),
+        countNuevosClientes: salespersonSummary.reduce((acc, r) => acc + (r.countNuevosClientes || 0), 0),
+        facturacionNuevos: salespersonSummary.reduce((acc, r) => acc + (r.facturacionNuevos || 0), 0),
+        previsionCierre: salespersonSummary.reduce((acc, r) => acc + (r.previsionCierre || 0), 0),
+      };
+
+      exportToXlsx(salespersonSummary, spColumns, `rendimiento_comerciales_${year}`, spTotalsRow);
+      return;
+    }
+
     const result = await getSalesBudgetPerformanceExport({
       year,
       months: selectedMonths,
@@ -188,14 +241,54 @@ export const SalesBudgetPage: React.FC = () => {
       { key: 'facturacionAnioAnterior', label: `Fact. ${year - 1} (€)`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
       { key: 'objetivo', label: 'Objetivo (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
       { key: 'desviacion', label: 'Desviación (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
-      { key: 'desviacionPorcentaje', label: 'Desv. (%)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+      {
+        key: 'desviacionPorcentaje',
+        label: 'Desv. (%)',
+        format: (v: number, row: any) => {
+          if (!row.objetivo || Number(row.objetivo) === 0) {
+            return Number(row.facturacion) > 0 ? '-' : 0;
+          }
+          return Number((Number(v || 0) / 100).toFixed(4));
+        },
+        numFmt: '+0.0%;-0.0%;0.0%',
+      },
       { key: 'isNew', label: 'Cliente Nuevo', format: (v: boolean) => v ? 'Sí' : 'No' },
     ];
 
-    const totalsRow = {
+    const allRows = result?.rows || [];
+    const placeholderRow = allRows.find(
+      (r: any) => r.customerCode === '99999999' || r.customerCode === '9999999' || r.customerName === 'CLIENTE NUEVO'
+    );
+    const regularRows = allRows.filter(
+      (r: any) => !r.isNew && r.customerCode !== '99999999' && r.customerCode !== '9999999' && r.customerName !== 'CLIENTE NUEVO'
+    );
+    const newClientRows = allRows.filter(
+      (r: any) => r.isNew && r.customerCode !== '99999999' && r.customerCode !== '9999999' && r.customerName !== 'CLIENTE NUEVO'
+    );
+    const totalNewClientsSales = newClientRows.reduce((acc, r) => acc + (r.facturacion || 0), 0);
+    const totalNewClientsPrev = newClientRows.reduce((acc, r) => acc + (r.facturacionAnioAnterior || 0), 0);
+    const newClientsBudget = Number(placeholderRow?.objetivo) || 0;
+    const newClientsDev = totalNewClientsSales - newClientsBudget;
+    const newClientsDevPct = newClientsBudget > 0 ? (newClientsDev / newClientsBudget) * 100 : 0;
+
+    // Fila agrupada de clientes nuevos para cuadrar exactamente con el presupuesto en Hoja 1
+    const newClientsSummaryRow = {
+      customerCode: '99999999',
+      customerName: 'CLIENTES NUEVOS (Meta Agrupada - Detalle en Hoja 2)',
+      facturacion: totalNewClientsSales,
+      facturacionAnioAnterior: totalNewClientsPrev,
+      objetivo: newClientsBudget,
+      desviacion: newClientsDev,
+      desviacionPorcentaje: newClientsDevPct,
+      isNew: true,
+    };
+
+    const sheet1Rows = [...regularRows, newClientsSummaryRow];
+
+    const sheet1Totals = {
       customerCode: '',
       customerName: 'TOTALES',
-      facturacion: performanceKPIs.ventas,
+      facturacion: (performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas,
       facturacionAnioAnterior: (performanceKPIs as any).facturacionAnioAnterior || 0,
       objetivo: performanceKPIs.objetivo,
       desviacion: performanceKPIs.desviacionEur,
@@ -203,11 +296,37 @@ export const SalesBudgetPage: React.FC = () => {
       isNew: false,
     };
 
-    const exportRows = (result?.rows || []).filter(
-      (r: any) => r.customerCode !== '99999999' && r.customerCode !== '9999999' && r.customerName !== 'CLIENTE NUEVO'
-    );
+    const newClientsColumns = [
+      { key: 'customerCode', label: 'Código Cliente' },
+      { key: 'customerName', label: 'Cliente Nuevo' },
+      { key: 'facturacion', label: `Fact. ${year} (€)`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+      { key: 'facturacionAnioAnterior', label: `Fact. ${year - 1} (€)`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+    ];
 
-    exportToXlsx(exportRows, columns, `ventas_presupuesto_${year}`, totalsRow);
+    const sheet2Totals = {
+      customerCode: '',
+      customerName: 'TOTAL CLIENTES NUEVOS',
+      facturacion: totalNewClientsSales,
+      facturacionAnioAnterior: totalNewClientsPrev,
+    };
+
+    exportMultiSheetToXlsx(
+      [
+        {
+          sheetName: 'Ventas vs Presupuesto',
+          rows: sheet1Rows,
+          columns,
+          totalsRow: sheet1Totals,
+        },
+        {
+          sheetName: 'Detalle Clientes Nuevos',
+          rows: newClientRows,
+          columns: newClientsColumns,
+          totalsRow: sheet2Totals,
+        },
+      ],
+      `ventas_presupuesto_${year}`
+    );
   };
 
   return (
@@ -220,22 +339,22 @@ export const SalesBudgetPage: React.FC = () => {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6">
         <KPICard 
-          title="Facturación" 
-          value={performanceKPIs.ventas} 
+          title="Facturación (Items)" 
+          value={(performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas} 
           type="currency" 
           icon={TrendingUp} 
           isLoading={isLoadingPerf} 
-          subtext={performanceKPIs.prepagosFacturados ? `Incluye ${formatCurrency(performanceKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
           infoProps={{ 
-            title: "Facturación Neta",
-            description: "Total de ventas reales acumuladas netas (Facturas Ordinarias + Prepagos - Devoluciones/Abonos) para el periodo y filtros actuales.", 
-            formulas: "Facturas Ordinarias (FV) + Facturas Prepago (PFV) - Facturas Devolución (AAV)",
-            source: "sales_documents (FV + PFV - AAV)",
+            title: "Facturación de Productos (Sin Cuentas GL)",
+            description: "Total de ventas reales netas de producto (líneas Item) acumuladas. Se toma exclusivamente la venta de producto para compararse de forma homogénea con el presupuesto anual. Los prepagos vivos pendientes de entrega y las líneas de cuentas contables se detallan a título informativo.", 
+            formulas: "Líneas de Producto Facturadas (FV) - Abonos de Producto (AAV)",
+            source: "sales_document_lines (Item)",
             breakdown: [
-              { label: "Facturas Ordinarias (FV)", value: formatCurrency(performanceKPIs.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
-              { label: "Facturas Prepago (PFV)", value: formatCurrency(performanceKPIs.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
-              { label: "Devoluciones y Abonos (AAV)", value: formatCurrency(performanceKPIs.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
-              { label: "Total Facturación Neta", value: formatCurrency(performanceKPIs.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
+              { label: "Venta Neta de Producto (Item)", value: formatCurrency((performanceKPIs as any).ventasSinCuentas || 0), sign: 'i', color: 'text-dts-primary dark:text-white font-bold' },
+              { label: "Portes y Transportes (Cuenta 624)", value: formatCurrency((performanceKPIs as any).portesFacturados || 0), sign: 'i', color: 'text-amber-600 dark:text-amber-400 font-semibold' },
+              { label: "Otras Cuentas Contables (GL)", value: formatCurrency((performanceKPIs as any).otrasCuentasFacturadas || 0), sign: 'i', color: 'text-violet-600 dark:text-violet-400 font-semibold' },
+              { label: "Prepagos Vivos Pendientes de Facturar (PFV)", value: formatCurrency((performanceKPIs as any).prepagosVivos ?? 0), sign: 'i', color: 'text-cyan-600 dark:text-cyan-400 font-semibold' },
+              { label: "Total Facturación Documental", value: formatCurrency(performanceKPIs.ventas || 0), sign: 'i', color: 'text-gray-700 dark:text-gray-200 font-semibold' },
             ]
           }} 
         />
@@ -309,25 +428,56 @@ export const SalesBudgetPage: React.FC = () => {
           {/* Table Toolbar - Joined */}
           <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="w-full max-w-md relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  {isFetchingPerf && debouncedSearch ? (
-                    <Loader2 size={16} className="animate-spin text-dts-secondary" />
-                  ) : (
-                    <Search size={16} />
-                  )}
-                </div>
-                <input 
-                  type="text" 
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-sm" 
-                  placeholder="Buscar cliente por nombre o código..." 
-                  value={searchTerm} 
-                  onChange={(e) => setSearchTerm(e.target.value)} 
-                />
-              </div>
               
-              <div className="flex items-center gap-2">
-                {searchTerm && (
+              {/* Tab Selector Principal */}
+              <div className="flex items-center gap-1.5 p-1 bg-gray-200/60 dark:bg-gray-800/80 rounded-lg shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveMainTab('customers')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    activeMainTab === 'customers'
+                      ? 'bg-white dark:bg-dts-primary text-dts-primary dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Building2 size={14} className={activeMainTab === 'customers' ? 'text-dts-secondary' : ''} />
+                  <span>Por Clientes</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMainTab('salespersons')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    activeMainTab === 'salespersons'
+                      ? 'bg-white dark:bg-dts-primary text-dts-primary dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Users size={14} className={activeMainTab === 'salespersons' ? 'text-dts-secondary' : ''} />
+                  <span>{isSalesperson ? 'Mi Rendimiento' : 'Por Comercial'}</span>
+                </button>
+              </div>
+
+              {activeMainTab === 'customers' && (
+                <div className="w-full max-w-md relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    {isFetchingPerf && debouncedSearch ? (
+                      <Loader2 size={16} className="animate-spin text-dts-secondary" />
+                    ) : (
+                      <Search size={16} />
+                    )}
+                  </div>
+                  <input 
+                    type="text" 
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-sm" 
+                    placeholder="Buscar cliente por nombre o código..." 
+                    value={searchTerm} 
+                    onChange={(e) => setSearchTerm(e.target.value)} 
+                  />
+                </div>
+              )}
+              
+              <div className="flex items-center gap-2 ml-auto">
+                {activeMainTab === 'customers' && searchTerm && (
                   <button 
                     onClick={() => setSearchTerm('')}
                     className="px-3 py-1.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-lg transition-colors border border-dts-secondary/20"
@@ -340,8 +490,23 @@ export const SalesBudgetPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto custom-scrollbar relative">
-            <table className="w-full text-left text-sm border-separate border-spacing-0 table-fixed">
+          {activeMainTab === 'salespersons' ? (
+            <div className="flex-1 overflow-hidden">
+              <SalespersonPerformanceTable
+                data={salespersonSummary}
+                year={year}
+                isLoading={isLoadingPerf}
+                isSalesperson={isSalesperson}
+                onSelectSalesperson={(code) => {
+                  setSalespersonFilter(code);
+                  setActiveMainTab('customers');
+                }}
+                selectedSalespersonCode={salespersonFilter}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 overflow-auto custom-scrollbar relative">
+              <table className="w-full text-left text-sm border-separate border-spacing-0 table-fixed">
 
                 <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
                   <tr>
@@ -368,18 +533,36 @@ export const SalesBudgetPage: React.FC = () => {
                    : tableData.length === 0 ? 
                     <tr><td colSpan={5} className="py-20 text-center text-gray-400 opacity-60">Sin datos de rendimiento para los filtros aplicados</td></tr>
                    : 
-                    tableData.map((row, idx) => (
-                      <tr key={`${row.customerCode}-${idx}`} className={`transition-colors ${row.isNew ? 'bg-emerald-50/30 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50/80 dark:hover:bg-white/5'}`}>
+                    tableData.map((row, idx) => {
+                      const isPlaceholderNew = row.customerCode === '99999999' || row.customerName === 'CLIENTE NUEVO' || (row as any).excludeFacturacionFromTotal;
+                      return (
+                      <tr key={`${row.customerCode}-${idx}`} className={`transition-colors ${isPlaceholderNew ? 'bg-indigo-50/40 dark:bg-indigo-950/20 border-l-2 border-indigo-500' : row.isNew ? 'bg-emerald-50/30 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50/80 dark:hover:bg-white/5'}`}>
                         <td className="px-6 py-3 font-medium">
                           <div className="flex flex-col truncate">
                             <div className="flex items-center gap-2 truncate">
                               <span className="truncate" title={row.customerName}>{row.customerName}</span>
-                              {row.isNew && <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 animate-pulse uppercase">Nuevo</span>}
+                              {isPlaceholderNew ? (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 uppercase" title="Objetivo de captación global para clientes nuevos. No suma al total para no duplicar con sus clientes individuales.">
+                                  Meta Agrupada
+                                </span>
+                              ) : row.isNew ? (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 animate-pulse uppercase">Nuevo</span>
+                              ) : null}
+                              {Boolean(row.prepagos && row.prepagos > 0) && (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-cyan-100 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/40" title={`Prepago vivo pendiente de facturar: ${formatCurrency(row.prepagos!, 2)}`}>
+                                  Prepago: {formatCurrency(row.prepagos!, 0)}
+                                </span>
+                              )}
                             </div>
                             <span className="text-[10px] font-mono text-gray-400">{row.customerCode}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-3 text-right font-mono">{formatCurrency(row.facturacion, 0)}</td>
+                        <td className="px-6 py-3 text-right font-mono">
+                          <div>{formatCurrency(row.facturacion, 0)}</div>
+                          {isPlaceholderNew && (
+                            <span className="text-[8px] text-gray-400 font-sans block font-normal leading-tight">(Agrupado)</span>
+                          )}
+                        </td>
                         <td className="px-6 py-3 text-right font-mono text-gray-400">{(row as any).facturacionAnioAnterior ? formatCurrency((row as any).facturacionAnioAnterior, 0) : '-'}</td>
                         <td className="px-6 py-3 text-right font-mono">{formatCurrency(row.objetivo, 0)}</td>
                         <td className="px-6 py-3 text-right font-mono">
@@ -391,38 +574,39 @@ export const SalesBudgetPage: React.FC = () => {
                           </div>
                         </td>
                       </tr>
-                    ))
+                    );})
                   }
                   <tr ref={observerTarget}><td colSpan={5} className="py-8 text-center text-gray-400 text-[10px] opacity-60 uppercase tracking-widest">{isFetchingNextPage ? 'Cargando más clientes...' : hasNextPage ? 'Desplázate para cargar más' : 'Fin del listado'}</td></tr>
                 </tbody>
               </table>
             </div>
+          )}
 
-            {/* Fixed Footer Table */}
-            {tableData.length > 0 && (
-              <div className="bg-dts-primary text-white font-bold text-xs uppercase shadow-[0_-5px_15px_rgba(0,0,0,0.2)] border-t border-white/10 z-30">
-                <table className="w-full text-left text-[10px] border-separate border-spacing-0 table-fixed">
-                  <tbody>
-                    <tr className="font-bold">
-                      <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES FILTRADOS</td>
-                      <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.ventas, 0)}</td>
-                      <td className="w-[15%] px-6 py-4 text-right font-mono opacity-60">{(performanceKPIs as any).facturacionAnioAnterior ? formatCurrency((performanceKPIs as any).facturacionAnioAnterior, 0) : '-'}</td>
-                      <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
-                      <td className="w-[15%] px-6 py-4 text-right font-mono">
-                        <div className={performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}>
-                          {performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}
-                        </div>
-                        <div className={`text-[10px] ${performanceKPIs.desviacionPct < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                          {performanceKPIs.desviacionPct > 0 ? '+' : ''}{formatNumber(performanceKPIs.desviacionPct, 1)}%
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          {/* Fixed Footer Table (solo para pestaña clientes) */}
+          {activeMainTab === 'customers' && tableData.length > 0 && (
+            <div className="bg-dts-primary text-white font-bold text-xs uppercase shadow-[0_-5px_15px_rgba(0,0,0,0.2)] border-t border-white/10 z-30">
+              <table className="w-full text-left text-[10px] border-separate border-spacing-0 table-fixed">
+                <tbody>
+                  <tr className="font-bold">
+                    <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES FILTRADOS</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency((performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas, 0)}</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono opacity-60">{(performanceKPIs as any).facturacionAnioAnterior ? formatCurrency((performanceKPIs as any).facturacionAnioAnterior, 0) : '-'}</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono">
+                      <div className={performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}>
+                        {performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}
+                      </div>
+                      <div className={`text-[10px] ${performanceKPIs.desviacionPct < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {performanceKPIs.desviacionPct > 0 ? '+' : ''}{formatNumber(performanceKPIs.desviacionPct, 1)}%
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
+      </div>
 
       {/* Evolution Chart */}
       <BudgetEvolutionChart

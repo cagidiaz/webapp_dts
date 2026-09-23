@@ -14,7 +14,7 @@ import {
   getProductFamilies
 } from '../../api';
 import { ExportButton } from '../../components/ui';
-import { exportToXlsx } from '../../utils/exportToXlsx';
+import { exportMultiSheetToXlsx } from '../../utils/exportToXlsx';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { formatCurrency, formatNumber } from '../../api/formatters';
@@ -213,13 +213,28 @@ export const ProductBudgetPage: React.FC = () => {
       sortBy, sortDir,
     });
 
-    // Flatten hierarchy for export (excluyendo cliente fantasma comodín 99999999 / CLIENTE NUEVO)
-    const flatRows: any[] = [];
-    (result?.rows || [])
-      .filter((row: any) => row.customerCode !== '99999999' && row.customerCode !== '9999999' && row.customerName !== 'CLIENTE NUEVO')
-      .forEach(row => {
-        (row.products || []).forEach(prod => {
-        flatRows.push({
+    const allRows = result?.rows || [];
+    const placeholderRow = allRows.find(
+      (r: any) => r.customerCode === '99999999' || r.customerCode === '9999999' || r.customerName === 'CLIENTE NUEVO'
+    );
+    const regularCustomerRows = allRows.filter(
+      (r: any) => !r.isNew && r.customerCode !== '99999999' && r.customerCode !== '9999999' && r.customerName !== 'CLIENTE NUEVO'
+    );
+    const newCustomerRows = allRows.filter(
+      (r: any) => r.isNew && r.customerCode !== '99999999' && r.customerCode !== '9999999' && r.customerName !== 'CLIENTE NUEVO'
+    );
+
+    const totalNewClientsSales = newCustomerRows.reduce((acc, r) => acc + (r.facturacion || 0), 0);
+    const totalNewClientsPrev = newCustomerRows.reduce((acc, r) => acc + (r.facturacionAnioAnterior || 0), 0);
+    const newClientsBudget = Number(placeholderRow?.objetivo) || 0;
+    const newClientsDev = totalNewClientsSales - newClientsBudget;
+    const newClientsDevPct = newClientsBudget > 0 ? (newClientsDev / newClientsBudget) * 100 : 0;
+
+    // 1. Aplanar clientes habituales para la Hoja 1
+    const flatRegularRows: any[] = [];
+    regularCustomerRows.forEach(row => {
+      (row.products || []).forEach(prod => {
+        flatRegularRows.push({
           customerCode: row.customerCode,
           customerName: row.customerName,
           itemNo: prod.itemNo,
@@ -233,6 +248,19 @@ export const ProductBudgetPage: React.FC = () => {
       });
     });
 
+    // Fila agrupada de clientes nuevos para cuadrar exactamente con el presupuesto en Hoja 1
+    flatRegularRows.push({
+      customerCode: '99999999',
+      customerName: 'CLIENTES NUEVOS (Meta Agrupada - Detalle en Hoja 2)',
+      itemNo: 'AGRUPADO',
+      productName: 'Facturación Clientes Nuevos (Detalle en Hoja 2)',
+      facturacion: totalNewClientsSales,
+      facturacionAnioAnterior: totalNewClientsPrev,
+      objetivo: newClientsBudget,
+      desviacion: newClientsDev,
+      desviacionPorcentaje: newClientsDevPct,
+    });
+
     const columns = [
       { key: 'customerCode', label: 'Código Cliente' },
       { key: 'customerName', label: 'Cliente' },
@@ -242,22 +270,78 @@ export const ProductBudgetPage: React.FC = () => {
       { key: 'facturacionAnioAnterior', label: `Fact. ${year - 1} (€)`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
       { key: 'objetivo', label: 'Objetivo (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
       { key: 'desviacion', label: 'Desviación (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
-      { key: 'desviacionPorcentaje', label: 'Desv. (%)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+      {
+        key: 'desviacionPorcentaje',
+        label: 'Desv. (%)',
+        format: (v: number, row: any) => {
+          if (!row.objetivo || Number(row.objetivo) === 0) {
+            return Number(row.facturacion) > 0 ? '-' : 0;
+          }
+          return Number((Number(v || 0) / 100).toFixed(4));
+        },
+        numFmt: '+0.0%;-0.0%;0.0%',
+      },
     ];
 
-    const totalsRow = {
+    const sheet1Totals = {
       customerCode: '',
       customerName: 'TOTALES',
       itemNo: '',
       productName: '',
-      facturacion: performanceKPIs.ventas,
+      facturacion: (performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas,
       facturacionAnioAnterior: (performanceKPIs as any).facturacionAnioAnterior || 0,
       objetivo: performanceKPIs.objetivo,
       desviacion: performanceKPIs.desviacionEur,
       desviacionPorcentaje: performanceKPIs.desviacionPct,
     };
 
-    exportToXlsx(flatRows, columns, `presupuesto_producto_${year}`, totalsRow);
+    // 2. Aplanar clientes nuevos con sus productos para la Hoja 2
+    const flatNewClientRows: any[] = [];
+    newCustomerRows.forEach(row => {
+      (row.products || []).forEach(prod => {
+        flatNewClientRows.push({
+          customerCode: row.customerCode,
+          customerName: row.customerName,
+          itemNo: prod.itemNo,
+          productName: prod.productName,
+          facturacion: prod.facturacion || 0,
+          facturacionAnioAnterior: (prod as any).facturacionAnioAnterior || 0,
+          objetivo: prod.objetivo || 0,
+          desviacion: prod.desviacion || 0,
+          desviacionPorcentaje: prod.desviacionPorcentaje || 0,
+        });
+      });
+    });
+
+    const sheet2Totals = {
+      customerCode: '',
+      customerName: 'TOTAL CLIENTES NUEVOS',
+      itemNo: '',
+      productName: '',
+      facturacion: totalNewClientsSales,
+      facturacionAnioAnterior: totalNewClientsPrev,
+      objetivo: 0,
+      desviacion: totalNewClientsSales,
+      desviacionPorcentaje: 0,
+    };
+
+    exportMultiSheetToXlsx(
+      [
+        {
+          sheetName: 'Presupuesto x Producto',
+          rows: flatRegularRows,
+          columns,
+          totalsRow: sheet1Totals,
+        },
+        {
+          sheetName: 'Detalle Clientes Nuevos',
+          rows: flatNewClientRows,
+          columns,
+          totalsRow: sheet2Totals,
+        },
+      ],
+      `presupuesto_producto_${year}`
+    );
   };
 
   const hasActiveFilters = Boolean(
@@ -270,7 +354,26 @@ export const ProductBudgetPage: React.FC = () => {
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6">
-        <KPICard title="Facturación" value={performanceKPIs.ventas} type="currency" icon={TrendingUp} isLoading={isLoadingPerf} infoProps={{ description: "Total de ventas reales acumuladas (Facturas Ordinarias + Prepagos - Devoluciones/Abonos).", formulas: "Ventas Netas = Facturación - Devoluciones", source: "Tabla de Sales Documents." }} />
+        <KPICard 
+          title="Facturación (Items)" 
+          value={(performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas} 
+          type="currency" 
+          icon={TrendingUp} 
+          isLoading={isLoadingPerf}
+          infoProps={{ 
+            title: "Facturación de Productos (Sin Cuentas GL)",
+            description: "Total de ventas reales netas de catálogo (líneas Item) acumuladas. Se toma exclusivamente la venta de producto para contrastar de forma homogénea con el presupuesto del Product Manager. Los prepagos vivos pendientes de entrega y las cuentas contables se detallan a título informativo.", 
+            formulas: "Ventas Netas de Producto (value_entries)",
+            source: "Movimientos de Valor (Value Entries)",
+            breakdown: [
+              { label: "Venta Neta de Producto (Item)", value: formatCurrency((performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas), sign: 'i', color: 'text-dts-primary dark:text-white font-bold' },
+              { label: "Portes y Transportes (Cuenta 624)", value: formatCurrency((performanceKPIs as any).portesFacturados || 0), sign: 'i', color: 'text-amber-600 dark:text-amber-400 font-semibold' },
+              { label: "Otras Cuentas Contables (GL)", value: formatCurrency((performanceKPIs as any).otrasCuentasFacturadas || 0), sign: 'i', color: 'text-violet-600 dark:text-violet-400 font-semibold' },
+              { label: "Prepagos Vivos Pendientes de Facturar (PFV)", value: formatCurrency((performanceKPIs as any).prepagosVivos ?? 0), sign: 'i', color: 'text-cyan-600 dark:text-cyan-400 font-semibold' },
+              { label: "Total Facturación Documental", value: formatCurrency((performanceKPIs as any).ventas || 0), sign: 'i', color: 'text-gray-700 dark:text-gray-200 font-semibold' },
+            ]
+          }} 
+        />
         <KPICard title="Objetivo" value={performanceKPIs.objetivo} type="currency" icon={Target} isLoading={isLoadingPerf} infoProps={{ description: "Cifra de ventas presupuestada como objetivo para el periodo seleccionado.", objective: "Indica la meta comercial establecida." }} />
         <KPICard title="Desviación" value={performanceKPIs.desviacionEur} type="currency" icon={DollarSign} status={performanceKPIs.desviacionEur >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ description: "Diferencia absoluta entre la facturación real y el objetivo.", formulas: "Ventas Reales - Objetivo Presupuestado" }} />
         <KPICard title="Cumplimiento" value={performanceKPIs.desviacionPct} type="percentage" icon={Activity} status={performanceKPIs.desviacionPct >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ description: "Tasa de cumplimiento del objetivo en porcentaje.", formulas: "(Ventas Reales / Objetivo) * 100" }} />
@@ -373,12 +476,13 @@ export const ProductBudgetPage: React.FC = () => {
                  :
                   tableData.map((row, idx) => {
                     const isExpanded = expandedRows.has(row.customerCode);
+                    const isPlaceholderNew = row.customerCode === '99999999' || row.customerName === 'CLIENTE NUEVO' || (row as any).excludeFacturacionFromTotal;
                     return (
                       <React.Fragment key={`${row.customerCode}-${idx}`}>
                         {/* Customer Row */}
                         <tr
                           onClick={() => toggleExpand(row.customerCode)}
-                          className={`cursor-pointer transition-colors font-semibold ${row.isNew ? 'bg-emerald-50/30 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50/80 dark:hover:bg-white/5'}`}
+                          className={`cursor-pointer transition-colors font-semibold ${isPlaceholderNew ? 'bg-indigo-50/40 dark:bg-indigo-950/20 border-l-2 border-indigo-500' : row.isNew ? 'bg-emerald-50/30 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50/80 dark:hover:bg-white/5'}`}
                         >
                           <td className="px-6 py-3 font-medium">
                             <div className="flex items-center gap-2">
@@ -386,12 +490,28 @@ export const ProductBudgetPage: React.FC = () => {
                               <div className="flex flex-col truncate">
                                 <div className="flex items-center gap-2 truncate">
                                   <span className="truncate font-bold" title={row.customerName}>{row.customerName}</span>
-                                  {row.isNew && <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 animate-pulse uppercase">Nuevo</span>}
+                                  {isPlaceholderNew ? (
+                                    <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 uppercase" title="Objetivo de captación global para clientes nuevos. No suma al total para no duplicar con sus clientes individuales.">
+                                      Meta Agrupada
+                                    </span>
+                                  ) : row.isNew ? (
+                                    <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 animate-pulse uppercase">Nuevo</span>
+                                  ) : null}
+                                  {Boolean(row.prepagos && row.prepagos > 0) && (
+                                    <span className="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-cyan-100 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/40" title={`Prepago vivo pendiente de facturar: ${formatCurrency(row.prepagos!, 2)}`}>
+                                      Prepago: {formatCurrency(row.prepagos!, 0)}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-3 text-right font-mono font-bold">{formatCurrency(row.facturacion, 0)}</td>
+                          <td className="px-6 py-3 text-right font-mono font-bold">
+                            <div>{formatCurrency(row.facturacion, 0)}</div>
+                            {isPlaceholderNew && (
+                              <span className="text-[8px] text-gray-400 font-sans block font-normal leading-tight">(Agrupado)</span>
+                            )}
+                          </td>
                           <td className="px-6 py-3 text-right font-mono text-gray-400">{(row as any).facturacionAnioAnterior ? formatCurrency((row as any).facturacionAnioAnterior, 0) : '-'}</td>
                           <td className="px-6 py-3 text-right font-mono">{formatCurrency(row.objetivo, 0)}</td>
                           <td className="px-6 py-3 text-right font-mono">
@@ -441,7 +561,7 @@ export const ProductBudgetPage: React.FC = () => {
                 <tbody>
                   <tr className="font-bold">
                     <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES FILTRADOS</td>
-                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.ventas, 0)}</td>
+                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency((performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas, 0)}</td>
                     <td className="w-[15%] px-6 py-4 text-right font-mono opacity-60">{(performanceKPIs as any).facturacionAnioAnterior ? formatCurrency((performanceKPIs as any).facturacionAnioAnterior, 0) : '-'}</td>
                     <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
                     <td className="w-[15%] px-6 py-4 text-right font-mono">

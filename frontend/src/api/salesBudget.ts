@@ -18,8 +18,14 @@ export interface SalesBudgetPerformanceFilters {
 
 export interface SalesBudgetPerformanceKPIs {
   ventas: number;
+  ventasSinCuentas?: number;
+  ventasProducto?: number;
   facturasOrdinarias?: number;
   prepagosFacturados?: number;
+  prepagosVivos?: number;
+  cuentasFacturadas?: number;
+  portesFacturados?: number;
+  otrasCuentasFacturadas?: number;
   abonosDevoluciones?: number;
   objetivo: number;
   desviacionEur: number;
@@ -47,13 +53,45 @@ export interface SalesBudgetPerformanceDataRow {
   objetivo: number;
   desviacion: number;
   desviacionPorcentaje: number;
+  prepagos?: number;
   [key: string]: any; // Permite indexación dinámica para ordenación
+}
+
+export interface SalespersonSummaryRow {
+  code: string;
+  name: string;
+  // Producto
+  productoFacturas: number;
+  productoAbonos: number;
+  facturacion: number;
+  facturacionAnioAnterior: number;
+  objetivo: number;
+  desviacion: number;
+  desviacionPorcentaje: number;
+  porcentajeCumplimiento: number;
+  // Contable
+  facturasOrdinarias: number;
+  prepagosFacturados: number;
+  abonos: number;
+  facturacionTotal: number;
+  portes: number;
+  otrasCuentas: number;
+  prepagosVivos: number;
+  // Cartera y previsión
+  cartera: number;
+  enviadosFacturar: number;
+  prepagosDescontados: number;
+  countNuevosClientes: number;
+  facturacionNuevos: number;
+  previsionCierre: number;
+  [key: string]: any;
 }
 
 export interface SalesBudgetPerformanceResponse {
   kpis: SalesBudgetPerformanceKPIs;
   rows: SalesBudgetPerformanceDataRow[];
   total: number;
+  salespersonSummary?: SalespersonSummaryRow[];
 }
 
 export interface SalesBudgetEvolutionRow {

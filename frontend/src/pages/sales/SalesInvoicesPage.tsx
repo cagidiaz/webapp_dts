@@ -194,11 +194,15 @@ export const SalesInvoicesPage: React.FC = () => {
     const yearlyAccountsNegativeTotals: Record<number, number> = {
       2022: 0, 2023: 0, 2024: 0, 2025: 0, 2026: 0
     };
+    const yearlyPrepaymentsTotals: Record<number, number> = {
+      2022: 0, 2023: 0, 2024: 0, 2025: 0, 2026: 0
+    };
     dashboardData.forEach(item => {
       if (item.year >= 2022 && item.year <= 2026 && selectedMonths.includes(item.month)) {
         yearlyTotals[item.year] += item.amount;
         yearlyAccountsPositiveTotals[item.year] += item.accounts_positive_amount || 0;
         yearlyAccountsNegativeTotals[item.year] += item.accounts_negative_amount || 0;
+        yearlyPrepaymentsTotals[item.year] += item.prepayments_amount || 0;
       }
     });
 
@@ -237,6 +241,7 @@ export const SalesInvoicesPage: React.FC = () => {
       yearlyTotals,
       yearlyAccountsPositiveTotals,
       yearlyAccountsNegativeTotals,
+      yearlyPrepaymentsTotals,
       monthlyEvolution,
       salespersonChartData
     };
@@ -686,7 +691,12 @@ export const SalesInvoicesPage: React.FC = () => {
                       {formatCurrency(dashboardCalculations.yearlyTotals[kpi.year], 0)}
                     </h3>
                     <div className="text-[9px] opacity-80 mt-1 italic font-semibold space-y-0.5">
-                      <div>Total Cuentas: {formatCurrency((dashboardCalculations.yearlyAccountsPositiveTotals[kpi.year] || 0) + (dashboardCalculations.yearlyAccountsNegativeTotals[kpi.year] || 0), 0)}</div>
+                      {((dashboardCalculations.yearlyAccountsPositiveTotals[kpi.year] || 0) + (dashboardCalculations.yearlyAccountsNegativeTotals[kpi.year] || 0)) > 0 && (
+                        <div>Cuentas: {formatCurrency((dashboardCalculations.yearlyAccountsPositiveTotals[kpi.year] || 0) + (dashboardCalculations.yearlyAccountsNegativeTotals[kpi.year] || 0), 0)}</div>
+                      )}
+                      {(dashboardCalculations.yearlyPrepaymentsTotals[kpi.year] || 0) > 0 && (
+                        <div>Prepagos: {formatCurrency(dashboardCalculations.yearlyPrepaymentsTotals[kpi.year] || 0, 0)}</div>
+                      )}
                     </div>
                   </div>
                 ))}

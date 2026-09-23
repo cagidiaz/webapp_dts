@@ -106,7 +106,12 @@ export class SalesDocumentsService {
     // Filtrado por categoría de documento (FV, PFV, AAV)
     if (docCategory) {
       if (docCategory === 'PFV') {
-        and.push({ document_no: { startsWith: 'PFV' } });
+        and.push({
+          OR: [
+            { document_no: { startsWith: 'PFV' } },
+            { document_no: { startsWith: 'PFC' } },
+          ]
+        });
       } else if (docCategory === 'FV') {
         and.push({ document_no: { startsWith: 'FV' } });
       } else if (docCategory === 'AAV') {
@@ -465,6 +470,7 @@ export class SalesDocumentsService {
       accounts_amount: number;
       accounts_positive_amount: number;
       accounts_negative_amount: number;
+      prepayments_amount: number;
     }> = {};
 
     const yearlyBreakdown: Record<number, Record<number, {
@@ -477,13 +483,16 @@ export class SalesDocumentsService {
     }>> = {};
 
     documents.forEach(doc => {
-      const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB');
+      const isAbono = doc.document_type?.toLowerCase()?.includes('abono') || doc.document_no?.toUpperCase().startsWith('AB') || doc.document_no?.toUpperCase().startsWith('AAV');
+      const docNoUpper = (doc.document_no || '').toUpperCase();
+      const isPrepay = docNoUpper.startsWith('PFV') || docNoUpper.startsWith('PFC');
       const multiplier = isAbono ? -1 : 1;
       const amount = Number(doc.total_amount_excl_vat || 0) * multiplier;
       
       let accountsAmount = 0;
       let accountsPositiveAmount = 0;
       let accountsNegativeAmount = 0;
+      let prepaymentsAmount = 0;
       
       const date = doc.posting_date ? new Date(doc.posting_date) : null;
       if (!date) return;
@@ -531,6 +540,11 @@ export class SalesDocumentsService {
         });
       }
 
+      // Acumular prepago si el documento es un PFV
+      if (isPrepay && !isAbono) {
+        prepaymentsAmount = amount;
+      }
+
       const customer_no = doc.customer_no;
       const customer_name = doc.customer?.name || 'Desconocido';
       const salesperson_code = doc.customer?.salesperson_code || 'En blanco';
@@ -549,13 +563,15 @@ export class SalesDocumentsService {
           accounts_amount: 0,
           aggregated_positive_amount: 0, // renamed to avoid overlap errors if any
           accounts_positive_amount: 0,
-          accounts_negative_amount: 0
+          accounts_negative_amount: 0,
+          prepayments_amount: 0,
         } as any;
       }
       aggregated[key].amount += amount;
       aggregated[key].accounts_amount += accountsAmount;
       aggregated[key].accounts_positive_amount += accountsPositiveAmount;
       aggregated[key].accounts_negative_amount += accountsNegativeAmount;
+      aggregated[key].prepayments_amount += prepaymentsAmount;
     });
 
     const finalYearlyBreakdown: Record<number, Record<number, {

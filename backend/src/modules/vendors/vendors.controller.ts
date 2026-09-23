@@ -13,6 +13,8 @@ export class VendorsController {
     @Query('take') take?: string,
     @Query('search') search?: string,
     @Query('blocked') blocked?: string,
+    @Query('year') year?: string,
+    @Query('territory') territory?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortDir') sortDir?: 'asc' | 'desc',
   ) {
@@ -22,9 +24,21 @@ export class VendorsController {
       take: take ? parseInt(take, 10) : undefined,
       search,
       blocked: isBlocked,
+      year: year ? parseInt(year, 10) : undefined,
+      territory,
       sortBy,
       sortDir,
     });
+  }
+
+  @Get('map-data')
+  async getMapData(@Query('year') year?: string) {
+    return this.vendorsService.getVendorsMapData(year ? parseInt(year, 10) : undefined);
+  }
+
+  @Get('analytics/:vendorId')
+  async getAnalytics(@Param('vendorId') vendorId: string) {
+    return this.vendorsService.getVendorAnalytics(vendorId);
   }
 
   @Get(':id')
@@ -37,3 +51,4 @@ export class VendorsController {
     return this.vendorsService.getByVendorId(vendorId);
   }
 }
+

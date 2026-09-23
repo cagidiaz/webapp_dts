@@ -236,7 +236,30 @@ export class SalesService {
       }
     }
 
-    const [currentYearDocs, budgetsRaw, prevYearDocs] = await Promise.all([
+    const productSalesWhere: any = {
+      document_type: { in: SALES_DOC_TYPES },
+      reg_date: { in: dates },
+    };
+    if (hasCategoryFilter) {
+      productSalesWhere.item_no = itemNos.length > 0 ? { in: itemNos } : 'NO_PRODUCTS_FOUND';
+    }
+    if (salespersonCode) {
+      productSalesWhere.salesperson_code = salespersonCode;
+    }
+    if (customerCode) {
+      productSalesWhere.source_no = customerCode;
+    }
+
+    const [
+      currentYearDocs, 
+      budgetsRaw, 
+      prevYearDocs, 
+      productSalesAgg, 
+      prevProductSalesAgg,
+      salesRepsList,
+      budgetsByRepRaw,
+      allCustomers
+    ] = await Promise.all([
       this.prisma.sales_documents.findMany({
         where: docsWhere,
         select: {
@@ -244,10 +267,16 @@ export class SalesService {
           document_type: true,
           total_amount_excl_vat: true,
           customer_no: true,
-          lines: (hasCategoryFilter && itemNos.length > 0) ? {
-            where: { product_no: { in: itemNos } },
-            select: { line_amount: true },
-          } : undefined,
+          // Siempre traemos lines con type para poder calcular cuentas contables
+          lines: {
+            select: {
+              type: true,
+              line_amount: true,
+              product_no: true,
+              ...(hasCategoryFilter && itemNos.length > 0 ? { product_no: true } : {}),
+            },
+            ...(hasCategoryFilter && itemNos.length > 0 ? { where: { product_no: { in: itemNos } } } : {}),
+          },
         },
       }),
       this.prisma.sales_budgets.groupBy({
@@ -263,73 +292,237 @@ export class SalesService {
               document_type: true,
               total_amount_excl_vat: true,
               customer_no: true,
-              lines: (hasCategoryFilter && itemNos.length > 0) ? {
-                where: { product_no: { in: itemNos } },
-                select: { line_amount: true },
-              } : undefined,
+              lines: {
+                select: { type: true, line_amount: true, product_no: true },
+                ...(hasCategoryFilter && itemNos.length > 0 ? { where: { product_no: { in: itemNos } } } : {}),
+              },
             },
           })
         : Promise.resolve([] as any[]),
+      this.prisma.value_entries.aggregate({
+        _sum: { sales_amount: true },
+        where: productSalesWhere,
+      }),
+      prevYearDates.length > 0
+        ? this.prisma.value_entries.aggregate({
+            _sum: { sales_amount: true },
+            where: { ...productSalesWhere, reg_date: { in: prevYearDates } },
+          })
+        : Promise.resolve({ _sum: { sales_amount: null } }),
+      this.prisma.sales_reps.findMany({
+        select: { code: true, name: true },
+        orderBy: { code: 'asc' },
+      }),
+      this.prisma.sales_budgets.groupBy({
+        by: ['salesperson_code'],
+        _sum: { monthly_budget: true },
+        where: budgetWhere,
+      }),
+      this.prisma.customers.findMany({
+        select: { client_id: true, name: true, salesperson_code: true, created_at: true },
+      }),
     ]);
+
+    // Mapeo ágil de clientes y comerciales
+    const customerSalespersonMap = new Map<string, string>();
+    const customerIsNewMap = new Map<string, boolean>();
+    const customersDict: Record<string, { name: string; since: Date | null }> = {};
+
+    for (const c of allCustomers) {
+      if (c.salesperson_code) {
+        customerSalespersonMap.set(c.client_id, c.salesperson_code.trim());
+      }
+      const isNew = Boolean(c.created_at && new Date(c.created_at) >= startDate && new Date(c.created_at) <= endDate);
+      customerIsNewMap.set(c.client_id, isNew);
+      customersDict[c.client_id] = { name: c.name, since: c.created_at };
+    }
+
+    // Inicialización del acumulador de rendimiento por comercial
+    const repMap = new Map<string, any>();
+    const getOrCreateRep = (code: string, fallbackName?: string) => {
+      const cleanCode = (code || 'SIN_ASIGNAR').trim();
+      if (!repMap.has(cleanCode)) {
+        const matchedRep = salesRepsList.find(r => r.code?.trim() === cleanCode);
+        repMap.set(cleanCode, {
+          code: cleanCode,
+          name: matchedRep?.name || fallbackName || (cleanCode === 'SIN_ASIGNAR' ? 'Sin Asignar' : cleanCode),
+          productoFacturas: 0,
+          productoAbonos: 0,
+          facturacion: 0,
+          facturacionAnioAnterior: 0,
+          objetivo: 0,
+          desviacion: 0,
+          desviacionPorcentaje: 0,
+          porcentajeCumplimiento: 0,
+          facturasOrdinarias: 0,
+          prepagosFacturados: 0,
+          abonos: 0,
+          facturacionTotal: 0,
+          portes: 0,
+          otrasCuentas: 0,
+          prepagosVivos: 0,
+          cartera: 0,
+          enviadosFacturar: 0,
+          prepagosDescontados: 0,
+          countNuevosClientes: 0,
+          facturacionNuevos: 0,
+          previsionCierre: 0,
+        });
+      }
+      return repMap.get(cleanCode)!;
+    };
+
+    // Pre-cargar todos los comerciales oficiales de la empresa
+    for (const rep of salesRepsList) {
+      if (rep.code) getOrCreateRep(rep.code, rep.name);
+    }
+
+    // Cargar presupuestos por comercial
+    for (const b of budgetsByRepRaw) {
+      const bRep = (b.salesperson_code || '').trim();
+      if (bRep) {
+        const r = getOrCreateRep(bRep);
+        r.objetivo += Number(b._sum?.monthly_budget) || 0;
+      }
+    }
+
+    // Contar nuevos clientes asignados a cada comercial
+    for (const c of allCustomers) {
+      if (c.created_at && new Date(c.created_at) >= startDate && new Date(c.created_at) <= endDate) {
+        const rep = (c.salesperson_code || 'SIN_ASIGNAR').trim();
+        const r = getOrCreateRep(rep);
+        r.countNuevosClientes += 1;
+      }
+    }
 
     // Desglose de facturación actual
     let totalFacturasOrdinarias = 0;
     let totalPrepagosFacturados = 0;
     let totalAbonosDevoluciones = 0;
+    let totalCuentasFacturadas = 0;      // Líneas de tipo G/L Account (excluidas las 438 de prepago)
+    let totalPortesFacturados = 0;       // Líneas de cuentas 624% (portes y transportes)
+    let totalOtrasCuentasFacturadas = 0; // Líneas de cuentas GL distintas de 438 y 624
+    let totalLineasProducto = 0;         // Líneas de tipo Item (netas de abonos)
 
     const currentSalesByCustomer = new Map<string, number>();
 
     for (const doc of currentYearDocs) {
-      const amt = (hasCategoryFilter && itemNos.length > 0)
-        ? ((doc as any).lines || []).reduce((sum: number, l: any) => sum + (Number(l.line_amount) || 0), 0)
-        : (Number(doc.total_amount_excl_vat) || 0);
       const isAbono = doc.document_type === 'Abono';
-      const isPrepay = doc.document_no.startsWith('PFV');
+      const docNoUpper = (doc.document_no || '').toUpperCase();
+      const isPrepay = docNoUpper.startsWith('PFV') || docNoUpper.startsWith('PFC');
+      const multiplier = isAbono ? -1 : 1;
+
+      let amt: number;
+      let cuentasEnDoc = 0;
+      let portesEnDoc = 0;
+      let otrasCuentasEnDoc = 0;
+      let productoEnDoc = 0;
+      let productoFacturasDoc = 0;
+      let productoAbonosDoc = 0;
+
+      if ((doc as any).lines) {
+        for (const line of (doc as any).lines) {
+          const lineTypeLower = (line.type || '').toLowerCase();
+          const lineAmt = Number(line.line_amount) || 0;
+          if (lineTypeLower === 'item') {
+            productoEnDoc += lineAmt * multiplier;
+            if (isAbono) {
+              productoAbonosDoc += lineAmt;
+            } else {
+              productoFacturasDoc += lineAmt;
+            }
+          } else if (lineTypeLower === 'g/l account') {
+            // Excluimos líneas 438 (son los prepagos ya liquidados, no ingresos nuevos)
+            const acctNo = line.product_no || '';
+            if (!acctNo.startsWith('438')) {
+              const effAmt = lineAmt * multiplier;
+              cuentasEnDoc += effAmt;
+              if (acctNo.startsWith('624')) {
+                portesEnDoc += effAmt;
+              } else {
+                otrasCuentasEnDoc += effAmt;
+              }
+            }
+          }
+        }
+      }
+
+      if (hasCategoryFilter && itemNos.length > 0) {
+        amt = productoEnDoc;
+      } else {
+        amt = (Number(doc.total_amount_excl_vat) || 0);
+      }
+
+      totalLineasProducto += productoEnDoc;
 
       if (isAbono) {
-        totalAbonosDevoluciones += amt;
+        totalAbonosDevoluciones += Math.abs(amt);
       } else if (isPrepay) {
         totalPrepagosFacturados += amt;
       } else {
         totalFacturasOrdinarias += amt;
       }
 
-      const signedAmt = isAbono ? -amt : amt;
+      if (!isPrepay) {
+        totalCuentasFacturadas += cuentasEnDoc;
+        totalPortesFacturados += portesEnDoc;
+        totalOtrasCuentasFacturadas += otrasCuentasEnDoc;
+      }
+
       const cCode = doc.customer_no;
       if (cCode) {
-        currentSalesByCustomer.set(cCode, (currentSalesByCustomer.get(cCode) || 0) + signedAmt);
+        currentSalesByCustomer.set(cCode, (currentSalesByCustomer.get(cCode) || 0) + productoEnDoc);
+      }
+
+      // Acumulación por comercial
+      const docRep = (customerSalespersonMap.get(cCode) || 'SIN_ASIGNAR').trim();
+      const repItem = getOrCreateRep(docRep);
+
+      if (isAbono) {
+        repItem.abonos += Math.abs(amt);
+      } else if (isPrepay) {
+        repItem.prepagosFacturados += amt;
+      } else {
+        repItem.facturasOrdinarias += amt;
+      }
+
+      if (!isPrepay) {
+        repItem.portes += portesEnDoc;
+        repItem.otrasCuentas += otrasCuentasEnDoc;
+      }
+
+      repItem.productoFacturas += productoFacturasDoc;
+      repItem.productoAbonos += productoAbonosDoc;
+      repItem.facturacion += productoEnDoc;
+
+      if (customerIsNewMap.get(cCode)) {
+        repItem.facturacionNuevos += productoEnDoc;
       }
     }
 
     const prevSalesByCustomer = new Map<string, number>();
     for (const doc of prevYearDocs) {
-      const amt = (hasCategoryFilter && itemNos.length > 0)
-        ? ((doc as any).lines || []).reduce((sum: number, l: any) => sum + (Number(l.line_amount) || 0), 0)
-        : (Number(doc.total_amount_excl_vat) || 0);
       const isAbono = doc.document_type === 'Abono';
-      const signedAmt = isAbono ? -amt : amt;
+      const multiplier = isAbono ? -1 : 1;
+      let productoEnDocPrev = 0;
+      if ((doc as any).lines) {
+        for (const line of (doc as any).lines) {
+          const lineTypeLower = (line.type || '').toLowerCase();
+          const lineAmt = Number(line.line_amount) || 0;
+          if (hasCategoryFilter && itemNos.length > 0) {
+            productoEnDocPrev += lineAmt * multiplier;
+          } else if (lineTypeLower === 'item') {
+            productoEnDocPrev += lineAmt * multiplier;
+          }
+        }
+      }
       const cCode = doc.customer_no;
       if (cCode) {
-        prevSalesByCustomer.set(cCode, (prevSalesByCustomer.get(cCode) || 0) + signedAmt);
+        prevSalesByCustomer.set(cCode, (prevSalesByCustomer.get(cCode) || 0) + productoEnDocPrev);
+        const prevRep = (customerSalespersonMap.get(cCode) || 'SIN_ASIGNAR').trim();
+        const r = getOrCreateRep(prevRep);
+        r.facturacionAnioAnterior += productoEnDocPrev;
       }
-    }
-
-    // Mejor enfoque para nombres de cliente: extraer IDs
-    const customerIds = new Set<string>();
-    currentSalesByCustomer.forEach((_, cCode) => customerIds.add(cCode));
-    budgetsRaw.forEach((b) => b.customer_code && customerIds.add(b.customer_code));
-    prevSalesByCustomer.forEach((_, cCode) => customerIds.add(cCode));
-
-    let customersDict: Record<string, { name: string; since: Date | null }> = {};
-    if (customerIds.size > 0) {
-      const customers = await this.prisma.customers.findMany({
-        where: { client_id: { in: Array.from(customerIds) } },
-        select: { client_id: true, name: true, created_at: true },
-      });
-      customersDict = customers.reduce((acc, c) => {
-        acc[c.client_id] = { name: c.name, since: c.created_at };
-        return acc;
-      }, {} as Record<string, { name: string; since: Date | null }>);
     }
 
     // 4. Merge data por cliente
@@ -340,7 +533,7 @@ export class SalesService {
       mergedData.set(cCode, {
         customerCode: cCode,
         customerName: cInfo ? cInfo.name : cCode === '99999999' ? 'CLIENTE NUEVO' : cCode,
-        isNew: cInfo?.since ? new Date(cInfo.since).getFullYear() === new Date().getFullYear() : false,
+        isNew: customerIsNewMap.get(cCode) || false,
         salesSum,
         budgetSum: 0,
         prevYearSales: 0,
@@ -355,7 +548,7 @@ export class SalesService {
         mergedData.set(cCode, {
           customerCode: cCode,
           customerName: cInfo ? cInfo.name : cCode === '99999999' ? 'CLIENTE NUEVO' : cCode,
-          isNew: cInfo?.since ? new Date(cInfo.since).getFullYear() === new Date().getFullYear() : false,
+          isNew: customerIsNewMap.get(cCode) || false,
           salesSum: 0,
           budgetSum: 0,
           prevYearSales,
@@ -374,7 +567,7 @@ export class SalesService {
         mergedData.set(bCode, {
           customerCode: bCode,
           customerName: cInfo ? cInfo.name : bCode === '99999999' ? 'CLIENTE NUEVO' : bCode,
-          isNew: cInfo?.since ? new Date(cInfo.since).getFullYear() === new Date().getFullYear() : false,
+          isNew: customerIsNewMap.get(bCode) || false,
           salesSum: 0,
           budgetSum: bSum,
           prevYearSales: 0,
@@ -401,15 +594,10 @@ export class SalesService {
       .reduce((acc, curr) => acc + curr.facturacion, 0);
 
     // Cantidad real de clientes creados en el año actual (independientemente de si tienen ventas)
-    const countNewClients = await this.prisma.customers.count({
-      where: {
-        created_at: {
-          gte: startDate,
-          lte: endDate
-        },
-        ...(salespersonCode ? { salesperson_code: salespersonCode } : {})
-      }
-    });
+    const countNewClients = allCustomers.filter(c => 
+      c.created_at && new Date(c.created_at) >= startDate && new Date(c.created_at) <= endDate &&
+      (!salespersonCode || c.salesperson_code === salespersonCode)
+    ).length;
 
     const countNewClientsWithSales = results.filter(r => r.isNew && r.facturacion > 0).length;
     const countNewClientsNoSales = countNewClients - countNewClientsWithSales;
@@ -481,12 +669,14 @@ export class SalesService {
       filteredResults.sort((a, b) => b.facturacion - a.facturacion);
     }
 
+    const totalProductSales = Number(productSalesAgg._sum.sales_amount) || 0;
+    const totalPrevProductSales = Number(prevProductSalesAgg._sum.sales_amount) || 0;
 
-    const devEuros = totalSales - totalBudget;
-    const devPct = totalBudget > 0 ? (devEuros / totalBudget) * 100 : 0;
+    // Desviación se calcula respecto a la facturación de producto (para comparabilidad con presupuestos)
+    let devEuros = 0;
+    let devPct = 0;
 
     // 7. KPIs adicionales (Pedidos y Pendiente de facturar)
-    // Estos KPIs muestran el total anual según petición del usuario, ignorando el filtro de meses
     const ordersWhere: any = {};
     
     // Filtro por Cliente
@@ -502,7 +692,6 @@ export class SalesService {
       if (itemNos && itemNos.length > 0) {
         ordersWhere.item_code = { in: itemNos };
       } else {
-        // Si se pide filtro pero no hay productos, forzamos vacío
         ordersWhere.item_code = "NO_PRODUCTS_FOUND";
       }
     }
@@ -525,6 +714,8 @@ export class SalesService {
     let totalEnviadoNoFacturado = 0;
     let totalEnviadoNoFacturadoAccounts = 0;
     const ordersByCustomer: Record<string, { shipped: number; cartera: number }> = {};
+    const rawShippedByRep: Record<string, number> = {};
+    const rawCarteraByRep: Record<string, number> = {};
 
     if (ordersRaw && ordersRaw.length > 0) {
       for (const order of ordersRaw) {
@@ -557,97 +748,82 @@ export class SalesService {
           }
           ordersByCustomer[cust].shipped += lineShippedNotInv;
           ordersByCustomer[cust].cartera += lineCartera;
+
+          const rep = (customerSalespersonMap.get(cust) || 'SIN_ASIGNAR').trim();
+          rawShippedByRep[rep] = (rawShippedByRep[rep] || 0) + lineShippedNotInv;
+          rawCarteraByRep[rep] = (rawCarteraByRep[rep] || 0) + lineCartera;
         }
       }
     }
 
-    // Prepagos vivos para descontar:
-    // Consultar facturas PFV del ejercicio ordenadas cronológicamente
-    const pfvWhere: any = {
-      document_no: { startsWith: 'PFV' },
-    };
-    if (customerCode && String(customerCode).trim() !== '') {
-      pfvWhere.customer_no = String(customerCode).trim();
-    } else if (salespersonCode && String(salespersonCode).trim() !== '') {
-      pfvWhere.customer = { salesperson_code: String(salespersonCode).trim() };
-    }
-
-    const pfvs = await this.prisma.sales_documents.findMany({
-      where: pfvWhere,
-      select: {
-        document_no: true,
-        customer_no: true,
-        total_amount_excl_vat: true,
-        posting_date: true,
-      },
-      orderBy: { posting_date: 'asc' },
+    // Prepagos vivos para descontar de pedidos y para métrica informativa de prepagos no facturados
+    const { totalVivo: totalPrepagosVivos, byCustomer: prepaymentsByCustomer } = await this.getAlivePrepayments({
+      customerCode: customerCode ? String(customerCode).trim() : undefined,
+      salespersonCode: salespersonCode ? String(salespersonCode).trim() : undefined,
     });
 
     let totalPrepagosDescontadosFacturar = 0;
     let totalPrepagosDescontadosCartera = 0;
 
-    if (pfvs.length > 0) {
-      const customerCodes = Array.from(new Set(pfvs.map((p) => p.customer_no).filter(Boolean)));
-      const compensaciones = await this.prisma.sales_document_lines.findMany({
-        where: {
-          document: {
-            customer_no: { in: customerCodes },
-            document_no: { startsWith: 'FV' },
-          },
-          product_no: { startsWith: '438' },
-          line_amount: { lt: 0 },
-        },
-        select: {
-          line_amount: true,
-          document: { select: { customer_no: true } },
-        },
-      });
+    const repPrepagosVivos: Record<string, number> = {};
+    const repPrepagosDescontadosFacturar: Record<string, number> = {};
+    const repPrepagosDescontadosCartera: Record<string, number> = {};
 
-      // Compensaciones acumuladas por cliente
-      const compByCustomer: Record<string, number> = {};
-      for (const comp of compensaciones) {
-        const cust = comp.document?.customer_no;
-        if (!cust) continue;
-        compByCustomer[cust] = (compByCustomer[cust] || 0) + Math.abs(Number(comp.line_amount) || 0);
-      }
+    // Descontar cliente a cliente: primero de enviados por facturar y luego de cartera
+    for (const [cust, vivo] of Object.entries(prepaymentsByCustomer)) {
+      const custOrders = ordersByCustomer[cust] || { shipped: 0, cartera: 0 };
 
-      // Asignar en FIFO a las PFVs de cada cliente para calcular saldo vivo
-      const prepaymentsByCustomer: Record<string, number> = {};
-      for (const cust of customerCodes) {
-        let compRestante = compByCustomer[cust] || 0;
-        const custPfvs = pfvs.filter((p) => p.customer_no === cust);
+      const descFacturar = Math.min(vivo, custOrders.shipped);
+      totalPrepagosDescontadosFacturar += descFacturar;
 
-        for (const p of custPfvs) {
-          const amt = Number(p.total_amount_excl_vat) || 0;
-          let saldoVivo = 0;
+      const remanente = vivo - descFacturar;
+      const descCartera = Math.min(remanente, custOrders.cartera);
+      totalPrepagosDescontadosCartera += descCartera;
 
-          if (compRestante >= amt) {
-            compRestante -= amt;
-            saldoVivo = 0;
-          } else if (compRestante > 0) {
-            saldoVivo = amt - compRestante;
-            compRestante = 0;
-          } else {
-            saldoVivo = amt;
-          }
+      const rep = (customerSalespersonMap.get(cust) || 'SIN_ASIGNAR').trim();
+      repPrepagosVivos[rep] = (repPrepagosVivos[rep] || 0) + vivo;
+      repPrepagosDescontadosFacturar[rep] = (repPrepagosDescontadosFacturar[rep] || 0) + descFacturar;
+      repPrepagosDescontadosCartera[rep] = (repPrepagosDescontadosCartera[rep] || 0) + descCartera;
+    }
 
-          if (saldoVivo > 0.01) {
-            prepaymentsByCustomer[cust] = (prepaymentsByCustomer[cust] || 0) + saldoVivo;
-          }
-        }
-      }
+    // Inyectar prepagos vivos por cliente en cada fila de la tabla
+    filteredResults.forEach((r: any) => {
+      r.prepagos = prepaymentsByCustomer[r.customerCode] || 0;
+    });
 
-      // Descontar cliente a cliente: primero de enviados por facturar y luego de cartera
-      for (const [cust, vivo] of Object.entries(prepaymentsByCustomer)) {
-        const custOrders = ordersByCustomer[cust] || { shipped: 0, cartera: 0 };
+    // Cerrar métricas consolidadas por comercial
+    repMap.forEach((r, repCode) => {
+      const pVivo = repPrepagosVivos[repCode] || 0;
+      const pDescFact = repPrepagosDescontadosFacturar[repCode] || 0;
+      const pDescCart = repPrepagosDescontadosCartera[repCode] || 0;
 
-        const descFacturar = Math.min(vivo, custOrders.shipped);
-        totalPrepagosDescontadosFacturar += descFacturar;
+      r.prepagosVivos = pVivo;
+      r.prepagosDescontados = pDescFact + pDescCart;
 
-        const remanente = vivo - descFacturar;
-        const descCartera = Math.min(remanente, custOrders.cartera);
-        totalPrepagosDescontadosCartera += descCartera;
-      }
+      const rawShipped = rawShippedByRep[repCode] || 0;
+      const rawCart = rawCarteraByRep[repCode] || 0;
+
+      r.enviadosFacturar = Math.max(0, rawShipped - pDescFact);
+      r.cartera = Math.max(0, rawCart - pDescCart);
+
+      r.facturacionTotal = r.facturasOrdinarias + r.prepagosFacturados - r.abonos;
+      r.desviacion = r.facturacion - r.objetivo;
+      r.desviacionPorcentaje = r.objetivo > 0 ? (r.desviacion / r.objetivo) * 100 : 0;
+      r.porcentajeCumplimiento = r.objetivo > 0 ? (r.facturacion / r.objetivo) * 100 : 0;
+      r.previsionCierre = r.facturacion + r.cartera + r.enviadosFacturar;
+    });
+
+    let salespersonSummary = Array.from(repMap.values());
+    if (salespersonCode) {
+      salespersonSummary = salespersonSummary.filter(r => r.code === salespersonCode.trim());
+    } else {
+      // Filtrar comerciales con actividad o presupuesto
+      salespersonSummary = salespersonSummary.filter(r => 
+        r.facturacion !== 0 || r.objetivo !== 0 || r.cartera !== 0 || 
+        r.enviadosFacturar !== 0 || r.facturasOrdinarias !== 0 || 
+        r.facturacionAnioAnterior !== 0 || r.countNuevosClientes !== 0
+      );
+      salespersonSummary.sort((a, b) => b.facturacion - a.facturacion);
     }
 
     const totalCarteraBruta = totalCartera;
@@ -659,11 +835,31 @@ export class SalesService {
     const totalEnviadoNoFacturadoAccountsNeto = Math.min(totalEnviadoNoFacturadoAccounts, totalEnviadoNoFacturadoNeto);
     const totalCarteraAccountsNeta = Math.min(totalCarteraAccounts, totalCarteraNeta);
 
+    // Total de facturación neta que incluye cuentas y prepagos, y deduce devoluciones y abonos (para Panel Gerencia/Comercial)
+    const totalFacturacionConCuentas = totalFacturasOrdinarias + totalPrepagosFacturados - totalAbonosDevoluciones;
+    // Ventas de producto puras (para Panel Presupuestos: productos netos de líneas Item)
+    const totalVentasSinCuentas = totalLineasProducto > 0 ? totalLineasProducto : (totalFacturacionConCuentas - totalCuentasFacturadas);
+
+    // Para los KPIs de presupuesto usamos value_entries (excluye cuentas por definición)
+    // y lo contrastamos con la cifra sin cuentas de sales_documents
+    const ventasParaPresupuestos = hasCategoryFilter ? totalProductSales : totalVentasSinCuentas;
+    devEuros = ventasParaPresupuestos - totalBudget;
+    devPct = totalBudget > 0 ? (devEuros / totalBudget) * 100 : 0;
+
     return {
       kpis: {
-        ventas: totalSales,
+        // Cifra total que incluye cuentas + prepagos (Gerencia/Comercial)
+        ventas: totalFacturacionConCuentas,
+        // Cifra de producto puro sin cuentas GL (para presupuestos y comparativas puras de producto)
+        ventasSinCuentas: totalVentasSinCuentas,
+        ventasProducto: totalLineasProducto,
+        // Desglose de documentos reales de facturación (cabeceras sin deducciones artificiales)
         facturasOrdinarias: totalFacturasOrdinarias,
         prepagosFacturados: totalPrepagosFacturados,
+        prepagosVivos: totalPrepagosVivos,
+        cuentasFacturadas: totalCuentasFacturadas,
+        portesFacturados: totalPortesFacturados,
+        otrasCuentasFacturadas: totalOtrasCuentasFacturadas,
         abonosDevoluciones: totalAbonosDevoluciones,
         objetivo: totalBudget,
         desviacionEur: devEuros,
@@ -679,11 +875,12 @@ export class SalesService {
         facturacionNuevos: totalNewClientsSales,
         countNuevos: countNewClients,
         countNuevosSinVenta: countNewClientsNoSales,
-        facturacionAnioAnterior: totalPrevYear,
+        facturacionAnioAnterior: totalPrevProductSales,
       },
 
       rows: filteredResults.slice(skip ? Number(skip) : 0, take ? (Number(skip) || 0) + Number(take) : undefined),
-      total: filteredResults.length
+      total: filteredResults.length,
+      salespersonSummary,
     };
   }
 
@@ -894,7 +1091,8 @@ export class SalesService {
 
   /**
    * Rendimiento de presupuestos agrupado por producto dentro de cada cliente.
-   * Retorna estructura jerárquica: cliente → productos
+   * Retorna estructura jerárquica: cliente → productos, consumiendo sales_documents y sales_document_lines
+   * para homogeneidad total con la vista de Ventas vs Presupuestos.
    */
   async getProductBudgetPerformance(filters: {
     year: number;
@@ -921,131 +1119,267 @@ export class SalesService {
 
     // 1. Resolver item_nos según filtros de PM / familia / subfamilia / código producto
     const itemNos = await this.resolveItemNos({ pmCode, familyCode, subfamilyCode, productCode });
+    const hasProductFilter = itemNos !== null;
+    const itemNosSet = hasProductFilter && itemNos.length > 0 ? new Set(itemNos) : null;
 
-    // 2. Where clause para value_entries
-    const salesWhere: any = {
-      document_type: { in: SALES_DOC_TYPES },
-      reg_date: { gte: startDate, lte: endDate },
-    };
-
+    // 2. Fechas del periodo
     const isTodayFilter = limitToToday || false;
-    if (months && months.length > 0) {
-      salesWhere.reg_date = { in: await this.getDatesForMonths(year, months, isTodayFilter) };
-    }
-    if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
-    if (itemNos !== null) salesWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
+    const dates = await this.getDatesForMonths(year, months, isTodayFilter);
 
-    // 3. Where clause para sales_budgets
+    // 3. Where clause para sales_documents (año actual)
+    const docsWhere: any = {
+      posting_date: { in: dates },
+    };
+    if (salespersonCode) docsWhere.customer = { salesperson_code: salespersonCode };
+    if (hasProductFilter) {
+      if (itemNos.length > 0) {
+        docsWhere.lines = {
+          some: { product_no: { in: itemNos }, type: { equals: 'Item', mode: 'insensitive' } },
+        };
+      } else {
+        docsWhere.document_no = 'NO_DOCS_FOUND';
+      }
+    }
+
+    // 4. Where clause para sales_budgets
     const budgetWhere: any = {
       budget_date: { gte: startDate, lte: endDate },
     };
     if (months && months.length > 0) {
-      budgetWhere.budget_date = { in: await this.getDatesForMonths(year, months, isTodayFilter) };
+      budgetWhere.budget_date = { in: dates };
     }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
-    if (itemNos !== null) budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
+    if (hasProductFilter) {
+      budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
+    }
 
-    // 4. Obtener datos agrupados por cliente+producto en paralelo
+    // 5. Fechas y Where clause del año anterior (LYTD)
     const prevYear = year - 1;
     const prevYearDates = await this.getDatesForMonths(prevYear, months, isTodayFilter);
 
-    const [salesRaw, budgetsRaw, prevYearSalesRaw] = await Promise.all([
-      this.prisma.value_entries.groupBy({
-        by: ['source_no', 'item_no'],
-        _sum: { sales_amount: true },
-        where: salesWhere,
+    const prevDocsWhere: any = {
+      posting_date: { in: prevYearDates },
+    };
+    if (salespersonCode) prevDocsWhere.customer = { salesperson_code: salespersonCode };
+    if (hasProductFilter) {
+      if (itemNos.length > 0) {
+        prevDocsWhere.lines = {
+          some: { product_no: { in: itemNos }, type: { equals: 'Item', mode: 'insensitive' } },
+        };
+      } else {
+        prevDocsWhere.document_no = 'NO_DOCS_FOUND';
+      }
+    }
+
+    // 6. Consultas concurrentes en base de datos
+    const [currentYearDocs, budgetsRaw, prevYearDocs] = await Promise.all([
+      this.prisma.sales_documents.findMany({
+        where: docsWhere,
+        select: {
+          document_no: true,
+          document_type: true,
+          total_amount_excl_vat: true,
+          customer_no: true,
+          lines: {
+            select: {
+              type: true,
+              line_amount: true,
+              product_no: true,
+            },
+          },
+        },
       }),
       this.prisma.sales_budgets.groupBy({
         by: ['customer_code', 'item_no'],
         _sum: { monthly_budget: true },
         where: budgetWhere,
       }),
-      prevYearDates.length > 0 
-        ? this.prisma.value_entries.groupBy({
-            by: ['source_no', 'item_no'],
-            _sum: { sales_amount: true },
-            where: { ...salesWhere, reg_date: { in: prevYearDates } },
+      prevYearDates.length > 0
+        ? this.prisma.sales_documents.findMany({
+            where: prevDocsWhere,
+            select: {
+              document_no: true,
+              document_type: true,
+              total_amount_excl_vat: true,
+              customer_no: true,
+              lines: {
+                select: {
+                  type: true,
+                  line_amount: true,
+                  product_no: true,
+                },
+              },
+            },
           })
-        : Promise.resolve([] as any[])
+        : Promise.resolve([] as any[]),
     ]);
 
-    // 5. Recopilar IDs únicos de clientes y productos
-    const customerIds = new Set<string>();
-    const productIds = new Set<string>();
+    // 7. Desglose de magnitudes de facturación y mapa jerárquico: Cliente → Producto
+    let pmFacturasOrdinarias = 0;
+    let pmPrepagosFacturados = 0;
+    let pmAbonosDevoluciones = 0;
+    let pmCuentasFacturadas = 0;
+    let pmPortesFacturados = 0;
+    let pmOtrasCuentasFacturadas = 0;
+    let totalLineasProducto = 0;
 
-    salesRaw.forEach(s => {
-      if (s.source_no) customerIds.add(s.source_no);
-      if (s.item_no) productIds.add(s.item_no);
-    });
-    budgetsRaw.forEach(b => {
-      if (b.customer_code) customerIds.add(b.customer_code);
-      if (b.item_no) productIds.add(b.item_no);
-    });
-    prevYearSalesRaw.forEach(s => {
-      if (s.source_no) customerIds.add(s.source_no);
-      if (s.item_no) productIds.add(s.item_no);
-    });
-
-    // 6. Obtener nombres
-    const customers = customerIds.size > 0
-      ? await this.prisma.customers.findMany({
-          where: { client_id: { in: Array.from(customerIds) } },
-          select: { client_id: true, name: true, created_at: true }
-        })
-      : [] as { client_id: string; name: string; created_at: Date | null }[];
-
-    const productsData = productIds.size > 0
-      ? await this.prisma.products.findMany({
-          where: { item_no: { in: Array.from(productIds) } },
-          select: { item_no: true, description: true }
-        })
-      : [] as { item_no: string; description: string | null }[];
-
-    const customersDict: Record<string, { name: string; since: Date | null }> = {};
-    customers.forEach(c => { customersDict[c.client_id] = { name: c.name, since: c.created_at }; });
-
-    const productsDict: Record<string, string> = {};
-    productsData.forEach(p => { productsDict[p.item_no] = p.description || p.item_no; });
-
-    // 7. Merge: cliente → Map<item_no, {sales, budget, prevSales}>
     const clientMap = new Map<string, Map<string, { sales: number; budget: number; prevSales: number }>>();
 
-    salesRaw.forEach(sale => {
-      if (!sale.source_no) return;
-      if (!clientMap.has(sale.source_no)) clientMap.set(sale.source_no, new Map());
-      const prodMap = clientMap.get(sale.source_no)!;
-      const existing = prodMap.get(sale.item_no) || { sales: 0, budget: 0, prevSales: 0 };
-      existing.sales += sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
-      prodMap.set(sale.item_no, existing);
+    for (const doc of currentYearDocs) {
+      const isAbono = doc.document_type === 'Abono';
+      const docNoUpper = (doc.document_no || '').toUpperCase();
+      const isPrepay = docNoUpper.startsWith('PFV') || docNoUpper.startsWith('PFC');
+      const multiplier = isAbono ? -1 : 1;
+      const amt = Number(doc.total_amount_excl_vat) || 0;
+
+      let productoEnDoc = 0;
+      let cuentasEnDoc = 0;
+      let portesEnDoc = 0;
+      let otrasCuentasEnDoc = 0;
+
+      const cCode = doc.customer_no || 'SIN_CLIENTE';
+
+      if (doc.lines) {
+        for (const line of doc.lines) {
+          const lineTypeLower = (line.type || '').toLowerCase();
+          const lineAmt = Number(line.line_amount) || 0;
+          const pNo = line.product_no || 'SIN_PRODUCTO';
+
+          if (lineTypeLower === 'item') {
+            if (hasProductFilter && itemNosSet && !itemNosSet.has(pNo)) {
+              continue;
+            }
+            const effAmt = lineAmt * multiplier;
+            productoEnDoc += effAmt;
+
+            if (!clientMap.has(cCode)) clientMap.set(cCode, new Map());
+            const prodMap = clientMap.get(cCode)!;
+            const existing = prodMap.get(pNo) || { sales: 0, budget: 0, prevSales: 0 };
+            existing.sales += effAmt;
+            prodMap.set(pNo, existing);
+          } else if (lineTypeLower === 'g/l account' && !hasProductFilter && !isPrepay) {
+            if (!pNo.startsWith('438')) {
+              const effAmt = lineAmt * multiplier;
+              cuentasEnDoc += effAmt;
+              if (pNo.startsWith('624')) {
+                portesEnDoc += effAmt;
+              } else {
+                otrasCuentasEnDoc += effAmt;
+              }
+            }
+          }
+        }
+      }
+
+      totalLineasProducto += productoEnDoc;
+
+      if (isAbono) {
+        pmAbonosDevoluciones += Math.abs(amt);
+      } else if (isPrepay) {
+        pmPrepagosFacturados += amt;
+      } else {
+        pmFacturasOrdinarias += amt;
+      }
+
+      if (!isPrepay && !hasProductFilter) {
+        pmCuentasFacturadas += cuentasEnDoc;
+        pmPortesFacturados += portesEnDoc;
+        pmOtrasCuentasFacturadas += otrasCuentasEnDoc;
+      }
+    }
+
+    // 8. Procesamiento de líneas de año anterior (LYTD)
+    let totalPrevProductSales = 0;
+    for (const doc of prevYearDocs) {
+      const isAbono = doc.document_type === 'Abono';
+      const multiplier = isAbono ? -1 : 1;
+      const cCode = doc.customer_no || 'SIN_CLIENTE';
+
+      if (doc.lines) {
+        for (const line of doc.lines) {
+          const lineTypeLower = (line.type || '').toLowerCase();
+          if (lineTypeLower === 'item') {
+            const pNo = line.product_no || 'SIN_PRODUCTO';
+            if (hasProductFilter && itemNosSet && !itemNosSet.has(pNo)) {
+              continue;
+            }
+            const effAmt = (Number(line.line_amount) || 0) * multiplier;
+            totalPrevProductSales += effAmt;
+
+            if (!clientMap.has(cCode)) clientMap.set(cCode, new Map());
+            const prodMap = clientMap.get(cCode)!;
+            const existing = prodMap.get(pNo) || { sales: 0, budget: 0, prevSales: 0 };
+            existing.prevSales += effAmt;
+            prodMap.set(pNo, existing);
+          }
+        }
+      }
+    }
+
+    // 9. Cargar presupuestos por cliente y producto
+    for (const b of budgetsRaw) {
+      const cCode = b.customer_code;
+      const pNo = b.item_no;
+      if (!cCode || !pNo) continue;
+      const bAmt = Number(b._sum.monthly_budget) || 0;
+
+      if (!clientMap.has(cCode)) clientMap.set(cCode, new Map());
+      const prodMap = clientMap.get(cCode)!;
+      const existing = prodMap.get(pNo) || { sales: 0, budget: 0, prevSales: 0 };
+      existing.budget += bAmt;
+      prodMap.set(pNo, existing);
+    }
+
+    // 10. Prepagos vivos por cliente
+    const { totalVivo: pmPrepagosVivos, byCustomer: pmPrepaymentsByCustomer } = await this.getAlivePrepayments({
+      salespersonCode: salespersonCode ? String(salespersonCode).trim() : undefined,
     });
 
-    budgetsRaw.forEach(budget => {
-      if (!budget.customer_code) return;
-      if (!clientMap.has(budget.customer_code)) clientMap.set(budget.customer_code, new Map());
-      const prodMap = clientMap.get(budget.customer_code)!;
-      const existing = prodMap.get(budget.item_no) || { sales: 0, budget: 0, prevSales: 0 };
-      existing.budget += budget._sum.monthly_budget ? Number(budget._sum.monthly_budget) : 0;
-      prodMap.set(budget.item_no, existing);
+    // 11. Recopilar nombres de clientes y productos
+    const customerIds = Array.from(clientMap.keys());
+    const productIds = new Set<string>();
+    for (const prodMap of clientMap.values()) {
+      for (const itemNo of prodMap.keys()) {
+        productIds.add(itemNo);
+      }
+    }
+
+    const [customers, productsData] = await Promise.all([
+      customerIds.length > 0
+        ? this.prisma.customers.findMany({
+            where: { client_id: { in: customerIds } },
+            select: { client_id: true, name: true, created_at: true },
+          })
+        : ([] as { client_id: string; name: string; created_at: Date | null }[]),
+      productIds.size > 0
+        ? this.prisma.products.findMany({
+            where: { item_no: { in: Array.from(productIds) } },
+            select: { item_no: true, description: true },
+          })
+        : ([] as { item_no: string; description: string | null }[]),
+    ]);
+
+    const customersDict: Record<string, { name: string; since: Date | null }> = {};
+    customers.forEach((c) => {
+      customersDict[c.client_id] = { name: c.name, since: c.created_at };
     });
 
-    prevYearSalesRaw.forEach(sale => {
-      if (!sale.source_no) return;
-      if (!clientMap.has(sale.source_no)) clientMap.set(sale.source_no, new Map());
-      const prodMap = clientMap.get(sale.source_no)!;
-      const existing = prodMap.get(sale.item_no) || { sales: 0, budget: 0, prevSales: 0 };
-      existing.prevSales += sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
-      prodMap.set(sale.item_no, existing);
+    const productsDict: Record<string, string> = {};
+    productsData.forEach((p) => {
+      productsDict[p.item_no] = p.description || p.item_no;
     });
 
-    // 8. Construir resultado jerárquico
+    // 12. Construir resultado jerárquico Cliente → Productos
     let results = Array.from(clientMap.entries()).map(([customerCode, prodMap]) => {
       const cInfo = customersDict[customerCode];
       let totalSales = 0;
       let totalBudget = 0;
+      let totalPrevSales = 0;
 
       const productRows = Array.from(prodMap.entries()).map(([itemNo, vals]) => {
         totalSales += vals.sales;
         totalBudget += vals.budget;
+        totalPrevSales += vals.prevSales;
         return {
           itemNo,
           productName: productsDict[itemNo] || itemNo,
@@ -1060,32 +1394,33 @@ export class SalesService {
       // Ordenar productos por facturación descendente
       productRows.sort((a, b) => b.facturacion - a.facturacion);
 
+      const isNew = Boolean(cInfo?.since && new Date(cInfo.since) >= startDate && new Date(cInfo.since) <= endDate);
+
       return {
         customerCode,
-        customerName: cInfo ? cInfo.name : customerCode,
-        isNew: cInfo?.since ? new Date(cInfo.since).getFullYear() === new Date().getFullYear() : false,
+        customerName: cInfo ? cInfo.name : customerCode === '99999999' ? 'CLIENTE NUEVO' : customerCode,
+        isNew,
         facturacion: totalSales,
-        facturacionAnioAnterior: Array.from(prodMap.values()).reduce((acc, v) => acc + v.prevSales, 0),
+        facturacionAnioAnterior: totalPrevSales,
         objetivo: totalBudget,
         desviacion: totalSales - totalBudget,
         desviacionPorcentaje: totalBudget > 0 ? ((totalSales - totalBudget) / totalBudget) * 100 : 0,
+        prepagos: pmPrepaymentsByCustomer[customerCode] || 0,
         products: productRows,
       };
     });
 
-    // 8.1 Lógica especial para Cliente Nuevo (99999999)
-    // Calculamos el total de facturación de todos los productos de clientes creados en el año actual
+    // 12.1 Lógica especial para Cliente Nuevo (99999999)
     const totalNewClientsSales = results
-      .filter(r => r.isNew)
+      .filter((r) => r.isNew)
       .reduce((acc, curr) => acc + curr.facturacion, 0);
 
-    // Buscamos o inyectamos la fila 99999999
-    let placeholderIndex = results.findIndex(r => r.customerCode === '99999999');
+    let placeholderIndex = results.findIndex((r) => r.customerCode === '99999999');
     if (placeholderIndex !== -1) {
       results[placeholderIndex].facturacion = totalNewClientsSales;
       results[placeholderIndex].desviacion = results[placeholderIndex].facturacion - results[placeholderIndex].objetivo;
-      results[placeholderIndex].desviacionPorcentaje = results[placeholderIndex].objetivo > 0 
-        ? (results[placeholderIndex].desviacion / results[placeholderIndex].objetivo) * 100 
+      results[placeholderIndex].desviacionPorcentaje = results[placeholderIndex].objetivo > 0
+        ? (results[placeholderIndex].desviacion / results[placeholderIndex].objetivo) * 100
         : 0;
       (results[placeholderIndex] as any).customerName = 'CLIENTE NUEVO';
       (results[placeholderIndex] as any).excludeFacturacionFromTotal = true;
@@ -1100,46 +1435,52 @@ export class SalesService {
         desviacion: totalNewClientsSales,
         desviacionPorcentaje: 0,
         products: [],
-        excludeFacturacionFromTotal: true
+        excludeFacturacionFromTotal: true,
       } as any);
     }
 
-    // 9. Filtrado por búsqueda
+    // 13. Filtrado por búsqueda
     if (search && search.trim() !== '') {
       const s = search.toLowerCase();
-      results = results.filter(r =>
+      results = results.filter((r) =>
         (r.customerCode && r.customerCode.toLowerCase().includes(s)) ||
         (r.customerName && r.customerName.toLowerCase().includes(s))
       );
     }
 
-    // 10. KPIs globales
+    // 14. Totales globales
     let totalSales = 0;
     let totalBudget = 0;
     let totalPrevYear = 0;
-    results.forEach((r: any) => { 
-      totalSales += r.excludeFacturacionFromTotal ? 0 : r.facturacion; 
-      totalBudget += r.objetivo; 
+    results.forEach((r: any) => {
+      totalSales += r.excludeFacturacionFromTotal ? 0 : r.facturacion;
+      totalBudget += r.objetivo;
       totalPrevYear += r.facturacionAnioAnterior || 0;
     });
+
     const devEuros = totalSales - totalBudget;
     const devPct = totalBudget > 0 ? (devEuros / totalBudget) * 100 : 0;
 
-    // 11. KPIs de pedidos (Cartera + Pend. Facturar)
+    // 15. KPIs de pedidos (Cartera + Pendiente de facturar) con deducción cliente a cliente de prepagos
     const ordersWhere: any = {};
     if (salespersonCode) ordersWhere.customer = { salesperson_code: salespersonCode };
-    if (itemNos !== null) {
-      ordersWhere.item_code = itemNos.length > 0 ? { in: itemNos } : 'NO_PRODUCTS_FOUND';
+    if (hasProductFilter) {
+      if (itemNos && itemNos.length > 0) {
+        ordersWhere.item_code = { in: itemNos };
+      } else {
+        ordersWhere.item_code = 'NO_PRODUCTS_FOUND';
+      }
     }
 
     const ordersRaw = await this.prisma.sales_orders.findMany({
       where: ordersWhere,
-      select: { 
+      select: {
+        customer_code: true,
         quantity: true,
-        outstanding_quantity: true, 
-        qty_shipped_not_invoiced: true, 
-        line_amount: true, 
-        type: true 
+        outstanding_quantity: true,
+        qty_shipped_not_invoiced: true,
+        line_amount: true,
+        type: true,
       },
     });
 
@@ -1147,26 +1488,66 @@ export class SalesService {
     let totalCarteraAccounts = 0;
     let totalEnviadoNoFacturado = 0;
     let totalEnviadoNoFacturadoAccounts = 0;
+    const ordersByCustomer: Record<string, { shipped: number; cartera: number }> = {};
 
     for (const order of ordersRaw) {
       const totalQty = Number(order.quantity) || 0;
       const lineAmount = Number(order.line_amount) || 0;
-      const effectivePrice = totalQty > 0 ? (lineAmount / totalQty) : 0;
-      
+      const effectivePrice = totalQty > 0 ? lineAmount / totalQty : 0;
+
       if (effectivePrice === 0) continue;
 
+      const outstanding = Number(order.outstanding_quantity) || 0;
+      const shippedNotInv = Number(order.qty_shipped_not_invoiced) || 0;
       const isAccount = order.type === 'G/L Account';
-      const lineCartera = (Number(order.outstanding_quantity) || 0) * effectivePrice;
-      const lineShippedNotInv = (Number(order.qty_shipped_not_invoiced) || 0) * effectivePrice;
+
+      const lineCartera = outstanding * effectivePrice;
+      const lineShippedNotInv = shippedNotInv * effectivePrice;
 
       totalCartera += lineCartera;
       if (isAccount) totalCarteraAccounts += lineCartera;
 
       totalEnviadoNoFacturado += lineShippedNotInv;
       if (isAccount) totalEnviadoNoFacturadoAccounts += lineShippedNotInv;
+
+      const cust = order.customer_code;
+      if (cust) {
+        if (!ordersByCustomer[cust]) {
+          ordersByCustomer[cust] = { shipped: 0, cartera: 0 };
+        }
+        ordersByCustomer[cust].shipped += lineShippedNotInv;
+        ordersByCustomer[cust].cartera += lineCartera;
+      }
     }
 
-    // 12. Ordenación
+    let totalPrepagosDescontadosFacturar = 0;
+    let totalPrepagosDescontadosCartera = 0;
+
+    Object.keys(ordersByCustomer).forEach((custCode) => {
+      const pVivoCust = pmPrepaymentsByCustomer[custCode] || 0;
+      if (pVivoCust > 0) {
+        const cOrders = ordersByCustomer[custCode];
+        const descFact = Math.min(pVivoCust, cOrders.shipped);
+        const remanente = pVivoCust - descFact;
+        const descCart = Math.min(remanente, cOrders.cartera);
+
+        totalPrepagosDescontadosFacturar += descFact;
+        totalPrepagosDescontadosCartera += descCart;
+      }
+    });
+
+    const totalCarteraBruta = totalCartera;
+    const totalEnviadoNoFacturadoBruto = totalEnviadoNoFacturado;
+    const totalEnviadoNoFacturadoNeto = Math.max(0, totalEnviadoNoFacturadoBruto - totalPrepagosDescontadosFacturar);
+    const totalCarteraNeta = Math.max(0, totalCarteraBruta - totalPrepagosDescontadosCartera);
+
+    const totalEnviadoNoFacturadoAccountsNeto = Math.min(totalEnviadoNoFacturadoAccounts, totalEnviadoNoFacturadoNeto);
+    const totalCarteraAccountsNeta = Math.min(totalCarteraAccounts, totalCarteraNeta);
+
+    // Total de facturación documental (para desglose info)
+    const totalFacturacionConCuentas = pmFacturasOrdinarias + pmPrepagosFacturados - pmAbonosDevoluciones;
+
+    // 16. Ordenación
     if (sortBy) {
       results.sort((a, b) => {
         let valA = (a as any)[sortBy];
@@ -1184,23 +1565,37 @@ export class SalesService {
 
     return {
       kpis: {
-        ventas: totalSales,
+        ventas: hasProductFilter ? totalSales : totalFacturacionConCuentas,
+        ventasSinCuentas: totalSales,
+        ventasProducto: totalSales,
+        cuentasFacturadas: pmCuentasFacturadas,
+        portesFacturados: pmPortesFacturados,
+        otrasCuentasFacturadas: pmOtrasCuentasFacturadas,
+        facturasOrdinarias: pmFacturasOrdinarias,
+        prepagosFacturados: pmPrepagosFacturados,
+        prepagosVivos: pmPrepagosVivos,
+        abonosDevoluciones: pmAbonosDevoluciones,
         objetivo: totalBudget,
         desviacionEur: devEuros,
         desviacionPct: devPct,
-        carteraVentas: totalCartera,
-        carteraVentasAccounts: Math.min(totalCarteraAccounts, totalCartera),
-        enviadosFacturar: totalEnviadoNoFacturado,
-        enviadosFacturarAccounts: Math.min(totalEnviadoNoFacturadoAccounts, totalEnviadoNoFacturado),
+        carteraVentas: totalCarteraNeta,
+        carteraVentasBruta: totalCarteraBruta,
+        carteraVentasAccounts: totalCarteraAccountsNeta,
+        enviadosFacturar: totalEnviadoNoFacturadoNeto,
+        enviadosFacturarBruto: totalEnviadoNoFacturadoBruto,
+        prepagosDescontadosFacturar: totalPrepagosDescontadosFacturar,
+        prepagosDescontadosCartera: totalPrepagosDescontadosCartera,
+        enviadosFacturarAccounts: totalEnviadoNoFacturadoAccountsNeto,
         facturacionAnioAnterior: totalPrevYear,
       },
       rows: results.slice(skip ? Number(skip) : 0, take ? (Number(skip) || 0) + Number(take) : undefined),
-      total: results.length
+      total: results.length,
     };
   }
 
   /**
-   * Evolución mensual de ventas vs presupuesto, con filtro de Product Manager
+   * Evolución mensual de ventas vs presupuesto, con filtro de Product Manager.
+   * Utiliza sales_documents y sales_document_lines de forma homogénea con la tabla de rendimiento.
    */
   async getProductBudgetEvolution(filters: {
     year: number;
@@ -1216,63 +1611,100 @@ export class SalesService {
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-    // Resolver item_nos
+    // 1. Resolver item_nos
     const itemNos = await this.resolveItemNos({ pmCode, familyCode, subfamilyCode, productCode });
+    const hasProductFilter = itemNos !== null;
+    const itemNosSet = hasProductFilter && itemNos.length > 0 ? new Set(itemNos) : null;
 
-    const salesWhere: any = {
-      document_type: { in: SALES_DOC_TYPES },
-      reg_date: { gte: startDate, lte: endDate }
+    // 2. Where clause para sales_documents
+    const docsWhere: any = {
+      posting_date: { gte: startDate, lte: endDate },
     };
-    if (salespersonCode) salesWhere.salesperson_code = salespersonCode;
-    if (itemNos !== null) salesWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
+    if (salespersonCode) docsWhere.customer = { salesperson_code: salespersonCode };
+    if (hasProductFilter) {
+      if (itemNos.length > 0) {
+        docsWhere.lines = {
+          some: { product_no: { in: itemNos }, type: { equals: 'Item', mode: 'insensitive' } },
+        };
+      } else {
+        docsWhere.document_no = 'NO_DOCS_FOUND';
+      }
+    }
 
+    // 3. Where clause para sales_budgets
     const budgetWhere: any = {
-      budget_date: { gte: startDate, lte: endDate }
+      budget_date: { gte: startDate, lte: endDate },
     };
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
-    if (itemNos !== null) budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
+    if (hasProductFilter) {
+      budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
+    }
 
     if (search && search.trim() !== '') {
       const matchingCustomers = await this.prisma.customers.findMany({
         where: {
           OR: [
             { name: { contains: search, mode: 'insensitive' } },
-            { client_id: { contains: search, mode: 'insensitive' } }
-          ]
+            { client_id: { contains: search, mode: 'insensitive' } },
+          ],
         },
-        select: { client_id: true }
+        select: { client_id: true },
       });
-      const customerIds = matchingCustomers.map(c => c.client_id);
-      salesWhere.source_no = { in: customerIds };
+      const customerIds = matchingCustomers.map((c) => c.client_id);
+      docsWhere.customer_no = { in: customerIds };
       budgetWhere.customer_code = { in: customerIds };
     }
 
-    const [salesByDay, budgetsByDay] = await Promise.all([
-      this.prisma.value_entries.groupBy({
-        by: ['reg_date'],
-        _sum: { sales_amount: true },
-        where: salesWhere,
+    const [salesDocsCurrent, budgetsByDay] = await Promise.all([
+      this.prisma.sales_documents.findMany({
+        where: docsWhere,
+        select: {
+          posting_date: true,
+          document_type: true,
+          lines: {
+            select: {
+              type: true,
+              product_no: true,
+              line_amount: true,
+            },
+          },
+        },
       }),
       this.prisma.sales_budgets.groupBy({
         by: ['budget_date'],
         _sum: { monthly_budget: true },
         where: budgetWhere,
-      })
+      }),
     ]);
 
     const monthsData = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
       ventas: 0,
-      objetivo: 0
+      objetivo: 0,
     }));
 
-    salesByDay.forEach(sale => {
-      if (!sale.reg_date) return;
-      const m = new Date(sale.reg_date).getMonth();
-      monthsData[m].ventas += sale._sum.sales_amount ? Number(sale._sum.sales_amount) : 0;
+    salesDocsCurrent.forEach((doc) => {
+      if (!doc.posting_date) return;
+      const m = new Date(doc.posting_date).getMonth();
+      const multiplier = doc.document_type === 'Abono' ? -1 : 1;
+
+      let docProductAmt = 0;
+      if (doc.lines) {
+        for (const line of doc.lines) {
+          const lineTypeLower = (line.type || '').toLowerCase();
+          if (lineTypeLower === 'item') {
+            const pNo = line.product_no || '';
+            if (hasProductFilter && itemNosSet && !itemNosSet.has(pNo)) {
+              continue;
+            }
+            docProductAmt += (Number(line.line_amount) || 0) * multiplier;
+          }
+        }
+      }
+      monthsData[m].ventas += docProductAmt;
     });
 
-    budgetsByDay.forEach(budget => {
+    budgetsByDay.forEach((budget) => {
       if (!budget.budget_date) return;
       const m = new Date(budget.budget_date).getMonth();
       monthsData[m].objetivo += budget._sum.monthly_budget ? Number(budget._sum.monthly_budget) : 0;
@@ -1332,6 +1764,98 @@ export class SalesService {
       rows: formattedRows,
       total,
     };
+  }
+
+  /**
+   * Calcula los prepagos vivos (pendientes de facturar definitivamente) por cliente mediante asignación FIFO
+   */
+  private async getAlivePrepayments(params: {
+    customerCodes?: string[];
+    salespersonCode?: string;
+    customerCode?: string;
+  }): Promise<{ totalVivo: number; byCustomer: Record<string, number> }> {
+    const pfvWhere: any = {
+      OR: [
+        { document_no: { startsWith: 'PFV' } },
+        { document_no: { startsWith: 'PFC' } },
+      ],
+    };
+
+    if (params.customerCode && String(params.customerCode).trim() !== '') {
+      pfvWhere.customer_no = String(params.customerCode).trim();
+    } else if (params.customerCodes && params.customerCodes.length > 0) {
+      pfvWhere.customer_no = { in: params.customerCodes };
+    } else if (params.salespersonCode && String(params.salespersonCode).trim() !== '') {
+      pfvWhere.customer = { salesperson_code: String(params.salespersonCode).trim() };
+    }
+
+    const pfvs = await this.prisma.sales_documents.findMany({
+      where: pfvWhere,
+      select: {
+        document_no: true,
+        customer_no: true,
+        total_amount_excl_vat: true,
+        posting_date: true,
+      },
+      orderBy: { posting_date: 'asc' },
+    });
+
+    if (!pfvs || pfvs.length === 0) {
+      return { totalVivo: 0, byCustomer: {} };
+    }
+
+    const uniqueCustomerCodes = Array.from(new Set(pfvs.map((p) => p.customer_no).filter(Boolean))) as string[];
+    const compensaciones = await this.prisma.sales_document_lines.findMany({
+      where: {
+        document: {
+          customer_no: { in: uniqueCustomerCodes },
+          document_no: { startsWith: 'FV' },
+        },
+        product_no: { startsWith: '438' },
+        line_amount: { lt: 0 },
+      },
+      select: {
+        line_amount: true,
+        document: { select: { customer_no: true } },
+      },
+    });
+
+    const compByCustomer: Record<string, number> = {};
+    for (const comp of compensaciones) {
+      const cust = comp.document?.customer_no;
+      if (!cust) continue;
+      compByCustomer[cust] = (compByCustomer[cust] || 0) + Math.abs(Number(comp.line_amount) || 0);
+    }
+
+    const byCustomer: Record<string, number> = {};
+    let totalVivo = 0;
+
+    for (const cust of uniqueCustomerCodes) {
+      let compRestante = compByCustomer[cust] || 0;
+      const custPfvs = pfvs.filter((p) => p.customer_no === cust);
+
+      for (const p of custPfvs) {
+        const amt = Number(p.total_amount_excl_vat) || 0;
+        let saldoVivo = 0;
+
+        if (compRestante >= amt) {
+          compRestante -= amt;
+          saldoVivo = 0;
+        } else if (compRestante > 0) {
+          saldoVivo = amt - compRestante;
+          compRestante = 0;
+        } else {
+          saldoVivo = amt;
+        }
+
+        if (saldoVivo > 0.01) {
+          byCustomer[cust] = (byCustomer[cust] || 0) + saldoVivo;
+          totalVivo += saldoVivo;
+        }
+      }
+    }
+
+    return { totalVivo, byCustomer };
   }
 
   /**

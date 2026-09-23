@@ -72,19 +72,38 @@ Ubicado en `/sales/customers`, ofrece un directorio analítico de clientes con f
 ---
 
 ### 2.2 Presupuestos y Seguimiento de Objetivos (Ventas vs Ppto)
-Ubicado en `/sales/budgets`, permite el seguimiento del grado de cumplimiento comercial frente al plan anual.
+Ubicado en `/sales/budgets`, es la pantalla neurálgica de seguimiento del grado de cumplimiento comercial frente al plan anual de dTS Instruments.
 
-* **Comparativa YTD Día a Día**: Facturación neta del ejercicio acumulada hasta la fecha frente a la cuota presupuestaria equivalente.
-* **Desviaciones Financieras y Porcentuales**: Cálculo automático de la brecha en euros y en porcentaje, con alertas por colores (verde si está por encima de meta, ámbar/rojo si está por debajo).
-* **Tabla de Detalle por Cliente y Vendedor**: Desglose por cuenta cliente con facturación del año actual, meta presupuestada, desvío y comparativa con el año precedente (*Fact. LY*).
+* **Bandeja Superior de KPIs**:
+  * **Facturación (Items)**: Facturación neta devengada exclusivamente en líneas de catálogo (`Item`), aislando costes accesorios y anticipos para una comparación estrictamente homogénea frente al presupuesto anual.
+  * **Objetivo Presupuestado**: Cuota comercial acumulada en el periodo seleccionado.
+  * **Desviación Nominal (€) y Cumplimiento (%)**: Brecha absoluta y porcentual con código de color dinámico (verde para superávit, rojo para déficit) y micro-indicadores visuales.
+  * **Cartera de Pedidos (Neta)** y **Pendiente de Facturar (Neto)**: Pedidos abiertos y albaranes entregados sin facturar, netos de la deducción cliente por cliente de prepagos vivos aplicados.
+* **Modal de Transparencia Contable (`InfoPopover`)**:
+  * Al pulsar el icono `ℹ️` en Facturación, se despliega una ventana informativa con el desglose completo del periodo: *Venta Neta de Producto*, *Portes y Transportes (Cuenta 624)*, *Otras Cuentas Contables*, *Prepagos Vivos (PFV)* y *Total Facturación Documental*.
+* **Selector de Pestañas Principales**:
+  * **`[ 🏢 Por Clientes ]`**: Vista analítica clásica desagregada cliente a cliente con scroll infinito reactivo, badges para clientes nuevos (`NUEVO`), detección de saldo en prepagos vivos (`Prepago: X €`), tratamiento de meta agregada para clientes nuevos (`99999999`) y fila de totales fijos.
+  * **`[ 👥 Por Comercial ]`** (o **`[ 👤 Mi Rendimiento ]`** para usuarios con rol comercial): Tabla de control y productividad comercial con 3 sub-pestañas especializadas:
+    1. *Rendimiento y Cumplimiento*: FV Producto, AAV Producto, Facturación Neta Items, Facturación Año Anterior (LYTD), Presupuesto, Desviación y Barra de Progreso de Cumplimiento.
+    2. *Desglose Contable y Prepagos*: Facturas (FV), Prepagos (PFV), Abonos (AAV), Total Documental, Portes (624), Otras Cuentas y Prepagos Vivos.
+    3. *Cartera y Previsión*: Facturación actual, Cartera Neta, Pendiente Facturar, Prepagos Deducidos, Clientes Nuevos captados y Previsión Total a Cierre de Ejercicio.
+* **Control de Acceso (RBAC)**: Los comerciales conectados sólo visualizan sus propios datos personales en la pestaña *Mi Rendimiento*, mientras que Dirección y Administradores disponen de la visión global del equipo y el sumatorio consolidado.
+* **Exportación a Excel Contextual**: Genera el archivo Excel adaptado a la pestaña activa (desglose de clientes o reporte de 18 columnas de comerciales).
 
 ---
 
 ### 2.3 Presupuesto por Product Manager (PM)
-Ubicado en `/sales/product-budgets`, enfocado al análisis presupuestario por línea de producto y responsable técnico.
+Ubicado en `/sales/product-budgets`, enfocado al análisis presupuestario por línea de producto, marca y responsable técnico (Product Manager).
 
-* **Desglose Jerárquico por SKU / Referencia**: Permite desplegar cada cliente para examinar las ventas y metas presupuestadas a nivel de artículo individual.
-* **Análisis de Cartera por Fabricante / Marca**: Evaluación de líneas de producto para Product Managers y responsables de marca.
+* **Unificación Total de Orígenes de Datos**:
+  * Utiliza **las mismas tablas documentales** que Ventas vs Presupuestos (`sales_documents` y `sales_document_lines`), garantizando que la cifra de Facturación (Items) y los KPIs coincidan al céntimo en ambas vistas (ej. 1.524.189,01 € en 2026).
+* **Desglose Jerárquico por Cliente ➔ Producto (SKU)**:
+  * Cada cliente se puede expandir mediante una flecha interactiva para auditar qué referencias concretas de catálogo ha comprado, su facturación por artículo, su presupuesto asignado y su desviación.
+  * Se visualiza junto a cada cliente su saldo vivo en anticipos (`Prepago: X €`) y su condición de cliente nuevo si corresponde.
+* **Detección Automática de Rol PM**:
+  * Si el usuario conectado es Product Manager, el sistema fija automáticamente su código PM y restringe el ámbito a su catálogo de productos asignado.
+* **Gráfico de Evolución Mensual Unificado**:
+  * Refleja la suma de líneas de producto mes a mes, coincidiendo exactamente la suma de las 12 barras con la tarjeta de facturación y el pie de tabla.
 
 ---
 
@@ -193,11 +212,18 @@ Extensión oficial integrada en la cinta de opciones de Microsoft Outlook (Web, 
 ## 4. Módulo de Compras
 
 ### 4.1 Directorio de Proveedores
-Ubicado en `/purchases/vendors` (Acceso para roles `ADMIN`, `DIRECCION` y `OPERACIONES`).
+Ubicado en `/purchases/vendors` (Acceso para roles `ADMIN`, `DIRECCION` y `OPERACIONES`). Para documentación técnica y operativa exhaustiva, consultar [Documentación de Vista: Cartera de Proveedores](file:///c:/proyectos/webapp_dts/docs/vistas/compras_proveedores.md).
 
-* **Directorio Maestro de Proveedores**: Listado sincronizado en tiempo real desde Business Central con filtros por término de búsqueda, localidad y vendedor asignado.
-* **KPIs Financieros de Compras**: Total de compras acumuladas, saldo vivo de deuda pendiente y saldo vencido con proveedores.
-* **Drawer Lateral de Detalle del Proveedor**: Consulta rápida con condiciones comerciales y de pago pactadas (días de pago, forma de pago, moneda), datos fiscales y desglose de pedidos abiertos.
+* **Directorio Maestro de Proveedores**: Listado sincronizado en tiempo real desde Business Central con filtros por búsqueda de texto, ejercicio anual y estado de bloqueo.
+* **Mapa Geoespacial Interactivo D3 Mundial (`WorldGeoVendorsMap`)**:
+  * Cartografía global vectorial TopoJSON de alta fidelidad con proyección D3 Mercator.
+  * Inferencia inteligente de países de origen mediante códigos ISO, prefijos VAT y sedes de fabricantes.
+  * Selector de métrica en mapa (Volumen de compras € vs Deuda viva €).
+  * Presets de zoom regional rápido (Mundo, Europa, España, América, Asia).
+  * Panel lateral con Top 5 de países y filtrado interactivo bidireccional sobre la tabla con un clic.
+* **KPIs Financieros de Compras**: Cartera total de proveedores, volumen de compras devengadas (`value_entries`), saldo vivo de deuda pendiente y alertas de saldo vencido.
+* **Drawer Lateral de Detalle del Proveedor (`VendorDetailDrawer`)**: Consulta rápida con condiciones comerciales y de pago pactadas (días de crédito, forma de pago, moneda), datos fiscales, pedidos abiertos de compra y facturación histórica.
+* **Exportación a Excel**: Descarga estructurada con filtros aplicados y formato de importes.
 
 ### 4.2 Pedidos de Compra
 Ubicado en `/purchases/orders`.

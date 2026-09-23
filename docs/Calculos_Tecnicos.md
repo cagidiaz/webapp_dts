@@ -101,23 +101,38 @@ Lógica predictiva reactiva a inputs del usuario.
 
 ---
 
-## 7. Análisis Comercial (Rendimiento y Pedidos)
-Lógica aplicada en los paneles de ventas y presupuestos comerciales.
+## 7. Análisis Comercial y Presupuestos (Motor Unificado)
+Lógica aplicada en los paneles de **Ventas vs Presupuestos** (`/sales/budgets`) y **Presupuestos x Product Manager** (`/sales/product-budgets`). Ambas vistas comparten **exactamente las mismas tablas y criterios de agregación documental**:
 
-*   **Rendimiento vs Presupuesto**:
-    - *Ventas Reales*: Sumatorio de `sales_performance` (Facturas - Abonos).
-    - *Desviación (€)*: `Ventas Reales - Objetivo Presupuestado`.
-    - *Desviación (%)*: `(Desviación € / Objetivo) * 100`.
-*   **KPIs de Cartera (Pedidos)**:
-    - **Total Pedidos (Unique)**: `Count(Distinct Document_No)` sobre la tabla `sales_orders`. Identifica cuántos pedidos "de negocio" están abiertos.
-    - **Cartera Total (€)**: `Sum(Outstanding_Quantity * Unit_Price)`. Valor de la mercancía pendiente de gestionar.
-    - **Pendiente de Facturar (€)**: `Sum(Qty_Shipped_Not_Invoiced * Unit_Price)`. Mercancía entregada pero no procesada administrativamente.
+*   **Facturación Neta de Producto (Items)**:
+    - *Operación*: $\sum_{\text{Facturas}} \text{line\_amount} - \sum_{\text{Abonos}} \text{line\_amount}$ exclusivamente para líneas con $\texttt{LOWER(type)} = \text{'item'}$.
+    - *Origen*: Tablas documentales `sales_documents` y `sales_document_lines`.
+    - *Justificación*: Aísla costes accesorios (portes de cuenta 624, servicios contables) y anticipos para contrastar de forma estrictamente homogénea con el presupuesto comercial de catálogo.
+*   **Facturación Documental Total**:
+    - *Operación*: $\text{Facturas Ordinarias (FV)} + \text{Prepagos Facturados (PFV)} - \text{Abonos (AAV)}$.
+    - *Origen*: Cabeceras de `sales_documents` netas de impuestos.
+*   **Prepagos Vivos Pendientes de Facturar (PFV)**:
+    - *Operación*: Saldo vivo de anticipos cobrados cuyas ventas o mercancías asociadas aún no han sido entregadas ni liquidadas mediante factura ordinaria definitiva `FV`.
+    - *Lógica de Compensación*: Se calcula cliente por cliente mediante asignación FIFO cruzando con las líneas de cuenta `438%` de las facturas `FV`.
+*   **KPIs de Cartera y Pedidos Abiertos (`sales_orders`)**:
+    - *Precio Efectivo Neto*: $\text{Precio Efectivo} = \frac{\text{line\_amount}}{\text{quantity}}$ (para absorber descuentos por línea o cabecera). Las líneas a precio cero o cantidad cero se excluyen.
+    - *Cartera Bruta (€)*: $\sum (\text{outstanding\_quantity} \times \text{Precio Efectivo})$.
+    - *Pendiente de Facturar Bruto (€)*: $\sum (\text{qty\_shipped\_not\_invoiced} \times \text{Precio Efectivo})$.
+    - *Deducción de Prepagos Vivos (Cliente a Cliente)*:
+      1. El prepago vivo de cada cliente compensa en primer lugar su importe enviado pendiente de facturar: $\text{Pendiente Neto} = \max(0, \text{Pendiente Bruto} - \text{Prepagos})$.
+      2. El remanente no consumido compensa su cartera de pedidos abierta: $\text{Cartera Neta} = \max(0, \text{Cartera Bruta} - \text{Remanente})$.
+      3. Está estrictamente prohibido compensar prepagos entre clientes distintos.
+    - *Consistencia en Cuentas Contables*: La porción de líneas de tipo cuenta contable (`G/L Account`) nunca excede el neto total resultante: $\min(\text{cuentas}, \text{totalNeto})$.
+*   **Desviaciones y Cumplimiento**:
+    - *Desviación (€)*: $\text{Facturación Neta Items} - \text{Objetivo Presupuestado}$.
+    - *Cumplimiento (%)*: $\left(\frac{\text{Facturación Neta Items}}{\text{Objetivo}}\right) \times 100$.
 
 ---
 
-## Origen de Datos (Supabase)
+## 8. Origen de Datos (PostgreSQL / Supabase)
 *   **Tablas de Balance**: `financial_balances` (Códigos 1... para Activo, 2... para Pasivo).
 *   **Tablas de PyG**: `income_statements` (Códigos A1, A4, A6, etc.).
-*   **Tablas de Presupuestos**: `sales_budgets` (Datos mensuales por centro de coste).
-*   **Tabla de Pedidos**: `sales_orders` (Líneas de pedido de venta sincronizadas).
-*   **Tabla de Transacciones**: `sales_performance` (Sumario de facturación histórica).
+*   **Tablas de Presupuestos**: `sales_budgets` (Datos mensuales por cliente, vendedor y artículo).
+*   **Tablas de Facturación**: `sales_documents` (cabeceras) y `sales_document_lines` (líneas con `type`, `line_amount`, `product_no`).
+*   **Tabla de Pedidos**: `sales_orders` (Líneas de pedido con `outstanding_quantity`, `qty_shipped_not_invoiced`, `line_amount`, `quantity`).
+*   **Directorio Comercial y Catálogo**: `customers`, `products`, `sales_reps`, `product_categories`.

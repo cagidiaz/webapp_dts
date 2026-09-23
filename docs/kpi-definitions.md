@@ -19,28 +19,45 @@
 
 ---
 
-## KPIs de Ventas y Operaciones
+## KPIs de Ventas, Presupuestos y Operaciones
 
-### Cartera Total (Order Backlog)
-- **Definición:** Valor total de la mercancía comprometida en pedidos abiertos que aún no se ha enviado.
-- **Fórmula:** Sumatorio(Cantidad Pendiente * Precio Unitario)
-- **Importancia:** Indicador clave de demanda futura y carga de trabajo.
+### Facturación (Items) — Venta Neta de Producto
+- **Definición:** Valor neto devengado exclusivamente en líneas de producto/artículo (`Type = Item`), deduciendo devoluciones y abonos de producto. Aísla portes y líneas contables para compararse homogéneamente con el presupuesto.
+- **Fórmula:** $\sum (\text{Líneas FV Producto}) - \sum (\text{Líneas AAV Producto})$
+- **Fuente:** `sales_documents` + `sales_document_lines` (tanto en Ventas vs Presupuestos como en Product Manager)
+- **Color en gráficos:** `#003E51` (Primario — datos reales)
 
-### Pendiente de Facturar (Shipped Not Invoiced)
-- **Definición:** Valor de la mercancía que ya ha salido del almacén pero cuya factura aún no se ha emitido legalmente.
-- **Fórmula:** Sumatorio(Cant. Enviada No Facturada * Precio Unitario)
-- **Alerta:** Un valor alto indica retrasos administrativos en el ciclo de facturación.
+### Facturación Documental Total
+- **Definición:** Cifra de negocio documental total de cabeceras de facturación en Business Central, incluyendo portes y cuentas contables.
+- **Fórmula:** Facturas Ordinarias (FV) + Prepagos Facturados (PFV) - Abonos (AAV)
+- **Fuente:** `sales_documents` (cabeceras netas de IVA)
+
+### Prepagos Vivos (PFV)
+- **Definición:** Saldo de anticipos cobrados que aún no han sido compensados ni liquidados mediante entrega y factura ordinaria definitiva `FV`.
+- **Cálculo:** Asignación FIFO cliente a cliente frente a compensaciones de cuenta `438%` en facturas ordinarias.
+
+### Cartera de Pedidos Neta (Order Backlog)
+- **Definición:** Valor total de pedidos de venta abiertos y pendientes de servir (`outstanding_quantity`), neto de prepagos vivos aplicados del propio cliente.
+- **Fórmula:** $\sum (\text{outstanding\_quantity} \times \text{Precio Efectivo}) - \text{Prepagos Vivos Asignados}$
+- **Precio Efectivo:** $\text{line\_amount} / \text{quantity}$ (absorbe descuentos comerciales de línea y cabecera; excluye líneas a 0).
+- **Fuente:** `sales_orders`
+
+### Pendiente de Facturar Neto (Shipped Not Invoiced)
+- **Definición:** Valor de albaranes de venta entregados físicamente al cliente pero pendientes de emitir factura ordinaria definitiva, netos de prepagos aplicados.
+- **Fórmula:** $\sum (\text{qty\_shipped\_not\_invoiced} \times \text{Precio Efectivo}) - \text{Prepagos Facturados Asignados}$
+- **Fuente:** `sales_orders`
 
 ### Total Pedidos (Unique Orders)
 - **Definición:** Conteo de documentos de venta abiertos ignorando la cantidad de líneas internas.
-- **Fórmula:** Count(Distinct document_number)
+- **Fórmula:** `Count(Distinct document_number)` en `sales_orders`
 
 ---
 
-## Convenciones Visuales
+## Convenciones Visuales y Corporativas
 
-| Tipo de dato | Color | Estilo |
-|-------------|-------|--------|
-| Real (BC) | `#003E51` | Línea sólida |
-| Previsión manual | `#00B0B9` | Línea sólida |
-| Predicción IA | `#00B0B9` | Línea punteada / área sombreada |
+| Tipo de dato | Color | Estilo | Significado |
+| :--- | :--- | :--- | :--- |
+| **Real (BC)** | `#003E51` | Línea o barra sólida azul | Datos reales consolidados (Facturación, Clientes) |
+| **Previsión / Objetivo** | `#00B0B9` | Línea o barra sólida cian | Objetivos presupuestados, tendencias y botones activos |
+| **Año Anterior (LYTD)** | `#9CA3AF` | Línea gris punteada | Referencia histórica del ejercicio previo |
+

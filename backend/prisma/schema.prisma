@@ -566,6 +566,7 @@ model vendors {
   city                 String?    @db.VarChar(100)
   county               String?    @db.VarChar(100)
   post_code            String?    @db.VarChar(20)
+  country_code         String?    @db.VarChar(10)
   phone_no             String?    @db.VarChar(50)
   mobile_no            String?    @db.VarChar(50)
   email                String?    @db.VarChar(255)

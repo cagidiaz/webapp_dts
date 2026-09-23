@@ -202,15 +202,19 @@ export const FinancialDashboard: React.FC = () => {
             color="blue"
             variant="comparison"
             isLoading={isKpisLoading}
-            subtext1={activeKPIs?.prepagosFacturados ? `Incluye ${formatCurrency(activeKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
+            subtext1={
+              (activeKPIs?.cuentasFacturadas || activeKPIs?.prepagosFacturados)
+                ? `(Cuentas: ${formatCurrency(activeKPIs?.cuentasFacturadas || 0, 0)} · Prepagos: ${formatCurrency(activeKPIs?.prepagosFacturados || 0, 0)})`
+                : undefined
+            }
             infoProps={{
               title: "Ventas YTD vs Presupuesto YTD",
-              description: "Comparativa de facturación real neta acumulada frente al presupuesto acumulado a fecha de hoy.",
-              formulas: "Facturas Ordinarias (FV) + Facturas Prepago (PFV) - Facturas Devolución (AAV)",
-              source: "sales_documents (FV + PFV - AAV)",
+              description: "Comparativa de facturación real neta acumulada por documentos (incluye producto y cuentas contables) frente al presupuesto acumulado a fecha de hoy.",
+              formulas: "Facturas Ordinarias (FV) + Facturas Prepago (PFV/PFC) - Facturas Devolución (AAV)",
+              source: "sales_documents (FV + Prepagos - AAV)",
               breakdown: [
                 { label: "Facturas Ordinarias (FV)", value: formatCurrency(activeKPIs?.facturasOrdinarias || 0), sign: '+', color: 'text-emerald-600 dark:text-emerald-400' },
-                { label: "Facturas Prepago (PFV)", value: formatCurrency(activeKPIs?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
+                { label: "Facturas Prepago (PFV/PFC)", value: formatCurrency(activeKPIs?.prepagosFacturados || 0), sign: '+', color: 'text-cyan-600 dark:text-cyan-400' },
                 { label: "Devoluciones y Abonos (AAV)", value: formatCurrency(activeKPIs?.abonosDevoluciones || 0), sign: '-', color: 'text-red-500' },
                 { label: "Total Ventas Netas YTD", value: formatCurrency(activeKPIs?.ventas || 0), sign: '=', color: 'text-dts-primary dark:text-white font-bold' },
               ]
@@ -230,7 +234,11 @@ export const FinancialDashboard: React.FC = () => {
             label1={`${currentYear}:`}
             label2={`${currentYear - 1}:`}
             isLoading={isKpisLoading}
-            subtext1={activeKPIs?.prepagosFacturados ? `Incluye ${formatCurrency(activeKPIs.prepagosFacturados, 0)} en prepagos` : undefined}
+            subtext1={
+              (activeKPIs?.cuentasFacturadas || activeKPIs?.prepagosFacturados)
+                ? `(Cuentas: ${formatCurrency(activeKPIs?.cuentasFacturadas || 0, 0)} · Prepagos: ${formatCurrency(activeKPIs?.prepagosFacturados || 0, 0)})`
+                : undefined
+            }
             infoProps={{
               title: "Ventas YTD vs Ventas LYTD",
               description: "Facturación neta total del ejercicio actual comparada con el mismo periodo del año anterior (comparativa día a día).",

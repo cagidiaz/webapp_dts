@@ -153,7 +153,10 @@ export class SalesOrdersService {
       try {
         const pfvs = await this.prisma.sales_documents.findMany({
           where: {
-            document_no: { startsWith: 'PFV' },
+            OR: [
+              { document_no: { startsWith: 'PFV' } },
+              { document_no: { startsWith: 'PFC' } },
+            ],
             ...(customerCode ? { customer_no: customerCode } : {}),
           },
           select: {

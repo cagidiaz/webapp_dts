@@ -229,7 +229,7 @@ export const QuotesPage: React.FC = () => {
       { key: 'document_no', label: 'Nº Oferta' },
       { key: 'document_date', label: 'Fecha', format: (v: any) => v ? new Date(v).toLocaleDateString('es-ES') : '' },
       { key: 'customer_no', label: 'Cód. Cliente' },
-      { key: 'customerName', label: 'Cliente', format: (_v: any, row: any) => row.customer?.name || '' },
+      { key: 'customerName', label: 'Cliente', format: (_v: any, row: any) => row.customer?.name || row.customer_name || row.sell_to_customer_name || '' },
       { key: 'amount', label: 'Importe (€)', format: (v: any) => Number(Number(v).toFixed(2)) },
       { key: 'salesperson_code', label: 'Comercial' },
       { key: 'estado_oferta', label: 'Estado' },

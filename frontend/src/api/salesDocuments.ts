@@ -110,6 +110,7 @@ export interface BillingHistoryDashboardItem {
   accounts_amount: number;
   accounts_positive_amount?: number;
   accounts_negative_amount?: number;
+  prepayments_amount?: number;
 }
 
 export interface BillingHistoryDashboardResponse {

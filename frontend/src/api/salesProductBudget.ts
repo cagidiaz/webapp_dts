@@ -45,6 +45,7 @@ export interface ProductBudgetCustomerRow {
   objetivo: number;
   desviacion: number;
   desviacionPorcentaje: number;
+  prepagos?: number;
   products: ProductBudgetProductRow[];
   [key: string]: any;
 }
