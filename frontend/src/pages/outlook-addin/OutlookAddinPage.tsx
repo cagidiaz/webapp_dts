@@ -13,14 +13,20 @@ import {
   ShieldCheck,
   Send,
   Inbox,
-  Briefcase
+  Briefcase,
+  Users,
+  X
 } from 'lucide-react';
 import {
   lookupEmailInAddin,
   logEmailToAddin,
   searchCompaniesForAddin,
+  getCompanyContactsForAddin,
+  getCompanyQuotesForAddin,
   type LookupResult,
   type CompanyCandidate,
+  type CompanyContactCandidate,
+  type OpenQuoteCandidate,
 } from '../../api/outlookAddin';
 
 declare const Office: any;
@@ -54,6 +60,13 @@ export const OutlookAddinPage: React.FC = () => {
   const [companySearchQuery, setCompanySearchQuery] = useState('');
   const [companyResults, setCompanyResults] = useState<CompanyCandidate[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<CompanyCandidate | null>(null);
+
+  // Dynamic contacts & quotes state for selected/detected company
+  const [availableContacts, setAvailableContacts] = useState<CompanyContactCandidate[]>([]);
+  const [selectedManualContact, setSelectedManualContact] = useState<CompanyContactCandidate | null>(null);
+  const [contactSearchFilter, setContactSearchFilter] = useState('');
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [manualQuotes, setManualQuotes] = useState<OpenQuoteCandidate[]>([]);
 
   // Action state
   const [isSaving, setIsSaving] = useState(false);
@@ -313,6 +326,78 @@ export const OutlookAddinPage: React.FC = () => {
     return false;
   }, [lookupData?.isOutgoing, fromEmail, userEmail]);
 
+  // Efecto: cuando se selecciona una empresa manual o se detecta una empresa sin contacto emparejado, cargar sus contactos y ofertas
+  useEffect(() => {
+    const activeClientId = selectedCompany?.client_id || (!lookupData?.matchedContact ? lookupData?.matchedCustomer?.clientId : null);
+
+    if (!activeClientId) {
+      setAvailableContacts([]);
+      setSelectedManualContact(null);
+      setManualQuotes([]);
+      return;
+    }
+
+    let isSubscribed = true;
+
+    const fetchContactsAndQuotes = async () => {
+      setIsLoadingContacts(true);
+      try {
+        const [contactsRes, quotesRes] = await Promise.all([
+          getCompanyContactsForAddin(activeClientId),
+          getCompanyQuotesForAddin(activeClientId),
+        ]);
+
+        if (isSubscribed) {
+          setAvailableContacts(contactsRes || []);
+          setManualQuotes(quotesRes || []);
+
+          // Auto-sugerencia inteligente: si algún contacto de la empresa coincide en nombre con fromName
+          if (fromName && contactsRes && contactsRes.length > 0) {
+            const cleanFrom = fromName.toLowerCase().trim();
+            const autoMatch = contactsRes.find((c) => {
+              const cName = (c.name || '').toLowerCase();
+              return cName.includes(cleanFrom) || cleanFrom.includes(cName);
+            });
+            if (autoMatch) {
+              setSelectedManualContact(autoMatch);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error al cargar contactos u ofertas de la empresa:', err);
+      } finally {
+        if (isSubscribed) {
+          setIsLoadingContacts(false);
+        }
+      }
+    };
+
+    fetchContactsAndQuotes();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [selectedCompany?.client_id, lookupData?.matchedCustomer?.clientId, lookupData?.matchedContact, fromName]);
+
+  // Lista de contactos filtrada por el buscador
+  const filteredContacts = useMemo(() => {
+    if (!contactSearchFilter.trim()) return availableContacts;
+    const q = contactSearchFilter.toLowerCase().trim();
+    return availableContacts.filter((c) =>
+      (c.name || '').toLowerCase().includes(q) ||
+      (c.job_title || '').toLowerCase().includes(q) ||
+      (c.email || '').toLowerCase().includes(q)
+    );
+  }, [availableContacts, contactSearchFilter]);
+
+  // Ofertas consolidadas (las detectadas en el lookup inicial o las cargadas al seleccionar empresa manual)
+  const effectiveOpenQuotes = useMemo(() => {
+    if (selectedCompany && manualQuotes.length > 0) {
+      return manualQuotes;
+    }
+    return lookupData?.openQuotes || manualQuotes || [];
+  }, [selectedCompany, manualQuotes, lookupData?.openQuotes]);
+
   // Guardar correo en CRM
   const handleLogEmail = async () => {
     if (!selectedCompany && !lookupData?.matchedCustomer) {
@@ -324,7 +409,8 @@ export const OutlookAddinPage: React.FC = () => {
     setError(null);
 
     const targetClientId = lookupData?.matchedCustomer?.clientId || selectedCompany?.client_id;
-    const targetContactId = lookupData?.matchedContact?.id;
+    // Si ya venía un contacto emparejado en el lookup se usa ese; si no, se usa el contacto seleccionado manualmente
+    const targetContactId = lookupData?.matchedContact?.id || selectedManualContact?.id || undefined;
     const interlocutor = isOutgoingEmail ? (toEmails[0] || fromEmail) : (fromEmail || toEmails[0]);
 
     // Asegurar que el cuerpo del correo está cargado antes de enviar
@@ -545,20 +631,98 @@ export const OutlookAddinPage: React.FC = () => {
               </div>
             ) : lookupData?.matchedCustomer ? (
               <div className="space-y-2">
-                <div className="p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 space-y-1">
-                  <div className="text-blue-900 dark:text-blue-300 text-[11px] font-bold flex items-center gap-1.5">
-                    <Building2 size={13} className="text-dts-secondary shrink-0" />
-                    <span className="truncate">Empresa: {lookupData.matchedCustomer.name}</span>
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-blue-100 dark:bg-white/10 text-blue-700 dark:text-gray-300 font-mono shrink-0">
+                <div className="p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 space-y-1.5">
+                  <div className="text-blue-900 dark:text-blue-300 text-[11px] font-bold flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Building2 size={13} className="text-dts-secondary shrink-0" />
+                      <span className="truncate">{lookupData.matchedCustomer.name}</span>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-white/10 text-blue-700 dark:text-gray-300 font-mono shrink-0">
                       {lookupData.matchedCustomer.clientId}
                     </span>
                   </div>
                   <p className="text-[10px] text-blue-800/80 dark:text-blue-300/80 leading-relaxed">
-                    El remitente <b>{fromEmail}</b> no figura en los contactos de Business Central. El correo se guardará en la ficha de la empresa.
+                    El remitente <b>{fromEmail}</b> no figura como contacto registrado. Puedes vincularlo a un contacto de esta empresa a continuación:
                   </p>
-                  <p className="text-[9px] text-gray-500 dark:text-gray-400 italic">
-                    (Los nuevos contactos se gestionan exclusivamente en Business Central y se sincronizan vía n8n)
-                  </p>
+                </div>
+
+                {/* Selector de Contacto de la Empresa Detectada */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <Users size={11} className="text-dts-secondary" />
+                      Asignar a Contacto de la Empresa
+                    </span>
+                    {availableContacts.length > 0 && (
+                      <span className="text-[9px] text-gray-400 font-normal">
+                        ({availableContacts.length} contactos)
+                      </span>
+                    )}
+                  </label>
+
+                  {isLoadingContacts ? (
+                    <div className="p-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-[10px] text-gray-400 flex items-center gap-2">
+                      <div className="w-3 h-3 border-2 border-dts-secondary border-t-transparent rounded-full animate-spin"></div>
+                      Cargando contactos de {lookupData.matchedCustomer.name}...
+                    </div>
+                  ) : availableContacts.length === 0 ? (
+                    <div className="p-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-[10px] text-gray-400 italic">
+                      No hay contactos registrados en esta empresa. Se archivará en la ficha general de la empresa.
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {availableContacts.length > 4 && (
+                        <div className="relative">
+                          <Search size={11} className="absolute left-2 top-2 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Filtrar por nombre, cargo o email..."
+                            value={contactSearchFilter}
+                            onChange={(e) => setContactSearchFilter(e.target.value)}
+                            className="w-full pl-6 pr-2 py-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-md text-[11px] outline-none focus:border-dts-secondary"
+                          />
+                        </div>
+                      )}
+
+                      <select
+                        value={selectedManualContact?.id || ''}
+                        onChange={(e) => {
+                          const contactId = e.target.value;
+                          const found = availableContacts.find((c) => c.id === contactId) || null;
+                          setSelectedManualContact(found);
+                        }}
+                        className="w-full px-2 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-xs text-gray-800 dark:text-gray-200 outline-none focus:border-dts-secondary"
+                      >
+                        <option value="">(Sin contacto específico - Registrar a nivel de empresa)</option>
+                        {filteredContacts.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {c.job_title ? `· ${c.job_title}` : ''} {c.email ? `(${c.email})` : ''}
+                          </option>
+                        ))}
+                      </select>
+
+                      {selectedManualContact && (
+                        <div className="p-2 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 flex items-center justify-between text-[11px]">
+                          <div className="truncate">
+                            <span className="font-bold text-emerald-900 dark:text-emerald-300 block truncate">
+                              👤 {selectedManualContact.name}
+                            </span>
+                            <span className="text-[10px] text-emerald-700/80 dark:text-emerald-400 block truncate">
+                              {selectedManualContact.job_title || selectedManualContact.email || 'Contacto seleccionado'}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedManualContact(null)}
+                            className="text-gray-400 hover:text-rose-500 p-1 cursor-pointer"
+                            title="Quitar asignación de contacto"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -567,7 +731,7 @@ export const OutlookAddinPage: React.FC = () => {
                   <AlertCircle size={16} className="mx-auto text-amber-500 mb-1" />
                   <p className="text-gray-700 dark:text-gray-200 font-bold text-[11px]">Remitente no registrado</p>
                   <p className="text-[10px] text-gray-400 mt-0.5">
-                    Asocia este correo al historial de una empresa cliente en dTS CRM.
+                    Busca y asocia este correo a una empresa cliente y a un contacto en dTS CRM.
                   </p>
                 </div>
 
@@ -593,6 +757,7 @@ export const OutlookAddinPage: React.FC = () => {
                               setSelectedCompany(c);
                               setCompanyResults([]);
                               setCompanySearchQuery('');
+                              setSelectedManualContact(null);
                             }}
                             className="p-2 hover:bg-dts-secondary/15 cursor-pointer text-[11px] flex justify-between items-center transition-colors"
                           >
@@ -604,29 +769,108 @@ export const OutlookAddinPage: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="p-2.5 rounded-lg bg-dts-secondary/10 border border-dts-secondary/30 flex justify-between items-center">
-                    <div className="truncate">
-                      <span className="text-[9px] text-gray-400 block uppercase font-bold">Empresa asignada</span>
-                      <span className="font-bold text-dts-primary dark:text-dts-secondary text-xs truncate block">{selectedCompany.name}</span>
-                      <span className="text-[10px] text-gray-500 block font-mono">{selectedCompany.client_id}</span>
+                  <div className="space-y-2">
+                    <div className="p-2.5 rounded-lg bg-dts-secondary/10 border border-dts-secondary/30 flex justify-between items-center">
+                      <div className="truncate">
+                        <span className="text-[9px] text-gray-400 block uppercase font-bold">Empresa asignada</span>
+                        <span className="font-bold text-dts-primary dark:text-dts-secondary text-xs truncate block">{selectedCompany.name}</span>
+                        <span className="text-[10px] text-gray-500 block font-mono">{selectedCompany.client_id}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedCompany(null);
+                          setSelectedManualContact(null);
+                          setAvailableContacts([]);
+                          setCompanySearchQuery('');
+                        }}
+                        className="text-xs text-gray-400 hover:text-rose-500 font-bold px-1.5 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                        title="Cambiar empresa"
+                      >
+                        Cambiar
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCompany(null);
-                        setCompanySearchQuery('');
-                      }}
-                      className="text-xs text-gray-400 hover:text-rose-500 font-bold px-1.5 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                      title="Cambiar empresa"
-                    >
-                      Cambiar
-                    </button>
+
+                    {/* Selector de Contacto para la empresa seleccionada manualmente */}
+                    <div className="space-y-1.5 pt-1">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Users size={11} className="text-dts-secondary" />
+                          Asignar a Contacto de {selectedCompany.name}
+                        </span>
+                        {availableContacts.length > 0 && (
+                          <span className="text-[9px] text-gray-400 font-normal">
+                            ({availableContacts.length} contactos)
+                          </span>
+                        )}
+                      </label>
+
+                      {isLoadingContacts ? (
+                        <div className="p-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-[10px] text-gray-400 flex items-center gap-2">
+                          <div className="w-3 h-3 border-2 border-dts-secondary border-t-transparent rounded-full animate-spin"></div>
+                          Cargando contactos de {selectedCompany.name}...
+                        </div>
+                      ) : availableContacts.length === 0 ? (
+                        <div className="p-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-[10px] text-gray-400 italic">
+                          Esta empresa no tiene contactos específicos en Business Central. Se archivará en la ficha general de la empresa.
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {availableContacts.length > 4 && (
+                            <div className="relative">
+                              <Search size={11} className="absolute left-2 top-2 text-gray-400" />
+                              <input
+                                type="text"
+                                placeholder="Filtrar por nombre, cargo o email..."
+                                value={contactSearchFilter}
+                                onChange={(e) => setContactSearchFilter(e.target.value)}
+                                className="w-full pl-6 pr-2 py-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-md text-[11px] outline-none focus:border-dts-secondary"
+                              />
+                            </div>
+                          )}
+
+                          <select
+                            value={selectedManualContact?.id || ''}
+                            onChange={(e) => {
+                              const contactId = e.target.value;
+                              const found = availableContacts.find((c) => c.id === contactId) || null;
+                              setSelectedManualContact(found);
+                            }}
+                            className="w-full px-2 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-xs text-gray-800 dark:text-gray-200 outline-none focus:border-dts-secondary"
+                          >
+                            <option value="">(Sin contacto específico - Registrar a nivel de empresa)</option>
+                            {filteredContacts.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} {c.job_title ? `· ${c.job_title}` : ''} {c.email ? `(${c.email})` : ''}
+                              </option>
+                            ))}
+                          </select>
+
+                          {selectedManualContact && (
+                            <div className="p-2 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 flex items-center justify-between text-[11px]">
+                              <div className="truncate">
+                                <span className="font-bold text-emerald-900 dark:text-emerald-300 block truncate">
+                                  👤 {selectedManualContact.name}
+                                </span>
+                                <span className="text-[10px] text-emerald-700/80 dark:text-emerald-400 block truncate">
+                                  {selectedManualContact.job_title || selectedManualContact.email || 'Contacto seleccionado'}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedManualContact(null)}
+                                className="text-gray-400 hover:text-rose-500 p-1 cursor-pointer"
+                                title="Quitar asignación de contacto"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
-
-                <p className="text-[9px] text-gray-400 text-center italic">
-                  (Los contactos se gestionan exclusivamente en Business Central)
-                </p>
               </div>
             )}
           </div>
@@ -634,7 +878,7 @@ export const OutlookAddinPage: React.FC = () => {
           {/* Opciones de Registro */}
           <div className="bg-white dark:bg-[#00222C]/60 border border-gray-200 dark:border-white/10 rounded-xl p-3 shadow-2xs space-y-3">
             {/* Vinculación a Oferta Comercial */}
-            {lookupData?.openQuotes && lookupData.openQuotes.length > 0 && (
+            {effectiveOpenQuotes && effectiveOpenQuotes.length > 0 && (
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1">
                   <FileText size={10} /> Vincular a Oferta Abierta
@@ -645,7 +889,7 @@ export const OutlookAddinPage: React.FC = () => {
                   className="w-full px-2 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-xs text-gray-800 dark:text-gray-200 outline-none focus:border-dts-secondary"
                 >
                   <option value="">(Sin vincular a oferta - Solo ficha cliente)</option>
-                  {lookupData.openQuotes.map((q) => (
+                  {effectiveOpenQuotes.map((q) => (
                     <option key={q.document_no} value={q.document_no}>
                       {q.document_no} — {q.amount ? `${q.amount.toLocaleString('es-ES')} €` : 'S/I'} ({q.estado})
                     </option>
@@ -712,9 +956,9 @@ export const OutlookAddinPage: React.FC = () => {
                 </div>
               </div>
 
-              {lookupData.matchedContact && (
+              {(lookupData.matchedContact || selectedManualContact) && (
                 <a
-                  href={`/crm/contacts/${lookupData.matchedContact.id}?tab=emails`}
+                  href={`/crm/contacts/${lookupData.matchedContact?.id || selectedManualContact?.id}?tab=emails`}
                   target="_blank"
                   rel="noreferrer"
                   className="px-2 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold hover:bg-emerald-700 flex items-center gap-1"
@@ -725,6 +969,23 @@ export const OutlookAddinPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-2 pt-1">
+              {/* Resumen visual de vinculación */}
+              {(selectedCompany || lookupData?.matchedCustomer) && (
+                <div className="p-2 rounded-lg bg-gray-100/70 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[10px] space-y-1">
+                  <div className="flex justify-between items-center text-gray-500 dark:text-gray-400">
+                    <span className="font-semibold">Destino en CRM:</span>
+                    <span className="font-bold text-gray-800 dark:text-gray-200 truncate ml-2">
+                      {selectedCompany?.name || lookupData?.matchedCustomer?.name}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-gray-500 dark:text-gray-400">
+                    <span className="font-semibold">Contacto vinculado:</span>
+                    <span className="font-bold text-dts-primary dark:text-dts-secondary truncate ml-2">
+                      {lookupData?.matchedContact?.name || selectedManualContact?.name || '(General de Empresa)'}
+                    </span>
+                  </div>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleLogEmail}

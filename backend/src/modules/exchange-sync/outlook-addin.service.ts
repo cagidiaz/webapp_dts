@@ -475,4 +475,60 @@ export class OutlookAddinService {
       take: 10,
     });
   }
+
+  /**
+   * Obtiene la lista de contactos asociados a un cliente específico.
+   */
+  async getCompanyContacts(clientId: string) {
+    if (!clientId) return [];
+
+    return await this.prisma.contacts.findMany({
+      where: {
+        client_id: clientId,
+      },
+      select: {
+        id: true,
+        contact_no: true,
+        name: true,
+        email: true,
+        job_title: true,
+        phone_no: true,
+        mobile_no: true,
+        client_id: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+  }
+
+  /**
+   * Obtiene las ofertas abiertas asociadas a un cliente específico.
+   */
+  async getCompanyQuotes(clientId: string) {
+    if (!clientId) return [];
+
+    const quotes = await this.prisma.sales_quotes.findMany({
+      where: {
+        customer_no: clientId,
+      },
+      include: {
+        sales_quotes_crm: true,
+      },
+      orderBy: { document_date: 'desc' },
+      take: 10,
+    });
+
+    return quotes.map((q) => {
+      const crm = q.sales_quotes_crm;
+      return {
+        document_no: q.document_no,
+        document_date: q.document_date,
+        amount: Number(q.amount || 0),
+        estado: crm?.estado_oferta || 'abierta',
+        probabilidad: crm?.probabilidad_exito ? Number(crm.probabilidad_exito) : 10,
+        proxima_accion: crm?.proxima_accion || null,
+      };
+    });
+  }
 }

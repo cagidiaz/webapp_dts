@@ -81,6 +81,26 @@ export interface CompanyCandidate {
   salesperson_code?: string;
 }
 
+export interface CompanyContactCandidate {
+  id: string;
+  contact_no: string;
+  name: string;
+  email?: string | null;
+  job_title?: string | null;
+  phone_no?: string | null;
+  mobile_no?: string | null;
+  client_id: string;
+}
+
+export interface OpenQuoteCandidate {
+  document_no: string;
+  document_date?: string;
+  amount: number;
+  estado: string;
+  probabilidad: number;
+  proxima_accion?: string | null;
+}
+
 /**
  * Consulta en backend la información contextual del correo para el Add-in
  */
@@ -106,3 +126,24 @@ export const searchCompaniesForAddin = async (query: string): Promise<CompanyCan
   });
   return data;
 };
+
+/**
+ * Obtiene los contactos registrados de una empresa cliente
+ */
+export const getCompanyContactsForAddin = async (clientId: string): Promise<CompanyContactCandidate[]> => {
+  const { data } = await apiClient.get<CompanyContactCandidate[]>('/outlook-addin/company-contacts', {
+    params: { clientId },
+  });
+  return data;
+};
+
+/**
+ * Obtiene las ofertas abiertas de una empresa cliente
+ */
+export const getCompanyQuotesForAddin = async (clientId: string): Promise<OpenQuoteCandidate[]> => {
+  const { data } = await apiClient.get<OpenQuoteCandidate[]>('/outlook-addin/company-quotes', {
+    params: { clientId },
+  });
+  return data;
+};
+

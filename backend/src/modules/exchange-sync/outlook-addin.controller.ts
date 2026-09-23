@@ -33,4 +33,22 @@ export class OutlookAddinController {
   async searchCompanies(@Query('q') query: string) {
     return await this.addinService.searchCompanies(query || '');
   }
+
+  @Get('company-contacts')
+  @ApiOperation({ summary: 'Obtiene los contactos registrados de una empresa cliente' })
+  async getCompanyContacts(@Query('clientId') clientId: string) {
+    if (!clientId) {
+      throw new BadRequestException('El parámetro clientId es obligatorio.');
+    }
+    return await this.addinService.getCompanyContacts(clientId);
+  }
+
+  @Get('company-quotes')
+  @ApiOperation({ summary: 'Obtiene las ofertas abiertas de una empresa cliente' })
+  async getCompanyQuotes(@Query('clientId') clientId: string) {
+    if (!clientId) {
+      throw new BadRequestException('El parámetro clientId es obligatorio.');
+    }
+    return await this.addinService.getCompanyQuotes(clientId);
+  }
 }
