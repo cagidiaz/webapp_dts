@@ -98,36 +98,50 @@ export class OutlookAddinService {
 
     let text = rawBody;
 
-    // Normalizar saltos de línea
+    // Normalizar saltos de línea y entidades HTML básicas si viniesen
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    text = text.replace(/&nbsp;/gi, ' ');
 
-    // 1. Cortar cláusulas legales de confidencialidad y RGPD comunes en España y en inglés
+    // 1. Cortar cláusulas legales de confidencialidad, protección de datos y RGPD (español e inglés)
     const rgpdPatterns = [
-      /\n\s*(?:De conformidad con lo dispuesto en el Reglamento|En cumplimiento de la normativa de Protección de Datos|En virtud de lo establecido en la Ley Orgánica|Aviso Legal:|AVISO LEGAL:?)[\s\S]*$/i,
-      /\n\s*(?:Este mensaje y sus archivos adjuntos son confidenciales|Este correo y sus anexos pueden contener información confidencial|El contenido de este correo electrónico es confidencial)[\s\S]*$/i,
-      /\n\s*(?:Este mensaje se dirige exclusivamente a su destinatario|La información contenida en este e-mail es confidencial)[\s\S]*$/i,
-      /\n\s*(?:This email and any attachments are confidential|The information contained in this email is confidential|Confidentiality Notice:)[\s\S]*$/i,
-      /\n\s*(?:Before printing, think about environmental responsibility|Antes de imprimir este correo piense si es necesario)[\s\S]*$/i,
+      /\n\s*(?:--\s*\n)?\s*(?:De conformidad con lo dispuesto|En cumplimiento de la normativa|En virtud de lo establecido|Aviso Legal|AVISO LEGAL|PROTECCIÓN DE DATOS|Protección de Datos|Cláusula de Confidencialidad|Información básica sobre protección de datos)[\s\S]*$/i,
+      /\n\s*(?:Este mensaje y sus archivos adjuntos son confidenciales|Este correo y sus anexos pueden contener información|El contenido de este correo electrónico es confidencial|Este mensaje se dirige exclusivamente a su destinatario|La información contenida en este e-mail es confidencial)[\s\S]*$/i,
+      /\n\s*(?:Si usted no es el destinatario indicado|Si ha recibido este mensaje por error|If you are not the intended recipient|This email and any attachments are confidential|The information contained in this email is confidential|Confidentiality Notice:)[\s\S]*$/i,
+      /\n\s*(?:Before printing, think about environmental responsibility|Antes de imprimir este correo piense si es necesario|Por favor, considere el medio ambiente antes de imprimir)[\s\S]*$/i,
     ];
 
     for (const pattern of rgpdPatterns) {
       text = text.replace(pattern, '');
     }
 
-    // 2. Cortar citas previas extensas de Outlook ("De: ... Enviado el: ...") si solo queremos el mensaje más reciente
+    // 2. Cortar citas previas extensas de Outlook ("De: ... Enviado el: ...") para conservar el mensaje actual
     const replyHeaders = [
-      /\n\s*_{10,}[\s\S]*$/,
-      /\n\s*-{10,}[\s\S]*$/,
-      /\n\s*De:\s+.+?\nEnviado el:\s+.+?\nPara:\s+.+?\nAsunto:\s+.+?\n[\s\S]*$/i,
-      /\n\s*From:\s+.+?\nSent:\s+.+?\nTo:\s+.+?\nSubject:\s+.+?\n[\s\S]*$/i,
-      /\n\s*El\s+.+?,\s+.+?\sescribió:\s*[\s\S]*$/i,
+      /\n\s*_{8,}[\s\S]*$/,
+      /\n\s*-{8,}[\s\S]*$/,
+      /\n\s*De:\s+.+?\n(?:Enviado el|Fecha):\s+.+?\n(?:Para|Asunto):[\s\S]*$/i,
+      /\n\s*From:\s+.+?\n(?:Sent|Date):\s+.+?\n(?:To|Subject):[\s\S]*$/i,
+      /\n\s*El\s+.+?,\s+.+?\sescribió:[\s\S]*$/i,
+      /\n\s*On\s+.+?,\s+.+?\swrote:[\s\S]*$/i,
     ];
 
     for (const header of replyHeaders) {
       text = text.replace(header, '');
     }
 
-    // 3. Limpiar espacios en blanco excesivos y limitar tamaño
+    // 3. Cortar firmas estándar tipo "-- \nNombre..." o "Atentamente,\n..." si van seguidas de datos de contacto
+    const signaturePatterns = [
+      /\n\s*--\s*\n[\s\S]*$/,
+      /\n\s*_{3,}\s*\n[\s\S]*$/,
+    ];
+
+    for (const sig of signaturePatterns) {
+      text = text.replace(sig, '');
+    }
+
+    // 4. Reducir saltos de línea consecutivos a máximo 2
+    text = text.replace(/\n{3,}/g, '\n\n');
+
+    // 5. Limpiar espacios en blanco excesivos y limitar tamaño
     text = text.trim();
     if (text.length > 4000) {
       text = text.substring(0, 4000) + '... [Texto recortado para optimizar almacenamiento en CRM]';
@@ -390,6 +404,7 @@ export class OutlookAddinService {
         exchange_web_link: exchangeWebLink || null,
         exchange_sync_status: 'synced',
         exchange_last_synced_at: new Date(),
+        attendees: quoteDocumentNo ? { quoteDocumentNo } : undefined,
         created_at: activityDate,
       },
       include: {

@@ -179,8 +179,16 @@ Ubicado en `/crm/contacts` y `/crm/customers`.
 ---
 
 ### 3.3 Pestaña de Emails, Preparación de Correos y Apertura en Outlook
-Integrada en la ficha del contacto/cliente en el CRM.
+Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=emails`). Para especificaciones técnicas detalladas, consultar [Documentación de Vista: Contactos CRM y Pestaña de Emails](file:///c:/proyectos/webapp_dts/docs/vistas/crm_contactos_mails.md).
 
+* **Visualización Optimizada de Correos (Límite de 5 Líneas)**:
+  * Cada correo muestra por defecto exclusivamente sus primeras **5 líneas** para garantizar una navegación ágil y compacta sin saturar la pantalla.
+  * Botón interactivo **"Ver más (+N líneas)"** / **"Mostrar menos"** que expande y colapsa el texto íntegro en tiempo real.
+* **Badge Interactivo de Oferta Comercial**:
+  * Si el correo fue asociado a una cotización comercial, se muestra un distintivo azul con su código e importe (ej. `📄 Oferta: OFT-2026-0014 (4.500 €)`).
+  * Al hacer clic sobre el badge, se abre de inmediato el **Drawer lateral** de la oferta con todos sus detalles sin abandonar la ficha del contacto.
+* **Filtro de Correos por Oferta**:
+  * Desplegable en la cabecera que permite filtrar: *Todas las ofertas y correos*, *Solo con oferta vinculada*, *Sin oferta (Generales)* o por una *Oferta Específica* con indicación de su número de correos acumulados.
 * **Preparación Directa en Outlook (Sin Envío Automático)**:
   * El comercial redacta el correo o carga una plantilla corporativa en la WebApp y, al pulsar **"Abrir y Preparar en Outlook"**, el sistema genera el nuevo correo en Outlook con todos los datos precargados (destinatario, asunto y cuerpo).
   * Permite al comercial revisar el texto, adjuntar archivos o catálogos PDF y pulsar **"Enviar"** directamente desde Outlook.
@@ -201,11 +209,19 @@ Extensión oficial integrada en la cinta de opciones de Microsoft Outlook (Web, 
 * **Carga Inmediata y Skeleton Loading**: Apertura instantánea con animación estructurada corporativa dTS, desacoplando la lectura pesada del cuerpo del correo para iniciar la consulta al CRM en milisegundos.
 * **Presentación Limpia y Ergonómica**: Visualización directa de las direcciones de correo en los campos **De:** y **Para:**, eliminando etiquetas superfluas y aprovechando todo el ancho del panel.
 * **Detección Contextual Inteligente**: Reconocimiento automático del contacto y empresa (evalúa el remitente en recibidos o el destinatario en enviados).
-* **Vinculación a Ofertas Opcional**: Por defecto se mantiene en **`(Sin vincular a oferta - Solo ficha cliente)`**, permitiendo al comercial asociar una cotización abierta del cliente (`sales_quotes_crm`) solo cuando corresponda.
+* **Asociación y Selección Manual de Contactos por Empresa**:
+  * Cuando el remitente no está registrado previamente, el comercial puede buscar la empresa cliente (`customers`).
+  * Al seleccionar o detectar una empresa, se despliega un **selector dinámico de contactos** con todos los interlocutores de dicha cuenta registrados en Business Central (`Nombre`, `Cargo/Rol`, `Email`), incluyendo un buscador rápido por texto.
+  * Sugerencia automática del contacto si el nombre del interlocutor coincide con alguno de los contactos de la empresa.
+  * Opción flexible de asignación manual de contacto o archivo a nivel general de empresa.
+* **Vinculación a Ofertas Dinámica y Opcional**:
+  * Al asociar una empresa, se cargan de inmediato sus ofertas comerciales abiertas para vincular el correo a la cotización correspondiente.
+  * El número de oferta se persiste de forma estructurada en `attendees: { quoteDocumentNo }` para su explotación en el CRM.
 * **Etiquetado Comercial por Tipología**: Clasificación en un clic (`📄 Cierre / Aceptación`, `⚙️ Especificación Técnica`, `💬 Negociación`, `⚠️ Incidencia / Postventa`, `✉️ General`).
-* **Limpieza Inteligente de RGPD**: Filtro automático de cláusulas legales de privacidad, cadenas repetidas de reenvío y firmas pesadas.
+* **Limpieza y Acortado Inteligente de RGPD y Firmas**:
+  * Filtro automático robusto de cláusulas legales de privacidad (RGPD / LOPD en español e inglés), cadenas repetitivas de reenvíos (`De: ... Enviado el: ...`), firmas pesadas y normalización de saltos de línea continuos.
 * **Prevención Activa de Duplicados**: Detección por identificador único de Microsoft Graph (`✓ Ya registrado en dTS CRM`).
-* **Asociación Flexible a Empresas**: Permite vincular correos de remitentes no registrados directamente al historial de la empresa cliente (los contactos oficiales se gestionan exclusivamente en Business Central y se sincronizan vía n8n).
+* **Resumen de Destino Previo al Guardado**: Tarjeta de confirmación visual que muestra la empresa cliente y el contacto vinculado antes de pulsar guardar.
 
 ---
 

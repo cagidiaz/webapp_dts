@@ -19,6 +19,8 @@ export interface CrmActivity {
   exchange_item_id?: string | null;
   exchange_web_link?: string | null;
   exchange_sync_status?: string | null;
+  quote_document_no?: string | null;
+  attendees?: any;
   created_at: string;
   updated_at: string;
   customer?: {

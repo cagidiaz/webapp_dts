@@ -160,6 +160,10 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [outlookTarget, setOutlookTarget] = useState<'desktop' | 'web'>(getPreferredOutlookClient());
   const [isCopied, setIsCopied] = useState(false);
 
+  // Filtro de ofertas en la pestaña de emails y control de expansión (5 líneas)
+  const [selectedEmailQuoteFilter, setSelectedEmailQuoteFilter] = useState<string>('ALL');
+  const [expandedEmailIds, setExpandedEmailIds] = useState<Set<string>>(new Set());
+
   // Edit state (unificado)
   const [editingActivity, setEditingActivity] = useState<any | null>(null);
 
@@ -666,6 +670,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       location?: string | null;
       exchangeSyncStatus?: string | null;
       exchangeWebLink?: string | null;
+      quoteDocumentNo?: string | null;
       isPastDate: boolean;
       isFinished: boolean;
       hasConclusions: boolean;
@@ -778,6 +783,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         location: act.location || undefined,
         exchangeSyncStatus: act.exchange_sync_status || null,
         exchangeWebLink: act.exchange_web_link || null,
+        quoteDocumentNo: act.quote_document_no || act.attendees?.quoteDocumentNo || act.attendees?.quote_document_no || null,
         isPastDate,
         isFinished,
         hasConclusions,
@@ -831,6 +837,43 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     };
   }, [crmQuotes]);
 
+  // Lista de ofertas con correos y filtrado por oferta comercial en la pestaña de emails
+  const { allEmailsList, availableEmailQuotes, filteredEmailsList } = useMemo(() => {
+    const allEmails = timelineActivities.filter((act) => act.type === 'email');
+
+    // Ofertas detectadas con al menos un correo
+    const quoteMap = new Map<string, number>();
+    allEmails.forEach((mail: any) => {
+      if (mail.quoteDocumentNo) {
+        quoteMap.set(mail.quoteDocumentNo, (quoteMap.get(mail.quoteDocumentNo) || 0) + 1);
+      }
+    });
+
+    const quotesWithEmails = Array.from(quoteMap.entries()).map(([docNo, count]) => {
+      const matchCrm = crmQuotes.find((q) => q.document_no === docNo);
+      return {
+        document_no: docNo,
+        count,
+        amount: matchCrm?.amount,
+        estado: matchCrm?.estado_oferta || 'abierta',
+      };
+    });
+
+    // Filtrar según el selector activo
+    const filtered = allEmails.filter((mail: any) => {
+      if (selectedEmailQuoteFilter === 'ALL') return true;
+      if (selectedEmailQuoteFilter === 'WITH_QUOTE') return Boolean(mail.quoteDocumentNo);
+      if (selectedEmailQuoteFilter === 'WITHOUT_QUOTE') return !mail.quoteDocumentNo;
+      return mail.quoteDocumentNo === selectedEmailQuoteFilter;
+    });
+
+    return {
+      allEmailsList: allEmails,
+      availableEmailQuotes: quotesWithEmails,
+      filteredEmailsList: filtered,
+    };
+  }, [timelineActivities, crmQuotes, selectedEmailQuoteFilter]);
+
   // List of events (unifying tasks, notes, meetings, calls, events)
   const filteredEventsList = useMemo(() => {
     return timelineActivities.filter(act => {
@@ -845,6 +888,19 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       return true;
     });
   }, [timelineActivities, eventFilter]);
+
+  // Guardar/alternar expansión de visualización de correo
+  const toggleEmailExpansion = (emailId: string) => {
+    setExpandedEmailIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(emailId)) {
+        next.delete(emailId);
+      } else {
+        next.add(emailId);
+      }
+      return next;
+    });
+  };
 
   // Save linkedin profile link inline
   const handleSaveLinkedin = async (contactId: string) => {
@@ -1901,10 +1957,41 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           {/* Emails Tab */}
           {activeTab === 'emails' && (
             <div className="space-y-6">
-              <div className="flex flex-wrap justify-between items-center gap-3 pb-2 border-b border-gray-100 dark:border-white/5">
-                <span className="text-xs text-gray-400">Correos electrónicos registrados y plantillas</span>
+              {/* Cabecera con Filtro de Ofertas y Botones de Acción */}
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pb-3 border-b border-gray-100 dark:border-white/5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 w-full lg:w-auto">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold shrink-0">
+                    Correos ({filteredEmailsList.length}{filteredEmailsList.length !== allEmailsList.length ? ` de ${allEmailsList.length}` : ''})
+                  </span>
+
+                  {/* Filtro por Oferta Comercial */}
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                    <FileText size={12} className="text-dts-secondary shrink-0 hidden sm:block" />
+                    <select
+                      value={selectedEmailQuoteFilter}
+                      onChange={(e) => setSelectedEmailQuoteFilter(e.target.value)}
+                      className="px-2.5 py-1.5 bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-white/10 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-200 outline-none focus:border-dts-secondary w-full sm:w-auto cursor-pointer"
+                      title="Filtrar correos por oferta comercial asignada"
+                    >
+                      <option value="ALL">Todas las ofertas y correos ({allEmailsList.length})</option>
+                      {availableEmailQuotes.length > 0 && (
+                        <>
+                          <option value="WITH_QUOTE">Solo vinculados a alguna oferta</option>
+                          <option value="WITHOUT_QUOTE">Sin oferta vinculada (Generales)</option>
+                          <optgroup label="Ofertas Específicas">
+                            {availableEmailQuotes.map((q) => (
+                              <option key={q.document_no} value={q.document_no}>
+                                {q.document_no} ({q.count} {q.count === 1 ? 'correo' : 'correos'}) {q.amount ? `· ${formatCurrency(q.amount, 0)}` : ''}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
                   {isExchangeConnected && (
                     <button
                       type="button"
@@ -1914,7 +2001,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       title="Sincroniza y actualiza los borradores que ya hayan sido enviados desde Outlook"
                     >
                       <RefreshCw size={12} className={syncExchangeMutation.isPending ? 'animate-spin text-dts-secondary' : ''} />
-                      <span>{syncExchangeMutation.isPending ? 'Sincronizando...' : 'Sincronizar Cambios'}</span>
+                      <span>{syncExchangeMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}</span>
                     </button>
                   )}
 
@@ -1934,57 +2021,132 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
               <div className="space-y-4">
                 {isLoadingActivities ? (
                   <div className="text-center py-10 text-xs text-gray-400 uppercase font-medium">Cargando emails...</div>
-                ) : timelineActivities.filter(a => a.type === 'email').length === 0 ? (
+                ) : allEmailsList.length === 0 ? (
                   <div className="text-center py-12 text-gray-400 italic text-xs">No hay correos registrados para este contacto.</div>
+                ) : filteredEmailsList.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 italic text-xs space-y-2">
+                    <p>No hay correos vinculados al filtro seleccionado.</p>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEmailQuoteFilter('ALL')}
+                      className="text-xs font-bold text-dts-secondary hover:underline cursor-pointer"
+                    >
+                      Ver todos los correos ({allEmailsList.length})
+                    </button>
+                  </div>
                 ) : (
                   <div className="space-y-3">
-                    {timelineActivities.filter(a => a.type === 'email').map(mail => (
-                      <div key={mail.id} className="bg-gray-50/50 dark:bg-zinc-800/10 p-4 rounded-xl border border-gray-100 dark:border-gray-800/50 space-y-2.5">
-                        <div className="flex justify-between items-start gap-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-xs font-bold text-gray-900 dark:text-white">{mail.title}</h4>
-                              {mail.exchangeSyncStatus === 'draft' ? (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                                  Borrador en Outlook
-                                </span>
-                              ) : (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/10 text-dts-secondary border border-dts-secondary/20">
-                                  Sincronizado
-                                </span>
-                              )}
+                    {filteredEmailsList.map((mail: any) => {
+                      const isExpanded = expandedEmailIds.has(mail.id);
+                      const bodyLines = (mail.description || '').split('\n');
+                      const hasMoreThan5Lines = bodyLines.length > 5 || (mail.description && mail.description.length > 350);
+                      const visibleText = !isExpanded && hasMoreThan5Lines
+                        ? bodyLines.slice(0, 5).join('\n')
+                        : mail.description;
+
+                      // Encontrar si la oferta existe en crmQuotes para abrir su Drawer
+                      const matchingQuote = mail.quoteDocumentNo
+                        ? crmQuotes.find((q) => q.document_no === mail.quoteDocumentNo)
+                        : null;
+
+                      return (
+                        <div key={mail.id} className="bg-gray-50/50 dark:bg-zinc-800/10 p-4 rounded-xl border border-gray-100 dark:border-gray-800/50 space-y-2.5 transition-all">
+                          <div className="flex flex-col sm:flex-row justify-between items-start gap-2.5">
+                            <div className="space-y-1.5 flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                                  {mail.title}
+                                </h4>
+
+                                {mail.exchangeSyncStatus === 'draft' ? (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                                    Borrador en Outlook
+                                  </span>
+                                ) : (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/10 text-dts-secondary border border-dts-secondary/20 shrink-0">
+                                    Sincronizado
+                                  </span>
+                                )}
+
+                                {/* Badge de Oferta Comercial Asociada */}
+                                {mail.quoteDocumentNo && (
+                                  <button
+                                    type="button"
+                                    onClick={() => matchingQuote && openQuoteDrawer(matchingQuote)}
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-tight border transition-colors shadow-2xs ${
+                                      matchingQuote
+                                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 cursor-pointer'
+                                        : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10'
+                                    }`}
+                                    title={matchingQuote ? `Abrir detalles de la oferta ${mail.quoteDocumentNo}` : `Oferta ${mail.quoteDocumentNo}`}
+                                  >
+                                    <FileText size={10} className="text-blue-600 dark:text-blue-400" />
+                                    <span>Oferta: {mail.quoteDocumentNo}</span>
+                                    {matchingQuote?.amount ? (
+                                      <span className="text-[9px] font-mono text-blue-600/80 dark:text-blue-400/80 ml-0.5 font-normal">
+                                        ({formatCurrency(matchingQuote.amount, 0)})
+                                      </span>
+                                    ) : null}
+                                  </button>
+                                )}
+                              </div>
+
+                              <span className="text-[10px] text-gray-400 font-mono block truncate">
+                                {mail.title?.includes('Recibido') || mail.title?.includes('📥') ? 'Remitente' : 'Destinatario'}: {mail.email || contact?.email}
+                              </span>
                             </div>
-                            <span className="text-[10px] text-gray-400 font-mono block">
-                              {mail.title?.includes('Recibido') || mail.title?.includes('📥') ? 'Remitente' : 'Destinatario'}: {mail.email || contact?.email}
-                            </span>
+                            
+                            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                              <span className="text-[9px] font-mono text-gray-400">
+                                {new Date(mail.date).toLocaleDateString('es-ES')}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => openExistingEmailInOutlook({
+                                  webLink: mail.exchangeWebLink,
+                                  email: mail.email || contact?.email,
+                                  subject: mail.title,
+                                  target: outlookTarget,
+                                  exchangeSyncStatus: mail.exchangeSyncStatus,
+                                })}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-lg transition-colors cursor-pointer border border-dts-secondary/25 shadow-2xs"
+                                title={mail.exchangeSyncStatus === 'draft' ? 'Abrir bandeja de borradores en Outlook' : `Abrir en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
+                              >
+                                <ExternalLink size={10} />
+                                <span>{mail.exchangeSyncStatus === 'draft' ? 'Ver Borradores' : 'Abrir en Outlook'}</span>
+                              </button>
+                            </div>
                           </div>
-                          
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[9px] font-mono text-gray-400">
-                              {new Date(mail.date).toLocaleDateString('es-ES')}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => openExistingEmailInOutlook({
-                                webLink: mail.exchangeWebLink,
-                                email: mail.email || contact?.email,
-                                subject: mail.title,
-                                target: outlookTarget,
-                                exchangeSyncStatus: mail.exchangeSyncStatus,
-                              })}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-lg transition-colors cursor-pointer border border-dts-secondary/25 shadow-2xs"
-                              title={mail.exchangeSyncStatus === 'draft' ? 'Abrir bandeja de borradores en Outlook' : `Abrir en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
-                            >
-                              <ExternalLink size={10} />
-                              <span>{mail.exchangeSyncStatus === 'draft' ? 'Ver Borradores' : 'Abrir en Outlook'}</span>
-                            </button>
+
+                          {/* Cuerpo del Correo (Recortado a 5 líneas con botón Ver más / Ver menos) */}
+                          <div className="bg-white/40 dark:bg-black/10 p-2.5 rounded-lg border border-gray-100 dark:border-white/5 space-y-1.5">
+                            <p className="whitespace-pre-wrap leading-relaxed font-mono text-[11px] text-gray-600 dark:text-gray-300 break-words">
+                              {visibleText}
+                              {!isExpanded && hasMoreThan5Lines && '...'}
+                            </p>
+
+                            {hasMoreThan5Lines && (
+                              <div className="pt-1 flex items-center justify-between border-t border-gray-100 dark:border-white/5 text-[10px]">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleEmailExpansion(mail.id)}
+                                  className="font-bold text-dts-secondary hover:underline cursor-pointer flex items-center gap-1"
+                                >
+                                  {isExpanded ? (
+                                    <>Mostrar menos</>
+                                  ) : (
+                                    <>Ver más ({bodyLines.length > 5 ? `+${bodyLines.length - 5} líneas` : 'completo'})</>
+                                  )}
+                                </button>
+                                <span className="text-gray-400 font-mono text-[9px]">
+                                  {bodyLines.length} líneas en total
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <p className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed pt-1 bg-white/40 dark:bg-black/5 p-2 rounded-lg font-mono text-[11px] border border-gray-50/50 dark:border-white/2">
-                          {mail.description}
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

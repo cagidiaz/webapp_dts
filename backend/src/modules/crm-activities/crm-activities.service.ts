@@ -19,22 +19,25 @@ export class CrmActivitiesService {
       let activities = await this.prisma.crm_activities.findMany({
         where: { client_id: clientId },
         include: {
-          contact: true
+          contact: true,
         },
-        orderBy: { created_at: 'desc' }
+        orderBy: { created_at: 'desc' },
       });
 
       if (userId) {
-        const syncedActs = activities.filter(a => a.exchange_item_id && a.created_by === userId && a.type !== 'EMAIL');
+        const syncedActs = activities.filter(
+          (a) => a.exchange_item_id && a.created_by === userId && a.type !== 'EMAIL',
+        );
         if (syncedActs.length > 0) {
           const deletedIds = await this.exchangeSyncService.purgeDeletedCalendarActivities(userId, syncedActs);
           if (deletedIds.length > 0) {
-            activities = activities.filter(a => !deletedIds.includes(a.id));
+            activities = activities.filter((a) => !deletedIds.includes(a.id));
           }
         }
       }
 
-      return activities;
+      // Enriquecer con número de oferta asociada
+      return await this.enrichActivitiesWithQuoteInfo(activities);
     } catch (error) {
       console.error('Error en CrmActivitiesService.getByClient:', error);
       throw new InternalServerErrorException('Error al obtener las actividades del cliente');
@@ -49,26 +52,59 @@ export class CrmActivitiesService {
       let activities = await this.prisma.crm_activities.findMany({
         where: { contact_id: contactId },
         include: {
-          customer: true
+          customer: true,
         },
-        orderBy: { created_at: 'desc' }
+        orderBy: { created_at: 'desc' },
       });
 
       if (userId) {
-        const syncedActs = activities.filter(a => a.exchange_item_id && a.created_by === userId && a.type !== 'EMAIL');
+        const syncedActs = activities.filter(
+          (a) => a.exchange_item_id && a.created_by === userId && a.type !== 'EMAIL',
+        );
         if (syncedActs.length > 0) {
           const deletedIds = await this.exchangeSyncService.purgeDeletedCalendarActivities(userId, syncedActs);
           if (deletedIds.length > 0) {
-            activities = activities.filter(a => !deletedIds.includes(a.id));
+            activities = activities.filter((a) => !deletedIds.includes(a.id));
           }
         }
       }
 
-      return activities;
+      // Enriquecer con número de oferta asociada
+      return await this.enrichActivitiesWithQuoteInfo(activities);
     } catch (error) {
       console.error('Error en CrmActivitiesService.getByContact:', error);
       throw new InternalServerErrorException('Error al obtener las actividades del contacto');
     }
+  }
+
+  /**
+   * Extrae o cruza el número de oferta asociada (quote_document_no) para cada actividad.
+   */
+  private async enrichActivitiesWithQuoteInfo(activities: any[]) {
+    if (!activities || activities.length === 0) return [];
+
+    return activities.map((act) => {
+      let quoteDocNo: string | null = null;
+
+      // 1. Extraer desde attendees JSON si se guardó estructurado
+      if (act.attendees && typeof act.attendees === 'object') {
+        const att = act.attendees as any;
+        quoteDocNo = att.quoteDocumentNo || att.quote_document_no || null;
+      }
+
+      // 2. Extraer desde el título si contiene [OFT-...] o patrones similares
+      if (!quoteDocNo && act.title) {
+        const match = act.title.match(/(?:OFT|COT|OFERTA)[-_ ]?([A-Z0-9\-\/]+)/i);
+        if (match) {
+          quoteDocNo = match[0].toUpperCase();
+        }
+      }
+
+      return {
+        ...act,
+        quote_document_no: quoteDocNo,
+      };
+    });
   }
 
   /**
