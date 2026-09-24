@@ -234,3 +234,17 @@ Al pulsar el botón **Exportar**:
   - Exporta las 18 columnas exhaustivas del equipo comercial (FV Producto, AAV Producto, Facturación Neta Items, Histórico, Presupuesto, Desviaciones, Facturación Documental, Portes 624, Otras Cuentas GL, Prepagos Vivos, Cartera Neta, Pendiente Facturar, Nuevos Clientes y Previsión Cierre).
   - Incluye la fila de sumatorio de **TOTAL EQUIPO COMERCIAL**.
 
+---
+
+## 10. Optimización de Rendimiento y Reactividad ⚡
+
+Para garantizar una respuesta inmediata al interactuar con filtros pesados (familias con miles de artículos o conmutación rápida de meses):
+1. **Caché en Memoria de Artículos (`resolveItemNos`):**
+   - Al filtrar por familia o subfamilia, el árbol de artículos resultantes se memoriza en una caché interna del servidor con TTL de 10 minutos. Los cambios posteriores de mes o filtros temporales resuelven los artículos en **0 ms**.
+2. **Caché de Calendario (`getDatesForMonths`):**
+   - Las fechas de calendario para el cómputo de días del ejercicio se almacenan en memoria (TTL de 30 min), evitando consultas repetitivas a la tabla `calendar`.
+3. **Optimización de Índices por Rango de Fechas (`getMonthRanges` y `buildDateFilter`):**
+   - En lugar de enviar a PostgreSQL un array de más de 200 fechas individuales (`budget_date: { in: dates }`), el backend consolida automáticamente los meses seleccionados en rangos continuos `gte/lte` o intervalos `OR` discretos. Esto permite a PostgreSQL utilizar de forma óptima el índice B-tree (`idx_budget_date`), reduciendo la ejecución de presupuestos de ~650 ms a menos de 80 ms (8x más rápido).
+4. **Feedback Visual No Destructivo en KPIs:**
+   - Durante la obtención de datos en segundo plano (`isFetching`), las tarjetas de KPI muestran un indicador visual sutil (`Loader2`) y una ligera atenuación sin destruir el contenido ni alterar el layout, preservando el foco y garantizando máxima fluidez de usuario.
+

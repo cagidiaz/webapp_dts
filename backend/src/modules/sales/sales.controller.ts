@@ -1,6 +1,8 @@
-import { Controller, Get, UseGuards, Query, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { SalesService } from './sales.service';
+import { BudgetGeneratorService } from './budget-generator.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -11,6 +13,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class SalesController {
   constructor(
     private readonly salesService: SalesService,
+    private readonly budgetGeneratorService: BudgetGeneratorService,
     private readonly prisma: PrismaService
   ) {}
 
@@ -225,5 +228,54 @@ export class SalesController {
       take: take ? Number(take) : undefined,
       skip: skip ? Number(skip) : undefined,
     });
+  }
+
+  @Get('budget-generator/meta')
+  @ApiOperation({ summary: 'Get metadata for budget templates generation (Admin & Management only)' })
+  async getBudgetGeneratorMeta(@Req() req: any) {
+    const userId = req.user?.userId;
+    if (!userId) throw new UnauthorizedException('User not authenticated');
+    const profile = await this.prisma.profiles.findUnique({
+      where: { id: userId },
+      include: { roles: true }
+    });
+    const userRole = profile?.roles?.name?.toUpperCase();
+    if (userRole !== 'ADMIN' && userRole !== 'DIRECCION') {
+      throw new UnauthorizedException('Access denied: Admins and Management only');
+    }
+
+    return this.budgetGeneratorService.getMetadata();
+  }
+
+  @Get('budget-generator/export')
+  @ApiOperation({ summary: 'Export budget Excel templates or ZIP package (Admin & Management only)' })
+  async exportBudgetTemplates(
+    @Req() req: any,
+    @Res() res: Response,
+    @Query('priceIncreasePct') priceIncreasePct?: string,
+    @Query('salespersonCode') salespersonCode?: string,
+    @Query('asZip') asZip?: string,
+    @Query('protectSheet') protectSheet?: string,
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) throw new UnauthorizedException('User not authenticated');
+    const profile = await this.prisma.profiles.findUnique({
+      where: { id: userId },
+      include: { roles: true }
+    });
+    const userRole = profile?.roles?.name?.toUpperCase();
+    if (userRole !== 'ADMIN' && userRole !== 'DIRECCION') {
+      throw new UnauthorizedException('Access denied: Admins and Management only');
+    }
+
+    await this.budgetGeneratorService.exportBudgetTemplates(
+      {
+        priceIncreasePct: priceIncreasePct ? Number(priceIncreasePct) : 0,
+        salespersonCode,
+        asZip: asZip === 'true',
+        protectSheet: protectSheet === 'true',
+      },
+      res,
+    );
   }
 }

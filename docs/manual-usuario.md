@@ -27,6 +27,10 @@
    - [5.2 4 Puntos Clave y 20 Ratios Financieros](#52-4-puntos-clave-y-20-ratios-financieros)
    - [5.3 Gráficos de Ratios y Simulador Financiero](#53-gráficos-de-ratios-y-simulador-financiero)
 6. [Configuración, Seguridad y Control de Acceso (RBAC)](#6-configuración-seguridad-y-control-de-acceso-rbac)
+   - [6.1 Ajustes Generales y Preferencias de Outlook](#61-ajustes-generales-y-preferencias-de-outlook)
+   - [6.2 Generador de Presupuestos de Ventas (Plantillas Excel)](#62-generador-de-presupuestos-de-ventas-plantillas-excel)
+   - [6.3 Gestión de Usuarios y Roles](#63-gestión-de-usuarios-y-roles)
+   - [6.4 Inmutabilidad y Seguridad de Datos](#64-inmutabilidad-y-seguridad-de-datos)
 
 ---
 
@@ -89,6 +93,7 @@ Ubicado en `/sales/budgets`, es la pantalla neurálgica de seguimiento del grado
     3. *Cartera y Previsión*: Facturación actual, Cartera Neta, Pendiente Facturar, Prepagos Deducidos, Clientes Nuevos captados y Previsión Total a Cierre de Ejercicio.
 * **Control de Acceso (RBAC)**: Los comerciales conectados sólo visualizan sus propios datos personales en la pestaña *Mi Rendimiento*, mientras que Dirección y Administradores disponen de la visión global del equipo y el sumatorio consolidado.
 * **Exportación a Excel Contextual**: Genera el archivo Excel adaptado a la pestaña activa (desglose de clientes o reporte de 18 columnas de comerciales).
+* **Rendimiento Ultrarrápido y Reactividad**: Incorpora caché en memoria para resolución de familias/artículos, optimización de consultas B-tree por rangos de fecha e indicadores de carga no destructivos (`Loader2`) en las tarjetas KPI.
 
 ---
 
@@ -104,6 +109,7 @@ Ubicado en `/sales/product-budgets`, enfocado al análisis presupuestario por l�
   * Si el usuario conectado es Product Manager, el sistema fija automáticamente su código PM y restringe el ámbito a su catálogo de productos asignado.
 * **Gráfico de Evolución Mensual Unificado**:
   * Refleja la suma de líneas de producto mes a mes, coincidiendo exactamente la suma de las 12 barras con la tarjeta de facturación y el pie de tabla.
+* **Optimización de Filtros y Líneas**: Búsqueda acelerada por subconsultas restringidas a referencias activas del PM y respuesta instantánea al alternar meses.
 
 ---
 
@@ -287,13 +293,28 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * Memorización persistente en el navegador local (`localStorage`).
   * Botón de prueba inmediata para validar la apertura de Outlook.
 
-### 6.2 Gestión de Usuarios y Roles (`/users`)
+### 6.2 Generador de Presupuestos de Ventas (Plantillas Excel) (`/settings/budget-generator`)
+*(Acceso disponible para roles `ADMIN` y `DIRECCION` desde el menú lateral de Configuración)*
+
+* **Propósito**: Automatiza la confección de plantillas de trabajo en Excel para la elaboración del presupuesto de ventas del ejercicio siguiente (ej. 2027 a partir del año en curso 2026).
+* **Parámetros Configurables**:
+  * **Comercial / Vendedor**: Permite descargar la plantilla global consolidada o segmentada para un comercial específico.
+  * **% Incremento en Precio de Venta**: Aplica un incremento porcentual configurable sobre los precios medios netos de catálogo.
+  * **Protección Opcional**: Por defecto genera la hoja desbloqueada para permitir a los comerciales insertar libremente nuevas filas para presupuestar nuevos clientes o productos.
+* **Estructura del Libro Excel**:
+  * Histórico de unidades y ventas del año anterior y año actual (YTD).
+  * Columna de previsión de cierre editable en blanco.
+  * Columna de precio proyectado con el % de incremento reflejado en la cabecera.
+  * Columna de objetivo anual con fórmula Excel protegida contra borrado accidental (`=Previsión * P.Vta`).
+* **Exclusión de Cuentas Contables**: Filtra automáticamente cuentas `G/L Account` (`624%`, `438%`, `700%`, etc.), incluyendo únicamente referencias comerciales de producto (`Item`).
+
+### 6.3 Gestión de Usuarios y Roles (`/users`)
 *(Acceso exclusivo para rol `ADMIN`)*
 
 * Control de acceso basado en roles: `ADMIN`, `DIRECCION`, `VENTAS`, `OPERACIONES`.
 * Matriz de permisos modulares dinámicos (`role_modules`) gestionada mediante Supabase Auth.
 
-### 6.3 Inmutabilidad y Seguridad de Datos
+### 6.4 Inmutabilidad y Seguridad de Datos
 * Los datos de negocio procedentes de Dynamics 365 Business Central son de **estricta solo lectura**.
 * Únicamente se permite la persistencia de datos en metadatos propios del CRM (ofertas locales, actividades, tareas y configuraciones de usuario).
 

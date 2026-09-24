@@ -352,6 +352,7 @@ export const SalesBudgetPage: React.FC = () => {
           type="currency" 
           icon={TrendingUp} 
           isLoading={isLoadingPerf} 
+          isFetching={isFetchingPerf}
           infoProps={{ 
             title: "Facturación de Productos (Sin Cuentas GL)",
             description: "Total de ventas reales netas de producto (líneas Item) acumuladas. Se toma exclusivamente la venta de producto para compararse de forma homogénea con el presupuesto anual. Los prepagos vivos pendientes de entrega y las líneas de cuentas contables se detallan a título informativo.", 
@@ -366,9 +367,9 @@ export const SalesBudgetPage: React.FC = () => {
             ]
           }} 
         />
-        <KPICard title="Objetivo" value={performanceKPIs.objetivo} type="currency" icon={Target} isLoading={isLoadingPerf} infoProps={{ title: "Objetivo Presupuestado", description: "Cifra de ventas presupuestada como objetivo para el periodo y filtros seleccionados.", objective: "Indica la meta comercial a alcanzar." }} />
-        <KPICard title="Desviación" value={performanceKPIs.desviacionEur} type="currency" icon={DollarSign} status={performanceKPIs.desviacionEur >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ title: "Desviación Nominal", description: "Diferencia absoluta entre la facturación real neta y el objetivo.", formulas: "Ventas Reales - Objetivo Presupuestado" }} />
-        <KPICard title="Cumplimiento" value={performanceKPIs.desviacionPct} type="percentage" icon={Activity} status={performanceKPIs.desviacionPct >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ title: "Cumplimiento Porcentual", description: "Tasa de cumplimiento del objetivo en porcentaje.", formulas: "(Ventas Reales / Objetivo) * 100" }} />
+        <KPICard title="Objetivo" value={performanceKPIs.objetivo} type="currency" icon={Target} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ title: "Objetivo Presupuestado", description: "Cifra de ventas presupuestada como objetivo para el periodo y filtros seleccionados.", objective: "Indica la meta comercial a alcanzar." }} />
+        <KPICard title="Desviación" value={performanceKPIs.desviacionEur} type="currency" icon={DollarSign} status={performanceKPIs.desviacionEur >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ title: "Desviación Nominal", description: "Diferencia absoluta entre la facturación real neta y el objetivo.", formulas: "Ventas Reales - Objetivo Presupuestado" }} />
+        <KPICard title="Cumplimiento" value={performanceKPIs.desviacionPct} type="percentage" icon={Activity} status={performanceKPIs.desviacionPct >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ title: "Cumplimiento Porcentual", description: "Tasa de cumplimiento del objetivo en porcentaje.", formulas: "(Ventas Reales / Objetivo) * 100" }} />
         <KPICard 
           title="Cartera Pedidos" 
           value={performanceKPIs.carteraVentas} 
@@ -376,6 +377,7 @@ export const SalesBudgetPage: React.FC = () => {
           type="currency" 
           icon={Package} 
           isLoading={isLoadingPerf} 
+          isFetching={isFetchingPerf}
           infoProps={{ 
             title: "Cartera de Pedidos",
             description: "Importe total de los pedidos de venta abiertos y pendientes de servir. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", 
@@ -391,6 +393,7 @@ export const SalesBudgetPage: React.FC = () => {
           icon={DollarSign} 
           status="warning" 
           isLoading={isLoadingPerf} 
+          isFetching={isFetchingPerf}
           infoProps={{ 
             title: "Pendiente de Facturar (Neto)", 
             description: "Total neto de albaranes de venta enviados físicamente al cliente pero pendientes de emitir su factura definitiva. El valor entre paréntesis indica la porción de líneas de tipo cuenta contable.", 

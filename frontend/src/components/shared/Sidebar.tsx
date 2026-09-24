@@ -86,6 +86,7 @@ const navItems: NavItem[] = [
     icon: Sliders, 
     roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'PRODUCCION', 'TESTER'],
     children: [
+      { name: 'Generador Presupuestos', path: '/settings/budget-generator', roles: ['ADMIN', 'DIRECCION'] },
       { name: 'Gestión de Usuarios', path: '/users', roles: ['ADMIN'] },
       { name: 'Ajustes Generales', path: '/settings' },
     ]

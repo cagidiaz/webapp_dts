@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
+import { useUIStore } from '../../store/uiStore';
 import { 
   getExchangeStatus, 
   getExchangeConnectUrl, 
@@ -31,9 +32,25 @@ import {
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
+  const { setPageInfo } = useUIStore();
   const queryClient = useQueryClient();
   const { profile } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    setPageInfo({
+      title: 'Ajustes Generales',
+      subtitle: 'Configuración del sistema y preferencias del CRM',
+      icon: <Settings size={20} />,
+      infoProps: {
+        title: 'Ajustes Generales',
+        description: 'Centro de configuración para la integración con Microsoft 365 y selección de cliente predeterminado de Outlook.',
+        objective: 'Permitir a cada usuario conectar su buzón de correo corporativo para preparar y enviar emails desde el CRM.',
+        source: 'Microsoft Graph API y almacenamiento local de preferencias.'
+      }
+    });
+    return () => setPageInfo({ title: '', subtitle: '', icon: null });
+  }, [setPageInfo]);
 
   // Preferencia local de cliente Outlook
   const [preferredOutlook, setPreferredOutlook] = useState<'desktop' | 'web'>(getPreferredOutlookClient());
@@ -108,35 +125,19 @@ export const SettingsPage: React.FC = () => {
   const account = exchangeStatus?.account;
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
-      {/* Header Principal */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-6">
-        <div>
-          <div className="flex items-center gap-2.5 text-dts-primary dark:text-[#00B0B9] mb-1">
-            <Settings className="w-6 h-6" />
-            <span className="text-xs font-black uppercase tracking-wider">Centro de Control</span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-            Ajustes y Preferencias del CRM
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Gestiona la integración de tu correo de Microsoft 365 y personaliza cómo interactúa el CRM con Outlook.
-          </p>
+    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6 animate-in fade-in duration-300">
+      {/* Feedback flotante al cambiar preferencia */}
+      {showSaveFeedback && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-bold animate-in fade-in slide-in-from-top-2 duration-200">
+          <Check size={14} className="stroke-[3]" />
+          <span>Preferencia de Outlook guardada en este equipo</span>
         </div>
-
-        {/* Feedback flotante al cambiar preferencia */}
-        {showSaveFeedback && (
-          <div className="flex items-center gap-2 px-3.5 py-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-bold animate-in fade-in slide-in-from-top-2 duration-200">
-            <Check size={14} className="stroke-[3]" />
-            <span>Preferencia guardada en este equipo</span>
-          </div>
-        )}
-      </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Columna Principal (2 Cols): Microsoft 365 & Preferencia de Outlook */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           {/* TARJETA 1: Preferencia de Cliente de Outlook */}
           <section className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm space-y-5">
             <div className="flex items-start justify-between gap-4">

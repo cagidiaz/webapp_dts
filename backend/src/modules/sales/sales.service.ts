@@ -17,6 +17,9 @@ const MIN_DATE_FOR_QUERIES = new Date('2022-01-01');
 
 @Injectable()
 export class SalesService {
+  private itemNosCache = new Map<string, { data: string[] | null; expiresAt: number }>();
+  private datesCache = new Map<string, { data: Date[]; expiresAt: number }>();
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -109,6 +112,14 @@ export class SalesService {
     const hasFilter = Boolean(cleanPm || cleanFamily || cleanSubfamilies.length > 0 || cleanProduct);
     if (!hasFilter) return null;
 
+    // Caché en memoria para evitar consultas lentas repetidas (TTL: 10 minutos)
+    const cacheKey = `${cleanPm || ''}|${cleanFamily || ''}|${cleanSubfamilies.sort().join(',')}|${cleanProduct || ''}`;
+    const cached = this.itemNosCache.get(cacheKey);
+    const now = Date.now();
+    if (cached && cached.expiresAt > now) {
+      return cached.data;
+    }
+
     let matchingSubfamilies: string[] | null = null;
     if (cleanPm || cleanFamily || cleanSubfamilies.length > 0) {
       const catWhere: any = {};
@@ -128,6 +139,7 @@ export class SalesService {
 
       // Si se filtró por categoría y no hay ninguna que coincida, no hay productos posibles
       if (matchingSubfamilies.length === 0) {
+        this.itemNosCache.set(cacheKey, { data: [], expiresAt: now + 10 * 60 * 1000 });
         return [];
       }
     }
@@ -145,7 +157,80 @@ export class SalesService {
       select: { item_no: true },
     });
 
-    return matchingProducts.map((p) => p.item_no);
+    const result = matchingProducts.map((p) => p.item_no);
+    this.itemNosCache.set(cacheKey, { data: result, expiresAt: now + 10 * 60 * 1000 });
+    return result;
+  }
+
+  /**
+   * Agrupa los meses seleccionados en rangos continuos para optimizar búsquedas por índice B-tree en PostgreSQL.
+   */
+  private getMonthRanges(year: number, months?: number[], limitToToday: boolean = false): { start: Date; end: Date }[] {
+    const sortedMonths = months && months.length > 0
+      ? [...months].sort((a, b) => a - b)
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    const today = new Date();
+    const isCurrentOrPastYear = year <= today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+    const currentDay = today.getDate();
+
+    const activeMonths: number[] = [];
+    for (const m of sortedMonths) {
+      if (limitToToday && isCurrentOrPastYear && m > currentMonth) {
+        continue;
+      }
+      activeMonths.push(m);
+    }
+
+    if (activeMonths.length === 0) return [];
+
+    const intervals: number[][] = [];
+    let currentGroup: number[] = [activeMonths[0]];
+
+    for (let i = 1; i < activeMonths.length; i++) {
+      const prev = activeMonths[i - 1];
+      const curr = activeMonths[i];
+      if (curr === prev + 1) {
+        currentGroup.push(curr);
+      } else {
+        intervals.push(currentGroup);
+        currentGroup = [curr];
+      }
+    }
+    intervals.push(currentGroup);
+
+    return intervals.map(group => {
+      const startM = group[0];
+      const endM = group[group.length - 1];
+
+      const start = new Date(Date.UTC(year, startM - 1, 1, 0, 0, 0, 0));
+      let end: Date;
+
+      if (limitToToday && isCurrentOrPastYear && endM === currentMonth) {
+        end = new Date(Date.UTC(year, endM - 1, currentDay, 23, 59, 59, 999));
+      } else {
+        const lastDay = new Date(Date.UTC(year, endM, 0)).getUTCDate();
+        end = new Date(Date.UTC(year, endM - 1, lastDay, 23, 59, 59, 999));
+      }
+
+      return { start, end };
+    });
+  }
+
+  /**
+   * Construye un filtro de fecha eficiente para Prisma utilizando gte/lte o una lista pequeña de intervalos OR.
+   */
+  private buildDateFilter(fieldName: string, ranges: { start: Date; end: Date }[]) {
+    if (!ranges || ranges.length === 0) {
+      return { [fieldName]: { equals: new Date(0) } };
+    }
+    if (ranges.length === 1) {
+      return { [fieldName]: { gte: ranges[0].start, lte: ranges[0].end } };
+    }
+    return {
+      OR: ranges.map(r => ({ [fieldName]: { gte: r.start, lte: r.end } }))
+    };
   }
 
   /**
@@ -183,13 +268,18 @@ export class SalesService {
       },
     };
 
-    // 1. Obtener fechas exactas para el periodo
+    // 1. Obtener rangos de fecha e intervalos para el periodo (aceleración por índice B-tree)
     const isTodayFilter = limitToToday || false;
+    const monthRanges = this.getMonthRanges(year, months, isTodayFilter);
+    const budgetDateFilter = this.buildDateFilter('budget_date', monthRanges);
+    const docsDateFilter = this.buildDateFilter('posting_date', monthRanges);
+    const productSalesDateFilter = this.buildDateFilter('reg_date', monthRanges);
+
     const dates = await this.getDatesForMonths(year, months, isTodayFilter);
 
     // Where clause para sales_documents
     const docsWhere: any = {
-      posting_date: { in: dates },
+      ...docsDateFilter,
     };
     if (customerCode) docsWhere.customer_no = customerCode;
     if (salespersonCode) {
@@ -211,16 +301,8 @@ export class SalesService {
 
     // 2. Where clause para sales_budgets
     const budgetWhere: any = {
-      budget_date: {
-        gte: startDate,
-        lte: endDate,
-      },
+      ...budgetDateFilter,
     };
-    if (months && months.length > 0) {
-      budgetWhere.budget_date = {
-        in: dates,
-      };
-    }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
     if (customerCode) budgetWhere.customer_code = customerCode;
     if (hasCategoryFilter) {
@@ -229,10 +311,13 @@ export class SalesService {
 
     // 3. Fechas del año anterior (LYTD)
     const prevYear = year - 1;
+    const prevMonthRanges = this.getMonthRanges(prevYear, months, isTodayFilter);
+    const prevDocsDateFilter = this.buildDateFilter('posting_date', prevMonthRanges);
+    const prevProductSalesDateFilter = this.buildDateFilter('reg_date', prevMonthRanges);
     const prevYearDates = await this.getDatesForMonths(prevYear, months, isTodayFilter);
 
     const prevDocsWhere: any = {
-      posting_date: { in: prevYearDates },
+      ...prevDocsDateFilter,
     };
     if (customerCode) prevDocsWhere.customer_no = customerCode;
     if (salespersonCode) {
@@ -250,7 +335,7 @@ export class SalesService {
 
     const productSalesWhere: any = {
       document_type: { in: SALES_DOC_TYPES },
-      reg_date: { in: dates },
+      ...productSalesDateFilter,
     };
     if (hasCategoryFilter) {
       productSalesWhere.item_no = itemNos.length > 0 ? { in: itemNos } : 'NO_PRODUCTS_FOUND';
@@ -318,7 +403,7 @@ export class SalesService {
       prevYearDates.length > 0
         ? this.prisma.value_entries.aggregate({
             _sum: { sales_amount: true },
-            where: { ...productSalesWhere, reg_date: { in: prevYearDates } },
+            where: { ...productSalesWhere, ...prevProductSalesDateFilter },
           })
         : Promise.resolve({ _sum: { sales_amount: null } }),
       this.prisma.sales_reps.findMany({
@@ -1180,13 +1265,16 @@ export class SalesService {
     const hasProductFilter = itemNos !== null;
     const itemNosSet = hasProductFilter && itemNos.length > 0 ? new Set(itemNos) : null;
 
-    // 2. Fechas del periodo
+    // 2. Fechas del periodo e intervalos optimizados por índice
     const isTodayFilter = limitToToday || false;
+    const monthRanges = this.getMonthRanges(year, months, isTodayFilter);
+    const budgetDateFilter = this.buildDateFilter('budget_date', monthRanges);
+    const docsDateFilter = this.buildDateFilter('posting_date', monthRanges);
     const dates = await this.getDatesForMonths(year, months, isTodayFilter);
 
     // 3. Where clause para sales_documents (año actual)
     const docsWhere: any = {
-      posting_date: { in: dates },
+      ...docsDateFilter,
     };
     if (salespersonCode) docsWhere.customer = { salesperson_code: salespersonCode };
     if (hasProductFilter) {
@@ -1201,11 +1289,8 @@ export class SalesService {
 
     // 4. Where clause para sales_budgets
     const budgetWhere: any = {
-      budget_date: { gte: startDate, lte: endDate },
+      ...budgetDateFilter,
     };
-    if (months && months.length > 0) {
-      budgetWhere.budget_date = { in: dates };
-    }
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
     if (hasProductFilter) {
       budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
@@ -1213,10 +1298,12 @@ export class SalesService {
 
     // 5. Fechas y Where clause del año anterior (LYTD)
     const prevYear = year - 1;
+    const prevMonthRanges = this.getMonthRanges(prevYear, months, isTodayFilter);
+    const prevDocsDateFilter = this.buildDateFilter('posting_date', prevMonthRanges);
     const prevYearDates = await this.getDatesForMonths(prevYear, months, isTodayFilter);
 
     const prevDocsWhere: any = {
-      posting_date: { in: prevYearDates },
+      ...prevDocsDateFilter,
     };
     if (salespersonCode) prevDocsWhere.customer = { salesperson_code: salespersonCode };
     if (hasProductFilter) {
@@ -1239,6 +1326,7 @@ export class SalesService {
           total_amount_excl_vat: true,
           customer_no: true,
           lines: {
+            where: hasProductFilter && itemNos.length > 0 ? { product_no: { in: itemNos } } : undefined,
             select: {
               type: true,
               line_amount: true,
@@ -1261,6 +1349,7 @@ export class SalesService {
               total_amount_excl_vat: true,
               customer_no: true,
               lines: {
+                where: hasProductFilter && itemNos.length > 0 ? { product_no: { in: itemNos } } : undefined,
                 select: {
                   type: true,
                   line_amount: true,
@@ -1929,6 +2018,13 @@ export class SalesService {
    * Obtiene las fechas correspondientes a los meses seleccionados de un año
    */
   private async getDatesForMonths(year: number, months?: number[], limitToToday: boolean = false) {
+    const cacheKey = `${year}_${(months || []).sort().join(',')}_${limitToToday}`;
+    const cached = this.datesCache.get(cacheKey);
+    const now = Date.now();
+    if (cached && cached.expiresAt > now) {
+      return cached.data;
+    }
+
     const where: any = { year };
     if (months && months.length > 0) {
       where.month = { in: months };
@@ -1955,7 +2051,9 @@ export class SalesService {
       where,
       select: { date: true }
     });
-    return dates.map(d => d.date);
+    const result = dates.map(d => d.date);
+    this.datesCache.set(cacheKey, { data: result, expiresAt: now + 30 * 60 * 1000 });
+    return result;
   }
 }
 

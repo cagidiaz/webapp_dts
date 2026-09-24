@@ -59,6 +59,7 @@ El diseño prioriza la legibilidad (Data Storytelling) y se basará estrictament
 1\.  \*\*Escenarios Manuales:\*\* Creación de múltiples presupuestos (What-If), clonación de datos reales y carga masiva vía Excel.  
 2\.  \*\*Forecasting Predictivo (IA):\*\* Motor que analiza un mínimo de 24 meses históricos de Business Central para sugerir proyecciones a 6 meses.  
 3\.  \*\*Análisis de Desviaciones (Gap Analysis):\*\* Comparativa dinámica entre datos Reales (BC) vs. Presupuestos (Manual/IA) destacando deltas porcentuales.
+4\.  \*\*Generador de Presupuestos de Ventas (Excel Engine):\*\* Servicio backend (`budget-generator.service.ts`) que extrae el histórico comercial de Business Central y genera plantillas normalizadas en Excel para el siguiente ejercicio con fórmulas bloqueadas de objetivo, simulación porcentual de precios de venta y exclusión de cuentas contables.
 
 \---
 

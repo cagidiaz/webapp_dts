@@ -362,6 +362,7 @@ export const ProductBudgetPage: React.FC = () => {
           type="currency" 
           icon={TrendingUp} 
           isLoading={isLoadingPerf}
+          isFetching={isFetchingPerf}
           infoProps={{ 
             title: "Facturación de Productos (Sin Cuentas GL)",
             description: "Total de ventas reales netas de catálogo (líneas Item) acumuladas. Se toma exclusivamente la venta de producto para contrastar de forma homogénea con el presupuesto del Product Manager. Los prepagos vivos pendientes de entrega y las cuentas contables se detallan a título informativo.", 
@@ -376,11 +377,11 @@ export const ProductBudgetPage: React.FC = () => {
             ]
           }} 
         />
-        <KPICard title="Objetivo" value={performanceKPIs.objetivo} type="currency" icon={Target} isLoading={isLoadingPerf} infoProps={{ description: "Cifra de ventas presupuestada como objetivo para el periodo seleccionado.", objective: "Indica la meta comercial establecida." }} />
-        <KPICard title="Desviación" value={performanceKPIs.desviacionEur} type="currency" icon={DollarSign} status={performanceKPIs.desviacionEur >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ description: "Diferencia absoluta entre la facturación real y el objetivo.", formulas: "Ventas Reales - Objetivo Presupuestado" }} />
-        <KPICard title="Cumplimiento" value={performanceKPIs.desviacionPct} type="percentage" icon={Activity} status={performanceKPIs.desviacionPct >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} infoProps={{ description: "Tasa de cumplimiento del objetivo en porcentaje.", formulas: "(Ventas Reales / Objetivo) * 100" }} />
-        <KPICard title="Cartera Pedidos" value={performanceKPIs.carteraVentas} accountValue={performanceKPIs.carteraVentasAccounts} type="currency" icon={Package} isLoading={isLoadingPerf} infoProps={{ description: "Importe total de los pedidos de venta abiertos y pendientes de completar. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", source: "Tabla de Sales Orders." }} />
-        <KPICard title="Pend. Facturar" value={performanceKPIs.enviadosFacturar} accountValue={performanceKPIs.enviadosFacturarAccounts} type="currency" icon={DollarSign} status="warning" isLoading={isLoadingPerf} infoProps={{ description: "Importe de la mercancía ya enviada al cliente pero que aún no ha sido facturada. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", formulas: "Sumatorio(Qty. Shipped Not Invoiced * Unit Price)" }} />
+        <KPICard title="Objetivo" value={performanceKPIs.objetivo} type="currency" icon={Target} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ description: "Cifra de ventas presupuestada como objetivo para el periodo seleccionado.", objective: "Indica la meta comercial establecida." }} />
+        <KPICard title="Desviación" value={performanceKPIs.desviacionEur} type="currency" icon={DollarSign} status={performanceKPIs.desviacionEur >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ description: "Diferencia absoluta entre la facturación real y el objetivo.", formulas: "Ventas Reales - Objetivo Presupuestado" }} />
+        <KPICard title="Cumplimiento" value={performanceKPIs.desviacionPct} type="percentage" icon={Activity} status={performanceKPIs.desviacionPct >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ description: "Tasa de cumplimiento del objetivo en porcentaje.", formulas: "(Ventas Reales / Objetivo) * 100" }} />
+        <KPICard title="Cartera Pedidos" value={performanceKPIs.carteraVentas} accountValue={performanceKPIs.carteraVentasAccounts} type="currency" icon={Package} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ description: "Importe total de los pedidos de venta abiertos y pendientes de completar. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", source: "Tabla de Sales Orders." }} />
+        <KPICard title="Pend. Facturar" value={performanceKPIs.enviadosFacturar} accountValue={performanceKPIs.enviadosFacturarAccounts} type="currency" icon={DollarSign} status="warning" isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ description: "Importe de la mercancía ya enviada al cliente pero que aún no ha sido facturada. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", formulas: "Sumatorio(Qty. Shipped Not Invoiced * Unit Price)" }} />
       </div>
 
       {/* Main Analysis Section */}

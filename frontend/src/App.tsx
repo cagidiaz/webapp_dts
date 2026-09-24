@@ -16,6 +16,7 @@ import { CustomersPage, ProductsPage, SalesBudgetPage, SalesOrdersPage, ProductB
 import { CrmPage } from './pages/crm';
 import { VendorsPage, PurchaseOrdersPage } from './pages/purchases';
 import { SettingsPage } from './pages/settings';
+import { BudgetGeneratorPage } from './pages/settings/BudgetGeneratorPage';
 import { OutlookAddinPage } from './pages/outlook-addin/OutlookAddinPage';
 
 import { supabase } from './api/supabase';
@@ -125,7 +126,6 @@ const App: React.FC = () => {
                 <Route path="invoices" element={<SalesInvoicesPage />} />
                 <Route path="quotes" element={<QuotesPage />} />
                 <Route path="value-entries" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION']}><ValueEntriesPage /></RoleGuard>} />
-
               </Route>
               
               {/* Modulo Compras: ADMIN, DIRECCION, OPERACIONES, PRODUCCION, TESTER */}
@@ -143,6 +143,7 @@ const App: React.FC = () => {
               </Route>
               <Route path="users" element={<RoleGuard allowedRoles={['ADMIN']}><UsersPage /></RoleGuard>} />
               <Route path="settings" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'PRODUCCION', 'TESTER']}><SettingsPage /></RoleGuard>} />
+              <Route path="settings/budget-generator" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION']}><BudgetGeneratorPage /></RoleGuard>} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

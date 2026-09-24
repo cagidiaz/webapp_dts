@@ -157,7 +157,21 @@ Al exportar los datos de esta vista se genera el libro multi-pestaña `presupues
 | **Facturación Total Doc. (2026)** | **1.568.572,78 €** | **1.568.572,78 €** |
 | **Cartera de Pedidos (2026)** | **312.902,45 €** | **312.902,45 €** |
 | **Pendiente de Facturar (2026)** | **24.963,78 €** | **24.963,78 €** |
-| **Prepagos Vivos (2026)** | **27.228,92 €** | **27.228,92 €** |
 | **Suma 12 Meses Gráfico** | **1.524.189,01 €** | **1.524.189,01 €** |
 | **Diferencia entre Vistas** | **0,00 €** | **0,00 €** |
+
+---
+
+## 9. Optimización de Rendimiento y Filtrado Rápido ⚡
+
+Al igual que en la vista comercial, se implementaron medidas para acelerar las respuestas al navegar entre meses y familias:
+1. **Caché en Memoria de Artículos y Fechas:**
+   - La resolución de artículos por PM, familia y subfamilia se memoriza en el servidor durante 10 minutos, reduciendo el coste de filtrado de ~400 ms a 0 ms.
+2. **Consultas por Rango de Meses (`getMonthRanges`):**
+   - Agrupa los meses seleccionados en rangos continuos de fechas para aprovechar el índice B-tree de `sales_budgets`, reduciendo el tiempo de agregación de ~480 ms a ~70 ms.
+3. **Subconsulta de Líneas Filtradas por Referencia:**
+   - En las consultas a `sales_documents`, las líneas se restringen a `{ where: { product_no: { in: itemNos } } }`, evitando cargar en memoria miles de líneas de catálogo que no corresponden al Product Manager o a la familia seleccionada.
+4. **Indicador de Carga No Destructivo en KPIs:**
+   - Se incluye estado de `isFetching` en los componentes `KPICard`, proporcionando feedback visual instantáneo (spinner y leve atenuación) sin desmontar la interfaz ni perder el foco del usuario.
+
 

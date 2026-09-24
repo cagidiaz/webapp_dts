@@ -1,4 +1,5 @@
 import React from 'react';
+import { Loader2 } from 'lucide-react';
 import { 
   ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, 
   Tooltip, Legend, Bar, Line 
@@ -40,6 +41,7 @@ export interface KPICardProps {
   type?: 'currency' | 'percentage' | 'number';
   icon: any;
   isLoading?: boolean;
+  isFetching?: boolean;
   status?: 'success' | 'danger' | 'warning';
   decimalPlaces?: number;
   infoProps?: {
@@ -56,7 +58,7 @@ export interface KPICardProps {
 }
 
 export const KPICard: React.FC<KPICardProps> = ({ 
-  title, value, type = 'number', icon: Icon, isLoading, status, 
+  title, value, type = 'number', icon: Icon, isLoading, isFetching, status, 
   decimalPlaces = 0, infoProps, accountValue, infoText, subtext 
 }) => {
   if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-6 rounded-xl border border-gray-100 dark:border-gray-800 h-28 animate-pulse" />;
@@ -65,7 +67,7 @@ export const KPICard: React.FC<KPICardProps> = ({
   const formattedValue = formatKpiValue(value, type, decimalPlaces);
 
   return (
-    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
+    <div className={`bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between ${isFetching ? 'opacity-70' : ''}`}>
       <div>
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-1.5">
@@ -83,7 +85,10 @@ export const KPICard: React.FC<KPICardProps> = ({
               />
             )}
           </div>
-          <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
+          <div className="flex items-center gap-1.5">
+            {isFetching && <Loader2 size={13} className="animate-spin text-dts-secondary" />}
+            <Icon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
+          </div>
         </div>
         <div className={`text-xl font-medium font-mono ${colorClass}`}>{formattedValue}</div>
         {subtext && (
