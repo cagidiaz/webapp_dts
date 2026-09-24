@@ -230,25 +230,43 @@ export class SalesController {
     });
   }
 
-  @Get('budget-generator/meta')
-  @ApiOperation({ summary: 'Get metadata for budget templates generation (Admin & Management only)' })
-  async getBudgetGeneratorMeta(@Req() req: any) {
-    const userId = req.user?.userId;
+  private async checkBudgetGeneratorAccess(userId: string) {
     if (!userId) throw new UnauthorizedException('User not authenticated');
     const profile = await this.prisma.profiles.findUnique({
       where: { id: userId },
       include: { roles: true }
     });
     const userRole = profile?.roles?.name?.toUpperCase();
-    if (userRole !== 'ADMIN' && userRole !== 'DIRECCION') {
-      throw new UnauthorizedException('Access denied: Admins and Management only');
+    if (userRole === 'ADMIN') return;
+
+    if (profile?.role_id) {
+      const allowed: any[] = await this.prisma.$queryRaw`
+        SELECT rm.can_view 
+        FROM role_modules rm
+        JOIN modules m ON m.id = rm.module_id
+        WHERE rm.role_id = ${profile.role_id}::uuid
+          AND m.route_path = '/settings/budget-generator'
+        LIMIT 1
+      `;
+      if (allowed.length > 0 && allowed[0].can_view === true) {
+        return;
+      }
     }
+
+    throw new UnauthorizedException('Access denied: Unauthorized role for budget generator');
+  }
+
+  @Get('budget-generator/meta')
+  @ApiOperation({ summary: 'Get metadata for budget templates generation' })
+  async getBudgetGeneratorMeta(@Req() req: any) {
+    const userId = req.user?.userId;
+    await this.checkBudgetGeneratorAccess(userId);
 
     return this.budgetGeneratorService.getMetadata();
   }
 
   @Get('budget-generator/export')
-  @ApiOperation({ summary: 'Export budget Excel templates or ZIP package (Admin & Management only)' })
+  @ApiOperation({ summary: 'Export budget Excel templates or ZIP package' })
   async exportBudgetTemplates(
     @Req() req: any,
     @Res() res: Response,
@@ -258,15 +276,7 @@ export class SalesController {
     @Query('protectSheet') protectSheet?: string,
   ) {
     const userId = req.user?.userId;
-    if (!userId) throw new UnauthorizedException('User not authenticated');
-    const profile = await this.prisma.profiles.findUnique({
-      where: { id: userId },
-      include: { roles: true }
-    });
-    const userRole = profile?.roles?.name?.toUpperCase();
-    if (userRole !== 'ADMIN' && userRole !== 'DIRECCION') {
-      throw new UnauthorizedException('Access denied: Admins and Management only');
-    }
+    await this.checkBudgetGeneratorAccess(userId);
 
     await this.budgetGeneratorService.exportBudgetTemplates(
       {

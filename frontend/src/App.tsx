@@ -143,7 +143,7 @@ const App: React.FC = () => {
               </Route>
               <Route path="users" element={<RoleGuard allowedRoles={['ADMIN']}><UsersPage /></RoleGuard>} />
               <Route path="settings" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'PRODUCCION', 'TESTER']}><SettingsPage /></RoleGuard>} />
-              <Route path="settings/budget-generator" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION']}><BudgetGeneratorPage /></RoleGuard>} />
+              <Route path="settings/budget-generator" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'PRODUCCION', 'TESTER']}><BudgetGeneratorPage /></RoleGuard>} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

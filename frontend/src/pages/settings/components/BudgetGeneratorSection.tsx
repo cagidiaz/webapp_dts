@@ -241,7 +241,7 @@ export const BudgetGeneratorSection: React.FC = () => {
       {/* Características del Excel */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-cyan-50/40 dark:bg-cyan-950/20 rounded-xl border border-cyan-100 dark:border-cyan-900/40 text-xs">
         <div className="flex items-start gap-2.5">
-          <div className="p-1 rounded-md bg-[#00B0B9]/15 text-[#00B0B9] shrink-0 mt-0.5">
+          <div className="p-1 rounded-md bg-dts-secondary/15 text-dts-secondary shrink-0 mt-0.5">
             <Percent size={13} />
           </div>
           <div>
@@ -294,7 +294,7 @@ export const BudgetGeneratorSection: React.FC = () => {
           >
             {isDownloadingExcel ? (
               <>
-                <Loader2 size={15} className="animate-spin text-[#00B0B9]" />
+                <Loader2 size={15} className="animate-spin text-dts-secondary" />
                 <span>Generando Excel...</span>
               </>
             ) : (
@@ -319,12 +319,12 @@ export const BudgetGeneratorSection: React.FC = () => {
           >
             {isDownloadingZip ? (
               <>
-                <Loader2 size={15} className="animate-spin text-[#00B0B9]" />
+                <Loader2 size={15} className="animate-spin text-dts-secondary" />
                 <span>Comprimiendo ZIP...</span>
               </>
             ) : (
               <>
-                <Archive size={15} className="text-[#00B0B9]" />
+                <Archive size={15} className="text-dts-secondary" />
                 <span>Descargar Paquete ZIP por Comercial</span>
               </>
             )}

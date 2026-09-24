@@ -28,6 +28,13 @@ Este archivo contiene las directrices críticas y reglas de desarrollo específi
 * **Rol de Operaciones:** El rol de **Operaciones** (`OPERACIONES`) tiene acceso autorizado a la ruta de Ventas (`/sales`). Sin embargo, el acceso a las sub-vistas específicas se controla dinámicamente mediante los permisos configurados en la base de datos (tabla `role_modules`).
 * **Dashboard por Defecto:** El rol de `OPERACIONES` debe cargar por defecto el **Panel de Control Comercial** (`SalesDashboard`) en lugar del financiero, al igual que el rol `VENTAS`.
 * **Páginas Protegidas:** Asegurar que `App.tsx` y `Sidebar.tsx` permitan los accesos a `OPERACIONES` según corresponda.
+* **Registro Obligatorio de Nuevas Vistas en la Matriz de Permisos (`modules` y `role_modules`):**
+  Cada vez que se desarrolle una nueva vista o ruta en la WebApp, es **MANDATORIO** integrarla en el sistema RBAC:
+  1. **Base de Datos (`public.modules`):** Registrar el nuevo módulo con su nombre oficial descriptivo (`name`) y su ruta exacta (`route_path`).
+  2. **Permisos por Rol (`public.role_modules`):** Crear los registros correspondientes para **todos** los roles del sistema (`ADMIN`, `DIRECCION`, `VENTAS`, `OPERACIONES`, `PRODUCCION`, `TESTER`), inicializándolos en `true` o `false` según la lógica del rol para que el Administrador pueda encender o apagar el acceso dinámicamente desde la interfaz.
+  3. **Gestión de Permisos en Frontend (`pages/users/index.tsx`):** Comprobar que `groupedModules` agrupe la ruta dentro de su categoría padre correspondiente para que los administradores puedan verla y gestionarla en la pestaña "Permisos de Roles".
+  4. **Navegación y Rutas (`Sidebar.tsx` y `App.tsx`):** No limitar estáticamente las rutas a roles fijos (evitar `roles: ['ADMIN', 'DIRECCION']` hardcodeado en `Sidebar` o `RoleGuard` si el módulo debe ser asignable); delegar el control granular en `isPathAllowed(path)` (`role_modules`).
+  5. **Endpoints de Backend:** Si el backend protege los endpoints de esa vista, debe verificar dinámicamente los permisos en `role_modules` para el rol del usuario en lugar de comparar únicamente nombres de rol fijos.
 
 ---
 

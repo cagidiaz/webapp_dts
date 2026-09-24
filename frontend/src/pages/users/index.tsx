@@ -290,7 +290,7 @@ export const UsersPage: React.FC = () => {
     return parents.map(parent => {
       let rawChildren: any[] = [];
       if (parent.route_path === '/config') {
-        rawChildren = allModules.filter(m => m.route_path === '/users' || m.route_path === '/settings');
+        rawChildren = allModules.filter(m => m.route_path === '/users' || m.route_path.startsWith('/settings'));
       } else {
         rawChildren = allModules.filter(m => m.route_path.startsWith(parent.route_path + '/'));
       }

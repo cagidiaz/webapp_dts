@@ -71,3 +71,19 @@ El libro de trabajo generado (`.xlsx`) organiza los datos con la siguiente jerar
    $$\text{P.Vta Siguiente} = \text{Precio Efectivo} \times \left(1 + \frac{\text{\% Incremento}}{100}\right)$$
 3. **Integración en la Navegación:**  
    Se accede a través de la sección de Configuración (`/settings/budget-generator`). Su título e icono (`TrendingUp`) se sincronizan de forma estándar en el `TopBar` superior de la aplicación mediante `useUIStore`.
+
+---
+
+## 5. Control de Acceso y Permisos de Rol (RBAC) 👥
+
+La vista está plenamente integrada en la matriz dinámica de control de acceso basada en roles:
+
+1. **Catálogo de Módulos (`public.modules`):**
+   * Registrado bajo el nombre `Configuración: Generador de Presupuestos` con ruta base `/settings/budget-generator`.
+2. **Matriz de Permisos (`public.role_modules`):**
+   * Asignado con registro propio para todos los roles del sistema (`ADMIN`, `DIRECCION`, `VENTAS`, `OPERACIONES`, `PRODUCCION`, `TESTER`).
+   * Activado por defecto para los roles directivos y configurable dinámicamente por el Administrador desde la interfaz web de **Gestión de Usuarios > Permisos de Roles**.
+3. **Protección en Backend (`SalesController`):**
+   * Los endpoints `GET /sales/budget-generator/meta` y `GET /sales/budget-generator/export` verifican en tiempo real si el `role_id` del usuario tiene asignado `can_view = true` en `role_modules` (o rol `ADMIN`), denegando el acceso de forma segura ante roles no autorizados.
+4. **Navegación Dinámica (`Sidebar.tsx` y `App.tsx`):**
+   * El elemento del menú lateral se muestra u oculta automáticamente evaluando `isPathAllowed('/settings/budget-generator')`, sin bloqueos estáticos o hardcodeados en el frontend.

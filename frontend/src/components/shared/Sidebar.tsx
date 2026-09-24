@@ -86,7 +86,7 @@ const navItems: NavItem[] = [
     icon: Sliders, 
     roles: ['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'PRODUCCION', 'TESTER'],
     children: [
-      { name: 'Generador Presupuestos', path: '/settings/budget-generator', roles: ['ADMIN', 'DIRECCION'] },
+      { name: 'Generador Presupuestos', path: '/settings/budget-generator' },
       { name: 'Gestión de Usuarios', path: '/users', roles: ['ADMIN'] },
       { name: 'Ajustes Generales', path: '/settings' },
     ]
@@ -159,7 +159,10 @@ export const Sidebar: React.FC = () => {
         if (!isPathAllowed(child.path)) return false;
         
         // Also check parent prefix
-        const parentRoute = child.path.substring(0, child.path.indexOf('/', 1) > 0 ? child.path.indexOf('/', 1) : child.path.length);
+        let parentRoute = child.path.substring(0, child.path.indexOf('/', 1) > 0 ? child.path.indexOf('/', 1) : child.path.length);
+        if (parentRoute === '/settings' || parentRoute === '/users') {
+          parentRoute = '/config';
+        }
         if (parentRoute && !isPathAllowed(parentRoute)) return false;
 
         return true;

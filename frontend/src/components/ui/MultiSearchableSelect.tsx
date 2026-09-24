@@ -96,7 +96,7 @@ export const MultiSearchableSelect: React.FC<MultiSearchableSelectProps> = ({
       {/* Trigger Button */}
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-gray-900 dark:text-gray-200 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-dts-secondary focus:border-dts-secondary transition-all cursor-pointer select-none group min-h-[30px]"
+        className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-gray-900 dark:text-gray-200 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-dts-secondary focus:border-dts-secondary transition-all cursor-pointer select-none group min-h-7.5"
       >
         <div className="flex items-center gap-1.5 truncate flex-1 mr-1">
           {showIcon && (
@@ -219,7 +219,7 @@ export const MultiSearchableSelect: React.FC<MultiSearchableSelectProps> = ({
                           : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
                       }`}
                     >
-                      {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                      {isSelected && <Check className="h-3 w-3 stroke-3" />}
                     </div>
 
                     <span className="truncate flex-1" title={opt.label}>

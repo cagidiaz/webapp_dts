@@ -129,7 +129,7 @@ export const SettingsPage: React.FC = () => {
       {/* Feedback flotante al cambiar preferencia */}
       {showSaveFeedback && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-bold animate-in fade-in slide-in-from-top-2 duration-200">
-          <Check size={14} className="stroke-[3]" />
+          <Check size={14} className="stroke-3" />
           <span>Preferencia de Outlook guardada en este equipo</span>
         </div>
       )}
@@ -143,7 +143,7 @@ export const SettingsPage: React.FC = () => {
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="p-2 rounded-xl bg-cyan-500/10 text-[#00B0B9]">
+                  <span className="p-2 rounded-xl bg-cyan-500/10 text-dts-secondary">
                     <Mail className="w-5 h-5" />
                   </span>
                   <h2 className="text-base font-bold text-gray-900 dark:text-white">
@@ -164,7 +164,7 @@ export const SettingsPage: React.FC = () => {
                 onClick={() => handleSelectOutlookClient('desktop')}
                 className={`p-5 rounded-xl border text-left transition-all relative flex flex-col justify-between gap-4 cursor-pointer ${
                   preferredOutlook === 'desktop'
-                    ? 'border-[#00B0B9] bg-[#00B0B9]/5 dark:bg-[#00B0B9]/10 shadow-xs ring-2 ring-[#00B0B9]/30'
+                    ? 'border-dts-secondary bg-dts-secondary/5 dark:bg-dts-secondary/10 shadow-xs ring-2 ring-dts-secondary/30'
                     : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-zinc-800/20 hover:border-gray-300 dark:hover:border-zinc-700'
                 }`}
               >
@@ -173,8 +173,8 @@ export const SettingsPage: React.FC = () => {
                     <Laptop className="w-6 h-6" />
                   </div>
                   {preferredOutlook === 'desktop' && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#00B0B9] text-white">
-                      <Check size={11} className="stroke-[3]" /> Activo
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-dts-secondary text-white">
+                      <Check size={11} className="stroke-3" /> Activo
                     </span>
                   )}
                 </div>
@@ -195,17 +195,17 @@ export const SettingsPage: React.FC = () => {
                 onClick={() => handleSelectOutlookClient('web')}
                 className={`p-5 rounded-xl border text-left transition-all relative flex flex-col justify-between gap-4 cursor-pointer ${
                   preferredOutlook === 'web'
-                    ? 'border-[#00B0B9] bg-[#00B0B9]/5 dark:bg-[#00B0B9]/10 shadow-xs ring-2 ring-[#00B0B9]/30'
+                    ? 'border-dts-secondary bg-dts-secondary/5 dark:bg-dts-secondary/10 shadow-xs ring-2 ring-dts-secondary/30'
                     : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-zinc-800/20 hover:border-gray-300 dark:hover:border-zinc-700'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="p-2.5 rounded-xl bg-cyan-500/10 text-[#00B0B9]">
+                  <div className="p-2.5 rounded-xl bg-cyan-500/10 text-dts-secondary">
                     <Globe className="w-6 h-6" />
                   </div>
                   {preferredOutlook === 'web' && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#00B0B9] text-white">
-                      <Check size={11} className="stroke-[3]" /> Activo
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-dts-secondary text-white">
+                      <Check size={11} className="stroke-3" /> Activo
                     </span>
                   )}
                 </div>
@@ -306,7 +306,7 @@ export const SettingsPage: React.FC = () => {
                   </span>
                   <div className="flex flex-wrap gap-2">
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-white dark:bg-zinc-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-2xs">
-                      <Calendar size={13} className="text-[#00B0B9]" />
+                      <Calendar size={13} className="text-dts-secondary" />
                       <span>Calendario y Eventos</span>
                     </span>
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-white dark:bg-zinc-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-2xs">
@@ -324,7 +324,7 @@ export const SettingsPage: React.FC = () => {
                     disabled={syncMutation.isPending}
                     className="px-3 py-1.5 bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-800 dark:text-gray-200 font-bold text-xs rounded-xl border border-gray-200 dark:border-gray-700 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
-                    <RefreshCw size={13} className={syncMutation.isPending ? 'animate-spin text-[#00B0B9]' : ''} />
+                    <RefreshCw size={13} className={syncMutation.isPending ? 'animate-spin text-dts-secondary' : ''} />
                     <span>{syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar Ahora'}</span>
                   </button>
 
@@ -344,8 +344,8 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-gradient-to-br from-gray-50 to-cyan-50/30 dark:from-zinc-800/20 dark:to-cyan-950/20 rounded-xl p-6 border border-gray-100 dark:border-gray-800 text-center space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-dts-primary/10 dark:bg-[#00B0B9]/20 text-dts-primary dark:text-[#00B0B9] flex items-center justify-center mx-auto">
+              <div className="bg-linear-to-br from-gray-50 to-cyan-50/30 dark:from-zinc-800/20 dark:to-cyan-950/20 rounded-xl p-6 border border-gray-100 dark:border-gray-800 text-center space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-dts-primary/10 dark:bg-dts-secondary/20 text-dts-primary dark:text-dts-secondary flex items-center justify-center mx-auto">
                   <Sparkles size={24} />
                 </div>
 
@@ -402,8 +402,8 @@ export const SettingsPage: React.FC = () => {
           </section>
 
           {/* Tarjeta de Guía Rápida */}
-          <section className="bg-gradient-to-br from-dts-primary/5 to-[#00B0B9]/10 dark:from-zinc-800/40 dark:to-[#00B0B9]/5 rounded-2xl border border-dts-primary/10 dark:border-white/5 p-5 space-y-3">
-            <div className="flex items-center gap-2 text-dts-primary dark:text-[#00B0B9] font-bold text-xs">
+          <section className="bg-linear-to-br from-dts-primary/5 to-dts-secondary/10 dark:from-zinc-800/40 dark:to-dts-secondary/5 rounded-2xl border border-dts-primary/10 dark:border-white/5 p-5 space-y-3">
+            <div className="flex items-center gap-2 text-dts-primary dark:text-dts-secondary font-bold text-xs">
               <Info size={15} />
               <span>¿Cómo funciona la integración?</span>
             </div>

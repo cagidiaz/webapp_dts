@@ -294,7 +294,7 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * Botón de prueba inmediata para validar la apertura de Outlook.
 
 ### 6.2 Generador de Presupuestos de Ventas (Plantillas Excel) (`/settings/budget-generator`)
-*(Acceso disponible para roles `ADMIN` y `DIRECCION` desde el menú lateral de Configuración)*
+*(Acceso configurable dinámicamente mediante la matriz de permisos de rol `role_modules` desde Gestión de Usuarios)*
 
 * **Propósito**: Automatiza la confección de plantillas de trabajo en Excel para la elaboración del presupuesto de ventas del ejercicio siguiente (ej. 2027 a partir del año en curso 2026).
 * **Parámetros Configurables**:
@@ -311,14 +311,15 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
 ### 6.3 Gestión de Usuarios y Roles (`/users`)
 *(Acceso exclusivo para rol `ADMIN`)*
 
-* Control de acceso basado en roles: `ADMIN`, `DIRECCION`, `VENTAS`, `OPERACIONES`.
-* Matriz de permisos modulares dinámicos (`role_modules`) gestionada mediante Supabase Auth.
+* Control de acceso basado en roles: `ADMIN`, `DIRECCION`, `VENTAS`, `OPERACIONES`, `PRODUCCION`, `TESTER`.
+* Matriz de permisos modulares dinámicos (`role_modules`) gestionada mediante Supabase y configurable visualmente desde la pestaña "Permisos de Roles".
+* Asignación granular de módulos y vistas a cada rol (incluyendo el Generador de Presupuestos).
 
 ### 6.4 Inmutabilidad y Seguridad de Datos
 * Los datos de negocio procedentes de Dynamics 365 Business Central son de **estricta solo lectura**.
-* Únicamente se permite la persistencia de datos en metadatos propios del CRM (ofertas locales, actividades, tareas y configuraciones de usuario).
+* Únicamente se permite la persistencia de datos en metadatos propios del CRM (ofertas locales, actividades, tareas y configuraciones de usuario) y tablas de control de acceso RBAC.
 
 ---
 
-*Manual de dTS Instruments v6.0 — Actualizado a 8 de septiembre de 2026.*
+*Manual de dTS Instruments v6.1 — Actualizado a 24 de septiembre de 2026.*
 
