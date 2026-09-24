@@ -40,7 +40,7 @@ export const SalesBudgetPage: React.FC = () => {
   const [year, setYear] = useState<number>(currentYear);
   const [selectedMonths, setSelectedMonths] = useState<number[]>(initialMonths);
   const [familyFilter, setFamilyFilter] = useState<string>('');
-  const [subfamilyFilter, setSubfamilyFilter] = useState<string>('');
+  const [subfamilyFilter, setSubfamilyFilter] = useState<string[]>([]);
   const [salespersonFilter, setSalespersonFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
@@ -95,7 +95,8 @@ export const SalesBudgetPage: React.FC = () => {
       year, months: selectedMonths,
       salespersonCode: isSalesperson ? profile?.code : (salespersonFilter || undefined),
       search: debouncedSearch || undefined,
-      familyCode: familyFilter || undefined, subfamilyCode: subfamilyFilter || undefined,
+      familyCode: familyFilter || undefined,
+      subfamilyCode: subfamilyFilter.length > 0 ? subfamilyFilter : undefined,
       sortBy, sortDir, take: pageSize, skip: pageParam as number
     }),
     initialPageParam: 0,
@@ -109,7 +110,8 @@ export const SalesBudgetPage: React.FC = () => {
   const { data: evolutionData } = useQuery({
     queryKey: ['salesEvol', year, familyFilter, subfamilyFilter, salespersonFilter, debouncedSearch],
     queryFn: () => getSalesBudgetEvolution({
-      year, familyCode: familyFilter || undefined, subfamilyCode: subfamilyFilter || undefined,
+      year, familyCode: familyFilter || undefined,
+      subfamilyCode: subfamilyFilter.length > 0 ? subfamilyFilter : undefined,
       salespersonCode: isSalesperson ? profile?.code : (salespersonFilter || undefined),
       search: debouncedSearch || undefined
     }),
@@ -160,7 +162,7 @@ export const SalesBudgetPage: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setSelectedMonths([]); setFamilyFilter(''); setSubfamilyFilter(''); setSalespersonFilter('');
+    setSelectedMonths([]); setFamilyFilter(''); setSubfamilyFilter([]); setSalespersonFilter('');
     setSearchTerm(''); setYear(new Date().getFullYear());
   };
 
@@ -229,7 +231,7 @@ export const SalesBudgetPage: React.FC = () => {
       salespersonCode: isSalesperson ? profile?.code : (salespersonFilter || undefined),
       search: debouncedSearch || undefined,
       familyCode: familyFilter || undefined,
-      subfamilyCode: subfamilyFilter || undefined,
+      subfamilyCode: subfamilyFilter.length > 0 ? subfamilyFilter : undefined,
       sortBy,
       sortDir,
     });
@@ -238,6 +240,8 @@ export const SalesBudgetPage: React.FC = () => {
       { key: 'customerCode', label: 'Código Cliente' },
       { key: 'customerName', label: 'Cliente' },
       { key: 'facturacion', label: `Fact. ${year} (€)`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+      { key: 'cartera', label: 'Cartera Pedidos (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
+      { key: 'enviadosFacturar', label: 'Pend. Facturar (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
       { key: 'facturacionAnioAnterior', label: `Fact. ${year - 1} (€)`, format: (v: number) => Number(Number(v || 0).toFixed(2)) },
       { key: 'objetivo', label: 'Objetivo (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
       { key: 'desviacion', label: 'Desviación (€)', format: (v: number) => Number(Number(v || 0).toFixed(2)) },
@@ -276,6 +280,8 @@ export const SalesBudgetPage: React.FC = () => {
       customerCode: '99999999',
       customerName: 'CLIENTES NUEVOS (Meta Agrupada - Detalle en Hoja 2)',
       facturacion: totalNewClientsSales,
+      cartera: 0,
+      enviadosFacturar: 0,
       facturacionAnioAnterior: totalNewClientsPrev,
       objetivo: newClientsBudget,
       desviacion: newClientsDev,
@@ -289,6 +295,8 @@ export const SalesBudgetPage: React.FC = () => {
       customerCode: '',
       customerName: 'TOTALES',
       facturacion: (performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas,
+      cartera: performanceKPIs.carteraVentas,
+      enviadosFacturar: performanceKPIs.enviadosFacturar,
       facturacionAnioAnterior: (performanceKPIs as any).facturacionAnioAnterior || 0,
       objetivo: performanceKPIs.objetivo,
       desviacion: performanceKPIs.desviacionEur,
@@ -417,7 +425,7 @@ export const SalesBudgetPage: React.FC = () => {
           salespersonOptions={salespersonOptions}
           isSalesperson={isSalesperson}
           onClearFilters={clearFilters}
-          hasActiveFilters={Boolean(selectedMonths.length > 0 || familyFilter || subfamilyFilter || salespersonFilter || searchTerm)}
+          hasActiveFilters={Boolean(selectedMonths.length > 0 || familyFilter || subfamilyFilter.length > 0 || salespersonFilter || searchTerm)}
         />
 
         {/* Performance Table */}
@@ -510,34 +518,37 @@ export const SalesBudgetPage: React.FC = () => {
 
                 <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
                   <tr>
-                    <th className="w-[40%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('customerName')}>
+                    <th className="w-[30%] px-5 py-4 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('customerName')}>
                       <div className="flex items-center">Cliente {getSortIcon('customerName')}</div>
                     </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
+                    <th className="w-[14%] px-4 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
                       <div className="flex items-center justify-end">Fact. {year} {getSortIcon('facturacion')}</div>
                     </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionAnioAnterior')}>
+                    <th className="w-[14%] px-4 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('cartera')} title="Cartera viva de pedidos abierta y pendiente de servir">
+                      <div className="flex items-center justify-end">Cartera {getSortIcon('cartera')}</div>
+                    </th>
+                    <th className="w-[14%] px-4 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionAnioAnterior')}>
                       <div className="flex items-center justify-end">Fact. {year - 1} {getSortIcon('facturacionAnioAnterior')}</div>
                     </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
+                    <th className="w-[14%] px-4 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
                       <div className="flex items-center justify-end">Objetivo {getSortIcon('objetivo')}</div>
                     </th>
-                    <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
+                    <th className="w-[14%] px-4 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
                       <div className="flex items-center justify-end">Desviación {getSortIcon('desviacion')}</div>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-xs text-dts-primary dark:text-gray-300">
                   {isLoadingPerf && !infiniteData ? 
-                    <tr><td colSpan={5} className="py-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-dts-secondary" /></td></tr>
+                    <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-dts-secondary" /></td></tr>
                    : tableData.length === 0 ? 
-                    <tr><td colSpan={5} className="py-20 text-center text-gray-400 opacity-60">Sin datos de rendimiento para los filtros aplicados</td></tr>
+                    <tr><td colSpan={6} className="py-20 text-center text-gray-400 opacity-60">Sin datos de rendimiento para los filtros aplicados</td></tr>
                    : 
                     tableData.map((row, idx) => {
                       const isPlaceholderNew = row.customerCode === '99999999' || row.customerName === 'CLIENTE NUEVO' || (row as any).excludeFacturacionFromTotal;
                       return (
                       <tr key={`${row.customerCode}-${idx}`} className={`transition-colors ${isPlaceholderNew ? 'bg-indigo-50/40 dark:bg-indigo-950/20 border-l-2 border-indigo-500' : row.isNew ? 'bg-emerald-50/30 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50/80 dark:hover:bg-white/5'}`}>
-                        <td className="px-6 py-3 font-medium">
+                        <td className="px-5 py-3 font-medium">
                           <div className="flex flex-col truncate">
                             <div className="flex items-center gap-2 truncate">
                               <span className="truncate" title={row.customerName}>{row.customerName}</span>
@@ -557,15 +568,34 @@ export const SalesBudgetPage: React.FC = () => {
                             <span className="text-[10px] font-mono text-gray-400">{row.customerCode}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-3 text-right font-mono">
+                        <td className="px-4 py-3 text-right font-mono">
                           <div>{formatCurrency(row.facturacion, 0)}</div>
                           {isPlaceholderNew && (
                             <span className="text-[8px] text-gray-400 font-sans block font-normal leading-tight">(Agrupado)</span>
                           )}
                         </td>
-                        <td className="px-6 py-3 text-right font-mono text-gray-400">{(row as any).facturacionAnioAnterior ? formatCurrency((row as any).facturacionAnioAnterior, 0) : '-'}</td>
-                        <td className="px-6 py-3 text-right font-mono">{formatCurrency(row.objetivo, 0)}</td>
-                        <td className="px-6 py-3 text-right font-mono">
+                        <td className="px-4 py-3 text-right font-mono">
+                          {isPlaceholderNew ? (
+                            <span className="text-gray-400 font-sans">-</span>
+                          ) : (
+                            <div className="flex flex-col items-end">
+                              <span className={row.cartera && row.cartera > 0 ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-400'}>
+                                {row.cartera && row.cartera > 0 ? formatCurrency(row.cartera, 0) : '-'}
+                              </span>
+                              {Boolean(row.enviadosFacturar && row.enviadosFacturar > 0) && (
+                                <span 
+                                  className="text-[9px] font-sans font-semibold text-amber-600 dark:text-amber-400 mt-0.5 leading-tight" 
+                                  title={`Albaranes entregados pendientes de facturar: ${formatCurrency(row.enviadosFacturar, 2)}`}
+                                >
+                                  +{formatCurrency(row.enviadosFacturar, 0)} pend. fact.
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-gray-400">{(row as any).facturacionAnioAnterior ? formatCurrency((row as any).facturacionAnioAnterior, 0) : '-'}</td>
+                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(row.objetivo, 0)}</td>
+                        <td className="px-4 py-3 text-right font-mono">
                           <div className={row.desviacion < 0 ? 'text-red-500 font-bold' : 'text-emerald-500'}>
                             {row.desviacion > 0 ? '+' : ''}{formatCurrency(row.desviacion, 0)}
                           </div>
@@ -576,7 +606,7 @@ export const SalesBudgetPage: React.FC = () => {
                       </tr>
                     );})
                   }
-                  <tr ref={observerTarget}><td colSpan={5} className="py-8 text-center text-gray-400 text-[10px] opacity-60 uppercase tracking-widest">{isFetchingNextPage ? 'Cargando más clientes...' : hasNextPage ? 'Desplázate para cargar más' : 'Fin del listado'}</td></tr>
+                  <tr ref={observerTarget}><td colSpan={6} className="py-8 text-center text-gray-400 text-[10px] opacity-60 uppercase tracking-widest">{isFetchingNextPage ? 'Cargando más clientes...' : hasNextPage ? 'Desplázate para cargar más' : 'Fin del listado'}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -588,11 +618,21 @@ export const SalesBudgetPage: React.FC = () => {
               <table className="w-full text-left text-[10px] border-separate border-spacing-0 table-fixed">
                 <tbody>
                   <tr className="font-bold">
-                    <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES FILTRADOS</td>
-                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency((performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas, 0)}</td>
-                    <td className="w-[15%] px-6 py-4 text-right font-mono opacity-60">{(performanceKPIs as any).facturacionAnioAnterior ? formatCurrency((performanceKPIs as any).facturacionAnioAnterior, 0) : '-'}</td>
-                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
-                    <td className="w-[15%] px-6 py-4 text-right font-mono">
+                    <td className="w-[30%] px-5 py-4 tracking-widest">TOTALES FILTRADOS</td>
+                    <td className="w-[14%] px-4 py-4 text-right font-mono">{formatCurrency((performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas, 0)}</td>
+                    <td className="w-[14%] px-4 py-4 text-right font-mono">
+                      <div className="flex flex-col items-end">
+                        <span>{formatCurrency(performanceKPIs.carteraVentas, 0)}</span>
+                        {Boolean(performanceKPIs.enviadosFacturar > 0) && (
+                          <span className="text-[9px] font-sans text-amber-300 normal-case font-medium mt-0.5" title={`Total pendiente de facturar: ${formatCurrency(performanceKPIs.enviadosFacturar, 2)}`}>
+                            +{formatCurrency(performanceKPIs.enviadosFacturar, 0)} pend. fact.
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="w-[14%] px-4 py-4 text-right font-mono opacity-60">{(performanceKPIs as any).facturacionAnioAnterior ? formatCurrency((performanceKPIs as any).facturacionAnioAnterior, 0) : '-'}</td>
+                    <td className="w-[14%] px-4 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
+                    <td className="w-[14%] px-4 py-4 text-right font-mono">
                       <div className={performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}>
                         {performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}
                       </div>

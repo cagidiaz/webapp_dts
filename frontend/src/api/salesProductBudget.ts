@@ -8,7 +8,7 @@ export interface ProductBudgetFilters {
   salespersonCode?: string;
   pmCode?: string;
   familyCode?: string;
-  subfamilyCode?: string;
+  subfamilyCode?: string | string[];
   productCode?: string;
   search?: string;
   sortBy?: string;
@@ -83,7 +83,10 @@ export const getProductBudgetPerformance = async (
   if (salespersonCode) params.append('salespersonCode', salespersonCode);
   if (pmCode) params.append('pmCode', pmCode);
   if (familyCode) params.append('familyCode', familyCode);
-  if (subfamilyCode) params.append('subfamilyCode', subfamilyCode);
+  if (subfamilyCode) {
+    const subVal = Array.isArray(subfamilyCode) ? subfamilyCode.join(',') : subfamilyCode;
+    if (subVal) params.append('subfamilyCode', subVal);
+  }
   if (productCode) params.append('productCode', productCode);
   if (search) params.append('search', search);
   if (take !== undefined) params.append('take', String(take));
@@ -105,7 +108,10 @@ export const getProductBudgetEvolution = async (
   if (salespersonCode) params.append('salespersonCode', salespersonCode);
   if (pmCode) params.append('pmCode', pmCode);
   if (familyCode) params.append('familyCode', familyCode);
-  if (subfamilyCode) params.append('subfamilyCode', subfamilyCode);
+  if (subfamilyCode) {
+    const subVal = Array.isArray(subfamilyCode) ? subfamilyCode.join(',') : subfamilyCode;
+    if (subVal) params.append('subfamilyCode', subVal);
+  }
   if (productCode) params.append('productCode', productCode);
   if (search) params.append('search', search);
 

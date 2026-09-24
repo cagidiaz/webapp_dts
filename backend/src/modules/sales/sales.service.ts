@@ -89,24 +89,36 @@ export class SalesService {
   private async resolveItemNos(filters: {
     pmCode?: string;
     familyCode?: string;
-    subfamilyCode?: string;
+    subfamilyCode?: string | string[];
     productCode?: string;
   }): Promise<string[] | null> {
     const { pmCode, familyCode, subfamilyCode, productCode } = filters;
     const cleanPm = pmCode && String(pmCode).trim() !== '' ? String(pmCode).trim() : undefined;
     const cleanFamily = familyCode && String(familyCode).trim() !== '' ? String(familyCode).trim() : undefined;
-    const cleanSubfamily = subfamilyCode && String(subfamilyCode).trim() !== '' ? String(subfamilyCode).trim() : undefined;
+    
+    // Normalizar subfamilias (puede venir como string, string[] o string separado por comas)
+    let cleanSubfamilies: string[] = [];
+    if (Array.isArray(subfamilyCode)) {
+      cleanSubfamilies = subfamilyCode.map(s => String(s).trim()).filter(Boolean);
+    } else if (subfamilyCode && String(subfamilyCode).trim() !== '') {
+      cleanSubfamilies = String(subfamilyCode).split(',').map(s => s.trim()).filter(Boolean);
+    }
+
     const cleanProduct = productCode && String(productCode).trim() !== '' ? String(productCode).trim() : undefined;
 
-    const hasFilter = Boolean(cleanPm || cleanFamily || cleanSubfamily || cleanProduct);
+    const hasFilter = Boolean(cleanPm || cleanFamily || cleanSubfamilies.length > 0 || cleanProduct);
     if (!hasFilter) return null;
 
     let matchingSubfamilies: string[] | null = null;
-    if (cleanPm || cleanFamily || cleanSubfamily) {
+    if (cleanPm || cleanFamily || cleanSubfamilies.length > 0) {
       const catWhere: any = {};
       if (cleanPm) catWhere.pm_code = cleanPm;
       if (cleanFamily) catWhere.family_code = cleanFamily;
-      if (cleanSubfamily) catWhere.subfamily_code = cleanSubfamily;
+      if (cleanSubfamilies.length === 1) {
+        catWhere.subfamily_code = cleanSubfamilies[0];
+      } else if (cleanSubfamilies.length > 1) {
+        catWhere.subfamily_code = { in: cleanSubfamilies };
+      }
 
       const matchingCategories = await this.prisma.product_categories.findMany({
         where: catWhere,
@@ -144,7 +156,7 @@ export class SalesService {
     months?: number[];
     salespersonCode?: string;
     familyCode?: string;
-    subfamilyCode?: string;
+    subfamilyCode?: string | string[];
     customerCode?: string;
     search?: string;
     sortBy?: string;
@@ -627,56 +639,7 @@ export class SalesService {
       } as any);
     }
 
-    // 5.2. Filtrado por búsqueda
-    let filteredResults = results;
-    if (search && search.trim() !== '') {
-      const s = search.toLowerCase();
-      filteredResults = results.filter(r => 
-        (r.customerCode && r.customerCode.toLowerCase().includes(s)) || 
-        (r.customerName && r.customerName.toLowerCase().includes(s))
-      );
-    }
-
-    let totalSales = 0;
-    let totalBudget = 0;
-    let totalPrevYear = 0;
-
-    filteredResults.forEach((val: any) => {
-      totalSales += val.excludeFacturacionFromTotal ? 0 : val.facturacion;
-      totalBudget += val.objetivo;
-      totalPrevYear += val.facturacionAnioAnterior || 0;
-    });
-
-    // 6. Ordenación dinámica según parámetros
-    if (sortBy) {
-      filteredResults.sort((a, b) => {
-        let valA = (a as any)[sortBy];
-        let valB = (b as any)[sortBy];
-
-        // Manejo de nulos/undefined
-        if (valA === undefined || valA === null) return 1;
-        if (valB === undefined || valB === null) return -1;
-
-        if (typeof valA === 'string' && typeof valB === 'string') {
-          return sortDir === 'asc' 
-            ? valA.localeCompare(valB) 
-            : valB.localeCompare(valA);
-        }
-        return sortDir === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
-      });
-    } else {
-      // Orden por defecto: Facturación descendente
-      filteredResults.sort((a, b) => b.facturacion - a.facturacion);
-    }
-
-    const totalProductSales = Number(productSalesAgg._sum.sales_amount) || 0;
-    const totalPrevProductSales = Number(prevProductSalesAgg._sum.sales_amount) || 0;
-
-    // Desviación se calcula respecto a la facturación de producto (para comparabilidad con presupuestos)
-    let devEuros = 0;
-    let devPct = 0;
-
-    // 7. KPIs adicionales (Pedidos y Pendiente de facturar)
+    // 6. KPIs adicionales (Pedidos y Pendiente de facturar)
     const ordersWhere: any = {};
     
     // Filtro por Cliente
@@ -688,7 +651,8 @@ export class SalesService {
     }
 
     // Filtro por Familia / Subfamilia
-    if ((familyCode && String(familyCode).trim() !== "") || (subfamilyCode && String(subfamilyCode).trim() !== "")) {
+    const hasSubfamilyFilter = Array.isArray(subfamilyCode) ? subfamilyCode.length > 0 : Boolean(subfamilyCode && String(subfamilyCode).trim() !== "");
+    if ((familyCode && String(familyCode).trim() !== "") || hasSubfamilyFilter) {
       if (itemNos && itemNos.length > 0) {
         ordersWhere.item_code = { in: itemNos };
       } else {
@@ -770,15 +734,26 @@ export class SalesService {
     const repPrepagosDescontadosCartera: Record<string, number> = {};
 
     // Descontar cliente a cliente: primero de enviados por facturar y luego de cartera
+    const customerCarteraMap: Record<string, number> = {};
+    const customerShippedMap: Record<string, number> = {};
+    for (const [cust, o] of Object.entries(ordersByCustomer)) {
+      customerCarteraMap[cust] = o.cartera;
+      customerShippedMap[cust] = o.shipped;
+    }
+
     for (const [cust, vivo] of Object.entries(prepaymentsByCustomer)) {
       const custOrders = ordersByCustomer[cust] || { shipped: 0, cartera: 0 };
 
       const descFacturar = Math.min(vivo, custOrders.shipped);
       totalPrepagosDescontadosFacturar += descFacturar;
 
+      customerShippedMap[cust] = Math.max(0, (customerShippedMap[cust] || 0) - descFacturar);
+
       const remanente = vivo - descFacturar;
       const descCartera = Math.min(remanente, custOrders.cartera);
       totalPrepagosDescontadosCartera += descCartera;
+
+      customerCarteraMap[cust] = Math.max(0, (customerCarteraMap[cust] || 0) - descCartera);
 
       const rep = (customerSalespersonMap.get(cust) || 'SIN_ASIGNAR').trim();
       repPrepagosVivos[rep] = (repPrepagosVivos[rep] || 0) + vivo;
@@ -786,10 +761,93 @@ export class SalesService {
       repPrepagosDescontadosCartera[rep] = (repPrepagosDescontadosCartera[rep] || 0) + descCartera;
     }
 
-    // Inyectar prepagos vivos por cliente en cada fila de la tabla
-    filteredResults.forEach((r: any) => {
+    // Inyectar prepagos vivos, cartera neta y pendiente de facturar neto por cliente en cada fila existente de results
+    results.forEach((r: any) => {
       r.prepagos = prepaymentsByCustomer[r.customerCode] || 0;
+      r.cartera = customerCarteraMap[r.customerCode] || 0;
+      r.enviadosFacturar = customerShippedMap[r.customerCode] || 0;
     });
+
+    // Añadir a results los clientes que tienen cartera, pend. facturar o prepagos vivos pero que no tenían facturación ni presupuesto en el periodo
+    const existingClientCodes = new Set(results.map(r => r.customerCode));
+    const allActiveCustomerCodes = new Set([
+      ...Object.keys(customerCarteraMap),
+      ...Object.keys(customerShippedMap),
+      ...Object.keys(prepaymentsByCustomer),
+    ]);
+
+    for (const cCode of allActiveCustomerCodes) {
+      if (!existingClientCodes.has(cCode)) {
+        const cartVal = customerCarteraMap[cCode] || 0;
+        const shipVal = customerShippedMap[cCode] || 0;
+        const prepVal = prepaymentsByCustomer[cCode] || 0;
+        if (cartVal > 0 || shipVal > 0 || prepVal > 0) {
+          const cInfo = customersDict[cCode];
+          results.push({
+            customerCode: cCode,
+            customerName: cInfo ? cInfo.name : cCode,
+            isNew: customerIsNewMap.get(cCode) || false,
+            facturacion: 0,
+            facturacionAnioAnterior: 0,
+            objetivo: 0,
+            desviacion: 0,
+            desviacionPorcentaje: 0,
+            cartera: cartVal,
+            enviadosFacturar: shipVal,
+            prepagos: prepVal,
+          } as any);
+        }
+      }
+    }
+
+    // 5.2. Filtrado por búsqueda
+    let filteredResults = results;
+    if (search && search.trim() !== '') {
+      const s = search.toLowerCase();
+      filteredResults = results.filter(r => 
+        (r.customerCode && r.customerCode.toLowerCase().includes(s)) || 
+        (r.customerName && r.customerName.toLowerCase().includes(s))
+      );
+    }
+
+    let totalSales = 0;
+    let totalBudget = 0;
+    let totalPrevYear = 0;
+
+    filteredResults.forEach((val: any) => {
+      totalSales += val.excludeFacturacionFromTotal ? 0 : val.facturacion;
+      totalBudget += val.objetivo;
+      totalPrevYear += val.facturacionAnioAnterior || 0;
+    });
+
+    // 5.3. Ordenación dinámica según parámetros
+    if (sortBy) {
+      filteredResults.sort((a: any, b: any) => {
+        let valA = a[sortBy];
+        let valB = b[sortBy];
+
+        // Manejo de nulos/undefined
+        if (valA === undefined || valA === null) return 1;
+        if (valB === undefined || valB === null) return -1;
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return sortDir === 'asc' 
+            ? valA.localeCompare(valB) 
+            : valB.localeCompare(valA);
+        }
+        return sortDir === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+      });
+    } else {
+      // Orden por defecto: Facturación descendente
+      filteredResults.sort((a, b) => b.facturacion - a.facturacion);
+    }
+
+    const totalProductSales = Number(productSalesAgg._sum.sales_amount) || 0;
+    const totalPrevProductSales = Number(prevProductSalesAgg._sum.sales_amount) || 0;
+
+    // Desviación se calcula respecto a la facturación de producto (para comparabilidad con presupuestos)
+    let devEuros = 0;
+    let devPct = 0;
 
     // Cerrar métricas consolidadas por comercial
     repMap.forEach((r, repCode) => {
@@ -888,7 +946,7 @@ export class SalesService {
     year: number;
     salespersonCode?: string;
     familyCode?: string;
-    subfamilyCode?: string;
+    subfamilyCode?: string | string[];
     customerCode?: string;
     search?: string;
   }) {
@@ -1100,7 +1158,7 @@ export class SalesService {
     salespersonCode?: string;
     pmCode?: string;
     familyCode?: string;
-    subfamilyCode?: string;
+    subfamilyCode?: string | string[];
     productCode?: string;
     search?: string;
     sortBy?: string;
@@ -1522,6 +1580,10 @@ export class SalesService {
 
     let totalPrepagosDescontadosFacturar = 0;
     let totalPrepagosDescontadosCartera = 0;
+    const pmCustomerCarteraMap: Record<string, number> = {};
+    Object.keys(ordersByCustomer).forEach((custCode) => {
+      pmCustomerCarteraMap[custCode] = ordersByCustomer[custCode].cartera;
+    });
 
     Object.keys(ordersByCustomer).forEach((custCode) => {
       const pVivoCust = pmPrepaymentsByCustomer[custCode] || 0;
@@ -1533,7 +1595,12 @@ export class SalesService {
 
         totalPrepagosDescontadosFacturar += descFact;
         totalPrepagosDescontadosCartera += descCart;
+        pmCustomerCarteraMap[custCode] = Math.max(0, (pmCustomerCarteraMap[custCode] || 0) - descCart);
       }
+    });
+
+    results.forEach((r: any) => {
+      r.cartera = pmCustomerCarteraMap[r.customerCode] || 0;
     });
 
     const totalCarteraBruta = totalCartera;
@@ -1602,7 +1669,7 @@ export class SalesService {
     salespersonCode?: string;
     pmCode?: string;
     familyCode?: string;
-    subfamilyCode?: string;
+    subfamilyCode?: string | string[];
     productCode?: string;
     search?: string;
   }) {

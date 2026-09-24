@@ -38,7 +38,7 @@ export const ProductBudgetPage: React.FC = () => {
   const [year, setYear] = useState<number>(currentYear);
   const [selectedMonths, setSelectedMonths] = useState<number[]>(initialMonths);
   const [familyFilter, setFamilyFilter] = useState<string>('');
-  const [subfamilyFilter, setSubfamilyFilter] = useState<string>('');
+  const [subfamilyFilter, setSubfamilyFilter] = useState<string[]>([]);
   const [salespersonFilter, setSalespersonFilter] = useState<string>('');
   const [pmFilter, setPmFilter] = useState<string>('');
   const [productCodeFilter, setProductCodeFilter] = useState<string>('');
@@ -122,7 +122,8 @@ export const ProductBudgetPage: React.FC = () => {
       salespersonCode: salespersonFilter || undefined,
       pmCode: effectivePmCode,
       search: debouncedSearch || undefined,
-      familyCode: familyFilter || undefined, subfamilyCode: subfamilyFilter || undefined,
+      familyCode: familyFilter || undefined,
+      subfamilyCode: subfamilyFilter.length > 0 ? subfamilyFilter : undefined,
       productCode: debouncedProductCode || undefined,
       sortBy, sortDir, take: pageSize, skip: pageParam as number
     }),
@@ -138,7 +139,8 @@ export const ProductBudgetPage: React.FC = () => {
     queryKey: ['productBudgetEvol', year, familyFilter, subfamilyFilter, salespersonFilter, effectivePmCode, debouncedSearch, debouncedProductCode],
     queryFn: () => getProductBudgetEvolution({
       year, 
-      familyCode: familyFilter || undefined, subfamilyCode: subfamilyFilter || undefined,
+      familyCode: familyFilter || undefined,
+      subfamilyCode: subfamilyFilter.length > 0 ? subfamilyFilter : undefined,
       salespersonCode: salespersonFilter || undefined,
       pmCode: effectivePmCode,
       productCode: debouncedProductCode || undefined,
@@ -175,7 +177,7 @@ export const ProductBudgetPage: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setSelectedMonths([]); setFamilyFilter(''); setSubfamilyFilter(''); setSalespersonFilter('');
+    setSelectedMonths([]); setFamilyFilter(''); setSubfamilyFilter([]); setSalespersonFilter('');
     if (!isProductManager) setPmFilter('');
     setSearchTerm(''); setYear(new Date().getFullYear());
     setProductCodeFilter('');
@@ -208,7 +210,7 @@ export const ProductBudgetPage: React.FC = () => {
       pmCode: effectivePmCode,
       search: debouncedSearch || undefined,
       familyCode: familyFilter || undefined,
-      subfamilyCode: subfamilyFilter || undefined,
+      subfamilyCode: subfamilyFilter.length > 0 ? subfamilyFilter : undefined,
       productCode: debouncedProductCode || undefined,
       sortBy, sortDir,
     });
@@ -345,7 +347,7 @@ export const ProductBudgetPage: React.FC = () => {
   };
 
   const hasActiveFilters = Boolean(
-    selectedMonths.length > 0 || familyFilter || subfamilyFilter || salespersonFilter ||
+    selectedMonths.length > 0 || familyFilter || subfamilyFilter.length > 0 || salespersonFilter ||
     (!isProductManager && pmFilter) || productCodeFilter || searchTerm
   );
 

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Filter, X } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui/InfoPopover';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { MultiSearchableSelect } from '../../../components/ui/MultiSearchableSelect';
 import { MONTHS } from './budgetShared';
 import type { ProductCategory } from '../../../api/products';
 
@@ -15,8 +16,8 @@ export interface BudgetFiltersSidebarProps {
   categories: ProductCategory[];
   familyFilter: string;
   onFamilyChange: (family: string) => void;
-  subfamilyFilter: string;
-  onSubfamilyChange: (subfamily: string) => void;
+  subfamilyFilter: string[];
+  onSubfamilyChange: (subfamilies: string[]) => void;
 
   // Filtro Vendedor (opcional)
   showSalesperson?: boolean;
@@ -97,16 +98,9 @@ export const BudgetFiltersSidebar: React.FC<BudgetFiltersSidebarProps> = ({
   // Manejadores sincronizados de familia y subfamilia
   const handleFamilyChange = (val: string) => {
     onFamilyChange(val);
-    onSubfamilyChange('');
-  };
-
-  const handleSubfamilyChange = (val: string) => {
-    onSubfamilyChange(val);
-    if (val && !familyFilter) {
-      const match = categories.find(c => c.subfamily_code === val);
-      if (match?.family_code) {
-        onFamilyChange(match.family_code);
-      }
+    if (val) {
+      const validSubfamilies = new Set(categories.filter(c => c.family_code === val).map(c => c.subfamily_code));
+      onSubfamilyChange(subfamilyFilter.filter(sub => validSubfamilies.has(sub)));
     }
   };
 
@@ -202,7 +196,18 @@ export const BudgetFiltersSidebar: React.FC<BudgetFiltersSidebarProps> = ({
       <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-800">
         {showSalesperson && onSalespersonChange && !isSalesperson && (
           <div>
-            <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Vendedor</span>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-bold text-gray-400 uppercase">Vendedor</span>
+              {salespersonFilter && (
+                <button
+                  type="button"
+                  onClick={() => onSalespersonChange('')}
+                  className="text-[10px] font-bold text-rose-500 hover:text-rose-700 dark:text-rose-400 hover:underline transition-colors cursor-pointer"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
             <SearchableSelect
               options={salespersonOptions}
               value={salespersonFilter}
@@ -213,7 +218,18 @@ export const BudgetFiltersSidebar: React.FC<BudgetFiltersSidebarProps> = ({
         )}
 
         <div>
-          <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Familia</span>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-bold text-gray-400 uppercase">Familia</span>
+            {familyFilter && (
+              <button
+                type="button"
+                onClick={() => handleFamilyChange('')}
+                className="text-[10px] font-bold text-rose-500 hover:text-rose-700 dark:text-rose-400 hover:underline transition-colors cursor-pointer"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
           <SearchableSelect
             options={familyOptions}
             value={familyFilter}
@@ -223,25 +239,61 @@ export const BudgetFiltersSidebar: React.FC<BudgetFiltersSidebarProps> = ({
         </div>
 
         <div>
-          <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Subfamilia</span>
-          <SearchableSelect
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-bold text-gray-400 uppercase">Subfamilias</span>
+            {subfamilyFilter.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onSubfamilyChange([])}
+                className="text-[10px] font-bold text-rose-500 hover:text-rose-700 dark:text-rose-400 hover:underline transition-colors cursor-pointer"
+              >
+                Limpiar ({subfamilyFilter.length})
+              </button>
+            )}
+          </div>
+          <MultiSearchableSelect
             options={subfamilyOptions}
             value={subfamilyFilter}
-            onChange={handleSubfamilyChange}
+            onChange={onSubfamilyChange}
             placeholder="Todas..."
           />
         </div>
 
         {onProductCodeChange && (
           <div>
-            <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Código Producto</span>
-            <input
-              type="text"
-              value={productCodeFilter || ''}
-              onChange={(e) => onProductCodeChange(e.target.value)}
-              placeholder="Filtrar por SKU/Código..."
-              className="block w-full px-3 py-1.5 text-xs text-gray-900 dark:text-gray-200 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-dts-secondary focus:border-dts-secondary transition-all outline-none"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-bold text-gray-400 uppercase">Código Producto</span>
+              {productCodeFilter && (
+                <button
+                  type="button"
+                  onClick={() => onProductCodeChange('')}
+                  className="text-[10px] font-bold text-rose-500 hover:text-rose-700 dark:text-rose-400 hover:underline transition-colors cursor-pointer"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                value={productCodeFilter || ''}
+                onChange={(e) => onProductCodeChange(e.target.value)}
+                placeholder="Filtrar por SKU/Código..."
+                className="block w-full pr-8 px-3 py-1.5 text-xs text-gray-900 dark:text-gray-200 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-dts-secondary focus:border-dts-secondary transition-all outline-none"
+              />
+              {productCodeFilter && (
+                <button
+                  type="button"
+                  onClick={() => onProductCodeChange('')}
+                  className="absolute inset-y-0 right-0 pr-2 flex items-center cursor-pointer"
+                  title="Limpiar SKU"
+                >
+                  <span className="flex items-center justify-center h-4 w-4 rounded-full bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 transition-colors shadow-xs">
+                    <X size={10} strokeWidth={2.5} />
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

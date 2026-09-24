@@ -38,11 +38,11 @@ Ubicado a la izquierda para permitir una segmentación rápida y reactiva:
 | :--- | :--- | :--- | :--- |
 | **Ejercicio** | Selector desplegable | Años fiscales disponibles (2024, 2025, 2026). Cambia el año base de análisis. | Permite auditar años cerrados o analizar el ejercicio en curso. |
 | **Meses** | Botonera interactiva (1 al 12) | Permite seleccionar meses individuales o rangos acumulados (por defecto carga YTD, desde enero hasta el mes en curso). | Comparar periodos equivalentes (ej. primer trimestre Q1, semestre o YTD). |
-| **Vendedor** | Selector con búsqueda (`SearchableSelect`) | Filtra las ventas y presupuestos asignados al código de vendedor (ej. `ACI`, `JKU`, `JMO`, `JPG`). | **Control de Acceso (RBAC):** Si el usuario conectado es un comercial, este filtro queda fijado a su propio código y no puede ver a otros comerciales. Los administradores y dirección pueden seleccionar cualquier vendedor o ver "Todos". |
-| **Familia** | Selector desplegable | Filtra por código de familia de producto de Business Central (ej. `EQUIPOS`, `CONSUMIBLES`, `SERVICIOS`). | Analizar el cumplimiento por grandes líneas de producto. |
-| **Subfamilia** | Selector dependiente | Se auto-filtra dinámicamente según la familia seleccionada. | Bajar al detalle de subcategoría técnica. |
+| **Vendedor** | Selector con búsqueda (`SearchableSelect`) | Filtra las ventas y presupuestos asignados al código de vendedor (ej. `ACI`, `JKU`, `JMO`, `JPG`). Cuenta con botón individual "Limpiar" y opción en el desplegable. | **Control de Acceso (RBAC):** Si el usuario conectado es un comercial, este filtro queda fijado a su propio código y no puede ver a otros comerciales. Los administradores y dirección pueden seleccionar cualquier vendedor o ver "Todos". |
+| **Familia** | Selector con búsqueda (`SearchableSelect`) | Filtra por código de familia de producto de Business Central (ej. `EQUIPOS`, `CONSUMIBLES`, `SERVICIOS`). Dispone de botón individual "Limpiar" en cabecera. | Analizar el cumplimiento por grandes líneas de producto. |
+| **Subfamilias** | Selector múltiple con búsqueda (`MultiSearchableSelect`) | Permite seleccionar una, varias o todas las subfamilias a la vez. Dispone de buscador interno, acciones de "Marcar todas" / "Desmarcar todas", contador visual y botón de "Limpiar (N)". Se sincroniza automáticamente con la familia seleccionada. | Bajar al detalle de varias subcategorías técnicas de interés simultáneamente sin restricciones mono-selección. |
 | **Buscador de Cliente** | Input con debounce (400ms) | Búsqueda por nombre comercial o código de cliente de Business Central. | Localizar rápidamente la ficha de un cliente concreto sin desmontar el foco (`keepPreviousData`). |
-| **Limpiar Filtros** | Botón con icono `X` | Restablece todos los selectores a sus valores iniciales. | Volver a la vista general en un solo clic. |
+| **Limpiar Filtros** | Botones contextuales y globales | • **Botón Global `X`:** En la cabecera del panel para restablecer todos los filtros a sus valores iniciales.<br>• **Botones "Limpiar" individuales:** Cada filtro activo (Vendedor, Familia, Subfamilias) incluye un botón de texto claro en su cabecera.<br>• **Píldoras `X` de alto contraste:** Con fondo coloreado (`rose-100`) y separación de texto en cada casilla para evitar solapamientos visuales. | Proporcionar máxima comodidad y visibilidad para resetear filtros parciales o totales. |
 
 ---
 
@@ -171,11 +171,14 @@ Visión prospectiva de pedidos y estimación de cierre del ejercicio:
 Accesible mediante la pestaña **`[ 🏢 Por Clientes ]`**. Permite analizar el comportamiento cliente a cliente.
 
 ### 7.1. Columnas de la Tabla:
-1. **Cliente:** Nombre comercial del cliente y su código oficial de Business Central (`customerCode`). Dispone de etiquetas visuales distintivas.
-2. **Facturación Año en Curso (`Fact. {year}`):** Importe neto facturado al cliente en el periodo seleccionado.
-3. **Facturación Año Anterior (`Fact. {year-1}`):** Ventas netas acumuladas en el mismo periodo del año precedente, permitiendo comparar el crecimiento interanual.
-4. **Objetivo:** Meta presupuestaria fijada específicamente para ese cliente.
-5. **Desviación:** Desviación en euros y porcentaje de cumplimiento respecto a su objetivo particular.
+1. **Cliente:** Nombre comercial del cliente y su código oficial de Business Central (`customerCode`). Dispone de etiquetas visuales distintivas y aviso de prepago vivo si aplica.
+2. **Facturación Año en Curso (`Fact. {year}`):** Importe neto facturado al cliente en el periodo seleccionado (exclusivo de artículos de producto comercial).
+3. **Cartera Pedidos (`Cartera {year}`):** Importe de pedidos vivos abiertos y pendientes de servir para ese cliente (neto de prepagos).
+   - **Sub-indicador de Entregas Pendientes:** Si el cliente tiene mercancía entregada por albarán pendiente de facturar, se muestra debajo una etiqueta en cian: **`+{importe} € pend. fact.`**.
+   - **Garantía de Cuadre:** Los clientes con pedidos vivos o albaranes pendientes pero sin facturación ni presupuesto en el periodo se integran automáticamente en la tabla para que el sumatorio de la tabla coincida exactamente con los KPIs superiores.
+4. **Facturación Año Anterior (`Fact. {year-1}`):** Ventas netas acumuladas en el mismo periodo del año precedente, permitiendo comparar el crecimiento interanual.
+5. **Objetivo:** Meta presupuestaria fijada específicamente para ese cliente.
+6. **Desviación:** Desviación en euros y porcentaje de cumplimiento respecto a su objetivo particular.
 
 ---
 

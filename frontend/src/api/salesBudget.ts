@@ -5,7 +5,7 @@ export interface SalesBudgetPerformanceFilters {
   months?: number[];
   salespersonCode?: string;
   familyCode?: string;
-  subfamilyCode?: string;
+  subfamilyCode?: string | string[];
   customerCode?: string;
   search?: string;
   take?: number;
@@ -54,6 +54,8 @@ export interface SalesBudgetPerformanceDataRow {
   desviacion: number;
   desviacionPorcentaje: number;
   prepagos?: number;
+  cartera?: number;
+  enviadosFacturar?: number;
   [key: string]: any; // Permite indexación dinámica para ordenación
 }
 
@@ -119,7 +121,10 @@ export const getSalesBudgetPerformance = async (
   if (customerCode) params.append('customerCode', customerCode);
   if (search) params.append('search', search);
   if (familyCode) params.append('familyCode', familyCode);
-  if (subfamilyCode) params.append('subfamilyCode', subfamilyCode);
+  if (subfamilyCode) {
+    const subVal = Array.isArray(subfamilyCode) ? subfamilyCode.join(',') : subfamilyCode;
+    if (subVal) params.append('subfamilyCode', subVal);
+  }
   if (take !== undefined) params.append('take', String(take));
   if (skip !== undefined) params.append('skip', String(skip));
   if (sortBy) params.append('sortBy', sortBy);
@@ -145,7 +150,10 @@ export const getSalesBudgetEvolution = async (
   if (customerCode) params.append('customerCode', customerCode);
   if (search) params.append('search', search);
   if (familyCode) params.append('familyCode', familyCode);
-  if (subfamilyCode) params.append('subfamilyCode', subfamilyCode);
+  if (subfamilyCode) {
+    const subVal = Array.isArray(subfamilyCode) ? subfamilyCode.join(',') : subfamilyCode;
+    if (subVal) params.append('subfamilyCode', subVal);
+  }
 
 
   const response = await apiClient.get<SalesBudgetEvolutionRow[]>(`/sales/budget-evolution?${params.toString()}`);
