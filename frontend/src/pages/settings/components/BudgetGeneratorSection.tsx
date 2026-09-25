@@ -214,12 +214,12 @@ export const BudgetGeneratorSection: React.FC = () => {
                 {protectSheet ? 'Modo Protegido (Estructura y precios bloqueados)' : 'Modo Abierto / Desprotegido (Recomendado)'}
               </span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${protectSheet ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'}`}>
-                {protectSheet ? 'Solo Columnas M y N' : 'Nuevas Líneas Habilitadas'}
+                {protectSheet ? 'Solo Columnas N y O' : 'Nuevas Líneas Habilitadas'}
               </span>
             </div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 max-w-xl leading-normal">
               {protectSheet
-                ? 'La hoja se protegerá contra cualquier modificación ajena a las columnas M y N. Los comerciales no podrán insertar filas nuevas.'
+                ? 'La hoja se protegerá contra cualquier modificación ajena a las columnas N y O. Los comerciales no podrán insertar filas nuevas.'
                 : 'La hoja se genera completamente desprotegida para que los comerciales puedan <strong>insertar nuevas filas</strong> de productos o clientes no vendidos previamente y copiar las fórmulas libremente.'}
             </p>
           </div>

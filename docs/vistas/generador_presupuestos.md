@@ -42,21 +42,27 @@ El libro de trabajo generado (`.xlsx`) organiza los datos con la siguiente jerar
 
 | # | Columna | Campo / Fórmula | Tipo de Celda | Descripción |
 | :-: | :--- | :--- | :--- | :--- |
-| **A** | **Cód. Vendedor** | `salesperson_code` | Texto | Código del comercial asignado al cliente. |
-| **B** | **Vendedor** | `salesperson_name` | Texto | Nombre completo del comercial. |
-| **C** | **Cód. Cliente** | `customer_no` | Texto | Código de cliente en Business Central. |
-| **D** | **Nombre Cliente** | `customer_name` | Texto | Razón social comercial del cliente. |
-| **E** | **Cód. Producto** | `product_no` | Texto | Código de artículo/referencia comercial (`Item`). |
-| **F** | **Descripción Producto** | `product_description` | Texto | Nombre o descripción del artículo. |
-| **G** | **Familia** | `family_code` | Texto | Familia de producto principal. |
-| **H** | **Subfamilia** | `subfamily_code` | Texto | Subfamilia o categoría técnica. |
-| **I** | **Uds {Año-1}** | `units_prev` | Numérico (`#,##0`) | Cantidad total de unidades vendidas en el año anterior. |
-| **J** | **Fact. {Año-1} (€)** | `sales_prev` | Moneda (`#,##0.00 €`) | Importe neto facturado en el año anterior. |
-| **K** | **Uds {Año Actual} (YTD)** | `units_curr` | Numérico (`#,##0`) | Unidades vendidas hasta la fecha en el año en curso. |
-| **L** | **Fact. {Año Actual} (€)** | `sales_curr` | Moneda (`#,##0.00 €`) | Facturación neta devengada hasta la fecha en el año en curso. |
-| **M** | **Previsión Cierre {Año Actual} (€)** | *En Blanco* | **Editable** (`#,##0.00 €`) | Celda en blanco con fondo suave para que el comercial estime la facturación total a cierre del año en curso. |
-| **N** | **P.Vta {Año Siguiente} (+X.X%) (€)** | `unit_price_next` | **Solo Lectura** (`#,##0.00 €`) | Precio medio efectivo incrementado con el porcentaje configurado. El encabezado refleja explícitamente el porcentaje usado. |
-| **O** | **Objetivo {Año Siguiente} (€)** | `=M{row} * (1 + %)` o `=Uds * P.Vta` | **Fórmula Bloqueada** (`#,##0.00 €`) | Cálculo automático del objetivo anual. Celda con fórmula bloqueada contra sobreescritura accidental. |
+| **A** | **Cod vendedor** | `repCode` | Texto centrado | Código del comercial asignado al cliente. |
+| **B** | **Cod cliente** | `customerCode` | Texto centrado | Código de cliente en Business Central. |
+| **C** | **Nombre cliente** | `customerName` | Texto | Razón social comercial del cliente. |
+| **D** | **Comunidad Autónoma** | `community` | Texto | Comunidad autónoma (o país internacional) del cliente. |
+| **E** | **Cod Product Manager** | `pmCode` | Texto centrado | Código del Product Manager responsable de la categoría. |
+| **F** | **familia** | `familyCode` | Texto centrado | Código de familia de producto. |
+| **G** | **Desc_familia** | `familyName` | Texto | Descripción de la familia de producto. |
+| **H** | **subfamilia** | `subfamilyCode` | Texto centrado | Código de subfamilia de producto. |
+| **I** | **Desc_subfam** | `subfamilyName` | Texto | Descripción de la subfamilia de producto. |
+| **J** | **Nº producto** | `productNo` | Texto centrado | Código de artículo/referencia comercial (`Item`), situado a la izquierda de la descripción. |
+| **K** | **Descripción** | `description` | Texto | Nombre o descripción oficial del artículo. |
+| **L** | **UdFacturadas a dia de hoy** | `udFacturadas` | Numérico (`#,##0`) | Unidades netas facturadas en el año en curso. |
+| **M** | **UdCartera** | `udCartera` | Numérico (`#,##0`) | Unidades vivas pendientes en pedidos de cartera. |
+| **N** | **UdPrevision 31/12/{Año}** | `udPrevision` | **Editable** (`#,##0`) | Celda en blanco con fondo amarillo suave para estimación de unidades a cierre. |
+| **O** | **UdObjetivo {Año Siguiente}** | `udObjetivo` | **Editable** (`#,##0`) | Celda en blanco con fondo amarillo suave para fijar la meta de unidades del año siguiente. |
+| **P** | **PrecioVentaUd {Año}** | `precioVentaActual` | Moneda (`#,##0.00 €`) | Precio medio efectivo por unidad calculado para el ejercicio base. |
+| **Q** | **PrecioVentaUd {Año Siguiente} (+X%)** | `precioVentaSiguiente` | **Solo Lectura** (`#,##0.00 €`) | Precio unitario proyectado con el % de incremento oficial. |
+| **R** | **TotalLineaFacturado a dia de hoy** | `totalFacturado` | Moneda (`#,##0.00 €`) | Importe neto acumulado facturado en el año en curso. |
+| **S** | **€ Cartera** | `eurosCartera` | Moneda (`#,##0.00 €`) | Importe valorado de los pedidos vivos en cartera. |
+| **T** | **€ Previsión {Año}** | `=SI(O(ESBLANCO(N);ESBLANCO(P)); ""; N*P)` | **Fórmula Bloqueada** (`#,##0.00 €`) | Importe proyectado de cierre en base a unidades previstas y precio base. |
+| **U** | **€ Objetivo {Año Siguiente}** | `=SI(O(ESBLANCO(O);ESBLANCO(Q)); ""; O*Q)` | **Fórmula Bloqueada** (`#,##0.00 €`) | Meta en euros proyectada automáticamente para el año siguiente. |
 
 ---
 

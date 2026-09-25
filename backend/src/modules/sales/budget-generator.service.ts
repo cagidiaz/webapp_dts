@@ -102,6 +102,10 @@ export class BudgetGeneratorService {
             client_id: true,
             name: true,
             salesperson_code: true,
+            city: true,
+            county: true,
+            post_code: true,
+            country_reg_code: true,
           },
         }),
         this.prisma.products.findMany({
@@ -127,11 +131,12 @@ export class BudgetGeneratorService {
       ]);
 
       // 2. Diccionarios en memoria para resolución inmediata
-      const customerMap = new Map<string, { name: string; rep: string }>();
+      const customerMap = new Map<string, { name: string; rep: string; community: string }>();
       for (const c of allCustomers) {
         customerMap.set(c.client_id, {
           name: c.name || c.client_id,
           rep: (c.salesperson_code || 'SIN_ASIGNAR').trim(),
+          community: this.resolveCommunity(c),
         });
       }
 
@@ -162,12 +167,13 @@ export class BudgetGeneratorService {
         repCode: string;
         customerCode: string;
         customerName: string;
+        community: string;
         pmCode: string;
-        productNo: string;
         familyCode: string;
         familyName: string;
         subfamilyCode: string;
         subfamilyName: string;
+        productNo: string;
         description: string;
         udFacturadas: number;
         udCartera: number;
@@ -304,12 +310,13 @@ export class BudgetGeneratorService {
           repCode,
           customerCode: raw.customerCode,
           customerName: custInfo?.name || raw.customerCode,
+          community: custInfo?.community || '',
           pmCode: catInfo?.pmCode || '',
-          productNo: raw.productNo,
           familyCode: catInfo?.familyCode || '',
           familyName: catInfo?.familyName || '',
           subfamilyCode: subCode,
           subfamilyName: catInfo?.subfamilyName || '',
+          productNo: raw.productNo,
           description: prodInfo?.description || '',
           udFacturadas,
           udCartera,
@@ -407,34 +414,35 @@ export class BudgetGeneratorService {
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet(`Presupuestos ${nextYear}`, {
-      views: [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'M2' }],
+      views: [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'N2' }],
     });
 
     const pctSign = priceIncreasePct >= 0 ? `+${priceIncreasePct}%` : `${priceIncreasePct}%`;
     const headerPrecioSiguiente = `PrecioVentaUd ${nextYear} (${pctSign})`;
 
-    // 20 Columnas exactas solicitadas
+    // 21 Columnas: Comunidad Autónoma añadida tras Nombre cliente, y Nº producto reubicado a la izquierda de Descripción
     worksheet.columns = [
-      { header: 'Cod vendedor', key: 'repCode', width: 14 }, // A
-      { header: 'Cod cliente', key: 'customerCode', width: 14 }, // B
-      { header: 'Nombre cliente', key: 'customerName', width: 34 }, // C
-      { header: 'Cod Product Manager', key: 'pmCode', width: 20 }, // D
-      { header: 'Nº producto', key: 'productNo', width: 16 }, // E
-      { header: 'familia', key: 'familyCode', width: 12 }, // F
-      { header: 'Desc_familia', key: 'familyName', width: 28 }, // G
-      { header: 'subfamilia', key: 'subfamilyCode', width: 14 }, // H
-      { header: 'Desc_subfam', key: 'subfamilyName', width: 28 }, // I
-      { header: 'Descripción', key: 'description', width: 38 }, // J
-      { header: 'UdFacturadas a dia de hoy', key: 'udFacturadas', width: 24 }, // K
-      { header: 'UdCartera', key: 'udCartera', width: 14 }, // L
-      { header: `UdPrevision 31/12/${currentYear}`, key: 'udPrevision', width: 24 }, // M (EDITABLE / EN BLANCO)
-      { header: `UdObjetivo ${nextYear}`, key: 'udObjetivo', width: 20 }, // N (EDITABLE / EN BLANCO)
-      { header: `PrecioVentaUd ${currentYear}`, key: 'precioVentaActual', width: 20 }, // O
-      { header: headerPrecioSiguiente, key: 'precioVentaSiguiente', width: 24 }, // P (SOLO LECTURA)
-      { header: 'TotalLineaFacturado a dia de hoy', key: 'totalFacturado', width: 28 }, // Q
-      { header: '€ Cartera', key: 'eurosCartera', width: 16 }, // R
-      { header: `€ Previsión ${currentYear}`, key: 'eurosPrevision', width: 18 }, // S (FÓRMULA / BLOQUEADA)
-      { header: `€ Objetivo ${nextYear}`, key: 'eurosObjetivo', width: 18 }, // T (FÓRMULA / BLOQUEADA)
+      { header: 'Cod vendedor', key: 'repCode', width: 14 }, // A (1)
+      { header: 'Cod cliente', key: 'customerCode', width: 14 }, // B (2)
+      { header: 'Nombre cliente', key: 'customerName', width: 34 }, // C (3)
+      { header: 'Comunidad Autónoma', key: 'community', width: 24 }, // D (4) - NUEVA COLUMNA
+      { header: 'Cod Product Manager', key: 'pmCode', width: 20 }, // E (5)
+      { header: 'familia', key: 'familyCode', width: 12 }, // F (6)
+      { header: 'Desc_familia', key: 'familyName', width: 28 }, // G (7)
+      { header: 'subfamilia', key: 'subfamilyCode', width: 14 }, // H (8)
+      { header: 'Desc_subfam', key: 'subfamilyName', width: 28 }, // I (9)
+      { header: 'Nº producto', key: 'productNo', width: 16 }, // J (10) - A LA IZQUIERDA DE DESCRIPCIÓN
+      { header: 'Descripción', key: 'description', width: 38 }, // K (11)
+      { header: 'UdFacturadas a dia de hoy', key: 'udFacturadas', width: 24 }, // L (12)
+      { header: 'UdCartera', key: 'udCartera', width: 14 }, // M (13)
+      { header: `UdPrevision 31/12/${currentYear}`, key: 'udPrevision', width: 24 }, // N (14) (EDITABLE / EN BLANCO)
+      { header: `UdObjetivo ${nextYear}`, key: 'udObjetivo', width: 20 }, // O (15) (EDITABLE / EN BLANCO)
+      { header: `PrecioVentaUd ${currentYear}`, key: 'precioVentaActual', width: 20 }, // P (16)
+      { header: headerPrecioSiguiente, key: 'precioVentaSiguiente', width: 24 }, // Q (17) (SOLO LECTURA)
+      { header: 'TotalLineaFacturado a dia de hoy', key: 'totalFacturado', width: 28 }, // R (18)
+      { header: '€ Cartera', key: 'eurosCartera', width: 16 }, // S (19)
+      { header: `€ Previsión ${currentYear}`, key: 'eurosPrevision', width: 18 }, // T (20) (FÓRMULA / BLOQUEADA)
+      { header: `€ Objetivo ${nextYear}`, key: 'eurosObjetivo', width: 18 }, // U (21) (FÓRMULA / BLOQUEADA)
     ];
 
     // Estilo de Cabecera (Fila 1)
@@ -442,8 +450,8 @@ export class BudgetGeneratorService {
     headerRow.height = 32;
 
     headerRow.eachCell((cell, colNumber) => {
-      // Cabeceras de columnas editables M (13) y N (14) con distintivo de edición
-      const isEditableCol = colNumber === 13 || colNumber === 14;
+      // Cabeceras de columnas editables N (14) y O (15) con distintivo de edición
+      const isEditableCol = colNumber === 14 || colNumber === 15;
 
       cell.fill = {
         type: 'pattern',
@@ -473,26 +481,27 @@ export class BudgetGeneratorService {
     rows.forEach((r, idx) => {
       const rowNumber = idx + 2;
 
-      // Columna S: Fórmula Excel =SI(O(ESBLANCO(M2);ESBLANCO(O2)); ""; M2*O2)
+      // Columna T (20): Fórmula Excel =SI(O(ESBLANCO(N2);ESBLANCO(P2)); ""; N2*P2)
       const formulaEurosPrevision = {
-        formula: `IF(OR(ISBLANK(M${rowNumber}),ISBLANK(O${rowNumber})),"",M${rowNumber}*O${rowNumber})`,
+        formula: `IF(OR(ISBLANK(N${rowNumber}),ISBLANK(P${rowNumber})),"",N${rowNumber}*P${rowNumber})`,
       };
 
-      // Columna T: Fórmula Excel =SI(O(ESBLANCO(N2);ESBLANCO(P2)); ""; N2*P2)
+      // Columna U (21): Fórmula Excel =SI(O(ESBLANCO(O2);ESBLANCO(Q2)); ""; O2*Q2)
       const formulaEurosObjetivo = {
-        formula: `IF(OR(ISBLANK(N${rowNumber}),ISBLANK(P${rowNumber})),"",N${rowNumber}*P${rowNumber})`,
+        formula: `IF(OR(ISBLANK(O${rowNumber}),ISBLANK(Q${rowNumber})),"",O${rowNumber}*Q${rowNumber})`,
       };
 
       const row = worksheet.addRow({
         repCode: r.repCode,
         customerCode: r.customerCode,
         customerName: r.customerName,
+        community: r.community,
         pmCode: r.pmCode,
-        productNo: r.productNo,
         familyCode: r.familyCode,
         familyName: r.familyName,
         subfamilyCode: r.subfamilyCode,
         subfamilyName: r.subfamilyName,
+        productNo: r.productNo,
         description: r.description,
         udFacturadas: r.udFacturadas,
         udCartera: r.udCartera,
@@ -519,22 +528,22 @@ export class BudgetGeneratorService {
           right: { style: 'thin', color: { argb: 'FFF3F4F6' } },
         };
 
-        // Códigos centrados (A, B, D, E, F, H)
-        if ([1, 2, 4, 5, 6, 8].includes(colNumber)) {
+        // Códigos centrados (A, B, E, F, H, J)
+        if ([1, 2, 5, 6, 8, 10].includes(colNumber)) {
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        } else if ([3, 7, 9, 10].includes(colNumber)) {
-          // Textos a la izquierda
+        } else if ([3, 4, 7, 9, 11].includes(colNumber)) {
+          // Textos a la izquierda (C, D, G, I, K)
           cell.alignment = { horizontal: 'left', vertical: 'middle' };
         }
 
-        // Cantidades enteras del sistema (K, L)
-        if ([11, 12].includes(colNumber)) {
+        // Cantidades enteras del sistema (L, M)
+        if ([12, 13].includes(colNumber)) {
           cell.numFmt = '#,##0;(#,##0);"-"';
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
         }
 
-        // Columnas M y N: UdPrevision y UdObjetivo (AMBAS EDITABLES POR EL COMERCIAL)
-        if (colNumber === 13 || colNumber === 14) {
+        // Columnas N y O: UdPrevision y UdObjetivo (AMBAS EDITABLES POR EL COMERCIAL)
+        if (colNumber === 14 || colNumber === 15) {
           cell.numFmt = '#,##0;(#,##0);"-"';
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
           cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF003E51' } };
@@ -557,14 +566,14 @@ export class BudgetGeneratorService {
           cell.protection = { locked: true };
         }
 
-        // Monedas (O, P, Q, R, S, T)
-        if ([15, 16, 17, 18, 19, 20].includes(colNumber)) {
+        // Monedas (P, Q, R, S, T, U)
+        if ([16, 17, 18, 19, 20, 21].includes(colNumber)) {
           cell.numFmt = '#,##0.00 €;(#,##0.00 €);"-"';
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
         }
 
-        // Columna P (PrecioVentaUd Siguiente): Solo lectura con fondo gris claro sutil
-        if (colNumber === 16) {
+        // Columna Q (PrecioVentaUd Siguiente): Solo lectura con fondo gris claro sutil
+        if (colNumber === 17) {
           cell.fill = {
             type: 'pattern',
             pattern: 'solid',
@@ -573,8 +582,8 @@ export class BudgetGeneratorService {
           cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF1F2937' } };
         }
 
-        // Columnas S y T (€ Previsión y € Objetivo): Fondo cian suave con negrita y fórmula (solo lectura protegida)
-        if (colNumber === 19 || colNumber === 20) {
+        // Columnas T y U (€ Previsión y € Objetivo): Fondo cian suave con negrita y fórmula (solo lectura protegida)
+        if (colNumber === 20 || colNumber === 21) {
           cell.fill = {
             type: 'pattern',
             pattern: 'solid',
@@ -589,7 +598,7 @@ export class BudgetGeneratorService {
     const lastRowIndex = Math.max(rows.length + 1, 2);
     worksheet.autoFilter = {
       from: 'A1',
-      to: `T${lastRowIndex}`,
+      to: `U${lastRowIndex}`,
     };
 
     // Si se solicita protección expresamente, proteger la hoja.
@@ -614,4 +623,208 @@ export class BudgetGeneratorService {
 
     return workbook;
   }
+
+  /**
+   * Resuelve la Comunidad Autónoma o país a partir de los datos geográficos del cliente.
+   */
+  private resolveCommunity(c: {
+    country_reg_code?: string | null;
+    post_code?: string | null;
+    city?: string | null;
+    county?: string | null;
+    name?: string | null;
+  }): string {
+    const country = (c.country_reg_code || '').trim().toUpperCase();
+    const rawPostCode = (c.post_code || '').trim();
+    const countyNorm = this.normalizeGeoString(c.county);
+    const cityNorm = this.normalizeGeoString(c.city);
+
+    const isSpain = !country || country === 'ES' || country === 'ESP' || country === 'ESPAÑA' || country === 'SPAIN';
+    if (!isSpain) {
+      return COUNTRY_NAMES[country] || (country ? `Internacional (${country})` : '');
+    }
+
+    // 1. Código Postal de España (prefijo de 2 dígitos)
+    if (rawPostCode) {
+      const cleaned = rawPostCode.replace(/^ES-?/i, '').replace(/\s+/g, '');
+      const digits = cleaned.replace(/\D/g, '');
+      if (digits.length >= 4 && digits.length <= 5) {
+        const prefix = digits.length === 4 ? ('0' + digits[0]) : digits.substring(0, 2);
+        if (POSTCODE_TO_REGION[prefix]) {
+          return POSTCODE_TO_REGION[prefix];
+        }
+      }
+    }
+
+    // 2. Coincidencia por provincia / county
+    if (countyNorm) {
+      for (const [prov, region] of Object.entries(PROVINCE_TO_REGION)) {
+        if (countyNorm.includes(prov)) return region;
+      }
+    }
+
+    // 3. Coincidencia por ciudad
+    if (cityNorm) {
+      for (const [prov, region] of Object.entries(PROVINCE_TO_REGION)) {
+        if (cityNorm.includes(prov)) return region;
+      }
+    }
+
+    // 4. Si el nombre del cliente contiene una comunidad o provincia
+    const nameNorm = this.normalizeGeoString(c.name);
+    if (nameNorm) {
+      for (const [prov, region] of Object.entries(PROVINCE_TO_REGION)) {
+        if (nameNorm.includes(prov)) return region;
+      }
+    }
+
+    return c.county || c.city || '';
+  }
+
+  private normalizeGeoString(str?: string | null): string {
+    return (str || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
 }
+
+// --- Tablas de Normalización Geográfica ---
+
+const POSTCODE_TO_REGION: Record<string, string> = {
+  '01': 'País Vasco',
+  '02': 'Castilla-La Mancha',
+  '03': 'Comunidad Valenciana',
+  '04': 'Andalucía',
+  '05': 'Castilla y León',
+  '06': 'Extremadura',
+  '07': 'Islas Baleares',
+  '08': 'Cataluña',
+  '09': 'Castilla y León',
+  '10': 'Extremadura',
+  '11': 'Andalucía',
+  '12': 'Comunidad Valenciana',
+  '13': 'Castilla-La Mancha',
+  '14': 'Andalucía',
+  '15': 'Galicia',
+  '16': 'Castilla-La Mancha',
+  '17': 'Cataluña',
+  '18': 'Andalucía',
+  '19': 'Castilla-La Mancha',
+  '20': 'País Vasco',
+  '21': 'Andalucía',
+  '22': 'Aragón',
+  '23': 'Andalucía',
+  '24': 'Castilla y León',
+  '25': 'Cataluña',
+  '26': 'La Rioja',
+  '27': 'Galicia',
+  '28': 'Comunidad de Madrid',
+  '29': 'Andalucía',
+  '30': 'Región de Murcia',
+  '31': 'Comunidad Foral de Navarra',
+  '32': 'Galicia',
+  '33': 'Principado de Asturias',
+  '34': 'Castilla y León',
+  '35': 'Canarias',
+  '36': 'Galicia',
+  '37': 'Castilla y León',
+  '38': 'Canarias',
+  '39': 'Cantabria',
+  '40': 'Castilla y León',
+  '41': 'Andalucía',
+  '42': 'Castilla y León',
+  '43': 'Cataluña',
+  '44': 'Aragón',
+  '45': 'Castilla-La Mancha',
+  '46': 'Comunidad Valenciana',
+  '47': 'Castilla y León',
+  '48': 'País Vasco',
+  '49': 'Castilla y León',
+  '50': 'Aragón',
+  '51': 'Ceuta',
+  '52': 'Melilla',
+};
+
+const PROVINCE_TO_REGION: Record<string, string> = {
+  alava: 'País Vasco', araba: 'País Vasco',
+  albacete: 'Castilla-La Mancha',
+  alicante: 'Comunidad Valenciana', alacant: 'Comunidad Valenciana',
+  almeria: 'Andalucía',
+  avila: 'Castilla y León',
+  badajoz: 'Extremadura',
+  baleares: 'Islas Baleares', balears: 'Islas Baleares', mallorca: 'Islas Baleares', menorca: 'Islas Baleares', ibiza: 'Islas Baleares',
+  barcelona: 'Cataluña',
+  burgos: 'Castilla y León',
+  caceres: 'Extremadura',
+  cadiz: 'Andalucía',
+  castellon: 'Comunidad Valenciana', castello: 'Comunidad Valenciana',
+  'ciudad real': 'Castilla-La Mancha',
+  cordoba: 'Andalucía',
+  coruna: 'Galicia', 'a coruna': 'Galicia', 'la coruna': 'Galicia',
+  cuenca: 'Castilla-La Mancha',
+  girona: 'Cataluña', gerona: 'Cataluña',
+  granada: 'Andalucía',
+  guadalajara: 'Castilla-La Mancha',
+  guipuzcoa: 'País Vasco', gipuzkoa: 'País Vasco',
+  huelva: 'Andalucía',
+  huesca: 'Aragón',
+  jaen: 'Andalucía',
+  leon: 'Castilla y León',
+  lleida: 'Cataluña', lerida: 'Cataluña',
+  rioja: 'La Rioja', 'la rioja': 'La Rioja',
+  lugo: 'Galicia',
+  madrid: 'Comunidad de Madrid',
+  malaga: 'Andalucía',
+  murcia: 'Región de Murcia',
+  navarra: 'Comunidad Foral de Navarra', nafarroa: 'Comunidad Foral de Navarra',
+  ourense: 'Galicia', orense: 'Galicia',
+  asturias: 'Principado de Asturias',
+  palencia: 'Castilla y León',
+  'las palmas': 'Canarias', palmas: 'Canarias', 'gran canaria': 'Canarias', fuerteventura: 'Canarias', lanzarote: 'Canarias',
+  pontevedra: 'Galicia',
+  salamanca: 'Castilla y León',
+  'santa cruz de tenerife': 'Canarias', tenerife: 'Canarias',
+  cantabria: 'Cantabria', santander: 'Cantabria',
+  segovia: 'Castilla y León',
+  sevilla: 'Andalucía',
+  soria: 'Castilla y León',
+  tarragona: 'Cataluña',
+  teruel: 'Aragón',
+  toledo: 'Castilla-La Mancha',
+  valencia: 'Comunidad Valenciana',
+  valladolid: 'Castilla y León',
+  vizcaya: 'País Vasco', bizkaia: 'País Vasco',
+  zamora: 'Castilla y León',
+  zaragoza: 'Aragón',
+  ceuta: 'Ceuta',
+  melilla: 'Melilla',
+};
+
+const COUNTRY_NAMES: Record<string, string> = {
+  PT: 'Portugal',
+  AT: 'Austria',
+  FR: 'Francia',
+  DE: 'Alemania',
+  IT: 'Italia',
+  US: 'Estados Unidos',
+  GB: 'Reino Unido',
+  UK: 'Reino Unido',
+  IE: 'Irlanda',
+  NL: 'Países Bajos',
+  BE: 'Bélgica',
+  CH: 'Suiza',
+  MX: 'México',
+  CO: 'Colombia',
+  CL: 'Chile',
+  DZ: 'Argelia',
+  GH: 'Ghana',
+  AE: 'EAU (Dubái)',
+  CN: 'China',
+  MA: 'Marruecos',
+  SE: 'Suecia',
+  NO: 'Noruega',
+  DK: 'Dinamarca',
+  PL: 'Polonia',
+};

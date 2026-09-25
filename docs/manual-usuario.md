@@ -301,11 +301,13 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * **Comercial / Vendedor**: Permite descargar la plantilla global consolidada o segmentada para un comercial específico.
   * **% Incremento en Precio de Venta**: Aplica un incremento porcentual configurable sobre los precios medios netos de catálogo.
   * **Protección Opcional**: Por defecto genera la hoja desbloqueada para permitir a los comerciales insertar libremente nuevas filas para presupuestar nuevos clientes o productos.
-* **Estructura del Libro Excel**:
-  * Histórico de unidades y ventas del año anterior y año actual (YTD).
-  * Columna de previsión de cierre editable en blanco.
-  * Columna de precio proyectado con el % de incremento reflejado en la cabecera.
-  * Columna de objetivo anual con fórmula Excel protegida contra borrado accidental (`=Previsión * P.Vta`).
+* **Estructura del Libro Excel (21 Columnas)**:
+  * **Identificación del Cliente y Zona**: Código de vendedor, código de cliente, nombre de cliente y **Comunidad Autónoma** (columna D, resuelta automáticamente por código postal o provincia, con soporte para países internacionales).
+  * **Jerarquía de Producto**: Product Manager, Familia, Desc. Familia, Subfamilia, Desc. Subfamilia, **Nº producto** (columna J, situado inmediatamente a la izquierda de la descripción) y Descripción.
+  * **Histórico y Cartera**: Unidades facturadas a día de hoy y unidades en cartera viva.
+  * **Columnas Editables (Entrada Comercial)**: `UdPrevision 31/12/{Año}` (columna N) y `UdObjetivo {Año Siguiente}` (columna O), resaltadas con fondo amarillo suave y desbloqueadas para su introducción manual.
+  * **Precios y Valoraciones**: Precio de venta actual, precio siguiente proyectado con el % configurado, total facturado a día de hoy y € en cartera.
+  * **Fórmulas Vivas Automáticas**: Columna T (`€ Previsión {Año} = N * P`) y Columna U (`€ Objetivo {Año Siguiente} = O * Q`) protegidas contra borrado accidental.
 * **Exclusión de Cuentas Contables**: Filtra automáticamente cuentas `G/L Account` (`624%`, `438%`, `700%`, etc.), incluyendo únicamente referencias comerciales de producto (`Item`).
 
 ### 6.3 Gestión de Usuarios y Roles (`/users`)
@@ -321,5 +323,5 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
 
 ---
 
-*Manual de dTS Instruments v6.1 — Actualizado a 24 de septiembre de 2026.*
+*Manual de dTS Instruments v6.2 — Actualizado a 25 de septiembre de 2026.*
 
