@@ -24,6 +24,10 @@ export interface ProductBudgetKPIs {
   desviacionPct: number;
   carteraVentas: number;
   carteraVentasAccounts: number;
+  carteraVentasSeiko?: number;
+  carteraVentasSinSeiko?: number;
+  carteraVentasAccountsSinSeiko?: number;
+  carteraVentasItems?: number;
   enviadosFacturar: number;
   enviadosFacturarAccounts: number;
 }

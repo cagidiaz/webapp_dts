@@ -103,6 +103,12 @@ Para máxima transparencia, al pulsar `ℹ️` en Facturación se muestra un des
 * **Fórmula Matemática:**
   $$\text{Cartera Neta} = \sum (\text{Líneas de Pedido Pendientes}) - \text{Prepagos Vivos Asignados}$$
 * **Desglose de Cuentas Contables:** Muestra entre paréntesis la porción correspondiente a líneas de cuenta contable (G/L Accounts), asegurando consistencia visual.
+* **Modal de Información (`InfoPopover` / `infoProps`):**
+  Incorpora un desglose detallado con suma totalizada para auditar pedidos específicos de alto volumen o cuentas especiales:
+  1. **Cartera Pedidos Producto (Items) (+):** Pedidos abiertos correspondientes a material de catálogo (artículos estándar).
+  2. **Cuentas G/L Cartera (Diferentes a SEIKO) (+):** Líneas de pedidos abiertas asignadas a cuentas contables del resto de clientes.
+  3. **Pedidos Cartera SEIKO (CL100427 - G/L) (+):** Total de pedidos abiertos registrados bajo la cuenta de SEIKO FLOWCONTROL GMBH (líneas de cuenta contable `7050004` gestionadas habitualmente por comercial `JMO`).
+  4. **Total Cartera de Pedidos (=):** Suma totalizada neta de la cartera de pedidos viva de la compañía tras compensación de prepagos ($\text{Items} + \text{G/L Dif. Seiko} + \text{SEIKO}$).
 
 ---
 

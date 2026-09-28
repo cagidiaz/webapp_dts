@@ -13,6 +13,7 @@ import {
   getSalesReps,
   getProductFamilies
 } from '../../api';
+import type { ProductBudgetKPIs } from '../../api/salesProductBudget';
 import { ExportButton } from '../../components/ui';
 import { exportMultiSheetToXlsx } from '../../utils/exportToXlsx';
 import { useAuthStore } from '../../store/authStore';
@@ -161,9 +162,11 @@ export const ProductBudgetPage: React.FC = () => {
   // Derived Data
   const { tableData, performanceKPIs } = useMemo(() => {
     const allRows = infiniteData?.pages.flatMap(page => page.rows || []) || [];
-    const kpis = infiniteData?.pages[0]?.kpis || {
+    const kpis: ProductBudgetKPIs = infiniteData?.pages[0]?.kpis || {
       ventas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
       carteraVentas: 0, carteraVentasAccounts: 0,
+      carteraVentasSeiko: 0, carteraVentasSinSeiko: 0,
+      carteraVentasAccountsSinSeiko: 0, carteraVentasItems: 0,
       enviadosFacturar: 0, enviadosFacturarAccounts: 0
     };
     return { tableData: allRows, performanceKPIs: kpis };
@@ -380,7 +383,50 @@ export const ProductBudgetPage: React.FC = () => {
         <KPICard title="Objetivo" value={performanceKPIs.objetivo} type="currency" icon={Target} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ description: "Cifra de ventas presupuestada como objetivo para el periodo seleccionado.", objective: "Indica la meta comercial establecida." }} />
         <KPICard title="Desviación" value={performanceKPIs.desviacionEur} type="currency" icon={DollarSign} status={performanceKPIs.desviacionEur >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ description: "Diferencia absoluta entre la facturación real y el objetivo.", formulas: "Ventas Reales - Objetivo Presupuestado" }} />
         <KPICard title="Cumplimiento" value={performanceKPIs.desviacionPct} type="percentage" icon={Activity} status={performanceKPIs.desviacionPct >= 0 ? 'success' : 'danger'} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ description: "Tasa de cumplimiento del objetivo en porcentaje.", formulas: "(Ventas Reales / Objetivo) * 100" }} />
-        <KPICard title="Cartera Pedidos" value={performanceKPIs.carteraVentas} accountValue={performanceKPIs.carteraVentasAccounts} type="currency" icon={Package} isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ description: "Importe total de los pedidos de venta abiertos y pendientes de completar. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", source: "Tabla de Sales Orders." }} />
+        <KPICard 
+          title="Cartera Pedidos" 
+          value={performanceKPIs.carteraVentas} 
+          accountValue={performanceKPIs.carteraVentasAccounts} 
+          type="currency" 
+          icon={Package} 
+          isLoading={isLoadingPerf} 
+          isFetching={isFetchingPerf} 
+          infoProps={{ 
+            title: "Cartera de Pedidos",
+            description: "Importe total de los pedidos de venta abiertos y pendientes de servir. Incluye pedidos de producto de catálogo, cuentas contables (G/L) de clientes y los pedidos de SEIKO FLOWCONTROL GMBH (CL100427). El valor entre paréntesis indica la porción de líneas de tipo cuenta.", 
+            formulas: [
+              "Cartera Total = Pedidos Producto (Items) + Cuentas G/L (Resto Clientes) + Cartera SEIKO",
+              "Valoración neta tras compensación de prepagos vivos (PFV)"
+            ],
+            source: "Tabla sales_orders",
+            breakdown: [
+              { 
+                label: "Cartera Pedidos Producto (Items)", 
+                value: formatCurrency(performanceKPIs.carteraVentasItems ?? Math.max(0, performanceKPIs.carteraVentas - (performanceKPIs.carteraVentasAccounts || 0))), 
+                sign: '+', 
+                color: 'text-dts-primary dark:text-white font-semibold' 
+              },
+              { 
+                label: "Cuentas G/L Cartera (Diferentes a SEIKO)", 
+                value: formatCurrency(performanceKPIs.carteraVentasAccountsSinSeiko ?? Math.max(0, (performanceKPIs.carteraVentasAccounts || 0) - (performanceKPIs.carteraVentasSeiko || 0))), 
+                sign: '+', 
+                color: 'text-violet-600 dark:text-violet-400 font-semibold' 
+              },
+              { 
+                label: "Pedidos Cartera SEIKO (CL100427 - G/L)", 
+                value: formatCurrency(performanceKPIs.carteraVentasSeiko || 0), 
+                sign: '+', 
+                color: 'text-amber-600 dark:text-amber-400 font-bold' 
+              },
+              { 
+                label: "Total Cartera de Pedidos", 
+                value: formatCurrency(performanceKPIs.carteraVentas || 0), 
+                sign: '=', 
+                color: 'text-emerald-600 dark:text-emerald-400 font-black' 
+              },
+            ]
+          }} 
+        />
         <KPICard title="Pend. Facturar" value={performanceKPIs.enviadosFacturar} accountValue={performanceKPIs.enviadosFacturarAccounts} type="currency" icon={DollarSign} status="warning" isLoading={isLoadingPerf} isFetching={isFetchingPerf} infoProps={{ description: "Importe de la mercancía ya enviada al cliente pero que aún no ha sido facturada. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", formulas: "Sumatorio(Qty. Shipped Not Invoiced * Unit Price)" }} />
       </div>
 

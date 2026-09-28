@@ -978,6 +978,12 @@ export class SalesService {
     const totalEnviadoNoFacturadoAccountsNeto = Math.min(totalEnviadoNoFacturadoAccounts, totalEnviadoNoFacturadoNeto);
     const totalCarteraAccountsNeta = Math.min(totalCarteraAccounts, totalCarteraNeta);
 
+    // Cartera neta de pedidos de SEIKO FLOWCONTROL GMBH (CL100427) y cartera del resto de clientes
+    const seikoCarteraNeta = customerCarteraMap['CL100427'] || 0;
+    const totalCarteraSinSeiko = Math.max(0, totalCarteraNeta - seikoCarteraNeta);
+    const totalCarteraAccountsSinSeiko = Math.max(0, totalCarteraAccountsNeta - seikoCarteraNeta);
+    const totalCarteraItems = Math.max(0, totalCarteraNeta - totalCarteraAccountsNeta);
+
     // Total de facturación neta que incluye cuentas y prepagos, y deduce devoluciones y abonos (para Panel Gerencia/Comercial)
     const totalFacturacionConCuentas = totalFacturasOrdinarias + totalPrepagosFacturados - totalAbonosDevoluciones;
     // Ventas de producto puras (para Panel Presupuestos: productos netos de líneas Item)
@@ -1010,6 +1016,10 @@ export class SalesService {
         carteraVentas: totalCarteraNeta,
         carteraVentasBruta: totalCarteraBruta,
         carteraVentasAccounts: totalCarteraAccountsNeta,
+        carteraVentasSeiko: seikoCarteraNeta,
+        carteraVentasSinSeiko: totalCarteraSinSeiko,
+        carteraVentasAccountsSinSeiko: totalCarteraAccountsSinSeiko,
+        carteraVentasItems: totalCarteraItems,
         enviadosFacturar: totalEnviadoNoFacturadoNeto,
         enviadosFacturarBruto: totalEnviadoNoFacturadoBruto,
         prepagosDescontadosFacturar: totalPrepagosDescontadosFacturar,
@@ -1697,8 +1707,14 @@ export class SalesService {
     const totalEnviadoNoFacturadoNeto = Math.max(0, totalEnviadoNoFacturadoBruto - totalPrepagosDescontadosFacturar);
     const totalCarteraNeta = Math.max(0, totalCarteraBruta - totalPrepagosDescontadosCartera);
 
+    // Cartera neta de pedidos de SEIKO FLOWCONTROL GMBH (CL100427) y cartera del resto de clientes
+    const seikoCarteraNeta = pmCustomerCarteraMap['CL100427'] || 0;
+    const totalCarteraSinSeiko = Math.max(0, totalCarteraNeta - seikoCarteraNeta);
+
     const totalEnviadoNoFacturadoAccountsNeto = Math.min(totalEnviadoNoFacturadoAccounts, totalEnviadoNoFacturadoNeto);
     const totalCarteraAccountsNeta = Math.min(totalCarteraAccounts, totalCarteraNeta);
+    const totalCarteraAccountsSinSeiko = Math.max(0, totalCarteraAccountsNeta - seikoCarteraNeta);
+    const totalCarteraItems = Math.max(0, totalCarteraNeta - totalCarteraAccountsNeta);
 
     // Total de facturación documental (para desglose info)
     const totalFacturacionConCuentas = pmFacturasOrdinarias + pmPrepagosFacturados - pmAbonosDevoluciones;
@@ -1737,6 +1753,10 @@ export class SalesService {
         carteraVentas: totalCarteraNeta,
         carteraVentasBruta: totalCarteraBruta,
         carteraVentasAccounts: totalCarteraAccountsNeta,
+        carteraVentasSeiko: seikoCarteraNeta,
+        carteraVentasSinSeiko: totalCarteraSinSeiko,
+        carteraVentasAccountsSinSeiko: totalCarteraAccountsSinSeiko,
+        carteraVentasItems: totalCarteraItems,
         enviadosFacturar: totalEnviadoNoFacturadoNeto,
         enviadosFacturarBruto: totalEnviadoNoFacturadoBruto,
         prepagosDescontadosFacturar: totalPrepagosDescontadosFacturar,

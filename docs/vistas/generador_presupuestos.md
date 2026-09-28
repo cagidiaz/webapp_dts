@@ -53,14 +53,14 @@ El libro de trabajo generado (`.xlsx`) organiza los datos en **una única fila c
 | **I** | **Desc_subfam** | `subfamilyName` | Texto | Descripción de la subfamilia de producto. |
 | **J** | **Nº producto** | `productNo` | Texto centrado | Código de artículo/referencia comercial (`Item`), situado a la izquierda de la descripción. |
 | **K** | **Descripción** | `description` | Texto | Nombre o descripción oficial del artículo. |
-| **L** | **UdFacturadas {Año Anterior}** | `udFacturadasPrev` | Numérico (`#,##0`) | Unidades netas facturadas en el ejercicio cerrado anterior (ej. 2025). |
+| **L** | **UdFacturadas {Año Anterior}** | `udFacturadasPrev` | **Histórico Gris** (`#,##0`) | Unidades netas facturadas en el ejercicio cerrado anterior (ej. 2025). Fondo gris suave (`#F3F4F6`) y cabecera pizarra (`#475569`). |
 | **M** | **udFacturadas {Año} hasta hoy** | `udFacturadas` | Numérico (`#,##0`) | Unidades netas facturadas en el año en curso hasta la fecha (ej. udFacturadas 2026 hasta hoy). |
 | **N** | **UdCartera** | `udCartera` | Numérico (`#,##0`) | Unidades vivas pendientes en pedidos de cartera. |
 | **O** | **UdPrevision 31/12/{Año}** | `udPrevision` | **Editable** (`#,##0`) | Celda en blanco con fondo amarillo suave para estimación de unidades a cierre. |
 | **P** | **UdObjetivo {Año Siguiente}** | `udObjetivo` | **Editable** (`#,##0`) | Celda en blanco con fondo amarillo suave para fijar la meta de unidades del año siguiente. |
 | **Q** | **PrecioVentaUd {Año}** | `precioVentaActual` | Moneda (`#,##0.00 €`) | Precio medio efectivo por unidad calculado para el ejercicio base. |
 | **R** | **PrecioVentaUd {Año Siguiente} (+X%)** | `precioVentaSiguiente` | **Solo Lectura** (`#,##0.00 €`) | Precio unitario proyectado con el % de incremento oficial. |
-| **S** | **Facturacion {Año Anterior}** | `facturacionPrev` | Moneda (`#,##0.00 €`) | Importe neto acumulado cerrado del año anterior (ej. Facturación 2025). |
+| **S** | **Facturacion {Año Anterior}** | `facturacionPrev` | **Histórico Gris** (`#,##0.00 €`) | Importe neto acumulado cerrado del año anterior (ej. Facturación 2025). Fondo gris suave (`#F3F4F6`) y cabecera pizarra (`#475569`). |
 | **T** | **total linea fact. {Año} hasta hoy** | `totalFacturado` | Moneda (`#,##0.00 €`) | Importe neto acumulado facturado en el año en curso hasta la fecha (ej. total linea fact. 2026 hasta hoy). |
 | **U** | **€ Cartera** | `eurosCartera` | Moneda (`#,##0.00 €`) | Importe valorado de los pedidos vivos en cartera. |
 | **V** | **€ Previsión {Año}** | `=SI(O(ESBLANCO(O);ESBLANCO(Q)); ""; O*Q)` | **Fórmula Bloqueada** (`#,##0.00 €`) | Importe proyectado de cierre (`UdPrevisión * PrecioVentaActual`). |

@@ -12,7 +12,7 @@ import {
   getSalesReps,
   getProductFamilies
 } from '../../api';
-import { getSalesBudgetPerformanceExport, type SalespersonSummaryRow } from '../../api/salesBudget';
+import { getSalesBudgetPerformanceExport, type SalespersonSummaryRow, type SalesBudgetPerformanceKPIs } from '../../api/salesBudget';
 import { ExportButton } from '../../components/ui';
 import { exportToXlsx, exportMultiSheetToXlsx } from '../../utils/exportToXlsx';
 import { useAuthStore } from '../../store/authStore';
@@ -135,19 +135,23 @@ export const SalesBudgetPage: React.FC = () => {
   // Derived Data
   const { tableData, performanceKPIs, salespersonSummary } = useMemo(() => {
     const allRows = infiniteData?.pages.flatMap(page => page.rows || []) || [];
-    const kpis = infiniteData?.pages[0]?.kpis || { 
+    const kpis: SalesBudgetPerformanceKPIs = infiniteData?.pages[0]?.kpis || { 
       ventas: 0, ventasSinCuentas: 0, cuentasFacturadas: 0, objetivo: 0, desviacionEur: 0, desviacionPct: 0,
       carteraVentas: 0, carteraVentasAccounts: 0,
+      carteraVentasSeiko: 0, carteraVentasSinSeiko: 0, carteraVentasAccountsSinSeiko: 0, carteraVentasItems: 0,
       enviadosFacturar: 0, enviadosFacturarAccounts: 0,
       enviadosFacturarBruto: 0,
       prepagosDescontadosFacturar: 0,
       facturacionNuevos: 0,
+      countNuevos: 0,
+      countNuevosSinVenta: 0,
       facturasOrdinarias: 0,
       prepagosFacturados: 0,
       prepagosVivos: 0,
       abonosDevoluciones: 0,
       carteraVentasBruta: 0,
       prepagosDescontadosCartera: 0,
+      facturacionAnioAnterior: 0,
     };
     const summary: SalespersonSummaryRow[] = infiniteData?.pages[0]?.salespersonSummary || [];
     return { tableData: allRows, performanceKPIs: kpis, salespersonSummary: summary };
@@ -380,9 +384,38 @@ export const SalesBudgetPage: React.FC = () => {
           isFetching={isFetchingPerf}
           infoProps={{ 
             title: "Cartera de Pedidos",
-            description: "Importe total de los pedidos de venta abiertos y pendientes de servir. El valor entre paréntesis indica la porción de líneas de tipo cuenta.", 
-            formulas: "Sumatorio Pedidos Abiertos (Sales Orders)",
-            source: "Tabla sales_orders"
+            description: "Importe total de los pedidos de venta abiertos y pendientes de servir. Incluye pedidos de producto de catálogo, cuentas contables (G/L) de clientes y los pedidos de SEIKO FLOWCONTROL GMBH (CL100427). El valor entre paréntesis indica la porción de líneas de tipo cuenta.", 
+            formulas: [
+              "Cartera Total = Pedidos Producto (Items) + Cuentas G/L (Resto Clientes) + Cartera SEIKO",
+              "Valoración neta tras compensación de prepagos vivos (PFV)"
+            ],
+            source: "Tabla sales_orders",
+            breakdown: [
+              { 
+                label: "Cartera Pedidos Producto (Items)", 
+                value: formatCurrency(performanceKPIs.carteraVentasItems ?? Math.max(0, performanceKPIs.carteraVentas - (performanceKPIs.carteraVentasAccounts || 0))), 
+                sign: '+', 
+                color: 'text-dts-primary dark:text-white font-semibold' 
+              },
+              { 
+                label: "Cuentas G/L Cartera (Diferentes a SEIKO)", 
+                value: formatCurrency(performanceKPIs.carteraVentasAccountsSinSeiko ?? Math.max(0, (performanceKPIs.carteraVentasAccounts || 0) - (performanceKPIs.carteraVentasSeiko || 0))), 
+                sign: '+', 
+                color: 'text-violet-600 dark:text-violet-400 font-semibold' 
+              },
+              { 
+                label: "Pedidos Cartera SEIKO (CL100427 - G/L)", 
+                value: formatCurrency(performanceKPIs.carteraVentasSeiko || 0), 
+                sign: '+', 
+                color: 'text-amber-600 dark:text-amber-400 font-bold' 
+              },
+              { 
+                label: "Total Cartera de Pedidos", 
+                value: formatCurrency(performanceKPIs.carteraVentas || 0), 
+                sign: '=', 
+                color: 'text-emerald-600 dark:text-emerald-400 font-black' 
+              },
+            ]
           }} 
         />
         <KPICard 

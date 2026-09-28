@@ -570,11 +570,24 @@ export class BudgetGeneratorService {
     headerRow.eachCell((cell, colNumber) => {
       // Cabeceras de columnas editables O (15) y P (16) con distintivo de edición en cian dTS
       const isEditableCol = colNumber === 15 || colNumber === 16;
+      // Cabeceras de columnas del año anterior L (12) y S (19) con fondo gris pizarra para distinguir del año en curso
+      const isPrevYearCol = colNumber === 12 || colNumber === 19;
+
+      let headerBg = 'FF003E51'; // Azul corporativo por defecto
+      let bottomBorderColor = 'FF00B0B9'; // Cian por defecto
+
+      if (isEditableCol) {
+        headerBg = 'FF00B0B9'; // Cian para destacar editables
+        bottomBorderColor = 'FFFEF08A'; // Amarillo suave
+      } else if (isPrevYearCol) {
+        headerBg = 'FF475569'; // Gris pizarra (Slate) para histórico del año anterior
+        bottomBorderColor = 'FF94A3B8'; // Borde inferior gris medio
+      }
 
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: isEditableCol ? 'FF00B0B9' : 'FF003E51' }, // Cian para destacar editables, Azul corporativo para las demás
+        fgColor: { argb: headerBg },
       };
       cell.font = {
         name: 'Segoe UI',
@@ -589,7 +602,7 @@ export class BudgetGeneratorService {
       };
       cell.border = {
         top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
-        bottom: { style: 'medium', color: { argb: isEditableCol ? 'FFFEF08A' : 'FF00B0B9' } },
+        bottom: { style: 'medium', color: { argb: bottomBorderColor } },
         left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
         right: { style: 'thin', color: { argb: 'FFD1D5DB' } },
       };
@@ -690,6 +703,22 @@ export class BudgetGeneratorService {
         if ([17, 18, 19, 20, 21, 22, 23].includes(colNumber)) {
           cell.numFmt = '#,##0.00 €;(#,##0.00 €);"-"';
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        }
+
+        // Columnas L (12) y S (19) - Histórico Año Anterior: Fondo gris suave para distinguir de datos actuales
+        if (colNumber === 12 || colNumber === 19) {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF3F4F6' }, // Gris suave elegante (#F3F4F6)
+          };
+          cell.font = { name: 'Segoe UI', size: 9.5, color: { argb: 'FF374151' } };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+            bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+            left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+            right: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+          };
         }
 
         // Columna R (PrecioVentaUd Siguiente): Solo lectura con fondo gris claro sutil

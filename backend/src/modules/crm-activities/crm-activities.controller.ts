@@ -38,7 +38,7 @@ export class CrmActivitiesController {
   @Get('briefing')
   @ApiOperation({ summary: 'Obtener briefing diario y actividades pendientes del usuario' })
   async getDailyBriefing(@Req() req: any) {
-    const userId = req.user?.userId;
+    const userId = req.user?.userId || req.user?.id;
     return this.crmActivitiesService.getDailyBriefing(userId);
   }
 

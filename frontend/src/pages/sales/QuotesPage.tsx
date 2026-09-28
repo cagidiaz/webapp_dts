@@ -4,11 +4,12 @@ import { getAllQuotes, getQuoteById, updateCrmQuote, type SalesQuote } from '../
 import { getCustomerSalespersons } from '../../api/customers';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
-  Search, FileText, Euro, CheckCircle, Percent, ArrowUpDown, 
+  Search, FileText, Euro, Percent, ArrowUpDown, 
   ChevronUp, ChevronDown, Sparkles, BarChart3, Calendar,
-  AlertTriangle, ChevronLeft, ChevronRight, Check, X, Clock, HelpCircle, Loader2
+  AlertTriangle, ChevronLeft, ChevronRight, Check, X, Clock, HelpCircle, Loader2,
+  PieChart as PieChartIcon
 } from 'lucide-react';
-import { KPISkeleton, TableSkeleton, InfoPopover, ExportButton } from '../../components/ui';
+import { KPISkeleton, TableSkeleton, InfoPopover, type InfoBreakdownItem, ExportButton } from '../../components/ui';
 import { Drawer } from '../../components/shared';
 import { useUIStore } from '../../store/uiStore';
 import { exportToXlsx } from '../../utils/exportToXlsx';
@@ -22,7 +23,10 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   Legend,
-  ComposedChart
+  ComposedChart,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 
 export const QuotesPage: React.FC = () => {
@@ -402,22 +406,47 @@ export const QuotesPage: React.FC = () => {
           icon={Euro} 
           subtitle={`${summary.totalCount} ofertas emitidas`}
           infoProps={{
-            description: "Valor total de todas las ofertas emitidas activas e históricas.",
-            formulas: "Sumatorio(Amount)"
+            description: (
+              <div className="space-y-1">
+                <p>Valor total de todas las ofertas emitidas (activas e históricas) según los filtros seleccionados.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Incluye el desglose de propuestas ganadas, perdidas y el volumen total de ofertas vivas abiertas o en proceso.
+                </p>
+              </div>
+            ),
+            formulas: [
+              "Cartera Total = Ofertas Ganadas + Ofertas Perdidas + Ofertas Abiertas / En Proceso",
+              `Monto Abiertas / En Proceso = ${formatCurrency(summary.pendingAmount, 2)} (${summary.pendingCount} ofertas vivas)`
+            ],
+            breakdown: [
+              {
+                label: `Ofertas Ganadas (${summary.wonCount})`,
+                value: formatCurrency(summary.wonAmount, 2),
+                sign: '+',
+                color: 'text-emerald-600 dark:text-emerald-400 font-bold',
+              },
+              {
+                label: `Ofertas Perdidas (${summary.lostCount})`,
+                value: formatCurrency(summary.lostAmount, 2),
+                sign: '+',
+                color: 'text-rose-600 dark:text-rose-400 font-bold',
+              },
+              {
+                label: `Ofertas Abiertas / En Proceso (${summary.pendingCount})`,
+                value: formatCurrency(summary.pendingAmount, 2),
+                sign: '+',
+                color: 'text-amber-600 dark:text-amber-400 font-bold',
+              },
+              {
+                label: `Total Cartera (${summary.totalCount} ofertas)`,
+                value: formatCurrency(summary.totalAmount, 2),
+                sign: '=',
+                color: 'text-dts-primary dark:text-dts-secondary font-black',
+              },
+            ]
           }}
         />
-        <KPICard 
-          title="Ofertas Ganadas" 
-          value={summary.wonAmount} 
-          type="currency" 
-          icon={CheckCircle} 
-          status="success"
-          subtitle={`${summary.wonCount} ganadas`}
-          infoProps={{
-            description: "Importe y cantidad de ofertas que han sido marcadas como ganadas.",
-            formulas: "Sumatorio(Amount) de ofertas Ganadas"
-          }}
-        />
+        <QuotesStatusDonutCard summary={summary} />
         <KPICard 
           title="Valor Ponderado (IA)" 
           value={summary.totalWeightedValue} 
@@ -447,10 +476,10 @@ export const QuotesPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in slide-in-from-top-4 duration-300">
           
           {/* Chart 1: Ofertas por Comercial y Tasa de Éxito */}
-          <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm flex flex-col">
+          <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm flex flex-col min-w-0">
             <h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider mb-4">Ofertas por Comercial y Tasa de Éxito</h3>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-72 w-full min-w-0 min-h-72">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
                 <ComposedChart data={salespersonChartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
                   <XAxis dataKey="month" stroke="#94a3b8" tick={{ fontSize: 9 }} />
@@ -491,10 +520,10 @@ export const QuotesPage: React.FC = () => {
           </div>
 
           {/* Chart 2: Comparativa de Ofertas Creadas vs Aprobadas */}
-          <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm flex flex-col">
+          <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm flex flex-col min-w-0">
             <h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider mb-4">Ofertas Creadas vs Aprobadas (Ganadas)</h3>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-72 w-full min-w-0 min-h-72">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
                 <BarChart data={statusChartData} barGap={0} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
                   <XAxis dataKey="month" stroke="#94a3b8" tick={{ fontSize: 9 }} />
@@ -1013,6 +1042,33 @@ export const QuotesPage: React.FC = () => {
                 </td>
               </tr>
             </tbody>
+            {quotesList.length > 0 && (
+              <tfoot className="bg-dts-primary text-white sticky bottom-0 z-20 shadow-lg font-bold text-xs uppercase border-t-2 border-dts-secondary">
+                <tr className="divide-x divide-white/10">
+                  <td className="px-4 py-3.5 tracking-wider" colSpan={4}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-white">TOTALES</span>
+                      <span className="text-[11px] text-gray-200 lowercase font-medium">
+                        {summary.totalCount} {summary.totalCount === 1 ? 'oferta' : 'ofertas'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono font-black text-xs text-white whitespace-nowrap">
+                    {formatCurrency(Number(summary.totalAmount || 0), 2)}
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono text-xs text-dts-secondary whitespace-nowrap" title="Probabilidad media">
+                    {summary.averageProbability ? `${formatNumber(Number(summary.averageProbability), 1)}%` : '---'}
+                  </td>
+                  <td className="px-4 py-3.5 text-center text-[10px] text-gray-200 font-mono whitespace-nowrap" title="Valor ponderado total de las ofertas">
+                    {summary.totalWeightedValue ? `Pond: ${formatCurrency(Number(summary.totalWeightedValue), 0)}` : '---'}
+                  </td>
+                  <td className="px-4 py-3.5 text-center text-[10px] whitespace-nowrap">
+                    <span className="text-gray-200 font-medium">Éxito: </span>
+                    <span className="text-dts-secondary font-bold font-mono">{formatNumber(Number(summary.successRate || 0), 1)}%</span>
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
@@ -1213,8 +1269,11 @@ interface KPICardProps {
   status?: 'success' | 'danger' | 'warning' | 'normal';
   subtitle?: string;
   infoProps?: {
-    description: string;
-    formulas?: string;
+    description: React.ReactNode;
+    formulas?: string | string[];
+    source?: string;
+    objective?: string;
+    breakdown?: InfoBreakdownItem[];
   };
 }
 
@@ -1236,3 +1295,208 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, type = 'number', icon: 
     </div>
   );
 };
+
+interface QuotesStatusDonutCardProps {
+  summary: {
+    wonAmount: number;
+    wonCount: number;
+    lostAmount: number;
+    lostCount: number;
+    pendingAmount: number;
+    pendingCount: number;
+    totalAmount: number;
+    totalCount: number;
+  };
+}
+
+const QuotesStatusDonutCard: React.FC<QuotesStatusDonutCardProps> = ({ summary }) => {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const totalAmountForDonut = (summary.wonAmount || 0) + (summary.lostAmount || 0) + (summary.pendingAmount || 0);
+  const wonPct = totalAmountForDonut > 0 ? ((summary.wonAmount || 0) / totalAmountForDonut) * 100 : 0;
+  const lostPct = totalAmountForDonut > 0 ? ((summary.lostAmount || 0) / totalAmountForDonut) * 100 : 0;
+  const pendingPct = totalAmountForDonut > 0 ? ((summary.pendingAmount || 0) / totalAmountForDonut) * 100 : 0;
+
+  const donutData = useMemo(() => {
+    if (totalAmountForDonut === 0) {
+      return [{ name: 'Sin datos', value: 1, color: '#e5e7eb', count: 0, percentage: 0 }];
+    }
+    const items = [
+      { name: 'Ganadas', value: summary.wonAmount || 0, color: '#10b981', count: summary.wonCount || 0, percentage: wonPct },
+      { name: 'Perdidas', value: summary.lostAmount || 0, color: '#f43f5e', count: summary.lostCount || 0, percentage: lostPct },
+      { name: 'Abiertas', value: summary.pendingAmount || 0, color: '#f59e0b', count: summary.pendingCount || 0, percentage: pendingPct },
+    ].filter(d => d.value > 0);
+    return items.length > 0 ? items : [{ name: 'Sin datos', value: 1, color: '#e5e7eb', count: 0, percentage: 0 }];
+  }, [summary.wonAmount, summary.lostAmount, summary.pendingAmount, summary.wonCount, summary.lostCount, summary.pendingCount, totalAmountForDonut, wonPct, lostPct, pendingPct]);
+
+  // Coordenadas Y estimadas de cada fila para el trazo conector
+  const connectorY = hoveredIndex === 0 ? 12 : hoveredIndex === 1 ? 32 : hoveredIndex === 2 ? 52 : 32;
+  const activeColor = hoveredIndex !== null && donutData[hoveredIndex] ? donutData[hoveredIndex].color : undefined;
+
+  return (
+    <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
+      <div className="flex justify-between items-start mb-1.5">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
+            Ganadas vs Perdidas vs Abiertas
+          </span>
+          <InfoPopover 
+            title="Ganadas vs Perdidas vs Abiertas" 
+            iconSize={12}
+            description="Distribución porcentual e importes de ofertas clasificadas según su estado final o actual: Ganadas, Perdidas y Abiertas / En Proceso."
+            formulas={[
+              "Total Cartera = Ganadas + Perdidas + Abiertas",
+              `Ganadas: ${formatCurrency(summary.wonAmount, 2)} (${formatNumber(wonPct, 1)}%)`,
+              `Perdidas: ${formatCurrency(summary.lostAmount, 2)} (${formatNumber(lostPct, 1)}%)`,
+              `Abiertas: ${formatCurrency(summary.pendingAmount, 2)} (${formatNumber(pendingPct, 1)}%)`,
+            ]}
+            breakdown={[
+              { label: `Ofertas Ganadas (${summary.wonCount})`, value: formatCurrency(summary.wonAmount, 2), sign: '+', color: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+              { label: `Ofertas Perdidas (${summary.lostCount})`, value: formatCurrency(summary.lostAmount, 2), sign: '+', color: 'text-rose-600 dark:text-rose-400 font-bold' },
+              { label: `Ofertas Abiertas (${summary.pendingCount})`, value: formatCurrency(summary.pendingAmount, 2), sign: '+', color: 'text-amber-600 dark:text-amber-400 font-bold' },
+              { label: `Total Cartera (${summary.totalCount})`, value: formatCurrency(totalAmountForDonut, 2), sign: '=', color: 'text-dts-primary dark:text-dts-secondary font-black' },
+            ]}
+          />
+        </div>
+        <PieChartIcon size={18} className="text-gray-400 group-hover:text-dts-secondary transition-colors shrink-0" />
+      </div>
+
+      <div className="relative flex items-center gap-8">
+        {/* Línea conectora SVG dinámica con espacio equilibrado */}
+        {hoveredIndex !== null && activeColor && (
+          <svg className="absolute left-[64px] top-0 h-full w-9 pointer-events-none z-20 overflow-visible transition-all duration-200">
+            <path
+              d={
+                hoveredIndex === 0
+                  ? "M 0 32 C 16 32, 20 12, 34 12"
+                  : hoveredIndex === 1
+                  ? "M 0 32 L 34 32"
+                  : "M 0 32 C 16 32, 20 52, 34 52"
+              }
+              fill="none"
+              stroke={activeColor}
+              strokeWidth="2"
+              strokeDasharray="4 2"
+              className="animate-pulse"
+            />
+            <circle
+              cx="34"
+              cy={connectorY}
+              r="2.5"
+              fill={activeColor}
+            />
+          </svg>
+        )}
+
+        {/* Donut Chart limpio de tamaño fijo */}
+        <div className="relative flex items-center justify-center shrink-0 w-17 h-17">
+          <PieChart width={68} height={68}>
+            <Pie
+              data={donutData}
+              innerRadius={21}
+              outerRadius={33}
+              paddingAngle={donutData.filter(d => d.value > 0).length > 1 ? 3 : 0}
+              dataKey="value"
+              stroke="none"
+              isAnimationActive={false}
+              onMouseEnter={(_: any, index: number) => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              style={{ cursor: 'pointer' }}
+            >
+              {donutData.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.color}
+                  opacity={hoveredIndex === null || hoveredIndex === index ? 1 : 0.25}
+                  style={{ transition: 'opacity 0.2s ease-out' }}
+                />
+              ))}
+            </Pie>
+          </PieChart>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 leading-none">
+              {summary.totalCount}
+            </span>
+            <span className="text-[7.5px] text-gray-400 leading-none mt-0.5">ofertas</span>
+          </div>
+        </div>
+
+        {/* Compact Legend */}
+        <div className="flex-1 min-w-0 space-y-1">
+          {/* Fila 0: Ganadas */}
+          <div 
+            onMouseEnter={() => setHoveredIndex(0)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            className={`flex items-center justify-between text-xs px-1.5 py-0.5 -mx-1.5 rounded-md cursor-pointer transition-all duration-200 ${
+              hoveredIndex === 0 
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-500/30' 
+                : hoveredIndex !== null 
+                ? 'opacity-30' 
+                : 'opacity-100 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className={`text-[10px] truncate ${hoveredIndex === 0 ? 'font-bold text-emerald-700 dark:text-emerald-300' : 'font-semibold text-gray-600 dark:text-gray-300'}`}>
+                Ganadas
+              </span>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-[10px] font-bold font-mono text-emerald-600 dark:text-emerald-400">{formatCurrency(summary.wonAmount, 0)}</span>
+              <span className="text-[9px] text-gray-400 ml-1 font-medium">({formatNumber(wonPct, 0)}%)</span>
+            </div>
+          </div>
+
+          {/* Fila 1: Perdidas */}
+          <div 
+            onMouseEnter={() => setHoveredIndex(1)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            className={`flex items-center justify-between text-xs px-1.5 py-0.5 -mx-1.5 rounded-md cursor-pointer transition-all duration-200 ${
+              hoveredIndex === 1 
+                ? 'bg-rose-50 dark:bg-rose-950/40 ring-1 ring-rose-500/30' 
+                : hoveredIndex !== null 
+                ? 'opacity-30' 
+                : 'opacity-100 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+              <span className={`text-[10px] truncate ${hoveredIndex === 1 ? 'font-bold text-rose-700 dark:text-rose-300' : 'font-semibold text-gray-600 dark:text-gray-300'}`}>
+                Perdidas
+              </span>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-[10px] font-bold font-mono text-rose-600 dark:text-rose-400">{formatCurrency(summary.lostAmount, 0)}</span>
+              <span className="text-[9px] text-gray-400 ml-1 font-medium">({formatNumber(lostPct, 0)}%)</span>
+            </div>
+          </div>
+
+          {/* Fila 2: Abiertas */}
+          <div 
+            onMouseEnter={() => setHoveredIndex(2)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            className={`flex items-center justify-between text-xs px-1.5 py-0.5 -mx-1.5 rounded-md cursor-pointer transition-all duration-200 ${
+              hoveredIndex === 2 
+                ? 'bg-amber-50 dark:bg-amber-950/40 ring-1 ring-amber-500/30' 
+                : hoveredIndex !== null 
+                ? 'opacity-30' 
+                : 'opacity-100 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className={`text-[10px] truncate ${hoveredIndex === 2 ? 'font-bold text-amber-700 dark:text-amber-300' : 'font-semibold text-gray-600 dark:text-gray-300'}`}>
+                Abiertas
+              </span>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-[10px] font-bold font-mono text-amber-600 dark:text-amber-400">{formatCurrency(summary.pendingAmount, 0)}</span>
+              <span className="text-[9px] text-gray-400 ml-1 font-medium">({formatNumber(pendingPct, 0)}%)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+

@@ -10,8 +10,8 @@
 
 Se ha incorporado la facturación completa del ejercicio anterior en columnas dedicadas dentro de la plantilla de presupuestos sin fragmentar las filas, garantizando una **visión 360° en una única línea por Cliente + Producto**:
 
-* **Columna L (12) — `UdFacturadas {Año Anterior}` (`udFacturadasPrev`):** Unidades físicas netas facturadas en el ejercicio cerrado previo (ej. 2025). Formato `#,#0`.
-* **Columna S (19) — `Facturacion {Año Anterior}` (`facturacionPrev`):** Importe neto acumulado en euros (€) facturado en el ejercicio cerrado previo. Formato `#,##0.00 €`.
+* **Columna L (12) — `UdFacturadas {Año Anterior}` (`udFacturadasPrev`):** Unidades físicas netas facturadas en el ejercicio cerrado previo (ej. 2025). Formato `#,#0`, fondo gris claro (`#F3F4F6`) y cabecera gris pizarra (`#475569`) para distinguirla claramente del año actual.
+* **Columna S (19) — `Facturacion {Año Anterior}` (`facturacionPrev`):** Importe neto acumulado en euros (€) facturado en el ejercicio cerrado previo. Formato `#,##0.00 €`, fondo gris claro (`#F3F4F6`) y cabecera gris pizarra (`#475569`).
 * **Cero Ambigüedad Comercial:** Las ventas de ambos ejercicios nunca se suman entre sí en la misma celda. El comercial dispone en una sola fila del histórico completo:
   $$\text{Cierre } 2025 \longrightarrow \text{Real } 2026\ (\text{Facturado} + \text{Cartera}) \longrightarrow \text{Previsión } 2026 \longrightarrow \text{Objetivo } 2027$$
 * **Reactivación de Cuentas:** Si un cliente compró un producto en 2025 pero aún no en 2026, la línea se incluye automáticamente para permitir proyectar objetivos para el nuevo año.

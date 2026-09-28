@@ -47,7 +47,7 @@ export interface KPICardProps {
   infoProps?: {
     title?: string;
     description: string;
-    formulas?: string;
+    formulas?: string | string[];
     objective?: string;
     source?: string;
     breakdown?: InfoBreakdownItem[];

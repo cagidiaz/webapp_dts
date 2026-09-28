@@ -34,6 +34,10 @@ export interface SalesBudgetPerformanceKPIs {
   carteraVentasBruta?: number;
   prepagosDescontadosCartera?: number;
   carteraVentasAccounts: number;
+  carteraVentasSeiko?: number;
+  carteraVentasSinSeiko?: number;
+  carteraVentasAccountsSinSeiko?: number;
+  carteraVentasItems?: number;
   enviadosFacturar: number;
   enviadosFacturarBruto?: number;
   prepagosDescontadosFacturar?: number;

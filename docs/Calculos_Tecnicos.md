@@ -123,6 +123,12 @@ Lógica aplicada en los paneles de **Ventas vs Presupuestos** (`/sales/budgets`)
       2. El remanente no consumido compensa su cartera de pedidos abierta: $\text{Cartera Neta} = \max(0, \text{Cartera Bruta} - \text{Remanente})$.
       3. Está estrictamente prohibido compensar prepagos entre clientes distintos.
     - *Consistencia en Cuentas Contables*: La porción de líneas de tipo cuenta contable (`G/L Account`) nunca excede el neto total resultante: $\min(\text{cuentas}, \text{totalNeto})$.
+    - *Desglose y Totalización de Cartera (Transparencia Operativa)*:
+      Para auditar pedidos especiales y líneas contables, el modal de información desglosa y totaliza la cartera viva neta en tres sumandos aditivos:
+      1. $\text{Cartera Items} = \max(0, \text{Cartera Neta Total} - \text{Cartera Cuentas G/L Neta})$ (Material estándar de catálogo).
+      2. $\text{Cuentas G/L (Dif. SEIKO)} = \max(0, \text{Cartera Cuentas G/L Neta} - \text{Cartera Neta SEIKO})$ (Líneas contables del resto de clientes).
+      3. $\text{Cartera SEIKO (CL100427)} = \text{Cartera Neta del cliente SEIKO FLOWCONTROL GMBH}$ (Pedidos en cuenta contable `7050004`).
+      4. $\text{Total Cartera de Pedidos} = \text{Cartera Items} + \text{Cuentas G/L (Dif. SEIKO)} + \text{Cartera SEIKO}$.
 *   **Desviaciones y Cumplimiento**:
     - *Desviación (€)*: $\text{Facturación Neta Items} - \text{Objetivo Presupuestado}$.
     - *Cumplimiento (%)*: $\left(\frac{\text{Facturación Neta Items}}{\text{Objetivo}}\right) \times 100$.

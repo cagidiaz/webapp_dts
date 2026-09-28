@@ -205,13 +205,28 @@ export class CrmActivitiesService {
    * - Actividades pasadas no completadas
    * - Conteo global del equipo si es directivo/admin
    */
-  async getDailyBriefing(userId: string) {
+  async getDailyBriefing(userId?: string) {
     try {
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, '0');
       const dd = String(now.getDate()).padStart(2, '0');
       const todayStr = `${yyyy}-${mm}-${dd}`;
+
+      if (!userId) {
+        return {
+          todayStr,
+          todayActivities: [],
+          pendingActivities: [],
+          stats: {
+            todayTotal: 0,
+            todayPending: 0,
+            todayCompleted: 0,
+            pastPendingTotal: 0,
+            isAdminOrDireccion: false,
+          },
+        };
+      }
 
       const todayStart = new Date(`${todayStr}T00:00:00.000Z`);
       const todayEnd = new Date(`${todayStr}T23:59:59.999Z`);

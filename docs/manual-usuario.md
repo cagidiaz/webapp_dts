@@ -14,6 +14,7 @@
    - [2.5 Catálogo de Productos y Stock](#25-catálogo-de-productos-y-stock)
    - [2.6 Histórico de Facturación (Documentos y Líneas)](#26-histórico-de-facturación-documentos-y-líneas)
    - [2.7 Movimientos de Valor (Auditoría de value_entries)](#27-movimientos-de-valor-auditoría-de-value_entries)
+   - [2.8 Ofertas Comerciales (Seguimiento, KPIs y Totales)](#28-ofertas-comerciales-seguimiento-kpis-y-totales)
 3. [Módulo de CRM y Productividad Comercial](#3-módulo-de-crm-y-productividad-comercial)
    - [3.1 CRM de Ofertas y Pipeline Comercial](#31-crm-de-ofertas-y-pipeline-comercial)
    - [3.2 Contactos, Cuentas y Timeline de Actividades](#32-contactos-cuentas-y-timeline-de-actividades)
@@ -83,8 +84,9 @@ Ubicado en `/sales/budgets`, es la pantalla neurálgica de seguimiento del grado
   * **Objetivo Presupuestado**: Cuota comercial acumulada en el periodo seleccionado.
   * **Desviación Nominal (€) y Cumplimiento (%)**: Brecha absoluta y porcentual con código de color dinámico (verde para superávit, rojo para déficit) y micro-indicadores visuales.
   * **Cartera de Pedidos (Neta)** y **Pendiente de Facturar (Neto)**: Pedidos abiertos y albaranes entregados sin facturar, netos de la deducción cliente por cliente de prepagos vivos aplicados.
-* **Modal de Transparencia Contable (`InfoPopover`)**:
-  * Al pulsar el icono `ℹ️` en Facturación, se despliega una ventana informativa con el desglose completo del periodo: *Venta Neta de Producto*, *Portes y Transportes (Cuenta 624)*, *Otras Cuentas Contables*, *Prepagos Vivos (PFV)* y *Total Facturación Documental*.
+* **Modal de Transparencia Contable e Información (`InfoPopover`)**:
+  * Al pulsar el icono `ℹ️` en **Facturación**, se despliega una ventana informativa con el desglose completo del periodo: *Venta Neta de Producto*, *Portes y Transportes (Cuenta 624)*, *Otras Cuentas Contables*, *Prepagos Vivos (PFV)* y *Total Facturación Documental*.
+  * Al pulsar el icono `ℹ️` en **Cartera Pedidos**, se despliega el desglose que distingue los pedidos de producto (*Items*), las líneas de cuentas contables del resto de clientes (*Cuentas G/L Diferentes a SEIKO*) y los pedidos en cartera de **SEIKO FLOWCONTROL GMBH (CL100427)**, totalizando de manera explícita la suma neta viva.
 * **Selector de Pestañas Principales**:
   * **`[ 🏢 Por Clientes ]`**: Vista analítica clásica desagregada cliente a cliente con scroll infinito reactivo, badges para clientes nuevos (`NUEVO`), detección de saldo en prepagos vivos (`Prepago: X €`), tratamiento de meta agregada para clientes nuevos (`99999999`) y fila de totales fijos.
   * **`[ 👥 Por Comercial ]`** (o **`[ 👤 Mi Rendimiento ]`** para usuarios con rol comercial): Tabla de control y productividad comercial con 3 sub-pestañas especializadas:
@@ -147,10 +149,30 @@ Ubicado en `/sales/value-entries`, vista de auditoría transaccional directa res
 
 ---
 
+### 2.8 Ofertas Comerciales (Seguimiento, KPIs y Totales)
+Ubicado en `/sales/quotes`. Para documentación técnica exhaustiva, consultar [Documentación de Vista: Ofertas Comerciales](file:///c:/proyectos/webapp_dts/docs/vistas/ofertas_comerciales.md).
+
+* **Bandeja de KPIs de Rendimiento Superior**:
+  * **Cartera de Ofertas**: Total emitido acumulado con modal informativo (`ℹ️`) que desglosa propuestas ganadas, perdidas y volumen vivo en negociación.
+  * **Ganadas vs Perdidas vs Abiertas (Mini Donut)**: Gráfico circular tipo anillo interactivo con el recuento total central de ofertas y leyenda lateral compacta con los importes (€) y porcentajes de ofertas ganadas (verde), perdidas (rojo) y vivas abiertas (ámbar).
+  * **Valor Ponderado (IA)**: Estimación probabilística de cierre comercial (*Forecast*).
+  * **Tasa de Éxito (*Win Rate*)**: Eficacia porcentual sobre ofertas cerradas definitivas.
+* **Gráficos Analíticos Dinámicos**: Comparativa de ofertas creadas vs aprobadas por mes y volumen cotizado por comercial con línea de tasa de éxito.
+* **Filtros Avanzados y Cierre Previsto**:
+  * Filtros por comercial, estado, probabilidad de éxito y año fiscal.
+  * Selector inteligente de cierre previsto: modos *Todos*, *Sin fecha*, *Vencidas* y selección mensual interactiva (`Ctrl + Clic` o `Shift + Clic`).
+* **Tabla de Ofertas con Semáforo Visual**: Insignias inteligentes para cierres vencidos (rojo pulsante), urgentes (ámbar) o programados.
+* **Fila de Totales Fija (*Sticky Footer*)**:
+  * Anclada permanentemente en la parte inferior de la tabla (`sticky bottom-0 z-20`) con el fondo azul corporativo (`#003E51`) y borde cian (`#00B0B9`).
+  * Muestra el sumatorio exacto del importe total cotizado, la probabilidad media de éxito, el valor ponderado global previsto (*Forecast*) y la tasa media de éxito para todas las ofertas que cumplen los filtros activos.
+* **Drawer Lateral y Exportación**: Edición ágil de la fecha de cierre previsto sin recargar y exportación completa a Excel (`.xlsx`).
+
+---
+
 ## 3. Módulo de CRM y Productividad Comercial
 
 ### 3.1 CRM de Ofertas y Pipeline Comercial
-Ubicado en `/sales/quotes` (y `/crm/pipeline`), gestiona el ciclo de vida de las cotizaciones y oportunidades de venta.
+Ubicado en `/crm/pipeline`, gestiona el ciclo de vida de las cotizaciones y oportunidades de venta en formato Kanban interactivo.
 
 * **Vista Tablero Kanban Interactivo**:
   * Columnas por estado: *Borrador*, *Enviada*, *En Negociación*, *Ganada* o *Perdida*.
@@ -305,7 +327,7 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * **Identificación del Cliente y Zona**: Código de vendedor, código de cliente, nombre de cliente y **Comunidad Autónoma** (columna D, resuelta automáticamente por código postal o provincia, con soporte para países internacionales).
   * **Jerarquía de Producto**: Product Manager, Familia, Desc. Familia, Subfamilia, Desc. Subfamilia, **Nº producto** (columna J, situado inmediatamente a la izquierda de la descripción) y Descripción.
   * **Bloque de Unidades Físicas**:
-    * **`UdFacturadas {Año Anterior}`** (columna L, ej. 2025): Unidades cerradas del año previo.
+    * **`UdFacturadas {Año Anterior}`** (columna L, ej. 2025): Unidades cerradas del año previo con fondo gris claro (`#F3F4F6`) y cabecera pizarra (`#475569`) para distinguirla nítidamente del año en curso.
     * **`udFacturadas {Año} hasta hoy`** (columna M, ej. 2026: `udFacturadas 2026 hasta hoy`): Unidades netas reales del año en curso.
     * **`UdCartera`** (columna N): Unidades vivas pendientes en pedidos de cartera abierta.
   * **Columnas Editables (Entrada Comercial)**:
@@ -313,7 +335,7 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
     * **`UdObjetivo {Año Siguiente}`** (columna P): Meta en unidades con fondo amarillo suave para fijar el objetivo del siguiente año.
   * **Precios Unitarios**: Precio de venta actual (columna Q) y precio proyectado con el % configurado (columna R, solo lectura).
   * **Bloque de Importes Monetarios (€)**:
-    * **`Facturacion {Año Anterior}`** (columna S, ej. 2025): Importe neto cerrado del año anterior.
+    * **`Facturacion {Año Anterior}`** (columna S, ej. 2025): Importe neto cerrado del año anterior con fondo gris claro (`#F3F4F6`) y cabecera pizarra (`#475569`) para distinguirlo de los datos corrientes.
     * **`total linea fact. {Año} hasta hoy`** (columna T, ej. 2026: `total linea fact. 2026 hasta hoy`): Importe acumulado facturado en el año en curso.
     * **`€ Cartera`** (columna U): Importe valorado de la cartera viva.
   * **Fórmulas Vivas Automáticas**:
