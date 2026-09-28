@@ -9,8 +9,10 @@
 ## 1. Resumen de Cambios
 
 1. **Nuevo Gráfico Donut de Ofertas Comerciales (`QuotesStatusDonutCard`):**
-   - Sustitución de la antigua tarjeta plana de "Ofertas Ganadas" por un componente visual modular de distribución de cartera: **Ganadas vs Perdidas vs Abiertas**.
+   - Sustitución de la antigua tarjeta plana de "Ofertas Ganadas" por un componente visual modular de distribución de cartera: **Distribución de Ofertas** (Ganadas vs Perdidas vs Abiertas).
    - Gráfico tipo anillo (`PieChart`) compacto (68x68px) con recuento central del total de ofertas.
+   - Centro dinámico interactivo: al pasar el cursor (hover) sobre cualquier sector o fila de la leyenda, el centro cambia instantáneamente mostrando el número de ofertas de esa categoría, su etiqueta y su color temático correspondiente.
+   - Interacción puramente orientada al *hover*: clics anulados con `cursor: default` y eliminación completa de contornos de foco (`outline-none`) al interactuar con el gráfico.
    - Micro-interacción bidireccional limpia: geometría fija sin saltos de tamaño, resaltado por atenuación de opacidad (activo al 100%, inactivos al 25%) y micro-línea conectora SVG animada hacia su fila correspondiente.
    - Espaciado generoso y equilibrado (`gap-8`) entre el gráfico y la leyenda con importes y porcentajes.
 

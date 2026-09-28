@@ -154,7 +154,7 @@ Ubicado en `/sales/quotes`. Para documentación técnica exhaustiva, consultar [
 
 * **Bandeja de KPIs de Rendimiento Superior**:
   * **Cartera de Ofertas**: Total emitido acumulado con modal informativo (`ℹ️`) que desglosa propuestas ganadas, perdidas y volumen vivo en negociación.
-  * **Ganadas vs Perdidas vs Abiertas (Mini Donut)**: Gráfico circular tipo anillo interactivo con el recuento total central de ofertas y leyenda lateral compacta con los importes (€) y porcentajes de ofertas ganadas (verde), perdidas (rojo) y vivas abiertas (ámbar).
+  * **Distribución de Ofertas (Mini Donut)**: Gráfico circular tipo anillo interactivo con el recuento total central de ofertas y leyenda lateral compacta con los importes (€) y porcentajes de ofertas ganadas (verde), perdidas (rojo) y vivas abiertas (ámbar).
   * **Valor Ponderado (IA)**: Estimación probabilística de cierre comercial (*Forecast*).
   * **Tasa de Éxito (*Win Rate*)**: Eficacia porcentual sobre ofertas cerradas definitivas.
 * **Gráficos Analíticos Dinámicos**: Comparativa de ofertas creadas vs aprobadas por mes y volumen cotizado por comercial con línea de tasa de éxito.

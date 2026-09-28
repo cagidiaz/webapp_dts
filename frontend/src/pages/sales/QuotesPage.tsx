@@ -1310,7 +1310,7 @@ interface QuotesStatusDonutCardProps {
 }
 
 const QuotesStatusDonutCard: React.FC<QuotesStatusDonutCardProps> = ({ summary }) => {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [hoveredKey, setHoveredKey] = useState<'won' | 'lost' | 'pending' | null>(null);
 
   const totalAmountForDonut = (summary.wonAmount || 0) + (summary.lostAmount || 0) + (summary.pendingAmount || 0);
   const wonPct = totalAmountForDonut > 0 ? ((summary.wonAmount || 0) / totalAmountForDonut) * 100 : 0;
@@ -1319,29 +1319,57 @@ const QuotesStatusDonutCard: React.FC<QuotesStatusDonutCardProps> = ({ summary }
 
   const donutData = useMemo(() => {
     if (totalAmountForDonut === 0) {
-      return [{ name: 'Sin datos', value: 1, color: '#e5e7eb', count: 0, percentage: 0 }];
+      return [{ key: 'empty' as const, name: 'Sin datos', value: 1, color: '#e5e7eb', count: 0, percentage: 0 }];
     }
     const items = [
-      { name: 'Ganadas', value: summary.wonAmount || 0, color: '#10b981', count: summary.wonCount || 0, percentage: wonPct },
-      { name: 'Perdidas', value: summary.lostAmount || 0, color: '#f43f5e', count: summary.lostCount || 0, percentage: lostPct },
-      { name: 'Abiertas', value: summary.pendingAmount || 0, color: '#f59e0b', count: summary.pendingCount || 0, percentage: pendingPct },
+      { key: 'won' as const, name: 'Ganadas', value: summary.wonAmount || 0, color: '#10b981', count: summary.wonCount || 0, percentage: wonPct },
+      { key: 'lost' as const, name: 'Perdidas', value: summary.lostAmount || 0, color: '#f43f5e', count: summary.lostCount || 0, percentage: lostPct },
+      { key: 'pending' as const, name: 'Abiertas', value: summary.pendingAmount || 0, color: '#f59e0b', count: summary.pendingCount || 0, percentage: pendingPct },
     ].filter(d => d.value > 0);
-    return items.length > 0 ? items : [{ name: 'Sin datos', value: 1, color: '#e5e7eb', count: 0, percentage: 0 }];
+    return items.length > 0 ? items : [{ key: 'empty' as const, name: 'Sin datos', value: 1, color: '#e5e7eb', count: 0, percentage: 0 }];
   }, [summary.wonAmount, summary.lostAmount, summary.pendingAmount, summary.wonCount, summary.lostCount, summary.pendingCount, totalAmountForDonut, wonPct, lostPct, pendingPct]);
 
-  // Coordenadas Y estimadas de cada fila para el trazo conector
-  const connectorY = hoveredIndex === 0 ? 12 : hoveredIndex === 1 ? 32 : hoveredIndex === 2 ? 52 : 32;
-  const activeColor = hoveredIndex !== null && donutData[hoveredIndex] ? donutData[hoveredIndex].color : undefined;
+  // Configuración interactiva del estado sobrevolado
+  const activeConfig = useMemo(() => {
+    if (hoveredKey === 'won') {
+      return {
+        count: summary.wonCount || 0,
+        label: 'ganadas',
+        color: '#10b981',
+        connectorY: 12,
+        connectorPath: "M 0 32 C 16 32, 20 12, 34 12"
+      };
+    }
+    if (hoveredKey === 'lost') {
+      return {
+        count: summary.lostCount || 0,
+        label: 'perdidas',
+        color: '#f43f5e',
+        connectorY: 32,
+        connectorPath: "M 0 32 L 34 32"
+      };
+    }
+    if (hoveredKey === 'pending') {
+      return {
+        count: summary.pendingCount || 0,
+        label: 'abiertas',
+        color: '#f59e0b',
+        connectorY: 52,
+        connectorPath: "M 0 32 C 16 32, 20 52, 34 52"
+      };
+    }
+    return null;
+  }, [hoveredKey, summary.wonCount, summary.lostCount, summary.pendingCount]);
 
   return (
     <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group flex flex-col justify-between">
       <div className="flex justify-between items-start mb-1.5">
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
-            Ganadas vs Perdidas vs Abiertas
+            Distribución de Ofertas
           </span>
           <InfoPopover 
-            title="Ganadas vs Perdidas vs Abiertas" 
+            title="Distribución de Ofertas" 
             iconSize={12}
             description="Distribución porcentual e importes de ofertas clasificadas según su estado final o actual: Ganadas, Perdidas y Abiertas / En Proceso."
             formulas={[
@@ -1363,34 +1391,28 @@ const QuotesStatusDonutCard: React.FC<QuotesStatusDonutCardProps> = ({ summary }
 
       <div className="relative flex items-center gap-8">
         {/* Línea conectora SVG dinámica con espacio equilibrado */}
-        {hoveredIndex !== null && activeColor && (
+        {activeConfig && (
           <svg className="absolute left-[64px] top-0 h-full w-9 pointer-events-none z-20 overflow-visible transition-all duration-200">
             <path
-              d={
-                hoveredIndex === 0
-                  ? "M 0 32 C 16 32, 20 12, 34 12"
-                  : hoveredIndex === 1
-                  ? "M 0 32 L 34 32"
-                  : "M 0 32 C 16 32, 20 52, 34 52"
-              }
+              d={activeConfig.connectorPath}
               fill="none"
-              stroke={activeColor}
+              stroke={activeConfig.color}
               strokeWidth="2"
               strokeDasharray="4 2"
               className="animate-pulse"
             />
             <circle
               cx="34"
-              cy={connectorY}
+              cy={activeConfig.connectorY}
               r="2.5"
-              fill={activeColor}
+              fill={activeConfig.color}
             />
           </svg>
         )}
 
         {/* Donut Chart limpio de tamaño fijo */}
-        <div className="relative flex items-center justify-center shrink-0 w-17 h-17">
-          <PieChart width={68} height={68}>
+        <div className="relative flex items-center justify-center shrink-0 w-17 h-17 select-none outline-none focus:outline-none [&_.recharts-wrapper]:outline-none [&_.recharts-wrapper]:focus:outline-none [&_.recharts-surface]:outline-none [&_.recharts-surface]:focus:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus:ring-0">
+          <PieChart width={68} height={68} style={{ outline: 'none' }}>
             <Pie
               data={donutData}
               innerRadius={21}
@@ -1399,45 +1421,70 @@ const QuotesStatusDonutCard: React.FC<QuotesStatusDonutCardProps> = ({ summary }
               dataKey="value"
               stroke="none"
               isAnimationActive={false}
-              onMouseEnter={(_: any, index: number) => setHoveredIndex(index)}
-              onMouseLeave={() => setHoveredIndex(null)}
-              style={{ cursor: 'pointer' }}
+              onMouseEnter={(_: any, index: number) => {
+                const entry = donutData[index];
+                if (entry && entry.key !== 'empty') {
+                  setHoveredKey(entry.key);
+                }
+              }}
+              onMouseLeave={() => setHoveredKey(null)}
+              onClick={(e: any) => {
+                if (e && e.stopPropagation) e.stopPropagation();
+              }}
+              style={{ cursor: 'default', outline: 'none' }}
             >
               {donutData.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
                   fill={entry.color}
-                  opacity={hoveredIndex === null || hoveredIndex === index ? 1 : 0.25}
-                  style={{ transition: 'opacity 0.2s ease-out' }}
+                  opacity={hoveredKey === null || hoveredKey === entry.key ? 1 : 0.25}
+                  style={{ transition: 'opacity 0.2s ease-out', cursor: 'default', outline: 'none' }}
+                  onClick={(e: any) => {
+                    if (e && e.stopPropagation) e.stopPropagation();
+                  }}
                 />
               ))}
             </Pie>
           </PieChart>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 leading-none">
-              {summary.totalCount}
+          
+          {/* Centro dinámico del Donut */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-all duration-150 select-none">
+            <span 
+              className={`text-[10px] font-black leading-none transition-colors duration-150 ${
+                activeConfig ? '' : 'text-gray-700 dark:text-gray-200'
+              }`}
+              style={activeConfig ? { color: activeConfig.color } : undefined}
+            >
+              {activeConfig ? activeConfig.count : summary.totalCount}
             </span>
-            <span className="text-[7.5px] text-gray-400 leading-none mt-0.5">ofertas</span>
+            <span 
+              className={`text-[7.5px] font-medium leading-none mt-0.5 transition-colors duration-150 ${
+                activeConfig ? '' : 'text-gray-400'
+              }`}
+              style={activeConfig ? { color: activeConfig.color } : undefined}
+            >
+              {activeConfig ? activeConfig.label : 'ofertas'}
+            </span>
           </div>
         </div>
 
         {/* Compact Legend */}
-        <div className="flex-1 min-w-0 space-y-1">
-          {/* Fila 0: Ganadas */}
+        <div className="flex-1 min-w-0 space-y-1 select-none">
+          {/* Fila: Ganadas */}
           <div 
-            onMouseEnter={() => setHoveredIndex(0)}
-            onMouseLeave={() => setHoveredIndex(null)}
-            className={`flex items-center justify-between text-xs px-1.5 py-0.5 -mx-1.5 rounded-md cursor-pointer transition-all duration-200 ${
-              hoveredIndex === 0 
+            onMouseEnter={() => setHoveredKey('won')}
+            onMouseLeave={() => setHoveredKey(null)}
+            className={`flex items-center justify-between text-xs px-1.5 py-0.5 -mx-1.5 rounded-md cursor-default transition-all duration-200 ${
+              hoveredKey === 'won' 
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-500/30' 
-                : hoveredIndex !== null 
+                : hoveredKey !== null 
                 ? 'opacity-30' 
                 : 'opacity-100 hover:bg-gray-50 dark:hover:bg-gray-800/40'
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-              <span className={`text-[10px] truncate ${hoveredIndex === 0 ? 'font-bold text-emerald-700 dark:text-emerald-300' : 'font-semibold text-gray-600 dark:text-gray-300'}`}>
+              <span className={`text-[10px] truncate ${hoveredKey === 'won' ? 'font-bold text-emerald-700 dark:text-emerald-300' : 'font-semibold text-gray-600 dark:text-gray-300'}`}>
                 Ganadas
               </span>
             </div>
@@ -1447,21 +1494,21 @@ const QuotesStatusDonutCard: React.FC<QuotesStatusDonutCardProps> = ({ summary }
             </div>
           </div>
 
-          {/* Fila 1: Perdidas */}
+          {/* Fila: Perdidas */}
           <div 
-            onMouseEnter={() => setHoveredIndex(1)}
-            onMouseLeave={() => setHoveredIndex(null)}
-            className={`flex items-center justify-between text-xs px-1.5 py-0.5 -mx-1.5 rounded-md cursor-pointer transition-all duration-200 ${
-              hoveredIndex === 1 
+            onMouseEnter={() => setHoveredKey('lost')}
+            onMouseLeave={() => setHoveredKey(null)}
+            className={`flex items-center justify-between text-xs px-1.5 py-0.5 -mx-1.5 rounded-md cursor-default transition-all duration-200 ${
+              hoveredKey === 'lost' 
                 ? 'bg-rose-50 dark:bg-rose-950/40 ring-1 ring-rose-500/30' 
-                : hoveredIndex !== null 
+                : hoveredKey !== null 
                 ? 'opacity-30' 
                 : 'opacity-100 hover:bg-gray-50 dark:hover:bg-gray-800/40'
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
-              <span className={`text-[10px] truncate ${hoveredIndex === 1 ? 'font-bold text-rose-700 dark:text-rose-300' : 'font-semibold text-gray-600 dark:text-gray-300'}`}>
+              <span className={`text-[10px] truncate ${hoveredKey === 'lost' ? 'font-bold text-rose-700 dark:text-rose-300' : 'font-semibold text-gray-600 dark:text-gray-300'}`}>
                 Perdidas
               </span>
             </div>
@@ -1471,21 +1518,21 @@ const QuotesStatusDonutCard: React.FC<QuotesStatusDonutCardProps> = ({ summary }
             </div>
           </div>
 
-          {/* Fila 2: Abiertas */}
+          {/* Fila: Abiertas */}
           <div 
-            onMouseEnter={() => setHoveredIndex(2)}
-            onMouseLeave={() => setHoveredIndex(null)}
-            className={`flex items-center justify-between text-xs px-1.5 py-0.5 -mx-1.5 rounded-md cursor-pointer transition-all duration-200 ${
-              hoveredIndex === 2 
+            onMouseEnter={() => setHoveredKey('pending')}
+            onMouseLeave={() => setHoveredKey(null)}
+            className={`flex items-center justify-between text-xs px-1.5 py-0.5 -mx-1.5 rounded-md cursor-default transition-all duration-200 ${
+              hoveredKey === 'pending' 
                 ? 'bg-amber-50 dark:bg-amber-950/40 ring-1 ring-amber-500/30' 
-                : hoveredIndex !== null 
+                : hoveredKey !== null 
                 ? 'opacity-30' 
                 : 'opacity-100 hover:bg-gray-50 dark:hover:bg-gray-800/40'
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-              <span className={`text-[10px] truncate ${hoveredIndex === 2 ? 'font-bold text-amber-700 dark:text-amber-300' : 'font-semibold text-gray-600 dark:text-gray-300'}`}>
+              <span className={`text-[10px] truncate ${hoveredKey === 'pending' ? 'font-bold text-amber-700 dark:text-amber-300' : 'font-semibold text-gray-600 dark:text-gray-300'}`}>
                 Abiertas
               </span>
             </div>
