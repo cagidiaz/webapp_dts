@@ -20,6 +20,7 @@ export class BudgetGeneratorService {
    */
   async getMetadata() {
     const currentYear = new Date().getFullYear();
+    const previousYear = currentYear - 1;
     const nextYear = currentYear + 1;
 
     const salesReps = await this.prisma.sales_reps.findMany({
@@ -28,6 +29,7 @@ export class BudgetGeneratorService {
     });
 
     return {
+      previousYear,
       currentYear,
       nextYear,
       salesReps: salesReps.filter((r) => r.code && r.code.trim() !== ''),
@@ -40,17 +42,21 @@ export class BudgetGeneratorService {
   async exportBudgetTemplates(options: BudgetGeneratorOptions, res: Response) {
     try {
       const currentYear = new Date().getFullYear();
+      const previousYear = currentYear - 1;
       const nextYear = currentYear + 1;
       const priceIncreasePct = Number(options.priceIncreasePct) || 0;
       const filterSalesperson = options.salespersonCode ? options.salespersonCode.trim() : undefined;
       const asZip = String(options.asZip) === 'true';
       const protectSheet = String(options.protectSheet) === 'true';
 
+      const prevStartDate = new Date(`${previousYear}-01-01T00:00:00.000Z`);
+      const prevEndDate = new Date(`${previousYear}-12-31T23:59:59.999Z`);
       const startDate = new Date(`${currentYear}-01-01T00:00:00.000Z`);
       const endDate = new Date(`${currentYear}-12-31T23:59:59.999Z`);
 
       // 1. Consultas paralelas a Supabase
       const [
+        previousYearDocs,
         currentYearDocs,
         openOrders,
         allCustomers,
@@ -58,6 +64,33 @@ export class BudgetGeneratorService {
         allCategories,
         salesRepsList,
       ] = await Promise.all([
+        this.prisma.sales_documents.findMany({
+          where: {
+            posting_date: { gte: prevStartDate, lte: prevEndDate },
+            document_type: {
+              in: ['Factura', 'Abono', 'Invoice', 'Credit Memo', 'Sales Invoice', 'Sales Credit Memo'],
+            },
+          },
+          select: {
+            document_no: true,
+            document_type: true,
+            customer_no: true,
+            lines: {
+              where: {
+                OR: [
+                  { type: 'Item' },
+                  { product_no: '7050004' }, // Regla permanente: comisiones Seiko Flowcontrol
+                ],
+              },
+              select: {
+                product_no: true,
+                quantity: true,
+                line_amount: true,
+                unit_price: true,
+              },
+            },
+          },
+        }),
         this.prisma.sales_documents.findMany({
           where: {
             posting_date: { gte: startDate, lte: endDate },
@@ -70,7 +103,12 @@ export class BudgetGeneratorService {
             document_type: true,
             customer_no: true,
             lines: {
-              where: { type: 'Item' },
+              where: {
+                OR: [
+                  { type: 'Item' },
+                  { product_no: '7050004' }, // Regla permanente: comisiones Seiko Flowcontrol
+                ],
+              },
               select: {
                 product_no: true,
                 quantity: true,
@@ -83,7 +121,10 @@ export class BudgetGeneratorService {
         this.prisma.sales_orders.findMany({
           where: {
             outstanding_quantity: { gt: 0 },
-            type: 'Item',
+            OR: [
+              { type: 'Item' },
+              { item_code: '7050004' },
+            ],
           },
           select: {
             document_number: true,
@@ -175,11 +216,13 @@ export class BudgetGeneratorService {
         subfamilyName: string;
         productNo: string;
         description: string;
+        udFacturadasPrev: number;
         udFacturadas: number;
         udCartera: number;
         udPrevision: number;
         precioVentaActual: number;
         precioVentaSiguiente: number;
+        facturacionPrev: number;
         totalFacturado: number;
         eurosCartera: number;
         eurosPrevision: number;
@@ -188,6 +231,8 @@ export class BudgetGeneratorService {
       const rowsMap = new Map<string, {
         customerCode: string;
         productNo: string;
+        factPrevQty: number;
+        factPrevAmount: number;
         factQty: number;
         factAmount: number;
         carteraQty: number;
@@ -195,17 +240,24 @@ export class BudgetGeneratorService {
         lastOrderPrice: number;
       }>();
 
-      // Procesar facturas del año actual (solo Item / Productos)
-      for (const doc of currentYearDocs) {
+      // Procesar facturas del año anterior (solo Item / Productos o cuenta 7050004 Seiko)
+      for (const doc of previousYearDocs) {
         const isAbono = doc.document_type === 'Abono' || doc.document_type === 'Credit Memo' || doc.document_type === 'Sales Credit Memo';
         const mult = isAbono ? -1 : 1;
         const cCode = doc.customer_no || 'SIN_CLIENTE';
 
         for (const line of doc.lines) {
           if (!line.product_no) continue;
-          const pNo = line.product_no.trim();
-          // Excluir cuentas contables (G/L accounts de 7 dígitos)
-          if (/^[0-9]{7}$/.test(pNo)) continue;
+          let pNo = line.product_no.trim();
+
+          // Regla de Negocio Permanente: Seiko Flowcontrol (CL100427) factura sus comisiones
+          // bajo la cuenta 7050004, unificándola con el producto histórico SEICOMIS
+          if (this.isSeikoCommissionAccount(cCode, pNo)) {
+            pNo = 'SEICOMIS';
+          } else if (/^[0-9]{7}$/.test(pNo)) {
+            // Excluir cuentas contables generales (G/L accounts de 7 dígitos)
+            continue;
+          }
 
           const key = `${cCode}__${pNo}`;
 
@@ -213,6 +265,51 @@ export class BudgetGeneratorService {
             rowsMap.set(key, {
               customerCode: cCode,
               productNo: pNo,
+              factPrevQty: 0,
+              factPrevAmount: 0,
+              factQty: 0,
+              factAmount: 0,
+              carteraQty: 0,
+              carteraAmount: 0,
+              lastOrderPrice: 0,
+            });
+          }
+
+          const item = rowsMap.get(key)!;
+          const qty = (Number(line.quantity) || 0) * mult;
+          const amt = (Number(line.line_amount) || 0) * mult;
+          item.factPrevQty += qty;
+          item.factPrevAmount += amt;
+        }
+      }
+
+      // Procesar facturas del año actual (solo Item / Productos o cuenta 7050004 Seiko)
+      for (const doc of currentYearDocs) {
+        const isAbono = doc.document_type === 'Abono' || doc.document_type === 'Credit Memo' || doc.document_type === 'Sales Credit Memo';
+        const mult = isAbono ? -1 : 1;
+        const cCode = doc.customer_no || 'SIN_CLIENTE';
+
+        for (const line of doc.lines) {
+          if (!line.product_no) continue;
+          let pNo = line.product_no.trim();
+
+          // Regla de Negocio Permanente: Seiko Flowcontrol (CL100427) factura sus comisiones
+          // bajo la cuenta 7050004, unificándola con el producto histórico SEICOMIS
+          if (this.isSeikoCommissionAccount(cCode, pNo)) {
+            pNo = 'SEICOMIS';
+          } else if (/^[0-9]{7}$/.test(pNo)) {
+            // Excluir cuentas contables generales (G/L accounts de 7 dígitos)
+            continue;
+          }
+
+          const key = `${cCode}__${pNo}`;
+
+          if (!rowsMap.has(key)) {
+            rowsMap.set(key, {
+              customerCode: cCode,
+              productNo: pNo,
+              factPrevQty: 0,
+              factPrevAmount: 0,
               factQty: 0,
               factAmount: 0,
               carteraQty: 0,
@@ -229,18 +326,27 @@ export class BudgetGeneratorService {
         }
       }
 
-      // Procesar pedidos en cartera abiertos (solo Item / Productos)
+      // Procesar pedidos en cartera abiertos (solo Item / Productos o cuenta 7050004 Seiko)
       for (const ord of openOrders) {
-        if ((ord.type || '').toLowerCase() !== 'item') continue;
         const cCode = ord.customer_code || 'SIN_CLIENTE';
-        const pNo = (ord.item_code || '').trim();
-        if (!pNo || /^[0-9]{7}$/.test(pNo)) continue;
+        let pNo = (ord.item_code || '').trim();
+        if (!pNo) continue;
+
+        if (this.isSeikoCommissionAccount(cCode, pNo)) {
+          pNo = 'SEICOMIS';
+        } else {
+          if ((ord.type || '').toLowerCase() !== 'item') continue;
+          if (/^[0-9]{7}$/.test(pNo)) continue;
+        }
+
         const key = `${cCode}__${pNo}`;
 
         if (!rowsMap.has(key)) {
           rowsMap.set(key, {
             customerCode: cCode,
             productNo: pNo,
+            factPrevQty: 0,
+            factPrevAmount: 0,
             factQty: 0,
             factAmount: 0,
             carteraQty: 0,
@@ -266,8 +372,8 @@ export class BudgetGeneratorService {
       const consolidatedList: ConsolidatedRow[] = [];
 
       for (const [key, raw] of rowsMap.entries()) {
-        // Excluir combinaciones sin unidades facturadas ni en cartera
-        if (raw.factQty <= 0 && raw.carteraQty <= 0) continue;
+        // Excluir combinaciones sin unidades facturadas en el año anterior, año en curso ni cartera
+        if (raw.factPrevQty <= 0 && raw.factQty <= 0 && raw.carteraQty <= 0) continue;
 
         const custInfo = customerMap.get(raw.customerCode);
         const repCode = custInfo?.rep || 'SIN_ASIGNAR';
@@ -281,6 +387,13 @@ export class BudgetGeneratorService {
         const subCode = prodInfo?.subfamilyCode || '';
         const catInfo = subCode ? categoryMap.get(subCode) : undefined;
 
+        let description = prodInfo?.description || '';
+        if (!description && raw.productNo === 'SEICOMIS') {
+          description = 'Comisiones Seiko';
+        }
+
+        const udFacturadasPrev = Math.round(raw.factPrevQty);
+        const facturacionPrev = Math.round(raw.factPrevAmount * 100) / 100;
         const udFacturadas = Math.round(raw.factQty);
         const udCartera = Math.round(raw.carteraQty);
         const udPrevision = udFacturadas + udCartera;
@@ -318,11 +431,13 @@ export class BudgetGeneratorService {
           subfamilyName: catInfo?.subfamilyName || '',
           productNo: raw.productNo,
           description: prodInfo?.description || '',
+          udFacturadasPrev,
           udFacturadas,
           udCartera,
           udPrevision,
           precioVentaActual,
           precioVentaSiguiente,
+          facturacionPrev,
           totalFacturado,
           eurosCartera,
           eurosPrevision,
@@ -356,7 +471,7 @@ export class BudgetGeneratorService {
         archive.pipe(res);
 
         for (const [repCode, repRows] of rowsByRep.entries()) {
-          const wb = this.createExcelWorkbook(repRows, currentYear, nextYear, priceIncreasePct, protectSheet);
+          const wb = this.createExcelWorkbook(repRows, previousYear, currentYear, nextYear, priceIncreasePct, protectSheet);
           const buffer = await wb.xlsx.writeBuffer();
           archive.append(Buffer.from(buffer), {
             name: `Presupuestos_${nextYear}_${repCode}.xlsx`,
@@ -365,7 +480,7 @@ export class BudgetGeneratorService {
 
         // Si hay varios comerciales, incluir también el archivo global consolidado dentro del ZIP
         if (rowsByRep.size > 1) {
-          const globalWb = this.createExcelWorkbook(consolidatedList, currentYear, nextYear, priceIncreasePct, protectSheet);
+          const globalWb = this.createExcelWorkbook(consolidatedList, previousYear, currentYear, nextYear, priceIncreasePct, protectSheet);
           const globalBuffer = await globalWb.xlsx.writeBuffer();
           archive.append(Buffer.from(globalBuffer), {
             name: `Presupuestos_${nextYear}_TODOS_CONSOLIDADO.xlsx`,
@@ -385,7 +500,7 @@ export class BudgetGeneratorService {
         );
         res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
-        const wb = this.createExcelWorkbook(consolidatedList, currentYear, nextYear, priceIncreasePct, protectSheet);
+        const wb = this.createExcelWorkbook(consolidatedList, previousYear, currentYear, nextYear, priceIncreasePct, protectSheet);
         await wb.xlsx.write(res);
         res.end();
       }
@@ -403,6 +518,7 @@ export class BudgetGeneratorService {
    */
   private createExcelWorkbook(
     rows: any[],
+    previousYear: number,
     currentYear: number,
     nextYear: number,
     priceIncreasePct: number = 0,
@@ -414,35 +530,37 @@ export class BudgetGeneratorService {
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet(`Presupuestos ${nextYear}`, {
-      views: [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'N2' }],
+      views: [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'O2' }],
     });
 
     const pctSign = priceIncreasePct >= 0 ? `+${priceIncreasePct}%` : `${priceIncreasePct}%`;
     const headerPrecioSiguiente = `PrecioVentaUd ${nextYear} (${pctSign})`;
 
-    // 21 Columnas: Comunidad Autónoma añadida tras Nombre cliente, y Nº producto reubicado a la izquierda de Descripción
+    // 23 Columnas ordenadas con datos históricos (año anterior), año en curso y objetivos
     worksheet.columns = [
       { header: 'Cod vendedor', key: 'repCode', width: 14 }, // A (1)
       { header: 'Cod cliente', key: 'customerCode', width: 14 }, // B (2)
       { header: 'Nombre cliente', key: 'customerName', width: 34 }, // C (3)
-      { header: 'Comunidad Autónoma', key: 'community', width: 24 }, // D (4) - NUEVA COLUMNA
+      { header: 'Comunidad Autónoma', key: 'community', width: 24 }, // D (4)
       { header: 'Cod Product Manager', key: 'pmCode', width: 20 }, // E (5)
       { header: 'familia', key: 'familyCode', width: 12 }, // F (6)
       { header: 'Desc_familia', key: 'familyName', width: 28 }, // G (7)
       { header: 'subfamilia', key: 'subfamilyCode', width: 14 }, // H (8)
       { header: 'Desc_subfam', key: 'subfamilyName', width: 28 }, // I (9)
-      { header: 'Nº producto', key: 'productNo', width: 16 }, // J (10) - A LA IZQUIERDA DE DESCRIPCIÓN
+      { header: 'Nº producto', key: 'productNo', width: 16 }, // J (10)
       { header: 'Descripción', key: 'description', width: 38 }, // K (11)
-      { header: 'UdFacturadas a dia de hoy', key: 'udFacturadas', width: 24 }, // L (12)
-      { header: 'UdCartera', key: 'udCartera', width: 14 }, // M (13)
-      { header: `UdPrevision 31/12/${currentYear}`, key: 'udPrevision', width: 24 }, // N (14) (EDITABLE / EN BLANCO)
-      { header: `UdObjetivo ${nextYear}`, key: 'udObjetivo', width: 20 }, // O (15) (EDITABLE / EN BLANCO)
-      { header: `PrecioVentaUd ${currentYear}`, key: 'precioVentaActual', width: 20 }, // P (16)
-      { header: headerPrecioSiguiente, key: 'precioVentaSiguiente', width: 24 }, // Q (17) (SOLO LECTURA)
-      { header: 'TotalLineaFacturado a dia de hoy', key: 'totalFacturado', width: 28 }, // R (18)
-      { header: '€ Cartera', key: 'eurosCartera', width: 16 }, // S (19)
-      { header: `€ Previsión ${currentYear}`, key: 'eurosPrevision', width: 18 }, // T (20) (FÓRMULA / BLOQUEADA)
-      { header: `€ Objetivo ${nextYear}`, key: 'eurosObjetivo', width: 18 }, // U (21) (FÓRMULA / BLOQUEADA)
+      { header: `UdFacturadas ${previousYear}`, key: 'udFacturadasPrev', width: 20 }, // L (12) - HISTÓRICO AÑO ANTERIOR
+      { header: `udFacturadas ${currentYear} hasta hoy`, key: 'udFacturadas', width: 26 }, // M (13)
+      { header: 'UdCartera', key: 'udCartera', width: 14 }, // N (14)
+      { header: `UdPrevision 31/12/${currentYear}`, key: 'udPrevision', width: 24 }, // O (15) (EDITABLE / EN BLANCO)
+      { header: `UdObjetivo ${nextYear}`, key: 'udObjetivo', width: 20 }, // P (16) (EDITABLE / EN BLANCO)
+      { header: `PrecioVentaUd ${currentYear}`, key: 'precioVentaActual', width: 20 }, // Q (17)
+      { header: headerPrecioSiguiente, key: 'precioVentaSiguiente', width: 24 }, // R (18) (SOLO LECTURA)
+      { header: `Facturacion ${previousYear}`, key: 'facturacionPrev', width: 22 }, // S (19) - HISTÓRICO AÑO ANTERIOR
+      { header: `total linea fact. ${currentYear} hasta hoy`, key: 'totalFacturado', width: 28 }, // T (20)
+      { header: '€ Cartera', key: 'eurosCartera', width: 16 }, // U (21)
+      { header: `€ Previsión ${currentYear}`, key: 'eurosPrevision', width: 18 }, // V (22) (FÓRMULA / BLOQUEADA)
+      { header: `€ Objetivo ${nextYear}`, key: 'eurosObjetivo', width: 18 }, // W (23) (FÓRMULA / BLOQUEADA)
     ];
 
     // Estilo de Cabecera (Fila 1)
@@ -450,8 +568,8 @@ export class BudgetGeneratorService {
     headerRow.height = 32;
 
     headerRow.eachCell((cell, colNumber) => {
-      // Cabeceras de columnas editables N (14) y O (15) con distintivo de edición
-      const isEditableCol = colNumber === 14 || colNumber === 15;
+      // Cabeceras de columnas editables O (15) y P (16) con distintivo de edición en cian dTS
+      const isEditableCol = colNumber === 15 || colNumber === 16;
 
       cell.fill = {
         type: 'pattern',
@@ -481,14 +599,14 @@ export class BudgetGeneratorService {
     rows.forEach((r, idx) => {
       const rowNumber = idx + 2;
 
-      // Columna T (20): Fórmula Excel =SI(O(ESBLANCO(N2);ESBLANCO(P2)); ""; N2*P2)
+      // Columna V (22): Fórmula Excel =SI(O(ESBLANCO(O2);ESBLANCO(Q2)); ""; O2*Q2) -> UdPrevision * PrecioVentaActual
       const formulaEurosPrevision = {
-        formula: `IF(OR(ISBLANK(N${rowNumber}),ISBLANK(P${rowNumber})),"",N${rowNumber}*P${rowNumber})`,
+        formula: `IF(OR(ISBLANK(O${rowNumber}),ISBLANK(Q${rowNumber})),"",O${rowNumber}*Q${rowNumber})`,
       };
 
-      // Columna U (21): Fórmula Excel =SI(O(ESBLANCO(O2);ESBLANCO(Q2)); ""; O2*Q2)
+      // Columna W (23): Fórmula Excel =SI(O(ESBLANCO(P2);ESBLANCO(R2)); ""; P2*R2) -> UdObjetivo * PrecioVentaSiguiente
       const formulaEurosObjetivo = {
-        formula: `IF(OR(ISBLANK(O${rowNumber}),ISBLANK(Q${rowNumber})),"",O${rowNumber}*Q${rowNumber})`,
+        formula: `IF(OR(ISBLANK(P${rowNumber}),ISBLANK(R${rowNumber})),"",P${rowNumber}*R${rowNumber})`,
       };
 
       const row = worksheet.addRow({
@@ -503,12 +621,14 @@ export class BudgetGeneratorService {
         subfamilyName: r.subfamilyName,
         productNo: r.productNo,
         description: r.description,
+        udFacturadasPrev: r.udFacturadasPrev,
         udFacturadas: r.udFacturadas,
         udCartera: r.udCartera,
         udPrevision: null, // EN BLANCO: rellenable por el comercial
         udObjetivo: null, // EN BLANCO: rellenable por el comercial
         precioVentaActual: r.precioVentaActual,
         precioVentaSiguiente: r.precioVentaSiguiente,
+        facturacionPrev: r.facturacionPrev,
         totalFacturado: r.totalFacturado,
         eurosCartera: r.eurosCartera,
         eurosPrevision: formulaEurosPrevision,
@@ -519,7 +639,7 @@ export class BudgetGeneratorService {
 
       // Aplicar formatos, alineaciones y reglas de protección por celda
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-        // Por defecto: Calibri 9.5
+        // Por defecto: Segoe UI 9.5
         cell.font = { name: 'Segoe UI', size: 9.5 };
         cell.border = {
           top: { style: 'thin', color: { argb: 'FFF3F4F6' } },
@@ -536,14 +656,14 @@ export class BudgetGeneratorService {
           cell.alignment = { horizontal: 'left', vertical: 'middle' };
         }
 
-        // Cantidades enteras del sistema (L, M)
-        if ([12, 13].includes(colNumber)) {
+        // Cantidades enteras del sistema (L, M, N)
+        if ([12, 13, 14].includes(colNumber)) {
           cell.numFmt = '#,##0;(#,##0);"-"';
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
         }
 
-        // Columnas N y O: UdPrevision y UdObjetivo (AMBAS EDITABLES POR EL COMERCIAL)
-        if (colNumber === 14 || colNumber === 15) {
+        // Columnas O y P: UdPrevision y UdObjetivo (AMBAS EDITABLES POR EL COMERCIAL)
+        if (colNumber === 15 || colNumber === 16) {
           cell.numFmt = '#,##0;(#,##0);"-"';
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
           cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF003E51' } };
@@ -566,14 +686,14 @@ export class BudgetGeneratorService {
           cell.protection = { locked: true };
         }
 
-        // Monedas (P, Q, R, S, T, U)
-        if ([16, 17, 18, 19, 20, 21].includes(colNumber)) {
+        // Monedas (Q, R, S, T, U, V, W)
+        if ([17, 18, 19, 20, 21, 22, 23].includes(colNumber)) {
           cell.numFmt = '#,##0.00 €;(#,##0.00 €);"-"';
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
         }
 
-        // Columna Q (PrecioVentaUd Siguiente): Solo lectura con fondo gris claro sutil
-        if (colNumber === 17) {
+        // Columna R (PrecioVentaUd Siguiente): Solo lectura con fondo gris claro sutil
+        if (colNumber === 18) {
           cell.fill = {
             type: 'pattern',
             pattern: 'solid',
@@ -582,8 +702,8 @@ export class BudgetGeneratorService {
           cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF1F2937' } };
         }
 
-        // Columnas T y U (€ Previsión y € Objetivo): Fondo cian suave con negrita y fórmula (solo lectura protegida)
-        if (colNumber === 20 || colNumber === 21) {
+        // Columnas V y W (€ Previsión y € Objetivo): Fondo cian suave con negrita y fórmula (solo lectura protegida)
+        if (colNumber === 22 || colNumber === 23) {
           cell.fill = {
             type: 'pattern',
             pattern: 'solid',
@@ -594,11 +714,11 @@ export class BudgetGeneratorService {
       });
     });
 
-    // Auto-filtro activo en toda la tabla
+    // Auto-filtro activo en toda la tabla (de A1 a W[lastRow])
     const lastRowIndex = Math.max(rows.length + 1, 2);
     worksheet.autoFilter = {
       from: 'A1',
-      to: `U${lastRowIndex}`,
+      to: `W${lastRowIndex}`,
     };
 
     // Si se solicita protección expresamente, proteger la hoja.
@@ -687,6 +807,15 @@ export class BudgetGeneratorService {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
+  }
+
+  /**
+   * Determina si una línea corresponde a comisiones de Seiko Flowcontrol (CL100427).
+   * Regla de negocio permanente: En Seiko, la facturación mediante la cuenta contable 7050004
+   * sustituye la facturación que históricamente se realizaba con el producto SEICOMIS.
+   */
+  private isSeikoCommissionAccount(customerCode: string, productNo: string): boolean {
+    return productNo === '7050004' && customerCode === 'CL100427';
   }
 }
 

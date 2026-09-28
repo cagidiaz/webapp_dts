@@ -296,19 +296,32 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
 ### 6.2 Generador de Presupuestos de Ventas (Plantillas Excel) (`/settings/budget-generator`)
 *(Acceso configurable dinámicamente mediante la matriz de permisos de rol `role_modules` desde Gestión de Usuarios)*
 
-* **Propósito**: Automatiza la confección de plantillas de trabajo en Excel para la elaboración del presupuesto de ventas del ejercicio siguiente (ej. 2027 a partir del año en curso 2026).
+* **Propósito**: Automatiza la confección de plantillas de trabajo en Excel para la elaboración del presupuesto de ventas del ejercicio siguiente (ej. 2027 a partir del año en curso 2026), integrando la comparativa completa del ejercicio cerrado anterior (ej. 2025).
 * **Parámetros Configurables**:
   * **Comercial / Vendedor**: Permite descargar la plantilla global consolidada o segmentada para un comercial específico.
   * **% Incremento en Precio de Venta**: Aplica un incremento porcentual configurable sobre los precios medios netos de catálogo.
   * **Protección Opcional**: Por defecto genera la hoja desbloqueada para permitir a los comerciales insertar libremente nuevas filas para presupuestar nuevos clientes o productos.
-* **Estructura del Libro Excel (21 Columnas)**:
+* **Estructura del Libro Excel (23 Columnas)**:
   * **Identificación del Cliente y Zona**: Código de vendedor, código de cliente, nombre de cliente y **Comunidad Autónoma** (columna D, resuelta automáticamente por código postal o provincia, con soporte para países internacionales).
   * **Jerarquía de Producto**: Product Manager, Familia, Desc. Familia, Subfamilia, Desc. Subfamilia, **Nº producto** (columna J, situado inmediatamente a la izquierda de la descripción) y Descripción.
-  * **Histórico y Cartera**: Unidades facturadas a día de hoy y unidades en cartera viva.
-  * **Columnas Editables (Entrada Comercial)**: `UdPrevision 31/12/{Año}` (columna N) y `UdObjetivo {Año Siguiente}` (columna O), resaltadas con fondo amarillo suave y desbloqueadas para su introducción manual.
-  * **Precios y Valoraciones**: Precio de venta actual, precio siguiente proyectado con el % configurado, total facturado a día de hoy y € en cartera.
-  * **Fórmulas Vivas Automáticas**: Columna T (`€ Previsión {Año} = N * P`) y Columna U (`€ Objetivo {Año Siguiente} = O * Q`) protegidas contra borrado accidental.
-* **Exclusión de Cuentas Contables**: Filtra automáticamente cuentas `G/L Account` (`624%`, `438%`, `700%`, etc.), incluyendo únicamente referencias comerciales de producto (`Item`).
+  * **Bloque de Unidades Físicas**:
+    * **`UdFacturadas {Año Anterior}`** (columna L, ej. 2025): Unidades cerradas del año previo.
+    * **`udFacturadas {Año} hasta hoy`** (columna M, ej. 2026: `udFacturadas 2026 hasta hoy`): Unidades netas reales del año en curso.
+    * **`UdCartera`** (columna N): Unidades vivas pendientes en pedidos de cartera abierta.
+  * **Columnas Editables (Entrada Comercial)**:
+    * **`UdPrevision 31/12/{Año}`** (columna O): Estimación en blanco con fondo amarillo suave para previsión de cierre.
+    * **`UdObjetivo {Año Siguiente}`** (columna P): Meta en unidades con fondo amarillo suave para fijar el objetivo del siguiente año.
+  * **Precios Unitarios**: Precio de venta actual (columna Q) y precio proyectado con el % configurado (columna R, solo lectura).
+  * **Bloque de Importes Monetarios (€)**:
+    * **`Facturacion {Año Anterior}`** (columna S, ej. 2025): Importe neto cerrado del año anterior.
+    * **`total linea fact. {Año} hasta hoy`** (columna T, ej. 2026: `total linea fact. 2026 hasta hoy`): Importe acumulado facturado en el año en curso.
+    * **`€ Cartera`** (columna U): Importe valorado de la cartera viva.
+  * **Fórmulas Vivas Automáticas**:
+    * Columna V (`€ Previsión {Año} = O * Q`): Proyección de cierre en euros protegida contra borrado accidental.
+    * Columna W (`€ Objetivo {Año Siguiente} = P * R`): Meta calculada en euros protegida contra borrado accidental.
+* **Exclusión de Cuentas Contables y Regla Permanente de Seiko**:
+  * Filtra automáticamente cuentas `G/L Account` (`624%`, `438%`, `700%`, etc.), incluyendo únicamente referencias comerciales de catálogo (`Item`).
+  * **Excepción Permanente de Negocio:** Para **SEIKO FLOWCONTROL GMBH (`CL100427`)**, las líneas facturadas bajo la cuenta contable `7050004` (*Comisiones Seiko*) son autorizadas de forma permanente y se unifican bajo el producto `SEICOMIS`. De esta manera, el comercial dispone en una única fila de la facturación histórica completa (ej. 2025) y del ejercicio en curso (ej. 2026) sin dispersión.
 
 ### 6.3 Gestión de Usuarios y Roles (`/users`)
 *(Acceso exclusivo para rol `ADMIN`)*
@@ -323,5 +336,5 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
 
 ---
 
-*Manual de dTS Instruments v6.2 — Actualizado a 25 de septiembre de 2026.*
+*Manual de dTS Instruments v6.3 — Actualizado a 28 de septiembre de 2026.*
 

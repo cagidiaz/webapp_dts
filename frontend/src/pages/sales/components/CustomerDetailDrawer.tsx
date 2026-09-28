@@ -181,8 +181,18 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                 <div className="text-sm">
                   <p className="font-medium text-dts-primary dark:text-gray-200">{customer.address}</p>
                   {customer.address_2 && <p className="text-gray-600 dark:text-gray-400">{customer.address_2}</p>}
-                  <p className="text-gray-700 dark:text-gray-300">{customer.post_code} {customer.city}</p>
-                  <p className="text-gray-500 dark:text-gray-400 font-bold uppercase text-[10px] mt-1 tracking-wider">{customer.county}</p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {customer.county && (
+                      <p className="text-gray-500 dark:text-gray-400 font-bold uppercase text-[10px] tracking-wider">
+                        {customer.county}
+                      </p>
+                    )}
+                    {customer.territory_code && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 uppercase" title="Código de Territorio">
+                        Territorio: {customer.territory_code}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button 

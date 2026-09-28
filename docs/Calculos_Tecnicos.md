@@ -129,6 +129,27 @@ Lógica aplicada en los paneles de **Ventas vs Presupuestos** (`/sales/budgets`)
 
 ---
 
+### 7.1 Motor del Generador de Presupuestos (Excel Engine) (`/settings/budget-generator`)
+Servicio backend (`budget-generator.service.ts`) que automatiza la confección de los libros Excel normalizados para la planificación del ejercicio siguiente ($2027$):
+
+*   **Comparativa Histórica Integrada en Misma Fila (Opción B)**:
+    - Clave de consolidación: $\text{customer\_code} + \text{'\_'}' + \text{product\_no}$.
+    - Para cada cliente y producto se agregan independientemente:
+      1. *Año Anterior Cerrado ($2025$)*: $\text{UdFacturadas 2025}$ (columna L) y $\text{Facturación 2025}$ (columna S).
+      2. *Año en Curso ($2026$)*: $\text{udFacturadas 2026 hasta hoy}$ (columna M), $\text{UdCartera}$ (columna N) y $\text{total linea fact. 2026 hasta hoy}$ (columna T).
+    - *Inclusión de Filas*: Se incluyen todas las combinaciones con ventas en $2025$, ventas en $2026$ o pedidos pendientes en cartera viva.
+*   **Precio Unitario Base y Proyectado**:
+    - $\text{Precio Base 2026} = \frac{\text{factAmount}}{\text{udFacturadas}}$ (o en su defecto cartera / tarifa).
+    - $\text{Precio Proyectado 2027} = \text{Precio Base 2026} \times \left(1 + \frac{\text{\% Incremento}}{100}\right)$.
+*   **Fórmulas Excel Bloqueadas**:
+    - $€\ \text{Previsión 2026} = \text{UdPrevisión (O)} \times \text{PrecioVentaActual (Q)}$.
+    - $€\ \text{Objetivo 2027} = \text{UdObjetivo (P)} \times \text{PrecioVentaSiguiente (R)}$.
+*   **Excepción de Negocio Permanente (Seiko Flowcontrol GMBH - `CL100427`)**:
+    - Las líneas facturadas con la cuenta contable `7050004` (*Comisiones Seiko*) son autorizadas de forma permanente y se unifican bajo el código de producto histórico `SEICOMIS`.
+    - Esta regla garantiza que el comercial dispone en una sola fila de las comisiones históricas ($8.827,40\ \text{€}$ en $2025$) y del acumulado corriente ($38.765,43\ \text{€}$ en $2026$) para fijar su previsión y objetivo.
+
+---
+
 ## 8. Origen de Datos (PostgreSQL / Supabase)
 *   **Tablas de Balance**: `financial_balances` (Códigos 1... para Activo, 2... para Pasivo).
 *   **Tablas de PyG**: `income_statements` (Códigos A1, A4, A6, etc.).

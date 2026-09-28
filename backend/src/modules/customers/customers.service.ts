@@ -58,6 +58,7 @@ export class CustomersService {
           { client_id: { contains: search, mode: 'insensitive' as any } },
           { city: { contains: search, mode: 'insensitive' as any } },
           { county: { contains: search, mode: 'insensitive' as any } },
+          { territory_code: { contains: search, mode: 'insensitive' as any } },
           { salesperson_code: { contains: search, mode: 'insensitive' as any } },
         ],
       });
@@ -128,6 +129,7 @@ export class CustomersService {
           { county: { contains: cleanTerritory, mode: 'insensitive' as any } },
           { country_reg_code: { contains: cleanTerritory, mode: 'insensitive' as any } },
           { city: { contains: cleanTerritory, mode: 'insensitive' as any } },
+          { territory_code: { contains: cleanTerritory, mode: 'insensitive' as any } },
         ];
         if (/^\d{1,2}$/.test(postalPrefix)) {
           const padded = postalPrefix.padStart(2, '0');
@@ -157,7 +159,7 @@ export class CustomersService {
     const allowedSortFields = [
       'client_id', 'name', 'balance_due_lcy', 'total_sales', 'city', 
       'salesperson_code', 'client_type', 'invoice_margin', 'order_margin',
-      'market_segment', 'business_model', 'county', 'payment_terms_code', 'shipment_method_code'
+      'market_segment', 'business_model', 'county', 'territory_code', 'payment_terms_code', 'shipment_method_code'
     ];
     const orderByField = allowedSortFields.includes(sortBy) ? sortBy : 'client_id';
     const orderBy: any = {};

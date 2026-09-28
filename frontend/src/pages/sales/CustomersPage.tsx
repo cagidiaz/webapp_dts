@@ -24,6 +24,9 @@ import { exportToXlsx } from '../../utils/exportToXlsx';
 
 // Normalizador de códigos de territorio a partir de provincia / país
 const getTerritoryCode = (customer: CustomerDataRow): string => {
+  if (customer.territory_code && customer.territory_code.trim()) {
+    return customer.territory_code.trim();
+  }
   const county = customer.county?.trim().toUpperCase() || '';
   const country = customer.country_reg_code?.trim().toUpperCase() || '';
   
@@ -961,12 +964,12 @@ export const CustomersPage: React.FC = () => {
                 {/* Territorio */}
                 {visibleColumns.territory && (
                   <th 
-                    onClick={() => handleSort('county')} 
+                    onClick={() => handleSort('territory_code')} 
                     className="px-2 py-3 font-bold uppercase tracking-wider text-[10.5px] text-center cursor-pointer group hover:bg-white/10 transition-colors whitespace-nowrap"
                   >
                     <div className="flex items-center justify-center">
                       <span>Territorio</span>
-                      {getSortIcon('county')}
+                      {getSortIcon('territory_code')}
                     </div>
                   </th>
                 )}

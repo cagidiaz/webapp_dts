@@ -1,6 +1,7 @@
 import apiClient from './apiClient';
 
 export interface BudgetGeneratorMeta {
+  previousYear?: number;
   currentYear: number;
   nextYear: number;
   salesReps: Array<{ code: string; name: string }>;

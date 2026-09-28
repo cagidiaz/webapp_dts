@@ -32,6 +32,7 @@ export const BudgetGeneratorSection: React.FC = () => {
   });
 
   const currentYear = meta?.currentYear || new Date().getFullYear();
+  const previousYear = meta?.previousYear || currentYear - 1;
   const nextYear = meta?.nextYear || currentYear + 1;
 
   const handleDownload = async (asZip: boolean) => {
@@ -86,7 +87,7 @@ export const BudgetGeneratorSection: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-2xl leading-relaxed">
-              Crea los libros Excel oficiales con los datos consolidados de compras y cartera de <strong>{currentYear}</strong> para que el equipo comercial proyecte sus objetivos de venta de <strong>{nextYear}</strong>.
+              Crea los libros Excel oficiales con el histórico de ventas de <strong>{previousYear}</strong> y las compras y cartera consolidadas de <strong>{currentYear}</strong> para proyectar los objetivos de venta de <strong>{nextYear}</strong>.
             </p>
           </div>
         </div>
@@ -94,9 +95,9 @@ export const BudgetGeneratorSection: React.FC = () => {
         {/* Resumen del Ejercicio */}
         <div className="flex items-center gap-3 bg-gray-50 dark:bg-zinc-800/40 px-4 py-2.5 rounded-xl border border-gray-100 dark:border-gray-800 shrink-0 self-start sm:self-center">
           <div className="text-right">
-            <span className="text-[10px] uppercase font-bold text-gray-400 block">Año Base ➔ Objetivo</span>
+            <span className="text-[10px] uppercase font-bold text-gray-400 block">Histórico ➔ Base ➔ Objetivo</span>
             <span className="text-sm font-black text-dts-primary dark:text-dts-secondary font-mono">
-              {currentYear} ➔ {nextYear}
+              {previousYear} ➔ {currentYear} ➔ {nextYear}
             </span>
           </div>
         </div>
@@ -214,12 +215,12 @@ export const BudgetGeneratorSection: React.FC = () => {
                 {protectSheet ? 'Modo Protegido (Estructura y precios bloqueados)' : 'Modo Abierto / Desprotegido (Recomendado)'}
               </span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${protectSheet ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'}`}>
-                {protectSheet ? 'Solo Columnas N y O' : 'Nuevas Líneas Habilitadas'}
+                {protectSheet ? 'Solo Columnas O y P' : 'Nuevas Líneas Habilitadas'}
               </span>
             </div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 max-w-xl leading-normal">
               {protectSheet
-                ? 'La hoja se protegerá contra cualquier modificación ajena a las columnas N y O. Los comerciales no podrán insertar filas nuevas.'
+                ? 'La hoja se protegerá contra cualquier modificación ajena a las columnas O y P. Los comerciales no podrán insertar filas nuevas.'
                 : 'La hoja se genera completamente desprotegida para que los comerciales puedan <strong>insertar nuevas filas</strong> de productos o clientes no vendidos previamente y copiar las fórmulas libremente.'}
             </p>
           </div>

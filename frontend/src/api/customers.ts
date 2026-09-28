@@ -30,6 +30,7 @@ export interface CustomerDataRow {
   city: string | null;
   county: string | null;
   post_code: string | null;
+  territory_code?: string | null;
   phone_no: string | null;
   mobile_no: string | null;
   email: string | null;
