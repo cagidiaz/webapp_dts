@@ -273,6 +273,8 @@ export class QuotesService {
             document_date: true,
             cierreprev_date: true,
             salesperson_code: true,
+            motivo_ganada: true,
+            motivo_perdida: true,
             sales_rep: {
               select: {
                 name: true,
@@ -283,6 +285,8 @@ export class QuotesService {
                 cierreprev_date: true,
                 estado_oferta: true,
                 probabilidad_exito: true,
+                motivo_ganada: true,
+                motivo_perdida: true,
               }
             }
           },
@@ -316,6 +320,9 @@ export class QuotesService {
       let closingNext30Count = 0;
       let closing31To60Amount = 0;
       let closing31To60Count = 0;
+
+      const wonReasonsMap = new Map<string, { reason: string; count: number; amount: number }>();
+      const lostReasonsMap = new Map<string, { reason: string; count: number; amount: number }>();
 
       const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
       const monthlyStatusList = monthNames.map((name, idx) => ({
@@ -376,9 +383,31 @@ export class QuotesService {
         if (isWon) {
           wonAmount += amt;
           wonCount++;
+
+          const reasonRaw = (crm?.motivo_ganada && crm.motivo_ganada.trim() !== '')
+            ? crm.motivo_ganada.trim()
+            : (quote.motivo_ganada && quote.motivo_ganada.trim() !== '' ? quote.motivo_ganada.trim() : 'Sin especificar');
+          
+          const entry = wonReasonsMap.get(reasonRaw) || { reason: reasonRaw, count: 0, amount: 0 };
+          entry.count++;
+          entry.amount += amt;
+          wonReasonsMap.set(reasonRaw, entry);
         } else if (isLost) {
           lostAmount += amt;
           lostCount++;
+
+          let reasonRaw = (crm?.motivo_perdida && crm.motivo_perdida.trim() !== '')
+            ? crm.motivo_perdida.trim()
+            : (quote.motivo_perdida && quote.motivo_perdida.trim() !== '' ? quote.motivo_perdida.trim() : 'Sin especificar');
+
+          if (/no se hace por falta de financiaci[oó]n/i.test(reasonRaw)) {
+            reasonRaw = 'Falta de financiación';
+          }
+          
+          const entry = lostReasonsMap.get(reasonRaw) || { reason: reasonRaw, count: 0, amount: 0 };
+          entry.count++;
+          entry.amount += amt;
+          lostReasonsMap.set(reasonRaw, entry);
         } else {
           // Ofertas abiertas / vivas / en proceso
           pendingAmount += amt;
@@ -465,6 +494,22 @@ export class QuotesService {
         item.approvedAmount = Number(item.approvedAmount.toFixed(2));
       });
 
+      const wonReasonsList = Array.from(wonReasonsMap.values())
+        .sort((a, b) => b.count - a.count || b.amount - a.amount)
+        .slice(0, 6)
+        .map(item => ({
+          ...item,
+          amount: Number(item.amount.toFixed(2))
+        }));
+
+      const lostReasonsList = Array.from(lostReasonsMap.values())
+        .sort((a, b) => b.count - a.count || b.amount - a.amount)
+        .slice(0, 6)
+        .map(item => ({
+          ...item,
+          amount: Number(item.amount.toFixed(2))
+        }));
+
       const closedCount = wonCount + lostCount;
       const successRate = closedCount > 0 ? (wonCount / closedCount) * 100 : 0;
       const avgProbability = probabilityCount > 0 ? (totalProbabilitySum / probabilityCount) : 0;
@@ -494,7 +539,13 @@ export class QuotesService {
           cierreprev_date: crm?.cierreprev_date || q.cierreprev_date || null,
           oferta_type: crm?.oferta_type || q.oferta_type || null,
           motivo_ganada: crm?.motivo_ganada || q.motivo_ganada || null,
-          motivo_perdida: crm?.motivo_perdida || q.motivo_perdida || null,
+          motivo_perdida: (() => {
+            const m = crm?.motivo_perdida || q.motivo_perdida || null;
+            if (m && /no se hace por falta de financiaci[oó]n/i.test(m)) {
+              return 'Falta de financiación';
+            }
+            return m;
+          })(),
           observaciones: crm?.observaciones || q.observaciones || null,
           proxima_accion: crm?.proxima_accion || null,
           fecha_proxima_accion: crm?.fecha_proxima_accion || null,
@@ -529,6 +580,8 @@ export class QuotesService {
           chartData: {
             monthlyStatusData: monthlyStatusList,
             monthlySalespersonData: monthlySalespersonList,
+            wonReasonsData: wonReasonsList,
+            lostReasonsData: lostReasonsList,
           },
         }
       };
@@ -782,7 +835,13 @@ function normalizeQuoteStatus(status?: string | null): string {
           cierreprev_date: crm?.cierreprev_date || q.cierreprev_date || null,
           confirmacion_date: crm?.confirmacion_date || q.confirmacion_date || null,
           motivo_ganada: crm?.motivo_ganada || q.motivo_ganada || null,
-          motivo_perdida: crm?.motivo_perdida || q.motivo_perdida || null,
+          motivo_perdida: (() => {
+            const m = crm?.motivo_perdida || q.motivo_perdida || null;
+            if (m && /no se hace por falta de financiaci[oó]n/i.test(m)) {
+              return 'Falta de financiación';
+            }
+            return m;
+          })(),
           observaciones: crm?.observaciones || q.observaciones || null,
           contacto_id: crm?.contacto_id || null,
           contacto_nombre: crm?.contacto_nombre || null,

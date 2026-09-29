@@ -40,8 +40,11 @@ Mediante un botón de alternancia (`Ver Gráficos / Ocultar Gráficos`) con icon
 
 1. **Ofertas por Comercial y Tasa de Éxito:**
    * Gráfico compuesto (`ComposedChart`) con barras verticales por mes desglosadas por vendedor en K€ (`ACI`, `JKU`, `JMO`, `JPG`) y una línea superimposed con la tasa de éxito media mensual.
-2. **Comparativa de Ofertas Creadas vs Aprobadas (Ganadas):**
-   * Gráfico de barras combinadas que enfrenta mensualmente el volumen cotizado total frente al importe efectivamente ganado, permitiendo auditar la velocidad de conversión comercial.
+2. **Motivos de Cierre: Ganadas vs Perdidas (Lado a Lado):**
+   * Panel analítico dividido en dos columnas con gráficos de **barras horizontales**:
+     * **Éxito (Ganadas):** Ranking en verde corporativo (`#10B981`) con los principales motivos de aprobación (`motivo_ganada`), número de ofertas e importe total asociado.
+     * **Descarte (Perdidas):** Ranking en rojo/rosa (`#F43F5E`) con las razones de desestimación (`motivo_perdida`), identificando causas de fuga (precio, competencia, plazos, etc.).
+   * Incluye tooltips enriquecidos al vuelo con el motivo completo, recuento y volumen en miles de euros.
 
 > **Nota Técnica de Segregación:** Los gráficos consultan una query independiente (`sales-quotes-charts`) que preserva la evolución global anual independientemente de que el usuario filtre la tabla inferior por estados específicos (`Ganada`, `Perdida`, etc.), evitando distorsiones en las curvas históricas.
 

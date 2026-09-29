@@ -76,6 +76,16 @@ export interface SalesQuotesResponse {
         wonAmount: number;
         successRate: number;
       }[];
+      wonReasonsData?: {
+        reason: string;
+        count: number;
+        amount: number;
+      }[];
+      lostReasonsData?: {
+        reason: string;
+        count: number;
+        amount: number;
+      }[];
     };
   };
 }

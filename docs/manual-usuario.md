@@ -157,7 +157,7 @@ Ubicado en `/sales/quotes`. Para documentación técnica exhaustiva, consultar [
   * **Distribución de Ofertas (Mini Donut)**: Gráfico circular tipo anillo interactivo con el recuento total central de ofertas y leyenda lateral compacta con los importes (€) y porcentajes de ofertas ganadas (verde), perdidas (rojo) y vivas abiertas (ámbar).
   * **Valor Ponderado (IA)**: Estimación probabilística de cierre comercial (*Forecast*) calculada exclusivamente sobre las ofertas abiertas en proceso: $\sum_{\text{abiertas}} (\text{Importe} \times \text{Probabilidad} / 100)$.
   * **Previsión Cierre 60 Días**: Volumen e importe acumulado de ofertas vivas con fecha de cierre previsto en los próximos 60 días, con desglose emergente a 30 días y de 31 a 60 días, además de su valor ponderado previsto.
-* **Gráficos Analíticos Dinámicos**: Comparativa de ofertas creadas vs aprobadas por mes y volumen cotizado por comercial con línea de tasa de éxito.
+* **Gráficos Analíticos Dinámicos**: Volumen cotizado por comercial con línea de tasa de éxito y panel comparativo de **Motivos de Cierre (Ganadas vs Perdidas)** en barras horizontales lado a lado.
 * **Filtros Avanzados y Cierre Previsto**:
   * Filtros por comercial, estado, probabilidad de éxito y año fiscal.
   * Selector inteligente de cierre previsto: modos *Todos*, *Sin fecha*, *Vencidas* y selección mensual interactiva (`Ctrl + Clic` o `Shift + Clic`).

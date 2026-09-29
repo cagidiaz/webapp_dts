@@ -7,7 +7,7 @@ import {
   Search, FileText, Euro, ArrowUpDown, 
   ChevronUp, ChevronDown, Sparkles, BarChart3, Calendar, CalendarClock,
   AlertTriangle, ChevronLeft, ChevronRight, Check, X, Clock, HelpCircle, Loader2,
-  PieChart as PieChartIcon
+  PieChart as PieChartIcon, CheckCircle2, XCircle
 } from 'lucide-react';
 import { KPISkeleton, TableSkeleton, InfoPopover, type InfoBreakdownItem, ExportButton } from '../../components/ui';
 import { Drawer } from '../../components/shared';
@@ -332,16 +332,122 @@ export const QuotesPage: React.FC = () => {
     return { salespersonChartData: chartData, salespersonNames: spNames };
   }, [chartSummary.chartData]);
 
-  const statusChartData = useMemo(() => {
-    if (!chartSummary.chartData?.monthlyStatusData) return [];
-    return chartSummary.chartData.monthlyStatusData.map(d => ({
-      month: d.month,
-      'Creadas (€)': Number((d.createdAmount / 1000).toFixed(1)), // K €
-      'Aprobadas (€)': Number((d.approvedAmount / 1000).toFixed(1)), // K €
-      'Creadas (Cant.)': d.createdCount,
-      'Aprobadas (Cant.)': d.approvedCount,
-    }));
+  const { wonReasonsData, lostReasonsData } = useMemo(() => {
+    const rawWon = chartSummary.chartData?.wonReasonsData || [];
+    const rawLost = chartSummary.chartData?.lostReasonsData || [];
+
+    const mapData = (list: { reason: string; count: number; amount: number }[]) => {
+      return list.map(item => {
+        let cleanReason = item.reason;
+        if (/no se hace por falta de financiaci[oó]n/i.test(cleanReason)) {
+          cleanReason = 'Falta de financiación';
+        }
+        return {
+          ...item,
+          reason: cleanReason,
+          displayReason: cleanReason,
+          amountFormatted: formatCurrency(item.amount, 0),
+        };
+      });
+    };
+
+    return {
+      wonReasonsData: mapData(rawWon),
+      lostReasonsData: mapData(rawLost),
+    };
   }, [chartSummary.chartData]);
+
+  // Tick personalizado para el eje Y que divide textos en 2 líneas de forma natural
+  const renderTwoLineYAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    const text = String(payload?.value || '').trim();
+    if (!text) return null;
+
+    if (text.length <= 13) {
+      return (
+        <text 
+          x={x - 4} 
+          y={y} 
+          textAnchor="end" 
+          fill="#94a3b8" 
+          fontSize={9} 
+          dominantBaseline="central"
+          className="select-none"
+        >
+          {text}
+        </text>
+      );
+    }
+
+    const words = text.split(' ');
+    let line1 = '';
+    let line2 = '';
+
+    if (words.length > 1) {
+      let accumulated = '';
+      for (let i = 0; i < words.length; i++) {
+        const test = accumulated ? `${accumulated} ${words[i]}` : words[i];
+        if (test.length <= 13 || !line1) {
+          accumulated = test;
+          line1 = accumulated;
+        } else {
+          line2 = words.slice(i).join(' ');
+          break;
+        }
+      }
+      if (!line2 && words.length > 1) {
+        const mid = Math.ceil(words.length / 2);
+        line1 = words.slice(0, mid).join(' ');
+        line2 = words.slice(mid).join(' ');
+      }
+    } else {
+      line1 = `${text.slice(0, 11)}-`;
+      line2 = text.slice(11, 24);
+    }
+
+    if (line2.length > 14) {
+      line2 = `${line2.slice(0, 13)}…`;
+    }
+
+    return (
+      <text 
+        x={x - 4} 
+        y={y} 
+        textAnchor="end" 
+        fill="#94a3b8" 
+        fontSize={8.5} 
+        className="select-none"
+      >
+        <tspan x={x - 4} dy="-0.38em">{line1}</tspan>
+        <tspan x={x - 4} dy="1.15em">{line2}</tspan>
+      </text>
+    );
+  };
+
+  // Renderizador personalizado para barra horizontal activa (Hover dinámico sin sombra gris)
+  const renderActiveBar = (fillColor: string, strokeColor: string) => (props: any) => {
+    const { x, y, width, height } = props;
+    if (!width || width <= 0 || !height || height <= 0) return null;
+    const expandY = 2; // Expansión en grosor
+    const expandX = 4; // Expansión en longitud
+    return (
+      <rect
+        x={x}
+        y={y - expandY}
+        width={width + expandX}
+        height={height + expandY * 2}
+        fill={fillColor}
+        stroke={strokeColor}
+        strokeWidth={2}
+        rx={5}
+        ry={5}
+        style={{
+          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.2))',
+          transition: 'all 0.15s ease-out'
+        }}
+      />
+    );
+  };
 
   const openQuoteDetails = (quote: SalesQuote) => {
     setSelectedQuoteId(quote.id);
@@ -520,14 +626,15 @@ export const QuotesPage: React.FC = () => {
           {/* Chart 1: Ofertas por Comercial y Tasa de Éxito */}
           <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm flex flex-col min-w-0">
             <h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider mb-4">Ofertas por Comercial y Tasa de Éxito</h3>
-            <div className="h-72 w-full min-w-0 min-h-72">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
+            <div className="w-full min-w-0" style={{ height: 280, minHeight: 280 }}>
+              <ResponsiveContainer width="100%" height={280} initialDimension={{ width: 500, height: 280 }}>
                 <ComposedChart data={salespersonChartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
                   <XAxis dataKey="month" stroke="#94a3b8" tick={{ fontSize: 9 }} />
                   <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fontSize: 9 }} tickFormatter={(val) => `${val}k`} />
                   <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" tick={{ fontSize: 9 }} tickFormatter={(val) => `${val}%`} />
                   <RechartsTooltip
+                    cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }}
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', color: '#fff', fontSize: '11px' }}
                     formatter={(val, name) => {
                       if (name === 'Tasa Éxito') return [`${val}%`, name];
@@ -561,26 +668,142 @@ export const QuotesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Chart 2: Comparativa de Ofertas Creadas vs Aprobadas */}
+          {/* Chart 2: Motivos de Ofertas Ganadas vs Perdidas (Lado a Lado) */}
           <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm flex flex-col min-w-0">
-            <h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider mb-4">Ofertas Creadas vs Aprobadas (Ganadas)</h3>
-            <div className="h-72 w-full min-w-0 min-h-72">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
-                <BarChart data={statusChartData} barGap={0} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                  <XAxis dataKey="month" stroke="#94a3b8" tick={{ fontSize: 9 }} />
-                  <YAxis stroke="#94a3b8" tick={{ fontSize: 9 }} tickFormatter={(val) => `${val}k`} />
-                  <RechartsTooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', color: '#fff', fontSize: '11px' }}
-                    formatter={(val, name) => {
-                      return [`${val} mil €`, name];
-                    }}
-                  />
-                  <Legend iconSize={8} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                  <Bar dataKey="Creadas (€)" name="Creadas (€)" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="Aprobadas (€)" name="Aprobadas (€)" fill="#10B981" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider">
+                Motivos de Cierre: Ganadas vs Perdidas
+              </h3>
+              <div className="flex items-center gap-3 text-[10px]">
+                <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                  Ganadas
+                </span>
+                <span className="flex items-center gap-1 font-semibold text-rose-500 dark:text-rose-400">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
+                  Perdidas
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 dark:divide-gray-800 flex-1 min-w-0">
+              
+              {/* Columna Izquierda: Motivos Ganadas */}
+              <div className="flex flex-col min-w-0 sm:pr-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Éxito (Ganadas)
+                  </span>
+                  <span className="text-[9px] text-gray-400 font-mono">
+                    {wonReasonsData.reduce((acc, curr) => acc + curr.count, 0)} {wonReasonsData.reduce((acc, curr) => acc + curr.count, 0) === 1 ? 'oferta' : 'ofertas'}
+                  </span>
+                </div>
+
+                {wonReasonsData.length > 0 ? (
+                  <div className="w-full min-w-0" style={{ height: 245, minHeight: 245 }}>
+                    <ResponsiveContainer width="100%" height={245} initialDimension={{ width: 220, height: 245 }}>
+                      <BarChart
+                        layout="vertical"
+                        data={wonReasonsData}
+                        margin={{ top: 8, right: 15, left: 5, bottom: 8 }}
+                        barCategoryGap={6}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148, 163, 184, 0.1)" />
+                        <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 9 }} allowDecimals={false} />
+                        <YAxis
+                          type="category"
+                          dataKey="displayReason"
+                          stroke="#94a3b8"
+                          width={85}
+                          tickLine={false}
+                          axisLine={false}
+                          tick={renderTwoLineYAxisTick}
+                        />
+                        <RechartsTooltip
+                          cursor={false}
+                          contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', color: '#fff', fontSize: '11px' }}
+                          formatter={(val: any, _name: any, item: any) => [
+                            `${val} ofertas (${item.payload.amountFormatted})`,
+                            item.payload.reason
+                          ]}
+                        />
+                        <Bar 
+                          dataKey="count" 
+                          name="Ofertas" 
+                          fill="#10B981" 
+                          radius={[0, 4, 4, 0]} 
+                          activeBar={renderActiveBar('#10B981', '#34d399')}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-4 text-gray-400 min-h-60">
+                    <CheckCircle2 size={24} className="text-gray-300 dark:text-gray-600 mb-1 opacity-50" />
+                    <p className="text-xs font-medium">Sin motivos de ganada</p>
+                    <p className="text-[10px] text-gray-400">No hay registros especificados en el período</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Columna Derecha: Motivos Perdidas */}
+              <div className="flex flex-col min-w-0 pt-3 sm:pt-0 sm:pl-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                    <XCircle size={12} /> Descarte (Perdidas)
+                  </span>
+                  <span className="text-[9px] text-gray-400 font-mono">
+                    {lostReasonsData.reduce((acc, curr) => acc + curr.count, 0)} {lostReasonsData.reduce((acc, curr) => acc + curr.count, 0) === 1 ? 'oferta' : 'ofertas'}
+                  </span>
+                </div>
+
+                {lostReasonsData.length > 0 ? (
+                  <div className="w-full min-w-0" style={{ height: 245, minHeight: 245 }}>
+                    <ResponsiveContainer width="100%" height={245} initialDimension={{ width: 220, height: 245 }}>
+                      <BarChart
+                        layout="vertical"
+                        data={lostReasonsData}
+                        margin={{ top: 8, right: 15, left: 5, bottom: 8 }}
+                        barCategoryGap={6}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148, 163, 184, 0.1)" />
+                        <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 9 }} allowDecimals={false} />
+                        <YAxis
+                          type="category"
+                          dataKey="displayReason"
+                          stroke="#94a3b8"
+                          width={85}
+                          tickLine={false}
+                          axisLine={false}
+                          tick={renderTwoLineYAxisTick}
+                        />
+                        <RechartsTooltip
+                          cursor={false}
+                          contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', color: '#fff', fontSize: '11px' }}
+                          formatter={(val: any, _name: any, item: any) => [
+                            `${val} ofertas (${item.payload.amountFormatted})`,
+                            item.payload.reason
+                          ]}
+                        />
+                        <Bar 
+                          dataKey="count" 
+                          name="Ofertas" 
+                          fill="#F43F5E" 
+                          radius={[0, 4, 4, 0]} 
+                          activeBar={renderActiveBar('#F43F5E', '#fda4af')}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-4 text-gray-400 min-h-60">
+                    <XCircle size={24} className="text-gray-300 dark:text-gray-600 mb-1 opacity-50" />
+                    <p className="text-xs font-medium">Sin motivos de pérdida</p>
+                    <p className="text-[10px] text-gray-400">No hay registros especificados en el período</p>
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
 
@@ -1282,7 +1505,11 @@ export const QuotesPage: React.FC = () => {
                 {selectedQuote.motivo_perdida && (
                   <div className="p-3 bg-rose-50/50 dark:bg-rose-950/10 rounded-lg border border-rose-100/30">
                     <span className="text-rose-700 dark:text-rose-400 font-bold block">Motivo de Descarte (Perdida)</span>
-                    <span className="text-gray-700 dark:text-gray-300 block mt-1 leading-relaxed">{selectedQuote.motivo_perdida}</span>
+                    <span className="text-gray-700 dark:text-gray-300 block mt-1 leading-relaxed">
+                      {/no se hace por falta de financiaci[oó]n/i.test(selectedQuote.motivo_perdida)
+                        ? 'Falta de financiación'
+                        : selectedQuote.motivo_perdida}
+                    </span>
                   </div>
                 )}
                 <div>
@@ -1453,7 +1680,7 @@ const QuotesStatusDonutCard: React.FC<QuotesStatusDonutCardProps> = ({ summary }
         )}
 
         {/* Donut Chart limpio de tamaño fijo */}
-        <div className="relative flex items-center justify-center shrink-0 w-17 h-17 select-none outline-none focus:outline-none [&_.recharts-wrapper]:outline-none [&_.recharts-wrapper]:focus:outline-none [&_.recharts-surface]:outline-none [&_.recharts-surface]:focus:outline-none [&_*]:outline-none [&_*]:focus:outline-none [&_*]:focus:ring-0">
+        <div className="relative flex items-center justify-center shrink-0 w-17 h-17 select-none outline-none focus:outline-none [&_.recharts-wrapper]:outline-none [&_.recharts-wrapper]:focus:outline-none [&_.recharts-surface]:outline-none [&_.recharts-surface]:focus:outline-none **:outline-none **:focus:outline-none **:focus:ring-0">
           <PieChart width={68} height={68} style={{ outline: 'none' }}>
             <Pie
               data={donutData}
