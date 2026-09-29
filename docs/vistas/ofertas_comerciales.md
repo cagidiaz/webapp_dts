@@ -39,12 +39,20 @@ En la parte superior de la vista se sitúan cinco tarjetas analíticas con fondo
 Mediante un botón de alternancia (`Ver Gráficos / Ocultar Gráficos`) con icono dinámico, los usuarios pueden desplegar un panel comparativo de alto impacto visual:
 
 1. **Ofertas por Comercial y Tasa de Éxito:**
-   * Gráfico compuesto (`ComposedChart`) con barras verticales por mes desglosadas por vendedor en K€ (`ACI`, `JKU`, `JMO`, `JPG`) y una línea superimposed con la tasa de éxito media mensual.
-2. **Motivos de Cierre: Ganadas vs Perdidas (Lado a Lado):**
-   * Panel analítico dividido en dos columnas con gráficos de **barras horizontales**:
-     * **Éxito (Ganadas):** Ranking en verde corporativo (`#10B981`) con los principales motivos de aprobación (`motivo_ganada`), número de ofertas e importe total asociado.
-     * **Descarte (Perdidas):** Ranking en rojo/rosa (`#F43F5E`) con las razones de desestimación (`motivo_perdida`), identificando causas de fuga (precio, competencia, plazos, etc.).
-   * Incluye tooltips enriquecidos al vuelo con el motivo completo, recuento y volumen en miles de euros.
+   * Gráfico compuesto (`ComposedChart`) con barras verticales por mes desglosadas por vendedor en K€ (`ACI`, `JKU`, `JMO`, `JPG`) y una línea superpuesta con la tasa de éxito media mensual.
+2. **Motivos de Cierre: Ganadas vs Perdidas (Panel Lado a Lado):**
+   * Panel analítico que sustituye al anterior gráfico de emitidas vs aprobadas, ocupando el mismo espacio modular pero dividido en dos subpaneles paralelos con gráficos de **barras horizontales**:
+     * **Éxito (Ganadas):** Ranking clasificado con barras verde esmeralda (`#10B981`) que cuantifica los motivos de resolución favorable (`motivo_ganada`), número de ofertas y volumen total en miles de euros (K€).
+     * **Descarte (Perdidas):** Ranking en rojo/rosa (`#F43F5E`) con las razones de desestimación (`motivo_perdida`), identificando con precisión causas de pérdida (precio, competencia, plazos, desestimación técnica, etc.).
+   * **Interacción Avanzada en Hover (Sin Sombras Grises):**
+     * Se elimina el cursor de fondo gris predeterminado de Recharts (`cursor={false}`).
+     * Al pasar el ratón sobre cualquier barra, esta se eleva dinámicamente aumentando su tamaño (`+4px` de altura y `+4px` de anchura), incorporando un contorno luminoso del color de la barra (`strokeWidth={2}`) y una sutil sombra de relieve (`drop-shadow(0 2px 4px ...)`).
+   * **Etiquetas del Eje Y en Doble Línea (`renderTwoLineYAxisTick`):**
+     * Los motivos de longitud extensa se formatean de forma inteligente en **dos líneas** mediante etiquetas `<tspan>` SVG acotadas a `width={85}`, evitando cortes bruscos o solapamientos con el área gráfica.
+   * **Normalización Automática de Motivos:**
+     * El backend y la agregación analítica normalizan automáticamente cadenas no homogéneas (por ejemplo, expresiones como *"no se hace por falta de financiacion"* se convierten de forma transparente y unificada en **"Falta de financiación"**).
+   * **Tooltips Enriquecidos:** Proporcionan al instante el nombre completo del motivo, el número de ofertas ganadas/perdidas y el volumen total valorado.
+   * **Contadores Oficiales en Cabecera:** Tanto en la cabecera de la página como en los subgráficos, los contadores se expresan en nomenclatura de negocio estandarizada (ej. `364 ofertas` o `1 oferta`, sustituyendo a los antiguos `reg.`).
 
 > **Nota Técnica de Segregación:** Los gráficos consultan una query independiente (`sales-quotes-charts`) que preserva la evolución global anual independientemente de que el usuario filtre la tabla inferior por estados específicos (`Ganada`, `Perdida`, etc.), evitando distorsiones en las curvas históricas.
 
