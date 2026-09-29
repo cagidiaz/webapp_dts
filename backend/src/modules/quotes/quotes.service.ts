@@ -301,6 +301,22 @@ export class QuotesService {
       let totalProbabilitySum = 0;
       let probabilityCount = 0;
 
+      // Previsión de cierre próximos 30 y 60 días (ofertas abiertas)
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      in30Days.setHours(23, 59, 59, 999);
+      const in60Days = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+      in60Days.setHours(23, 59, 59, 999);
+
+      let closingNext60Amount = 0;
+      let closingNext60Count = 0;
+      let closingNext60Weighted = 0;
+      let closingNext30Amount = 0;
+      let closingNext30Count = 0;
+      let closing31To60Amount = 0;
+      let closing31To60Count = 0;
+
       const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
       const monthlyStatusList = monthNames.map((name, idx) => ({
         month: name,
@@ -327,15 +343,20 @@ export class QuotesService {
 
         // Probabilidad efectiva
         let prob = 0;
+        let hasProb = false;
         if (crm && crm.probabilidad_exito !== null && crm.probabilidad_exito !== undefined) {
           prob = Number(crm.probabilidad_exito);
+          hasProb = true;
         } else if (quote.probabilidad_exito !== null && quote.probabilidad_exito !== undefined) {
           prob = Number(quote.probabilidad_exito);
+          hasProb = true;
         }
 
         // Valor ponderado efectivo
         let weighted = 0;
-        if (quote.valor_oferta_ponderado !== null && quote.valor_oferta_ponderado !== undefined) {
+        if (hasProb) {
+          weighted = amt * (prob / 100);
+        } else if (quote.valor_oferta_ponderado !== null && quote.valor_oferta_ponderado !== undefined) {
           weighted = Number(quote.valor_oferta_ponderado);
         } else {
           weighted = amt * (prob / 100);
@@ -349,13 +370,6 @@ export class QuotesService {
 
         totalAmount += amt;
 
-        if (prob > 0) {
-          totalProbabilitySum += prob;
-          probabilityCount++;
-        }
-
-        totalWeightedValue += weighted;
-
         const isWon = state.includes('ganada') || state.includes('ganado') || state.includes('aceptada') || state.includes('aprobada');
         const isLost = state.includes('perdida') || state.includes('perdido') || state.includes('cancelada') || state.includes('rechazada');
 
@@ -366,8 +380,33 @@ export class QuotesService {
           lostAmount += amt;
           lostCount++;
         } else {
+          // Ofertas abiertas / vivas / en proceso
           pendingAmount += amt;
           pendingCount++;
+          totalWeightedValue += weighted;
+          if (prob > 0) {
+            totalProbabilitySum += prob;
+            probabilityCount++;
+          }
+
+          // Previsión de cierre previsto dentro de los próximos 30 y 60 días
+          const rawCierre = crm?.cierreprev_date || quote.cierreprev_date;
+          if (rawCierre) {
+            const cierreDate = new Date(rawCierre);
+            if (cierreDate >= now && cierreDate <= in60Days) {
+              closingNext60Amount += amt;
+              closingNext60Count++;
+              closingNext60Weighted += weighted;
+
+              if (cierreDate <= in30Days) {
+                closingNext30Amount += amt;
+                closingNext30Count++;
+              } else {
+                closing31To60Amount += amt;
+                closing31To60Count++;
+              }
+            }
+          }
         }
 
         // --- Agrupación para gráficos ---
@@ -478,6 +517,15 @@ export class QuotesService {
           successRate: Number(successRate.toFixed(2)),
           totalWeightedValue: Number(totalWeightedValue.toFixed(2)),
           averageProbability: Number(avgProbability.toFixed(2)),
+          closingNext60Days: {
+            amount: Number(closingNext60Amount.toFixed(2)),
+            count: closingNext60Count,
+            weightedAmount: Number(closingNext60Weighted.toFixed(2)),
+            in30DaysAmount: Number(closingNext30Amount.toFixed(2)),
+            in30DaysCount: closingNext30Count,
+            in31To60DaysAmount: Number(closing31To60Amount.toFixed(2)),
+            in31To60DaysCount: closing31To60Count,
+          },
           chartData: {
             monthlyStatusData: monthlyStatusList,
             monthlySalespersonData: monthlySalespersonList,

@@ -48,6 +48,15 @@ export interface SalesQuotesResponse {
     successRate: number;
     totalWeightedValue: number;
     averageProbability: number;
+    closingNext60Days?: {
+      amount: number;
+      count: number;
+      weightedAmount: number;
+      in30DaysAmount: number;
+      in30DaysCount: number;
+      in31To60DaysAmount: number;
+      in31To60DaysCount: number;
+    };
     chartData?: {
       monthlyStatusData: {
         month: string;

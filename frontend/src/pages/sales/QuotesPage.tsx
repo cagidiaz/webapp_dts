@@ -4,8 +4,8 @@ import { getAllQuotes, getQuoteById, updateCrmQuote, type SalesQuote } from '../
 import { getCustomerSalespersons } from '../../api/customers';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
-  Search, FileText, Euro, Percent, ArrowUpDown, 
-  ChevronUp, ChevronDown, Sparkles, BarChart3, Calendar,
+  Search, FileText, Euro, ArrowUpDown, 
+  ChevronUp, ChevronDown, Sparkles, BarChart3, Calendar, CalendarClock,
   AlertTriangle, ChevronLeft, ChevronRight, Check, X, Clock, HelpCircle, Loader2,
   PieChart as PieChartIcon
 } from 'lucide-react';
@@ -263,6 +263,15 @@ export const QuotesPage: React.FC = () => {
       successRate: 0,
       totalWeightedValue: 0,
       averageProbability: 0,
+      closingNext60Days: {
+        amount: 0,
+        count: 0,
+        weightedAmount: 0,
+        in30DaysAmount: 0,
+        in30DaysCount: 0,
+        in31To60DaysAmount: 0,
+        in31To60DaysCount: 0,
+      },
       chartData: {
         monthlyStatusData: [],
         monthlySalespersonData: []
@@ -452,21 +461,54 @@ export const QuotesPage: React.FC = () => {
           value={summary.totalWeightedValue} 
           type="currency" 
           icon={Sparkles} 
-          subtitle={`Prob. media: ${formatNumber(summary.averageProbability, 1)}%`}
+          subtitle={`Prob. media: ${formatNumber(summary.averageProbability, 1)}% (${summary.pendingCount} abiertas)`}
           infoProps={{
-            description: "Valor ponderado de la cartera basado en la probabilidad estimada de éxito.",
-            formulas: "Sumatorio(Amount * Probabilidad de Éxito)"
+            description: "Valor ponderado (Forecast) de las ofertas abiertas o en proceso, basado en su probabilidad estimada de éxito.",
+            formulas: [
+              "Valor Ponderado = Sumatorio(Importe * Probabilidad de Éxito) [Solo ofertas abiertas]",
+              `Base abierta: ${formatCurrency(summary.pendingAmount, 2)} (${summary.pendingCount} ofertas vivas)`
+            ]
           }}
         />
         <KPICard 
-          title="Tasa de Éxito" 
-          value={summary.successRate} 
-          type="percentage" 
-          icon={Percent} 
-          subtitle={`${summary.pendingCount} pendientes (${formatCurrency(summary.pendingAmount, 0)})`}
+          title="Previsión Cierre 60 Días" 
+          value={summary.closingNext60Days?.amount || 0} 
+          type="currency" 
+          icon={CalendarClock} 
+          subtitle={`${summary.closingNext60Days?.count || 0} ofertas vivas (Pond: ${formatCurrency(summary.closingNext60Days?.weightedAmount || 0, 0)})`}
           infoProps={{
-            description: "Porcentaje de ofertas ganadas sobre el total de ofertas cerradas (ganadas + perdidas).",
-            formulas: "(Ganadas / (Ganadas + Perdidas)) * 100"
+            description: (
+              <div className="space-y-1">
+                <p>Volumen de ofertas vivas (en proceso) con fecha de cierre previsto en los próximos 60 días naturales.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Permite proyectar la liquidez y facturación esperada a corto plazo por el equipo comercial.
+                </p>
+              </div>
+            ),
+            formulas: [
+              "Previsión 60D = Sumatorio(Importe ofertas abiertas con cierre entre hoy y +60 días)",
+              `Valor Ponderado esperado (60D) = ${formatCurrency(summary.closingNext60Days?.weightedAmount || 0, 2)}`
+            ],
+            breakdown: [
+              {
+                label: `Próximos 30 días (${summary.closingNext60Days?.in30DaysCount || 0})`,
+                value: formatCurrency(summary.closingNext60Days?.in30DaysAmount || 0, 2),
+                sign: '+',
+                color: 'text-amber-600 dark:text-amber-400 font-bold',
+              },
+              {
+                label: `De 31 a 60 días (${summary.closingNext60Days?.in31To60DaysCount || 0})`,
+                value: formatCurrency(summary.closingNext60Days?.in31To60DaysAmount || 0, 2),
+                sign: '+',
+                color: 'text-teal-600 dark:text-teal-400 font-bold',
+              },
+              {
+                label: `Total Previsión 60D (${summary.closingNext60Days?.count || 0} ofertas)`,
+                value: formatCurrency(summary.closingNext60Days?.amount || 0, 2),
+                sign: '=',
+                color: 'text-dts-primary dark:text-dts-secondary font-black',
+              },
+            ]
           }}
         />
       </div>
@@ -831,9 +873,9 @@ export const QuotesPage: React.FC = () => {
                 </div>
                 <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
                 <div className="flex flex-col items-end">
-                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1" title="Valor ponderado de las ofertas abiertas">
                     <Sparkles size={10} className="text-dts-secondary" />
-                    Valor Ponderado
+                    Valor Ponderado (Abiertas)
                   </span>
                   <span className="text-xs font-mono font-black text-dts-secondary">
                     {formatCurrency(summary.totalWeightedValue, 0)}
@@ -1056,10 +1098,10 @@ export const QuotesPage: React.FC = () => {
                   <td className="px-4 py-3.5 text-right font-mono font-black text-xs text-white whitespace-nowrap">
                     {formatCurrency(Number(summary.totalAmount || 0), 2)}
                   </td>
-                  <td className="px-4 py-3.5 text-right font-mono text-xs text-dts-secondary whitespace-nowrap" title="Probabilidad media">
+                  <td className="px-4 py-3.5 text-right font-mono text-xs text-dts-secondary whitespace-nowrap" title="Probabilidad media de las ofertas abiertas">
                     {summary.averageProbability ? `${formatNumber(Number(summary.averageProbability), 1)}%` : '---'}
                   </td>
-                  <td className="px-4 py-3.5 text-center text-[10px] text-gray-200 font-mono whitespace-nowrap" title="Valor ponderado total de las ofertas">
+                  <td className="px-4 py-3.5 text-center text-[10px] text-gray-200 font-mono whitespace-nowrap" title="Valor ponderado total de las ofertas abiertas">
                     {summary.totalWeightedValue ? `Pond: ${formatCurrency(Number(summary.totalWeightedValue), 0)}` : '---'}
                   </td>
                   <td className="px-4 py-3.5 text-center text-[10px] whitespace-nowrap">

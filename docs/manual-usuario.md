@@ -155,8 +155,8 @@ Ubicado en `/sales/quotes`. Para documentación técnica exhaustiva, consultar [
 * **Bandeja de KPIs de Rendimiento Superior**:
   * **Cartera de Ofertas**: Total emitido acumulado con modal informativo (`ℹ️`) que desglosa propuestas ganadas, perdidas y volumen vivo en negociación.
   * **Distribución de Ofertas (Mini Donut)**: Gráfico circular tipo anillo interactivo con el recuento total central de ofertas y leyenda lateral compacta con los importes (€) y porcentajes de ofertas ganadas (verde), perdidas (rojo) y vivas abiertas (ámbar).
-  * **Valor Ponderado (IA)**: Estimación probabilística de cierre comercial (*Forecast*).
-  * **Tasa de Éxito (*Win Rate*)**: Eficacia porcentual sobre ofertas cerradas definitivas.
+  * **Valor Ponderado (IA)**: Estimación probabilística de cierre comercial (*Forecast*) calculada exclusivamente sobre las ofertas abiertas en proceso: $\sum_{\text{abiertas}} (\text{Importe} \times \text{Probabilidad} / 100)$.
+  * **Previsión Cierre 60 Días**: Volumen e importe acumulado de ofertas vivas con fecha de cierre previsto en los próximos 60 días, con desglose emergente a 30 días y de 31 a 60 días, además de su valor ponderado previsto.
 * **Gráficos Analíticos Dinámicos**: Comparativa de ofertas creadas vs aprobadas por mes y volumen cotizado por comercial con línea de tasa de éxito.
 * **Filtros Avanzados y Cierre Previsto**:
   * Filtros por comercial, estado, probabilidad de éxito y año fiscal.

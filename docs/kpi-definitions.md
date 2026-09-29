@@ -53,6 +53,24 @@
 
 ---
 
+## KPIs de Ofertas Comerciales (`/sales/quotes`)
+
+### Valor Ponderado (IA / Forecast)
+- **Definición:** Valor esperado futuro de ingresos comerciales calculado **exclusivamente sobre las ofertas vivas / abiertas** (en proceso o pendientes de cierre). Se excluyen ofertas ganadas o perdidas para no distorsionar la cartera de oportunidades.
+- **Fórmula:** $\sum_{\text{abiertas}} (\text{Importe}_i \times \text{Probabilidad}_i / 100)$
+- **Fuente:** `sales_quotes` + `sales_quotes_crm` (probabilidad efectiva de CRM o cotización)
+- **Color en gráficos:** `#00B0B9` (Secundario/Acento — Previsiones y tendencias)
+
+### Previsión Cierre 60 Días
+- **Definición:** Volumen total (€) y recuento de ofertas abiertas cuya fecha prevista de cierre (`cierreprev_date`) está comprendida dentro de los próximos 60 días naturales a partir de hoy.
+- **Sub-períodos (Breakdown):**
+  - *Próximos 30 días:* Ofertas abiertas con cierre entre hoy y +30 días.
+  - *De 31 a 60 días:* Ofertas abiertas con cierre entre +31 y +60 días.
+- **Valor Ponderado Asociado:** Valor esperado ajustado por probabilidad para ese mismo horizonte temporal.
+- **Fórmula:** $\sum_{\text{abiertas con } \text{cierre} \in [\text{hoy}, \text{hoy}+60d]} \text{Importe}_i$
+
+---
+
 ## Convenciones Visuales y Corporativas
 
 | Tipo de dato | Color | Estilo | Significado |
