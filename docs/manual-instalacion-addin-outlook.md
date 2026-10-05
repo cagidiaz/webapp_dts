@@ -94,7 +94,7 @@ En el panel lateral derecho verás:
 * Si el remitente no está registrado, dispones de un buscador predictivo para asociar el correo a la empresa cliente correspondiente (los contactos oficiales se crean y sincronizan desde Business Central vía n8n).
 
 ### Paso 3: Asignar tipología y oferta (Opcional)
-* **Tipología:** Selecciona el botón correspondiente (`📄 Cierre/Aceptación`, `⚙️ Técnica`, `💬 Negociación`, `⚠️ Postventa`, `✉️ General`).
+* **Tipología:** Selecciona el botón correspondiente (`📋 Petición oferta`, `📦 Oferta proveedor`, `📝 Revisión oferta`, `💬 Negociación`, `📄 Cierre/Aceptación`).
 * **Vincular a Oferta:** Si el cliente tiene cotizaciones en curso y deseas vincular el correo a una de ellas, elígela del menú desplegable. De lo contrario, déjalo en la opción predeterminada para registrarlo exclusivamente en la ficha general del cliente.
 
 ### Paso 4: Guardar

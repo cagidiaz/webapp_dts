@@ -44,6 +44,13 @@ export interface LookupResult {
   userFound: boolean;
 }
 
+export type OutlookEmailCategory =
+  | 'PETICION_OFERTA'
+  | 'OFERTA_PROVEEDOR'
+  | 'REVISION_OFERTA'
+  | 'NEGOCIACION'
+  | 'CIERRE_ACEPTACION';
+
 export interface LogEmailPayload {
   userEmail: string;
   exchangeItemId: string;
@@ -55,7 +62,7 @@ export interface LogEmailPayload {
   sentDate?: string;
   direction?: 'INCOMING' | 'OUTGOING';
   interlocutorEmail?: string;
-  categoryTag?: 'ACEPTACION' | 'TECNICA' | 'NEGOCIACION' | 'POSTVENTA' | 'GENERAL';
+  categoryTag?: OutlookEmailCategory;
   quoteDocumentNo?: string;
   cleanBody?: boolean;
 }

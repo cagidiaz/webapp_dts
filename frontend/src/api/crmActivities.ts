@@ -161,6 +161,8 @@ export const updateCrmActivity = async (
     timeScheduled?: string;
     conclusions?: string | null;
     location?: string | null;
+    categoryTag?: string;
+    quoteDocumentNo?: string;
   }
 ): Promise<CrmActivity> => {
   const { data } = await apiClient.patch(`/crm-activities/${id}`, payload);

@@ -72,8 +72,27 @@ export class LogEmailDto {
 
   @IsString()
   @IsOptional()
-  @IsIn(['ACEPTACION', 'TECNICA', 'NEGOCIACION', 'POSTVENTA', 'GENERAL'])
-  categoryTag?: 'ACEPTACION' | 'TECNICA' | 'NEGOCIACION' | 'POSTVENTA' | 'GENERAL';
+  @IsIn([
+    'PETICION_OFERTA',
+    'OFERTA_PROVEEDOR',
+    'REVISION_OFERTA',
+    'NEGOCIACION',
+    'CIERRE_ACEPTACION',
+    'ACEPTACION',
+    'TECNICA',
+    'POSTVENTA',
+    'GENERAL',
+  ])
+  categoryTag?:
+    | 'PETICION_OFERTA'
+    | 'OFERTA_PROVEEDOR'
+    | 'REVISION_OFERTA'
+    | 'NEGOCIACION'
+    | 'CIERRE_ACEPTACION'
+    | 'ACEPTACION'
+    | 'TECNICA'
+    | 'POSTVENTA'
+    | 'GENERAL';
 
   @IsString()
   @IsOptional()
@@ -311,7 +330,7 @@ export class OutlookAddinService {
       body,
       sentDate,
       direction = 'INCOMING',
-      categoryTag = 'GENERAL',
+      categoryTag = 'PETICION_OFERTA',
       quoteDocumentNo,
       cleanBody = true,
     } = params;
@@ -366,9 +385,14 @@ export class OutlookAddinService {
     const directionBadge = isOutgoing ? '📤 Enviado' : '📥 Recibido';
 
     const tagLabels: Record<string, string> = {
-      ACEPTACION: '📄 Aceptación / Cierre',
+      PETICION_OFERTA: '📋 Petición oferta',
+      OFERTA_PROVEEDOR: '📦 Oferta proveedor',
+      REVISION_OFERTA: '📝 Revisión oferta',
+      NEGOCIACION: '💬 Negociación',
+      CIERRE_ACEPTACION: '📄 Cierre / Aceptación',
+      // Retrocompatibilidad
+      ACEPTACION: '📄 Cierre / Aceptación',
       TECNICA: '⚙️ Especificación Técnica',
-      NEGOCIACION: '💬 Negociación / Precio',
       POSTVENTA: '⚠️ Incidencia / Postventa',
       GENERAL: '✉️ Correo Comercial',
     };
@@ -404,7 +428,10 @@ export class OutlookAddinService {
         exchange_web_link: exchangeWebLink || null,
         exchange_sync_status: 'synced',
         exchange_last_synced_at: new Date(),
-        attendees: quoteDocumentNo ? { quoteDocumentNo } : undefined,
+        attendees: {
+          ...(quoteDocumentNo ? { quoteDocumentNo } : {}),
+          categoryTag: categoryTag || 'PETICION_OFERTA',
+        },
         created_at: activityDate,
       },
       include: {
@@ -427,7 +454,7 @@ export class OutlookAddinService {
             data: {
               document_no: quoteDocumentNo,
               contacto_id: resolvedContactId || null,
-              estado_oferta: categoryTag === 'ACEPTACION' ? 'ganada' : 'en_negociacion',
+              estado_oferta: (categoryTag === 'CIERRE_ACEPTACION' || categoryTag === 'ACEPTACION') ? 'ganada' : 'en_negociacion',
             },
           });
         }

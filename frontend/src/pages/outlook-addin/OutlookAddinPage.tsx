@@ -15,7 +15,10 @@ import {
   Inbox,
   Briefcase,
   Users,
-  X
+  X,
+  FileQuestion,
+  Truck,
+  FileEdit,
 } from 'lucide-react';
 import {
   lookupEmailInAddin,
@@ -27,6 +30,7 @@ import {
   type CompanyCandidate,
   type CompanyContactCandidate,
   type OpenQuoteCandidate,
+  type OutlookEmailCategory,
 } from '../../api/outlookAddin';
 
 declare const Office: any;
@@ -50,9 +54,7 @@ export const OutlookAddinPage: React.FC = () => {
   const [lookupData, setLookupData] = useState<LookupResult | null>(null);
 
   // Form options
-  const [selectedCategory, setSelectedCategory] = useState<
-    'ACEPTACION' | 'TECNICA' | 'NEGOCIACION' | 'POSTVENTA' | 'GENERAL'
-  >('GENERAL');
+  const [selectedCategory, setSelectedCategory] = useState<OutlookEmailCategory>('PETICION_OFERTA');
   const [selectedQuoteDocNo, setSelectedQuoteDocNo] = useState<string>('');
   const [cleanBody, setCleanBody] = useState<boolean>(true);
 
@@ -463,12 +465,17 @@ export const OutlookAddinPage: React.FC = () => {
     }
   };
 
-  const categoryOptions = [
-    { id: 'GENERAL', label: 'General', icon: Mail, color: 'text-gray-700 dark:text-gray-300' },
-    { id: 'ACEPTACION', label: 'Cierre / Aceptación', icon: CheckCircle2, color: 'text-emerald-600' },
-    { id: 'TECNICA', label: 'Técnica / Spec', icon: FileText, color: 'text-blue-600' },
-    { id: 'NEGOCIACION', label: 'Negociación', icon: Briefcase, color: 'text-amber-600' },
-    { id: 'POSTVENTA', label: 'Postventa', icon: AlertCircle, color: 'text-rose-600' },
+  const categoryOptions: {
+    id: OutlookEmailCategory;
+    label: string;
+    icon: React.ComponentType<{ size?: number; className?: string }>;
+    color: string;
+  }[] = [
+    { id: 'PETICION_OFERTA', label: 'Petición oferta', icon: FileQuestion, color: 'text-blue-500' },
+    { id: 'OFERTA_PROVEEDOR', label: 'Oferta proveedor', icon: Truck, color: 'text-amber-500' },
+    { id: 'REVISION_OFERTA', label: 'Revisión oferta', icon: FileEdit, color: 'text-purple-500' },
+    { id: 'NEGOCIACION', label: 'Negociación', icon: Briefcase, color: 'text-dts-secondary' },
+    { id: 'CIERRE_ACEPTACION', label: 'Cierre/Aceptación', icon: CheckCircle2, color: 'text-emerald-500' },
   ];
 
   return (
@@ -904,15 +911,18 @@ export const OutlookAddinPage: React.FC = () => {
                 Tipología del Correo
               </label>
               <div className="grid grid-cols-2 gap-1.5">
-                {categoryOptions.map((cat) => {
+                {categoryOptions.map((cat, idx) => {
                   const Icon = cat.icon;
                   const isSelected = selectedCategory === cat.id;
+                  const isLastOdd = idx === categoryOptions.length - 1 && categoryOptions.length % 2 !== 0;
                   return (
                     <button
                       key={cat.id}
                       type="button"
-                      onClick={() => setSelectedCategory(cat.id as any)}
+                      onClick={() => setSelectedCategory(cat.id)}
                       className={`p-1.5 rounded-lg border text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        isLastOdd ? 'col-span-2 justify-center' : ''
+                      } ${
                         isSelected
                           ? 'border-dts-secondary bg-dts-secondary/15 text-dts-primary dark:text-dts-secondary shadow-2xs'
                           : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/2 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300'

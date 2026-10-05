@@ -104,8 +104,20 @@ export class CrmActivitiesController {
     @Body('timeScheduled') timeScheduled?: string,
     @Body('conclusions') conclusions?: string,
     @Body('location') location?: string,
+    @Body('categoryTag') categoryTag?: string,
+    @Body('quoteDocumentNo') quoteDocumentNo?: string,
   ) {
-    return this.crmActivitiesService.update(id, { isCompleted, title, description, dueDate, timeScheduled, conclusions, location });
+    return this.crmActivitiesService.update(id, {
+      isCompleted,
+      title,
+      description,
+      dueDate,
+      timeScheduled,
+      conclusions,
+      location,
+      categoryTag,
+      quoteDocumentNo,
+    });
   }
 
   @Delete(':id')

@@ -89,14 +89,23 @@ export class CrmActivitiesService {
       // 1. Extraer desde attendees JSON si se guardó estructurado
       if (act.attendees && typeof act.attendees === 'object') {
         const att = act.attendees as any;
-        quoteDocNo = att.quoteDocumentNo || att.quote_document_no || null;
+        const candidate = att.quoteDocumentNo || att.quote_document_no || null;
+        if (candidate && !/^(OFERTA[ _]PROVEEDOR|PETICION[ _]OFERTA|REVISION[ _]OFERTA|NEGOCIACION|CIERRE_ACEPTACION)$/i.test(String(candidate).trim())) {
+          quoteDocNo = candidate;
+        }
       }
 
-      // 2. Extraer desde el título si contiene [OFT-...] o patrones similares
+      // 2. Extraer desde el título si contiene una oferta real (limpiando corchetes y requiriendo números)
       if (!quoteDocNo && act.title) {
-        const match = act.title.match(/(?:OFT|COT|OFERTA)[-_ ]?([A-Z0-9\-\/]+)/i);
+        // Ignorar corchetes iniciales de metadatos [📥 Recibido · 📦 Oferta proveedor]
+        const cleanTitle = act.title.replace(/^\[.*?\]\s*/, '');
+        // Buscar códigos con números obligatorios (ej. OFT-123, COT-456, OF-2024-001, OFERTA 24-012)
+        const match = cleanTitle.match(/(?:OFT|COT|OFERTA|OF)[-_ ]?([0-9][A-Z0-9\-\/]*)/i);
         if (match) {
-          quoteDocNo = match[0].toUpperCase();
+          const candidate = match[0].toUpperCase().trim();
+          if (!/^(OFERTA[ _]PROVEEDOR|PETICION[ _]OFERTA|REVISION[ _]OFERTA)$/i.test(candidate)) {
+            quoteDocNo = candidate;
+          }
         }
       }
 
@@ -389,7 +398,17 @@ export class CrmActivitiesService {
   /**
    * Actualiza una actividad existente (p. ej., marcar tarea como completada, fecha/hora) y sincroniza con Outlook.
    */
-  async update(id: string, data: { isCompleted?: boolean; title?: string; description?: string; dueDate?: string; timeScheduled?: string; conclusions?: string; location?: string }) {
+  async update(id: string, data: {
+    isCompleted?: boolean;
+    title?: string;
+    description?: string;
+    dueDate?: string;
+    timeScheduled?: string;
+    conclusions?: string;
+    location?: string;
+    categoryTag?: string;
+    quoteDocumentNo?: string;
+  }) {
     try {
       // Verificar existencia
       const existing = await this.prisma.crm_activities.findUnique({ where: { id } });
@@ -411,6 +430,39 @@ export class CrmActivitiesService {
         }
       }
       if (data.location !== undefined) prismaData.location = data.location || null;
+
+      // Actualizar attendees (categoryTag y/o quoteDocumentNo) si se proporcionan
+      if (data.categoryTag !== undefined || data.quoteDocumentNo !== undefined) {
+        const currentAttendees = (existing.attendees as any) || {};
+        prismaData.attendees = {
+          ...currentAttendees,
+          ...(data.categoryTag !== undefined ? { categoryTag: data.categoryTag } : {}),
+          ...(data.quoteDocumentNo !== undefined ? { quoteDocumentNo: data.quoteDocumentNo } : {}),
+        };
+
+        // Si se cambia la tipología de un correo, actualizar el prefijo del título para mantener consistencia visual
+        if (data.categoryTag) {
+          const tagLabels: Record<string, string> = {
+            PETICION_OFERTA: '📋 Petición oferta',
+            OFERTA_PROVEEDOR: '📦 Oferta proveedor',
+            REVISION_OFERTA: '📝 Revisión oferta',
+            NEGOCIACION: '💬 Negociación',
+            CIERRE_ACEPTACION: '📄 Cierre / Aceptación',
+            ACEPTACION: '📄 Cierre / Aceptación',
+            TECNICA: '⚙️ Especificación Técnica',
+            POSTVENTA: '⚠️ Incidencia / Postventa',
+            GENERAL: '✉️ Correo Comercial',
+          };
+          const newTagLabel = tagLabels[data.categoryTag] || data.categoryTag;
+          const baseTitle = data.title !== undefined ? data.title : existing.title;
+          const match = baseTitle.match(/^\[(.*?)\s*·\s*(.*?)\]\s*(.*)$/);
+          if (match) {
+            const direction = match[1].trim();
+            const cleanSubject = match[3].trim();
+            prismaData.title = `[${direction} · ${newTagLabel}] ${cleanSubject}`;
+          }
+        }
+      }
 
       const updated = await this.prisma.crm_activities.update({
         where: { id },

@@ -21,6 +21,10 @@ import {
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 import { EditActivityModal } from './EditActivityModal';
+import {
+  parseEmailActivity,
+  EMAIL_CATEGORY_LIST,
+} from '../utils/emailTipologia';
 
 const OutlookIcon: React.FC<{ size?: number; className?: string }> = ({ size = 14, className = '' }) => (
   <svg
@@ -161,9 +165,21 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [outlookTarget, setOutlookTarget] = useState<'desktop' | 'web'>(getPreferredOutlookClient());
   const [isCopied, setIsCopied] = useState(false);
 
-  // Filtro de ofertas en la pestaña de emails y control de expansión (5 líneas)
+  // Filtro de ofertas y tipologías en la pestaña de emails y control de expansión (5 líneas)
   const [selectedEmailQuoteFilter, setSelectedEmailQuoteFilter] = useState<string>('ALL');
+  const [selectedEmailCategoryFilter, setSelectedEmailCategoryFilter] = useState<string>('ALL');
   const [expandedEmailIds, setExpandedEmailIds] = useState<Set<string>>(new Set());
+
+  // Mutación para cambio rápido de tipología de correo
+  const updateEmailCategoryMutation = useMutation({
+    mutationFn: ({ id, categoryTag }: { id: string; categoryTag: string }) =>
+      updateCrmActivity(id, { categoryTag }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['crmContactActivities', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['crmActivities'] });
+    },
+  });
 
   // Edit state (unificado)
   const [editingActivity, setEditingActivity] = useState<any | null>(null);
@@ -672,6 +688,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       exchangeSyncStatus?: string | null;
       exchangeWebLink?: string | null;
       quoteDocumentNo?: string | null;
+      attendees?: any;
       isPastDate: boolean;
       isFinished: boolean;
       hasConclusions: boolean;
@@ -784,8 +801,14 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         email: act.email || undefined,
         location: act.location || undefined,
         exchangeSyncStatus: act.exchange_sync_status || null,
-        exchangeWebLink: act.exchange_web_link || null,
-        quoteDocumentNo: act.quote_document_no || act.attendees?.quoteDocumentNo || act.attendees?.quote_document_no || null,
+        quoteDocumentNo: (() => {
+          const raw = act.quote_document_no || act.attendees?.quoteDocumentNo || act.attendees?.quote_document_no || null;
+          if (!raw) return null;
+          if (/^(OFERTA[ _]PROVEEDOR|PETICION[ _]OFERTA|REVISION[ _]OFERTA|NEGOCIACION|CIERRE_ACEPTACION)$/i.test(String(raw).trim())) {
+            return null;
+          }
+          return raw;
+        })(),
         isPastDate,
         isFinished,
         hasConclusions,
@@ -839,9 +862,34 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     };
   }, [crmQuotes]);
 
-  // Lista de ofertas con correos y filtrado por oferta comercial en la pestaña de emails
-  const { allEmailsList, availableEmailQuotes, filteredEmailsList } = useMemo(() => {
-    const allEmails = timelineActivities.filter((act) => act.type === 'email');
+  // Lista de ofertas con correos y filtrado por oferta comercial y tipología en la pestaña de emails
+  const { allEmailsList, availableEmailQuotes, categoryCounts, filteredEmailsList } = useMemo(() => {
+    const allEmails = timelineActivities
+      .filter((act) => act.type === 'email')
+      .map((mail) => {
+        const parsed = parseEmailActivity(mail);
+        return {
+          ...mail,
+          parsedEmail: parsed,
+        };
+      });
+
+    // Contadores por tipología
+    const counts: Record<string, number> = {
+      ALL: allEmails.length,
+      PETICION_OFERTA: 0,
+      OFERTA_PROVEEDOR: 0,
+      REVISION_OFERTA: 0,
+      NEGOCIACION: 0,
+      CIERRE_ACEPTACION: 0,
+    };
+
+    allEmails.forEach((mail) => {
+      const key = mail.parsedEmail.categoryKey;
+      if (counts[key] !== undefined) {
+        counts[key]++;
+      }
+    });
 
     // Ofertas detectadas con al menos un correo
     const quoteMap = new Map<string, number>();
@@ -861,20 +909,34 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       };
     });
 
-    // Filtrar según el selector activo
+    // Filtrar según el selector activo de oferta y tipología
     const filtered = allEmails.filter((mail: any) => {
-      if (selectedEmailQuoteFilter === 'ALL') return true;
-      if (selectedEmailQuoteFilter === 'WITH_QUOTE') return Boolean(mail.quoteDocumentNo);
-      if (selectedEmailQuoteFilter === 'WITHOUT_QUOTE') return !mail.quoteDocumentNo;
-      return mail.quoteDocumentNo === selectedEmailQuoteFilter;
+      // 1. Filtro por Oferta
+      if (selectedEmailQuoteFilter === 'WITH_QUOTE' && !mail.quoteDocumentNo) return false;
+      if (selectedEmailQuoteFilter === 'WITHOUT_QUOTE' && mail.quoteDocumentNo) return false;
+      if (
+        selectedEmailQuoteFilter !== 'ALL' &&
+        selectedEmailQuoteFilter !== 'WITH_QUOTE' &&
+        selectedEmailQuoteFilter !== 'WITHOUT_QUOTE'
+      ) {
+        if (mail.quoteDocumentNo !== selectedEmailQuoteFilter) return false;
+      }
+
+      // 2. Filtro por Tipología
+      if (selectedEmailCategoryFilter !== 'ALL') {
+        if (mail.parsedEmail.categoryKey !== selectedEmailCategoryFilter) return false;
+      }
+
+      return true;
     });
 
     return {
       allEmailsList: allEmails,
       availableEmailQuotes: quotesWithEmails,
+      categoryCounts: counts,
       filteredEmailsList: filtered,
     };
-  }, [timelineActivities, crmQuotes, selectedEmailQuoteFilter]);
+  }, [timelineActivities, crmQuotes, selectedEmailQuoteFilter, selectedEmailCategoryFilter]);
 
   // List of events (unifying tasks, notes, meetings, calls, events)
   const filteredEventsList = useMemo(() => {
@@ -1520,13 +1582,74 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2 border-b border-gray-100 dark:border-white/5 pb-2">
                           <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
-                            <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
-                              act.type !== 'email' && act.done
-                                ? 'line-through text-gray-400'
-                                : 'text-gray-900 dark:text-white'
-                            }`}>
-                              {act.title}
-                            </span>
+                            {act.type === 'email' ? (() => {
+                              const parsed = parseEmailActivity(act);
+                              const CategoryIcon = parsed.categoryConfig.icon;
+                              const DirectionIcon = parsed.directionIcon;
+                              return (
+                                <>
+                                  <span
+                                    className="font-bold text-xs text-gray-900 dark:text-white group-hover/box:text-dts-secondary transition-colors truncate max-w-sm"
+                                    title={parsed.cleanSubject}
+                                  >
+                                    {parsed.cleanSubject}
+                                  </span>
+                                  {parsed.directionLabel && DirectionIcon && (
+                                    <span
+                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-bold border ${
+                                        parsed.direction === 'OUTGOING'
+                                          ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20'
+                                          : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20'
+                                      }`}
+                                    >
+                                      <DirectionIcon size={9} />
+                                      <span>{parsed.directionLabel}</span>
+                                    </span>
+                                  )}
+                                  {/* Badge Interactivo de Tipología en Timeline con Selector Rápido */}
+                                  <div className="relative inline-flex items-center" title="Cambiar tipología del correo">
+                                    <span
+                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${parsed.categoryConfig.badgeClass} shadow-2xs hover:brightness-95 transition-all cursor-pointer`}
+                                    >
+                                      <CategoryIcon size={10} className={parsed.categoryConfig.color} />
+                                      <span>{parsed.categoryConfig.label}</span>
+                                      <ChevronDown size={8} className="opacity-60 ml-0.5" />
+                                    </span>
+                                    <select
+                                      value={parsed.categoryKey}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        updateEmailCategoryMutation.mutate({
+                                          id: act.id,
+                                          categoryTag: e.target.value,
+                                        });
+                                      }}
+                                      disabled={updateEmailCategoryMutation.isPending}
+                                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full text-xs dark:bg-[#00222C] text-gray-900 dark:text-gray-100 scheme-light dark:scheme-dark"
+                                      title="Cambiar tipología del correo"
+                                    >
+                                      {EMAIL_CATEGORY_LIST.map((c) => (
+                                        <option
+                                          key={c.key}
+                                          value={c.key}
+                                          className="bg-white dark:bg-[#00222C] text-gray-900 dark:text-gray-100 py-1.5"
+                                        >
+                                          {c.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </>
+                              );
+                            })() : (
+                              <span
+                                className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
+                                  act.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
+                                }`}
+                              >
+                                {act.title}
+                              </span>
+                            )}
                             {act.type === 'email' && act.done && (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Correo tramitado / completado">
                                 <Check size={9} className="stroke-3" /> Tramitado
@@ -1669,7 +1792,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                           return (
                             <div className="space-y-1.5">
                               <p className={`text-gray-600 dark:text-gray-300 leading-relaxed text-[11px] whitespace-pre-wrap ${
-                                isEmail ? 'font-mono bg-white/40 dark:bg-black/10 p-2 rounded-lg border border-gray-100 dark:border-white/5 break-words' : ''
+                                isEmail ? 'font-mono bg-white/40 dark:bg-black/10 p-2 rounded-lg border border-gray-100 dark:border-white/5 wrap-break-word' : ''
                               }`}>
                                 {visibleText}
                                 {isEmail && !isExpanded && hasMoreThan5Lines && '...'}
@@ -2022,31 +2145,76 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
           {/* Emails Tab */}
           {activeTab === 'emails' && (
-            <div className="space-y-6">
-              {/* Cabecera con Filtro de Ofertas y Botones de Acción */}
+            <div className="space-y-4">
+              {/* Cabecera unificada: Botones de Tipología + Selector de Ofertas + Acciones */}
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pb-3 border-b border-gray-100 dark:border-white/5">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 w-full lg:w-auto">
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold shrink-0">
-                    Correos ({filteredEmailsList.length}{filteredEmailsList.length !== allEmailsList.length ? ` de ${allEmailsList.length}` : ''})
-                  </span>
+                {/* Lado izquierdo: Botones de Tipología y Selector de Ofertas en la misma línea */}
+                <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                  {/* Píldoras / Chips de Tipología */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px] no-scrollbar shrink-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 shrink-0 mr-0.5 flex items-center gap-1">
+                      Tipología:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEmailCategoryFilter('ALL')}
+                      className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all shrink-0 cursor-pointer border ${
+                        selectedEmailCategoryFilter === 'ALL'
+                          ? 'bg-dts-primary text-white border-dts-primary shadow-xs'
+                          : 'bg-white dark:bg-zinc-800/40 border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      Todos ({categoryCounts?.ALL || 0})
+                    </button>
+                    {EMAIL_CATEGORY_LIST.map((cat) => {
+                      const Icon = cat.icon;
+                      const count = categoryCounts?.[cat.key] || 0;
+                      const isSelected = selectedEmailCategoryFilter === cat.key;
+                      return (
+                        <button
+                          key={cat.key}
+                          type="button"
+                          onClick={() => setSelectedEmailCategoryFilter(cat.key)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition-all shrink-0 cursor-pointer border ${
+                            isSelected
+                              ? `${cat.pillActiveBg} border-transparent shadow-xs ring-1 ring-black/10`
+                              : `bg-white dark:bg-zinc-800/40 border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5`
+                          }`}
+                        >
+                          <Icon size={12} className={isSelected ? 'text-white' : cat.color} />
+                          <span>{cat.shortLabel}</span>
+                          <span
+                            className={`text-[10px] ml-0.5 px-1 py-0.2 rounded-full font-mono ${
+                              isSelected ? 'bg-white/25 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-500'
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
 
-                  {/* Filtro por Oferta Comercial */}
-                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                    <FileText size={12} className="text-dts-secondary shrink-0 hidden sm:block" />
+                  {/* Separador vertical sutil */}
+                  <div className="h-5 w-px bg-gray-200 dark:bg-white/10 hidden sm:block shrink-0 mx-1" />
+
+                  {/* Selector de Ofertas en la misma línea */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <FileText size={12} className="text-dts-secondary shrink-0" />
                     <select
                       value={selectedEmailQuoteFilter}
                       onChange={(e) => setSelectedEmailQuoteFilter(e.target.value)}
-                      className="px-2.5 py-1.5 bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-white/10 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-200 outline-none focus:border-dts-secondary w-full sm:w-auto cursor-pointer"
+                      className="px-2.5 py-1 bg-white dark:bg-[#00222C] border border-gray-200 dark:border-white/10 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-200 outline-none focus:border-dts-secondary cursor-pointer shadow-2xs scheme-light dark:scheme-dark"
                       title="Filtrar correos por oferta comercial asignada"
                     >
-                      <option value="ALL">Todas las ofertas y correos ({allEmailsList.length})</option>
+                      <option value="ALL" className="bg-white dark:bg-[#00222C] text-gray-900 dark:text-gray-100">Todas las ofertas ({allEmailsList.length})</option>
                       {availableEmailQuotes.length > 0 && (
                         <>
-                          <option value="WITH_QUOTE">Solo vinculados a alguna oferta</option>
-                          <option value="WITHOUT_QUOTE">Sin oferta vinculada (Generales)</option>
-                          <optgroup label="Ofertas Específicas">
+                          <option value="WITH_QUOTE" className="bg-white dark:bg-[#00222C] text-gray-900 dark:text-gray-100">Solo con oferta vinculada</option>
+                          <option value="WITHOUT_QUOTE" className="bg-white dark:bg-[#00222C] text-gray-900 dark:text-gray-100">Sin oferta vinculada (Generales)</option>
+                          <optgroup label="Ofertas Específicas" className="bg-white dark:bg-[#00222C] text-gray-900 dark:text-gray-100">
                             {availableEmailQuotes.map((q) => (
-                              <option key={q.document_no} value={q.document_no}>
+                              <option key={q.document_no} value={q.document_no} className="bg-white dark:bg-[#00222C] text-gray-900 dark:text-gray-100">
                                 {q.document_no} ({q.count} {q.count === 1 ? 'correo' : 'correos'}) {q.amount ? `· ${formatCurrency(q.amount, 0)}` : ''}
                               </option>
                             ))}
@@ -2056,8 +2224,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     </select>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
+
+                {/* Lado derecho: Botones de Acción */}
+                <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
                   {isExchangeConnected && (
                     <button
                       type="button"
@@ -2092,13 +2261,26 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 ) : filteredEmailsList.length === 0 ? (
                   <div className="text-center py-12 text-gray-400 italic text-xs space-y-2">
                     <p>No hay correos vinculados al filtro seleccionado.</p>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedEmailQuoteFilter('ALL')}
-                      className="text-xs font-bold text-dts-secondary hover:underline cursor-pointer"
-                    >
-                      Ver todos los correos ({allEmailsList.length})
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      {selectedEmailCategoryFilter !== 'ALL' && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEmailCategoryFilter('ALL')}
+                          className="text-xs font-bold text-dts-secondary hover:underline cursor-pointer"
+                        >
+                          Limpiar filtro tipología
+                        </button>
+                      )}
+                      {selectedEmailQuoteFilter !== 'ALL' && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEmailQuoteFilter('ALL')}
+                          className="text-xs font-bold text-dts-secondary hover:underline cursor-pointer"
+                        >
+                          Limpiar filtro oferta
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -2115,14 +2297,62 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                         ? crmQuotes.find((q) => q.document_no === mail.quoteDocumentNo)
                         : null;
 
+                      const parsed = mail.parsedEmail || parseEmailActivity(mail);
+                      const CategoryIcon = parsed.categoryConfig.icon;
+                      const DirectionIcon = parsed.directionIcon;
+
                       return (
-                        <div key={mail.id} className="bg-gray-50/50 dark:bg-zinc-800/10 p-4 rounded-xl border border-gray-100 dark:border-gray-800/50 space-y-2.5 transition-all">
+                        <div key={mail.id} className="bg-gray-50/50 dark:bg-zinc-800/10 p-4 rounded-xl border border-gray-100 dark:border-gray-800/50 space-y-2.5 transition-all hover:border-dts-secondary/35">
                           <div className="flex flex-col sm:flex-row justify-between items-start gap-2.5">
                             <div className="space-y-1.5 flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                                  {mail.title}
+                                {/* Asunto limpio destacado */}
+                                <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate max-w-md" title={parsed.cleanSubject}>
+                                  {parsed.cleanSubject}
                                 </h4>
+
+                                {/* Badge de Dirección (Recibido / Enviado) */}
+                                {parsed.directionLabel && DirectionIcon && (
+                                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+                                    parsed.direction === 'OUTGOING'
+                                      ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20'
+                                      : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20'
+                                  }`}>
+                                    <DirectionIcon size={10} />
+                                    <span>{parsed.directionLabel}</span>
+                                  </span>
+                                )}
+
+                                {/* Badge Interactivo de Tipología con Selector Rápido */}
+                                <div className="relative inline-flex items-center" title="Haz clic para cambiar la tipología del correo">
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${parsed.categoryConfig.badgeClass} shadow-2xs hover:brightness-95 transition-all cursor-pointer`}>
+                                    <CategoryIcon size={11} className={parsed.categoryConfig.color} />
+                                    <span>{parsed.categoryConfig.label}</span>
+                                    <ChevronDown size={10} className="opacity-60 ml-0.5" />
+                                  </span>
+                                  <select
+                                    value={parsed.categoryKey}
+                                    onChange={(e) => {
+                                      updateEmailCategoryMutation.mutate({
+                                        id: mail.id,
+                                        categoryTag: e.target.value,
+                                      });
+                                    }}
+                                    disabled={updateEmailCategoryMutation.isPending}
+                                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full text-xs dark:bg-[#00222C] text-gray-900 dark:text-gray-100 scheme-light dark:scheme-dark"
+                                    title="Cambiar tipología del correo"
+                                  >
+                                    {EMAIL_CATEGORY_LIST.map((c) => (
+                                      <option
+                                        key={c.key}
+                                        value={c.key}
+                                        className="bg-white dark:bg-[#00222C] text-gray-900 dark:text-gray-100 py-1.5"
+                                      >
+                                        {c.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
 
                                 {mail.exchangeSyncStatus === 'draft' ? (
                                   <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0">
@@ -2158,7 +2388,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               </div>
 
                               <span className="text-[10px] text-gray-400 font-mono block truncate">
-                                {mail.title?.includes('Recibido') || mail.title?.includes('📥') ? 'Remitente' : 'Destinatario'}: {mail.email || contact?.email}
+                                {parsed.direction === 'INCOMING' ? 'Remitente' : 'Destinatario'}: {mail.email || contact?.email}
                               </span>
                             </div>
                             
@@ -2166,6 +2396,18 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               <span className="text-[9px] font-mono text-gray-400">
                                 {new Date(mail.date).toLocaleDateString('es-ES')}
                               </span>
+                              {/* Botón de editar correo */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingActivity(mail.rawActivity || mail);
+                                  setShowEditModal(true);
+                                }}
+                                className="p-1 text-gray-400 hover:text-dts-secondary hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                                title="Editar correo y detalles"
+                              >
+                                <Edit2 size={12} />
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => openExistingEmailInOutlook({
@@ -2186,7 +2428,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
                           {/* Cuerpo del Correo (Recortado a 5 líneas con botón Ver más / Ver menos) */}
                           <div className="bg-white/40 dark:bg-black/10 p-2.5 rounded-lg border border-gray-100 dark:border-white/5 space-y-1.5">
-                            <p className="whitespace-pre-wrap leading-relaxed font-mono text-[11px] text-gray-600 dark:text-gray-300 break-words">
+                            <p className="whitespace-pre-wrap leading-relaxed font-mono text-[11px] text-gray-600 dark:text-gray-300 wrap-break-word">
                               {visibleText}
                               {!isExpanded && hasMoreThan5Lines && '...'}
                             </p>

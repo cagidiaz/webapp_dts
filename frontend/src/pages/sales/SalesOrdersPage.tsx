@@ -212,15 +212,6 @@ export const SalesOrdersPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-dts-primary dark:text-white">Pedidos de Venta</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Gestión y seguimiento de pedidos de venta vivos sincronizados desde Business Central
-          </p>
-        </div>
-      </div>
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard 

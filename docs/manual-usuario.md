@@ -210,17 +210,23 @@ Ubicado en `/crm/contacts` y `/crm/customers`.
 
 ---
 
-### 3.3 Pestaña de Emails, Preparación de Correos y Apertura en Outlook
+### 3.3 Pestaña de Emails, Filtrado por Tipologías y Apertura en Outlook
 Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=emails`). Para especificaciones técnicas detalladas, consultar [Documentación de Vista: Contactos CRM y Pestaña de Emails](file:///c:/proyectos/webapp_dts/docs/vistas/crm_contactos_mails.md).
 
+* **Barra Unificada de Filtrado por Tipología y Oferta**:
+  * Ubicada en una misma fila horizontal compacta para máxima ergonomía visual.
+  * **Píldoras de Tipología**: Botones reactivos para filtrar en tiempo real por `Todas (N)` o individualmente por `Petición oferta`, `Oferta proveedor`, `Revisión oferta`, `Negociación` y `Cierre/Aceptación` con sus respectivos contadores dinámicos.
+  * **Selector Compacto de Ofertas**: Desplegable adyacente para filtrar simultáneamente por *Todas las ofertas*, *Con oferta vinculada*, *Sin oferta vinculada* o una *Oferta Específica* con indicación de su número de correos acumulados.
+* **Badge Interactivo de Tipología con Selector Rápido**:
+  * En cada tarjeta de correo (tanto en *Emails* como en el *Timeline*), el badge de tipología (`🚚 Oferta proveedor ▾`, `📋 Petición oferta ▾`, etc.) funciona como un selector directo en 1 clic para corregir rápidamente la tipología si el comercial se equivocó al clasificarlo.
+  * Diseñado con soporte nativo de alto contraste para **Modo Claro** y **Modo Oscuro** corporativo.
+  * Alternativamente, se puede editar mediante el modal completo de actividad (icono de lápiz).
 * **Visualización Optimizada de Correos (Límite de 5 Líneas)**:
   * Cada correo muestra por defecto exclusivamente sus primeras **5 líneas** para garantizar una navegación ágil y compacta sin saturar la pantalla.
   * Botón interactivo **"Ver más (+N líneas)"** / **"Mostrar menos"** que expande y colapsa el texto íntegro en tiempo real.
-* **Badge Interactivo de Oferta Comercial**:
-  * Si el correo fue asociado a una cotización comercial, se muestra un distintivo azul con su código e importe (ej. `📄 Oferta: OFT-2026-0014 (4.500 €)`).
-  * Al hacer clic sobre el badge, se abre de inmediato el **Drawer lateral** de la oferta con todos sus detalles sin abandonar la ficha del contacto.
-* **Filtro de Correos por Oferta**:
-  * Desplegable en la cabecera que permite filtrar: *Todas las ofertas y correos*, *Solo con oferta vinculada*, *Sin oferta (Generales)* o por una *Oferta Específica* con indicación de su número de correos acumulados.
+* **Badge Interactivo de Oferta Comercial (Distinción Estricta)**:
+  * Si el correo fue asociado a una cotización de Business Central, se muestra un distintivo azul independiente con su código e importe (ej. `📄 Oferta: OF-2024-001 (4.500 €)`), claramente diferenciado del badge de tipología.
+  * Al hacer clic sobre el badge de la oferta, se abre de inmediato el **Drawer lateral** de la oferta con todos sus detalles sin abandonar la ficha del contacto.
 * **Preparación Directa en Outlook (Sin Envío Automático)**:
   * El comercial redacta el correo o carga una plantilla corporativa en la WebApp y, al pulsar **"Abrir y Preparar en Outlook"**, el sistema genera el nuevo correo en Outlook con todos los datos precargados (destinatario, asunto y cuerpo).
   * Permite al comercial revisar el texto, adjuntar archivos o catálogos PDF y pulsar **"Enviar"** directamente desde Outlook.
@@ -249,7 +255,12 @@ Extensión oficial integrada en la cinta de opciones de Microsoft Outlook (Web, 
 * **Vinculación a Ofertas Dinámica y Opcional**:
   * Al asociar una empresa, se cargan de inmediato sus ofertas comerciales abiertas para vincular el correo a la cotización correspondiente.
   * El número de oferta se persiste de forma estructurada en `attendees: { quoteDocumentNo }` para su explotación en el CRM.
-* **Etiquetado Comercial por Tipología**: Clasificación en un clic (`📄 Cierre / Aceptación`, `⚙️ Especificación Técnica`, `💬 Negociación`, `⚠️ Incidencia / Postventa`, `✉️ General`).
+* **Etiquetado Comercial en 5 Tipologías Oficiales**: Clasificación en un clic distribuida en cuadrícula:
+  1. `📋 Petición oferta` (`PETICION_OFERTA`)
+  2. `📦 Oferta proveedor` (`OFERTA_PROVEEDOR`)
+  3. `📝 Revisión oferta` (`REVISION_OFERTA`)
+  4. `💬 Negociación` (`NEGOCIACION`)
+  5. `📄 Cierre/Aceptación` (`CIERRE_ACEPTACION`) - *Marca automáticamente la oferta asociada como Ganada*.
 * **Limpieza y Acortado Inteligente de RGPD y Firmas**:
   * Filtro automático robusto de cláusulas legales de privacidad (RGPD / LOPD en español e inglés), cadenas repetitivas de reenvíos (`De: ... Enviado el: ...`), firmas pesadas y normalización de saltos de línea continuos.
 * **Prevención Activa de Duplicados**: Detección por identificador único de Microsoft Graph (`✓ Ya registrado en dTS CRM`).

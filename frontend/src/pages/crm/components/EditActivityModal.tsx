@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   X, Calendar, Clock, MapPin, FileText, CheckSquare, 
-  Users, Video, Phone, Check, Loader2 
+  Users, Video, Phone, Check, Loader2, Mail
 } from 'lucide-react';
 import { type CrmActivityType, updateCrmActivity } from '../../../api/crmActivities';
+import {
+  parseEmailActivity,
+  EMAIL_CATEGORY_LIST,
+  type EmailCategoryKey,
+} from '../utils/emailTipologia';
 
 export interface EditableActivityData {
   id: string;
@@ -40,6 +45,7 @@ interface EditActivityModalProps {
 }
 
 const ACTIVITY_TYPES: { type: CrmActivityType; label: string; icon: any }[] = [
+  { type: 'EMAIL', label: 'Correo / Email', icon: Mail },
   { type: 'REUNION', label: 'Reunión', icon: Users },
   { type: 'VIDEOLLAMADA', label: 'Videollamada', icon: Video },
   { type: 'VISITA', label: 'Visita', icon: MapPin },
@@ -52,6 +58,7 @@ const ACTIVITY_TYPES: { type: CrmActivityType; label: string; icon: any }[] = [
 const normalizeType = (type?: string): CrmActivityType => {
   if (!type) return 'EVENT';
   const upper = type.toUpperCase();
+  if (upper === 'EMAIL' || upper === 'CORREO') return 'EMAIL';
   if (upper === 'TASK' || upper === 'TAREA') return 'TASK';
   if (upper === 'NOTE' || upper === 'NOTA') return 'NOTE';
   if (upper === 'REUNION' || upper === 'REUNIÓN') return 'REUNION';
@@ -79,11 +86,22 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
   const [description, setDescription] = useState('');
   const [conclusions, setConclusions] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<EmailCategoryKey>('PETICION_OFERTA');
 
   useEffect(() => {
     if (activity) {
       setTitle(activity.title || '');
-      setActivityType(normalizeType(activity.type));
+      const normType = normalizeType(activity.type);
+      setActivityType(normType);
+
+      if (normType === 'EMAIL' || (activity.type || '').toUpperCase() === 'EMAIL') {
+        const parsed = parseEmailActivity({
+          title: activity.title,
+          attendees: (activity as any).attendees,
+        });
+        setSelectedCategory(parsed.categoryKey);
+      }
+
       const rawDate = activity.due_date || activity.date || activity.created_at;
       setDate(rawDate ? rawDate.split('T')[0] : '');
       const rawTime = activity.time_scheduled || activity.time;
@@ -120,6 +138,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
     if (!title.trim() && activityType !== 'NOTE') return;
 
     const hasConclusions = Boolean(conclusions.trim());
+    const isEmail = activityType === 'EMAIL' || (activity.type || '').toUpperCase() === 'EMAIL';
     const payload: any = {
       title: activityType === 'NOTE' ? (title.trim() || 'Nota Comercial') : title.trim(),
       description: description.trim() || null,
@@ -127,6 +146,10 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
       location: location.trim() || null,
       isCompleted: hasConclusions ? true : isCompleted,
     };
+
+    if (isEmail) {
+      payload.categoryTag = selectedCategory;
+    }
 
     if (activityType !== 'NOTE') {
       payload.dueDate = date ? new Date(date).toISOString() : null;
@@ -194,6 +217,39 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
             </div>
           </div>
 
+          {/* Selector de Tipología para Correos */}
+          {(activityType === 'EMAIL' || (activity.type || '').toUpperCase() === 'EMAIL') && (
+            <div className="space-y-2 p-3 rounded-xl bg-gray-50/80 dark:bg-white/3 border border-gray-200 dark:border-white/10">
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Tipología del Correo
+                </label>
+                <span className="text-[9px] text-gray-400">Puedes corregir la tipología asignada</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                {EMAIL_CATEGORY_LIST.map((cat) => {
+                  const Icon = cat.icon;
+                  const isSelected = selectedCategory === cat.key;
+                  return (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat.key)}
+                      className={`p-2 rounded-lg border text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-dts-secondary bg-dts-secondary/15 text-dts-primary dark:text-dts-secondary shadow-xs ring-1 ring-dts-secondary/40'
+                          : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/2 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      <Icon size={13} className={cat.color} />
+                      <span className="truncate">{cat.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Título */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -212,7 +268,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
           {/* Fecha y Hora */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
                 <Calendar size={11} /> Fecha
               </label>
               <input
@@ -224,7 +280,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
                 <Clock size={11} /> Hora
               </label>
               <input
@@ -240,7 +296,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
           {activityType !== 'NOTE' && (
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
                   <MapPin size={11} /> Ubicación / Lugar
                 </label>
                 {defaultLocation && !location && (
@@ -308,7 +364,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
                 type="checkbox"
                 checked={isCompleted}
                 onChange={(e) => setIsCompleted(e.target.checked)}
-                className="w-4 h-4 rounded text-dts-secondary focus:ring-dts-secondary border-gray-300 dark:border-gray-600 rounded-md"
+                className="w-4 h-4 text-dts-secondary focus:ring-dts-secondary border-gray-300 dark:border-gray-600 rounded-md"
               />
               <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
                 Marcar evento/actividad como completada
