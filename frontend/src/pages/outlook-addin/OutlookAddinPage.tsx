@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-  Mail,
   Building2,
   User,
   CheckCircle2,
