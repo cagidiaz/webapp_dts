@@ -10,8 +10,8 @@ export interface ReportFilterOptions {
 
 const TYPE_CONFIG: Record<string, { label: string; icon: string; bg: string; color: string; border: string }> = {
   REUNION: {
-    label: 'Reunión Presencial',
-    icon: '🏢',
+    label: 'Reunión Interna',
+    icon: '👥',
     bg: '#EBF4F6',
     color: '#003E51',
     border: '#B3D4DC',
@@ -52,11 +52,11 @@ const TYPE_CONFIG: Record<string, { label: string; icon: string; bg: string; col
     border: '#CFD8DC',
   },
   EVENT: {
-    label: 'Evento / Otro',
-    icon: '📅',
-    bg: '#EDE7F6',
-    color: '#4527A0',
-    border: '#D1C4E9',
+    label: 'Visita no programada',
+    icon: '📍',
+    bg: '#FFF3E0',
+    color: '#E65100',
+    border: '#FFCC80',
   },
 };
 

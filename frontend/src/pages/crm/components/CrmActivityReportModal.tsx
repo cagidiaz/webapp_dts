@@ -373,7 +373,7 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
                   }`}
                 >
                   <Users size={13} />
-                  Reunión Presencial
+                  Reunión Interna
                 </button>
                 <button
                   type="button"
@@ -428,12 +428,12 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
                   onClick={() => toggleType('EVENT')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border ${
                     selectedTypes.includes('EVENT')
-                      ? 'bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800/60 shadow-sm'
+                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 shadow-sm'
                       : 'bg-transparent text-gray-400 border-dashed border-gray-300 dark:border-white/10 opacity-60'
                   }`}
                 >
                   <Calendar size={13} />
-                  Evento
+                  Visita no programada
                 </button>
               </div>
             </div>
@@ -513,10 +513,10 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
                 : act.type === 'TASK'
                 ? 'Tarea Comercial'
                 : act.type === 'EVENT'
-                ? 'Evento'
+                ? 'Visita no programada'
                 : act.type === 'NOTE'
                 ? 'Nota'
-                : 'Reunión Presencial';
+                : 'Reunión Interna';
 
               const creatorName = act.creator
                 ? `${act.creator.first_name || ''} ${act.creator.last_name || ''}`.trim() || act.creator.email

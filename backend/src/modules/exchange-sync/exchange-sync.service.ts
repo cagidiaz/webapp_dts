@@ -143,9 +143,9 @@ export class ExchangeSyncService {
       const dateStr = activity.due_date.toISOString().split('T')[0];
       const attendees: { email: string; name?: string }[] = [];
 
-      // Solo generar convocatoria/invitación de reunión por correo si es Videollamada o Reunión presencial
-      // Las tareas (TASK), llamadas (CALL) y otros eventos (EVENT) son solo apuntes informativos en el calendario del comercial sin enviar correos al contacto
-      const isMeetingWithInvite = activity.type === 'VIDEOLLAMADA' || activity.type === 'REUNION';
+      // Solo generar convocatoria/invitación de reunión por correo si es Videollamada
+      // Las reuniones internas (REUNION), visitas a cliente (VISITA), visitas no programadas (EVENT), tareas (TASK) y llamadas (CALL) son apuntes en el calendario del comercial sin enviar correos al contacto
+      const isMeetingWithInvite = activity.type === 'VIDEOLLAMADA';
       if (isMeetingWithInvite && activity.contact?.email) {
         attendees.push({
           email: activity.contact.email,
@@ -154,7 +154,15 @@ export class ExchangeSyncService {
       }
 
       const isTeams = activity.type === 'VIDEOLLAMADA';
-      const eventPrefix = `[dTS CRM - ${activity.type}]`;
+      const eventTypeLabel = 
+        activity.type === 'EVENT' ? 'Visita No Programada' :
+        activity.type === 'REUNION' ? 'Reunión Interna' :
+        activity.type === 'VISITA' ? 'Visita' :
+        activity.type === 'VIDEOLLAMADA' ? 'Videollamada' :
+        activity.type === 'CALL' ? 'Llamada' :
+        activity.type === 'TASK' ? 'Tarea' :
+        activity.type;
+      const eventPrefix = `[dTS CRM - ${eventTypeLabel}]`;
       const clientOrContactName = activity.customer?.name || activity.contact?.name || 'Cliente';
       const fullTitle = `${eventPrefix} ${activity.title} (${clientOrContactName})`;
 
@@ -162,7 +170,7 @@ export class ExchangeSyncService {
       const categories = ['dTS CRM'];
 
       let locationDisplay = activity.location || '';
-      if (activity.type === 'VISITA' && !locationDisplay && activity.customer) {
+      if ((activity.type === 'VISITA' || activity.type === 'EVENT') && !locationDisplay && activity.customer) {
         locationDisplay = [activity.customer.address, activity.customer.city].filter(Boolean).join(', ');
       }
 

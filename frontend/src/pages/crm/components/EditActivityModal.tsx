@@ -46,12 +46,12 @@ interface EditActivityModalProps {
 
 const ACTIVITY_TYPES: { type: CrmActivityType; label: string; icon: any }[] = [
   { type: 'EMAIL', label: 'Correo / Email', icon: Mail },
-  { type: 'REUNION', label: 'Reunión', icon: Users },
+  { type: 'REUNION', label: 'Reunión Interna', icon: Users },
   { type: 'VIDEOLLAMADA', label: 'Videollamada', icon: Video },
-  { type: 'VISITA', label: 'Visita', icon: MapPin },
+  { type: 'VISITA', label: 'Visita a Cliente', icon: MapPin },
   { type: 'TASK', label: 'Tarea', icon: CheckSquare },
   { type: 'CALL', label: 'Llamada', icon: Phone },
-  { type: 'EVENT', label: 'Evento', icon: Calendar },
+  { type: 'EVENT', label: 'Visita no programada', icon: Calendar },
   { type: 'NOTE', label: 'Nota', icon: FileText },
 ];
 

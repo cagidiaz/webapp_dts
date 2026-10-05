@@ -77,3 +77,36 @@ En cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline):
 
 ### 4.3 Limpieza y Acortado de Contenido
 - **Depuración de Firmas y Cláusulas Legales**: Eliminación automática de cláusulas RGPD/LOPD, avisos de confidencialidad y firmas pesadas.
+
+---
+
+## 5. Tipologías de Eventos y Actividades Comerciales
+
+En la pestaña de **Eventos** y en el botón **"Nueva Actividad"** de la ficha de contacto, el CRM clasifica las interacciones comerciales mediante tipologías oficiales:
+
+| Clave Técnica | Etiqueta en Interfaz | Envío Convocatoria al Contacto | Sincronización Outlook | Descripción y Uso |
+| :--- | :--- | :---: | :---: | :--- |
+| `TASK` | **Tarea** | ❌ No | ✅ Sí (Calendario) | Recordatorio o tarea interna asignada con fecha y hora. |
+| `NOTE` | **Nota Interna** | ❌ No | ❌ No | Apunte rápido comercial o comentario interno sin fecha fija. |
+| `REUNION` | **Reunión Interna** | ❌ No | *En configuración* | Reunión entre miembros del equipo dTS. *(Opción en blanco/preparación temporal)*. |
+| `VISITA` | **Visita a Cliente** | ❌ No | ✅ Sí (Calendario) | Visita presencial agendada a las instalaciones del cliente, con captura de dirección. |
+| `VIDEOLLAMADA` | **Videollamada** | ✅ Sí (Invitación Teams) | ✅ Sí (Calendario) | Reunión remota con enlace de Microsoft Teams y convocatoria al contacto. |
+| `CALL` | **Llamada Telefónica** | ❌ No | ✅ Sí (Calendario) | Registro de contacto telefónico realizado o programado. |
+| `EVENT` | **Visita no programada** | ❌ **No envía correo** | ✅ Sí (Calendario) | **Visita espontánea/presencial sin cita previa.** Queda registrada en la app y en el Outlook del comercial bajo la categoría corporativa `dTS CRM`, sin enviar ningún correo al cliente. |
+
+### 5.1 Particularidades de la "Visita no programada" (`EVENT`)
+- **Sin envíos accidentales a clientes:** A diferencia de una videollamada Teams, Microsoft Graph **no añade al contacto como asistente (`attendees`)**. De este modo, Microsoft 365 nunca despacha notificaciones ni correos al cliente.
+- **Registro en Outlook:** Se genera como evento personal en el calendario del comercial con el prefijo `[dTS CRM - Visita No Programada]`, categoría azul dTS, fecha, hora, ubicación y notas.
+- **Captura de Ubicación:** Dispone de selector de ubicación con el botón directo *"Usar dirección de la empresa"* para rellenar automáticamente la sede del contacto.
+
+### 5.2 Estado de la "Reunión Interna" (`REUNION`)
+- Sustituye a la antigua nomenclatura de "Reunión Presencial".
+- Al seleccionarla en el modal de nueva actividad, se presenta en blanco con un aviso de que dicha funcionalidad se configurará en una fase posterior para coordinar agendas internas del equipo.
+
+### 5.3 Barra de Filtros Unificada (Mismo Diseño que la Pestaña de Emails)
+- **Consistencia Visual Absoluta:** La barra de filtros por tipología de la pestaña de Eventos replica de forma exacta la experiencia y diseño de la pestaña de Emails:
+  - Botón principal de **"Todos (N)"** con fondo azul corporativo (`bg-dts-primary text-white border-dts-primary shadow-xs`) cuando está activo.
+  - Píldoras con bordes suaves (`rounded-lg border`), icono Lucide corporativo con su color semántico, etiqueta descriptiva y badge redondeado (`rounded-full font-mono`) con el contador dinámico en tiempo real (`count`).
+  - Al seleccionarse un chip, este adopta su fondo semántico activo con texto blanco y badge traslúcido (`bg-white/25 text-white`).
+  - Estilos compatibles con modo oscuro (`bg-white dark:bg-zinc-800/40 border-gray-200 dark:border-white/10`).
+

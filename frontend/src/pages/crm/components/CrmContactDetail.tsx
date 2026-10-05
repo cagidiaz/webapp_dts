@@ -17,7 +17,7 @@ import {
   Linkedin, Edit2, Check, X, Plus, Calendar, Clock, Percent,
   Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users, ExternalLink,
   Copy, CheckCheck, Laptop, Globe, RefreshCw, Building2, PhoneCall,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Info
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 import { EditActivityModal } from './EditActivityModal';
@@ -56,6 +56,64 @@ const STAGES = [
   { id: 'en negociación', label: 'En Negociación', color: 'border-t-amber-400 bg-amber-500/5' },
   { id: 'ganada', label: 'Ganada', color: 'border-t-emerald-400 bg-emerald-500/5' },
   { id: 'perdida', label: 'Perdida', color: 'border-t-rose-400 bg-rose-500/5' }
+];
+
+const EVENT_FILTER_CHIPS: {
+  id: string;
+  label: string;
+  icon: any;
+  color: string;
+  pillActiveBg: string;
+}[] = [
+  {
+    id: 'TASK',
+    label: 'Tareas',
+    icon: CheckSquare,
+    color: 'text-blue-600 dark:text-blue-400',
+    pillActiveBg: 'bg-blue-600 text-white',
+  },
+  {
+    id: 'NOTE',
+    label: 'Notas',
+    icon: FileText,
+    color: 'text-amber-600 dark:text-amber-400',
+    pillActiveBg: 'bg-amber-600 text-white',
+  },
+  {
+    id: 'VISITA',
+    label: 'Visitas Cliente',
+    icon: MapPin,
+    color: 'text-orange-600 dark:text-orange-400',
+    pillActiveBg: 'bg-orange-600 text-white',
+  },
+  {
+    id: 'EVENT',
+    label: 'Visitas no prog.',
+    icon: Calendar,
+    color: 'text-amber-600 dark:text-amber-400',
+    pillActiveBg: 'bg-amber-600 text-white',
+  },
+  {
+    id: 'VIDEO',
+    label: 'Videollamadas',
+    icon: Video,
+    color: 'text-violet-600 dark:text-violet-400',
+    pillActiveBg: 'bg-violet-600 text-white',
+  },
+  {
+    id: 'CALL',
+    label: 'Llamadas',
+    icon: Phone,
+    color: 'text-cyan-600 dark:text-cyan-400',
+    pillActiveBg: 'bg-cyan-600 text-white',
+  },
+  {
+    id: 'REUNION',
+    label: 'Reuniones Internas',
+    icon: Users,
+    color: 'text-teal-600 dark:text-teal-400',
+    pillActiveBg: 'bg-teal-600 text-white',
+  },
 ];
 
 const EMAIL_TEMPLATES = [
@@ -272,7 +330,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   };
 
   const handleOpenEventModal = () => {
-    if (activityType === 'REUNION' && !newLocation.trim()) {
+    if ((activityType === 'VISITA' || activityType === 'EVENT') && !newLocation.trim()) {
       const addr = getCompanyAddress();
       if (addr) setNewLocation(addr);
     }
@@ -740,12 +798,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         label = 'Llamada';
       } else if (upperType === 'REUNION') {
         icon = Users;
-        iconBg = 'bg-rose-100 dark:bg-rose-950/30';
-        iconColor = 'text-rose-600 dark:text-rose-400';
-        badgeBg = 'bg-rose-500/10 dark:bg-rose-500/20';
-        badgeColor = 'text-rose-700 dark:text-rose-300';
+        iconBg = 'bg-teal-100 dark:bg-teal-950/30';
+        iconColor = 'text-teal-600 dark:text-teal-400';
+        badgeBg = 'bg-teal-500/10 dark:bg-teal-500/20';
+        badgeColor = 'text-teal-700 dark:text-teal-300';
         type = 'reunion';
-        label = 'Reunión';
+        label = 'Reunión Interna';
       } else if (upperType === 'VIDEOLLAMADA') {
         icon = Video;
         iconBg = 'bg-indigo-100 dark:bg-indigo-950/30';
@@ -761,7 +819,15 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         badgeBg = 'bg-orange-500/10 dark:bg-orange-500/20';
         badgeColor = 'text-orange-700 dark:text-orange-300';
         type = 'visita';
-        label = 'Visita';
+        label = 'Visita a Cliente';
+      } else if (upperType === 'EVENT') {
+        icon = Calendar;
+        iconBg = 'bg-amber-100 dark:bg-amber-950/30';
+        iconColor = 'text-amber-600 dark:text-amber-400';
+        badgeBg = 'bg-amber-500/10 dark:bg-amber-500/20';
+        badgeColor = 'text-amber-700 dark:text-amber-300';
+        type = 'event';
+        label = 'Visita no programada';
       }
 
       const actDateStr = act.due_date || act.created_at;
@@ -945,13 +1011,42 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       if (eventFilter === 'ALL') return true;
       if (eventFilter === 'TASK') return act.type === 'task';
       if (eventFilter === 'NOTE') return act.type === 'note';
-      if (eventFilter === 'REUNION') return act.type === 'reunion' || act.type === 'visita';
+      if (eventFilter === 'VISITA') return act.type === 'visita';
+      if (eventFilter === 'EVENT') return act.type === 'event';
+      if (eventFilter === 'REUNION') return act.type === 'reunion';
       if (eventFilter === 'VIDEO') return act.type === 'videollamada';
       if (eventFilter === 'CALL') return act.type === 'call';
-      if (eventFilter === 'EVENT') return act.type === 'event';
       return true;
     });
   }, [timelineActivities, eventFilter]);
+
+  // Contadores reactivos por tipología de evento para las píldoras de filtro
+  const eventCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      ALL: 0,
+      TASK: 0,
+      NOTE: 0,
+      VISITA: 0,
+      EVENT: 0,
+      VIDEO: 0,
+      CALL: 0,
+      REUNION: 0,
+    };
+
+    timelineActivities.forEach((act) => {
+      if (act.type === 'email') return; // Los correos tienen su propia pestaña
+      counts.ALL++;
+      if (act.type === 'task') counts.TASK++;
+      else if (act.type === 'note') counts.NOTE++;
+      else if (act.type === 'visita') counts.VISITA++;
+      else if (act.type === 'event') counts.EVENT++;
+      else if (act.type === 'videollamada') counts.VIDEO++;
+      else if (act.type === 'call') counts.CALL++;
+      else if (act.type === 'reunion') counts.REUNION++;
+    });
+
+    return counts;
+  }, [timelineActivities]);
 
   // Guardar/alternar expansión de visualización de correo
   const toggleEmailExpansion = (emailId: string) => {
@@ -983,6 +1078,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   // Event creation handler
   const handleCreateActivity = (e: React.FormEvent) => {
     e.preventDefault();
+    if (activityType === 'REUNION') return;
     if (!newTitle.trim() && activityType !== 'NOTE') return;
     if (activityType === 'NOTE' && !newDescription.trim()) return;
 
@@ -1984,32 +2080,57 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
           {/* Eventos Tab (Unificada: Tareas, Notas, Calendario) */}
           {activeTab === 'eventos' && (
-            <div className="space-y-6">
-              {/* Header con filtros y botón nueva actividad */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-gray-100 dark:border-white/5">
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { id: 'ALL', label: 'Todas' },
-                    { id: 'TASK', label: 'Tareas' },
-                    { id: 'NOTE', label: 'Notas' },
-                    { id: 'REUNION', label: 'Reuniones' },
-                    { id: 'VIDEO', label: 'Videollamadas' },
-                    { id: 'CALL', label: 'Llamadas' },
-                    { id: 'EVENT', label: 'Eventos' }
-                  ].map(chip => (
+            <div className="space-y-4">
+              {/* Cabecera unificada: Botones de Tipología + Acciones */}
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pb-3 border-b border-gray-100 dark:border-white/5">
+                {/* Lado izquierdo: Botones de Tipología de Evento */}
+                <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px] no-scrollbar shrink-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 shrink-0 mr-0.5 flex items-center gap-1">
+                      Tipología:
+                    </span>
                     <button
-                      key={chip.id}
-                      onClick={() => setEventFilter(chip.id)}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide transition-colors cursor-pointer ${
-                        eventFilter === chip.id
-                          ? 'bg-dts-secondary text-white'
-                          : 'bg-gray-100 dark:bg-white/5 text-gray-500 hover:bg-gray-200 dark:hover:bg-white/10'
+                      type="button"
+                      onClick={() => setEventFilter('ALL')}
+                      className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all shrink-0 cursor-pointer border ${
+                        eventFilter === 'ALL'
+                          ? 'bg-dts-primary text-white border-dts-primary shadow-xs'
+                          : 'bg-white dark:bg-zinc-800/40 border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
                       }`}
                     >
-                      {chip.label}
+                      Todos ({eventCounts.ALL})
                     </button>
-                  ))}
+                    {EVENT_FILTER_CHIPS.map((chip) => {
+                      const Icon = chip.icon;
+                      const count = eventCounts[chip.id] || 0;
+                      const isSelected = eventFilter === chip.id;
+                      return (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          onClick={() => setEventFilter(chip.id)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition-all shrink-0 cursor-pointer border ${
+                            isSelected
+                              ? `${chip.pillActiveBg} border-transparent shadow-xs ring-1 ring-black/10`
+                              : 'bg-white dark:bg-zinc-800/40 border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
+                          }`}
+                        >
+                          <Icon size={12} className={isSelected ? 'text-white' : chip.color} />
+                          <span>{chip.label}</span>
+                          <span
+                            className={`text-[10px] ml-0.5 px-1 py-0.2 rounded-full font-mono ${
+                              isSelected ? 'bg-white/25 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-500'
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+
+                {/* Lado derecho: Acciones */}
                 <div className="flex items-center gap-2 shrink-0">
                   {isExchangeConnected && (
                     <button
@@ -2056,18 +2177,18 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                             <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
                               act.type === 'task' ? 'bg-blue-500/10 text-blue-600' :
                               act.type === 'note' ? 'bg-amber-500/10 text-amber-600' :
-                              act.type === 'reunion' ? 'bg-emerald-500/10 text-emerald-600' :
+                              act.type === 'reunion' ? 'bg-teal-500/10 text-teal-600' :
                               act.type === 'videollamada' ? 'bg-violet-500/10 text-violet-600' :
-                              act.type === 'visita' ? 'bg-rose-500/10 text-rose-600' :
+                              act.type === 'visita' ? 'bg-orange-500/10 text-orange-600' :
                               act.type === 'call' ? 'bg-cyan-500/10 text-cyan-600' :
-                              'bg-indigo-500/10 text-indigo-600'
+                              'bg-amber-500/10 text-amber-700 dark:text-amber-300'
                             }`}>
                               {act.type === 'task' ? 'Tarea' :
                                act.type === 'note' ? 'Nota' :
-                               act.type === 'reunion' ? 'Reunión' :
+                               act.type === 'reunion' ? 'Reunión Interna' :
                                act.type === 'videollamada' ? 'Videollamada' :
                                act.type === 'visita' ? 'Visita' :
-                               act.type === 'call' ? 'Llamada' : 'Evento'}
+                               act.type === 'call' ? 'Llamada' : 'Visita no programada'}
                             </span>
 
                             {act.exchangeSyncStatus === 'synced' && (
@@ -2480,7 +2601,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   onChange={(e) => {
                     const nextType = e.target.value as any;
                     setActivityType(nextType);
-                    if ((nextType === 'REUNION' || nextType === 'VISITA') && !newLocation.trim()) {
+                    if ((nextType === 'VISITA' || nextType === 'EVENT') && !newLocation.trim()) {
                       const addr = getCompanyAddress();
                       if (addr) setNewLocation(addr);
                     }
@@ -2489,130 +2610,166 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 >
                   <option value="TASK">Tarea</option>
                   <option value="NOTE">Nota Interna</option>
-                  <option value="REUNION">Reunión Presencial</option>
+                  <option value="REUNION">Reunión Interna</option>
                   <option value="VISITA">Visita a Cliente</option>
                   <option value="VIDEOLLAMADA">Videollamada Teams / Online</option>
                   <option value="CALL">Llamada Telefónica</option>
-                  <option value="EVENT">Evento / Otro</option>
+                  <option value="EVENT">Visita no programada</option>
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Título / Concepto</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. Seguimiento comercial..."
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                />
-              </div>
+              {activityType === 'REUNION' ? (
+                <div className="py-8 px-4 text-center rounded-2xl bg-gray-50/70 dark:bg-white/5 border border-dashed border-gray-200 dark:border-gray-700 space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center mx-auto">
+                    <Users size={22} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                      Reunión Interna
+                    </h4>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 max-w-xs mx-auto">
+                      Esta opción se configurará próximamente para coordinar reuniones internas del equipo.
+                    </p>
+                  </div>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowEventModal(false)}
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 font-bold text-xs cursor-pointer"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {activityType === 'EVENT' && (
+                    <div className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 flex items-start gap-2 text-[11px] text-amber-800 dark:text-amber-300">
+                      <Info size={14} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                      <span>
+                        <strong>Visita no programada:</strong> No envía correo electrónico al contacto. Quedará registrada en la app y en tu calendario de Outlook.
+                      </span>
+                    </div>
+                  )}
 
-              {activityType !== 'NOTE' && (
-                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fecha</label>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Título / Concepto</label>
                     <input
-                      type="date"
+                      type="text"
                       required
-                      value={newDate}
-                      onChange={(e) => setNewDate(e.target.value)}
+                      placeholder={activityType === 'EVENT' ? 'Ej. Visita presencial no programada...' : 'Ej. Seguimiento comercial...'}
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
                     />
                   </div>
+
+                  {activityType !== 'NOTE' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fecha</label>
+                        <input
+                          type="date"
+                          required
+                          value={newDate}
+                          onChange={(e) => setNewDate(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hora</label>
+                        <input
+                          type="time"
+                          value={newTime}
+                          onChange={(e) => setNewTime(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {(activityType === 'VISITA' || activityType === 'EVENT') && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
+                        {getCompanyAddress() && (
+                          <button
+                            type="button"
+                            onClick={() => setNewLocation(getCompanyAddress())}
+                            className="text-[10px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                            title="Rellenar con la dirección de la empresa del contacto"
+                          >
+                            <MapPin size={11} />
+                            <span>Usar dirección de la empresa</span>
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Sede del cliente / Dirección visitada..."
+                        value={newLocation}
+                        onChange={(e) => setNewLocation(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                      />
+                    </div>
+                  )}
+
                   <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hora</label>
-                    <input
-                      type="time"
-                      value={newTime}
-                      onChange={(e) => setNewTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Detalles / Descripción</label>
+                    <textarea
+                      placeholder="Detalla los puntos a tratar o temas abordados..."
+                      rows={3}
+                      value={newDescription}
+                      onChange={(e) => setNewDescription(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
                     />
                   </div>
-                </div>
-              )}
 
-              {(activityType === 'REUNION' || activityType === 'VISITA') && (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
-                    {getCompanyAddress() && (
-                      <button
-                        type="button"
-                        onClick={() => setNewLocation(getCompanyAddress())}
-                        className="text-[10px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer transition-colors"
-                        title="Rellenar con la dirección de la empresa del contacto"
-                      >
-                        <MapPin size={11} />
-                        <span>Usar dirección de la empresa</span>
-                      </button>
-                    )}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Conclusiones / Resultado (Opcional)</label>
+                    <textarea
+                      placeholder="Acuerdos alcanzados..."
+                      rows={2}
+                      value={newConclusions}
+                      onChange={(e) => setNewConclusions(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
+                    />
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Sede del cliente / Oficinas dTS..."
-                    value={newLocation}
-                    onChange={(e) => setNewLocation(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                  />
-                </div>
-              )}
 
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Detalles / Descripción</label>
-                <textarea
-                  placeholder="Detalla los puntos a tratar..."
-                  rows={3}
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
-                />
-              </div>
+                  {activityType !== 'NOTE' && (
+                    <div className="p-2.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/10 border border-cyan-100 dark:border-cyan-900/30 flex items-center justify-between text-[11px]">
+                      <div className="flex items-center gap-1.5 text-dts-primary dark:text-cyan-400 font-semibold">
+                        <Calendar size={13} className="text-dts-secondary" />
+                        <span>Sincronizar en Outlook</span>
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-mono">
+                        {isExchangeConnected ? (
+                          <span className="text-emerald-500 font-bold">● Conectado a Exchange (Categoría dTS CRM)</span>
+                        ) : (
+                          <span className="text-amber-500 font-bold">● Modo Local</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Conclusiones / Resultado (Opcional)</label>
-                <textarea
-                  placeholder="Acuerdos alcanzados..."
-                  rows={2}
-                  value={newConclusions}
-                  onChange={(e) => setNewConclusions(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
-                />
-              </div>
-
-              {activityType !== 'NOTE' && (
-                <div className="p-2.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/10 border border-cyan-100 dark:border-cyan-900/30 flex items-center justify-between text-[11px]">
-                  <div className="flex items-center gap-1.5 text-dts-primary dark:text-cyan-400 font-semibold">
-                    <Calendar size={13} className="text-dts-secondary" />
-                    <span>Sincronizar en Outlook</span>
+                  <div className="flex gap-3 justify-end pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowEventModal(false)}
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 font-bold cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={createActivityMutation.isPending}
+                      className="px-4 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer disabled:opacity-50"
+                    >
+                      {createActivityMutation.isPending ? 'Guardando...' : 'Guardar y Sincronizar'}
+                    </button>
                   </div>
-                  <div className="text-[10px] text-gray-400 font-mono">
-                    {isExchangeConnected ? (
-                      <span className="text-emerald-500 font-bold">● Conectado a Exchange (Categoría dTS CRM)</span>
-                    ) : (
-                      <span className="text-amber-500 font-bold">● Modo Local</span>
-                    )}
-                  </div>
-                </div>
+                </>
               )}
-
-              <div className="flex gap-3 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEventModal(false)}
-                  className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 font-bold cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={createActivityMutation.isPending}
-                  className="px-4 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer disabled:opacity-50"
-                >
-                  {createActivityMutation.isPending ? 'Guardando...' : 'Guardar y Sincronizar'}
-                </button>
-              </div>
             </form>
           </div>
         </div>

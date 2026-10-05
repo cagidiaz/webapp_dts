@@ -200,12 +200,16 @@ Ubicado en `/crm/contacts` y `/crm/customers`.
   * Tarjeta de centro de trabajo en la pestaña *Información* con enlace directo a Google Maps y modal de edición rápida.
   * Búsqueda global y en tabla filtrable por localidad, provincia o código de territorio.
 * **Timeline Histórico de Actividades**: Registro cronológico de reuniones, llamadas, notas comerciales y correos electrónicos vinculados al cliente.
-* **Gestión de Eventos y Reuniones Presenciales**:
-  * Autocompletado jerárquico prioritario: si el contacto dispone de centro de trabajo propio registrado, se utiliza su dirección; de lo contrario, se aplica la sede social de la empresa matriz.
-  * Botones de restauración rápida para alternar entre la sede del contacto y la de la empresa con un solo clic.
+* **Gestión de Eventos, Visitas y Actividades Comerciales**:
+  * **Visita no programada (`EVENT`)**: Diseñada para visitas presenciales espontáneas ("puerta fría" o visitas no planificadas). **No envía invitaciones ni correos electrónicos al contacto**, registrándose exclusivamente en la base de datos de la aplicación y en el calendario de Outlook del comercial bajo la categoría corporativa `dTS CRM` con el prefijo `[dTS CRM - Visita No Programada]`.
+  * **Visita a Cliente (`VISITA`)**: Registro de visitas comerciales agendadas, con soporte de ubicación.
+  * **Reunión Interna (`REUNION`)**: Sustituye a la anterior reunión presencial; reservada para coordinación interna de equipos dTS *(opción temporalmente en blanco para configuración en siguiente fase)*.
+  * **Autocompletado de Ubicación de Empresa**: En visitas a clientes y visitas no programadas, botón directo para autocompletar la dirección con la sede social de la empresa o el centro de trabajo del contacto con un clic.
+  * **Barra de Filtrado Unificada con Contadores Reactivos**: Diseño visual compartido con la pestaña de Emails, incorporando contadores dinámicos en tiempo real para cada tipología (*Todos*, *Tareas*, *Notas*, *Visitas Cliente*, *Visitas no prog.*, *Videollamadas*, *Llamadas*, *Reuniones Internas*).
 * **Sincronización Bidireccional de Calendario con Microsoft Outlook**:
   * Categorización visual automática con la etiqueta corporativa **`dTS CRM`** (Azul dTS).
-  * Detección activa de eliminaciones: si una reunión o tarea es eliminada directamente en el calendario de Outlook, el CRM la detecta y purga de inmediato en la base de datos local.
+  * Control estricto de invitaciones: las visitas no programadas, tareas y notas no incluyen al cliente en la lista de asistentes (`attendees`), previniendo envíos no deseados de correo.
+  * Detección activa de eliminaciones: si una cita o tarea se elimina en Outlook, el CRM la detecta y purga de inmediato en la base de datos local.
   * Botón directo de **"Sincronizar"** en la pestaña de Eventos y actualización en segundo plano al cambiar de pestaña.
 
 ---

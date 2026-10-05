@@ -679,7 +679,7 @@ export const SalesDashboard: React.FC = () => {
                     ? { bg: 'bg-emerald-100 dark:bg-emerald-950/20', color: 'text-emerald-600 dark:text-emerald-400' }
                     : { bg: 'bg-blue-100 dark:bg-blue-950/20', color: 'text-blue-600 dark:text-blue-400' },
                   EMAIL: { bg: 'bg-purple-100 dark:bg-purple-950/20', color: 'text-purple-600 dark:text-purple-400' },
-                  EVENT: { bg: 'bg-rose-100 dark:bg-rose-950/20', color: 'text-rose-600 dark:text-rose-400' },
+                  EVENT: { bg: 'bg-amber-100 dark:bg-amber-950/20', color: 'text-amber-600 dark:text-amber-400' },
                   CALL: { bg: 'bg-cyan-100 dark:bg-cyan-950/20', color: 'text-cyan-600 dark:text-cyan-400' },
                   REUNION: { bg: 'bg-teal-100 dark:bg-teal-950/20', color: 'text-teal-600 dark:text-teal-400' },
                   VIDEOLLAMADA: { bg: 'bg-indigo-100 dark:bg-indigo-950/20', color: 'text-indigo-600 dark:text-indigo-400' },
@@ -689,11 +689,11 @@ export const SalesDashboard: React.FC = () => {
                   NOTE: 'Nota',
                   TASK: 'Tarea',
                   EMAIL: 'Email',
-                  EVENT: 'Evento',
+                  EVENT: 'Visita no programada',
                   CALL: 'Llamada',
-                  REUNION: 'Reunión',
+                  REUNION: 'Reunión Interna',
                   VIDEOLLAMADA: 'Videollamada',
-                  VISITA: 'Visita'
+                  VISITA: 'Visita a Cliente'
                 };
 
                 const IconComponent = typeIconMap[act.type] || FileText;
