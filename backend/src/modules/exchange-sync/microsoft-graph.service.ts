@@ -248,11 +248,19 @@ export class MicrosoftGraphService {
   }
 
   /**
-   * Asegura que la categoría maestra "dTS CRM" esté creada en Outlook con el color corporativo (preset7 - Azul dTS)
-   * para que los eventos sincronizados aparezcan coloreados y claramente diferenciados en el calendario de Outlook.
+   * Asegura que las categorías maestras "dTS CRM" (preset7 - Azul dTS) y "dTS CRM - Completado" (preset4 - Verde éxito)
+   * estén creadas en Outlook para que los eventos sincronizados aparezcan coloreados en el calendario según su estado.
    */
   async ensureDtsCategory(userId: string): Promise<void> {
-    const categoryName = 'dTS CRM';
+    await this.ensureDtsCategories(userId);
+  }
+
+  async ensureDtsCategories(userId: string): Promise<void> {
+    const categoriesToEnsure = [
+      { name: 'dTS CRM', color: 'preset7' }, // Azul corporativo dTS (#003E51)
+      { name: 'dTS CRM - Completado', color: 'preset4' }, // Verde esmeralda (#107c41 / Green)
+    ];
+
     const accessToken = await this.getValidAccessToken(userId);
     if (!accessToken) return;
 
@@ -263,40 +271,43 @@ export class MicrosoftGraphService {
 
       if (listRes.ok) {
         const data = await listRes.json();
-        const existing = (data.value || []).find(
-          (c: any) => c.displayName?.toLowerCase().trim() === categoryName.toLowerCase().trim(),
-        );
+        const existingList = data.value || [];
 
-        if (!existing) {
-          const createRes = await fetch('https://graph.microsoft.com/v1.0/me/outlook/masterCategories', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              displayName: categoryName,
-              color: 'preset7', // Color azul corporativo dTS (#003E51)
-            }),
-          });
-          if (createRes.ok) {
-            this.logger.log(`Categoría "${categoryName}" (preset7 - Azul dTS) registrada exitosamente en Outlook para ${userId}`);
+        for (const cat of categoriesToEnsure) {
+          const existing = existingList.find(
+            (c: any) => c.displayName?.toLowerCase().trim() === cat.name.toLowerCase().trim(),
+          );
+
+          if (!existing) {
+            const createRes = await fetch('https://graph.microsoft.com/v1.0/me/outlook/masterCategories', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                displayName: cat.name,
+                color: cat.color,
+              }),
+            });
+            if (createRes.ok) {
+              this.logger.log(`Categoría "${cat.name}" (${cat.color}) registrada exitosamente en Outlook para ${userId}`);
+            }
+          } else if (existing.color !== cat.color) {
+            await fetch(`https://graph.microsoft.com/v1.0/me/outlook/masterCategories/${existing.id}`, {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ color: cat.color }),
+            });
+            this.logger.log(`Categoría "${cat.name}" actualizada a ${cat.color} para ${userId}`);
           }
-        } else if (existing && existing.color !== 'preset7') {
-          // Si existía con otro preset (ej. preset5), actualizar al azul corporativo dTS
-          await fetch(`https://graph.microsoft.com/v1.0/me/outlook/masterCategories/${existing.id}`, {
-            method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ color: 'preset7' }),
-          });
-          this.logger.log(`Categoría "${categoryName}" actualizada a preset7 (Azul dTS) para ${userId}`);
         }
       }
     } catch (error) {
-      this.logger.warn(`No se pudo asegurar la categoría de Outlook para ${userId}:`, error);
+      this.logger.warn(`No se pudieron asegurar las categorías de Outlook para ${userId}:`, error);
     }
   }
 
@@ -629,37 +640,68 @@ export class MicrosoftGraphService {
 
   /**
    * Obtiene eventos recientes o deltas del calendario del usuario para sincronización hacia el CRM.
+   * Recorre todas las páginas delta (@odata.nextLink) y gestiona el refresco completo ante expiración (410 Gone).
    */
-  async getCalendarEventsDelta(userId: string, deltaTokenOrUrl?: string) {
+  async getCalendarEventsDelta(
+    userId: string,
+    deltaTokenOrUrl?: string,
+  ): Promise<{ events: any[]; nextDeltaLink?: string } | null> {
     const accessToken = await this.getValidAccessToken(userId);
     if (!accessToken) return null;
 
-    let url = deltaTokenOrUrl;
-    if (!url) {
+    let currentUrl: string | undefined = deltaTokenOrUrl;
+    if (!currentUrl) {
       // Sincronizar desde hace 30 días hasta dentro de 90 días
       const startDateTime = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
       const endDateTime = new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString();
-      url = `https://graph.microsoft.com/v1.0/me/calendarView/delta?startDateTime=${startDateTime}&endDateTime=${endDateTime}`;
+      currentUrl = `https://graph.microsoft.com/v1.0/me/calendarView/delta?startDateTime=${startDateTime}&endDateTime=${endDateTime}`;
     }
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Prefer: 'outlook.timezone="Europe/Madrid", odata.maxpagesize=50',
-      },
-    });
+    const allEvents: any[] = [];
+    let deltaLink: string | undefined = undefined;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      this.logger.error(`Error en delta de calendario de Microsoft Graph: ${errorText}`);
+    try {
+      while (currentUrl) {
+        const fetchRes: any = await fetch(currentUrl, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Prefer: 'outlook.timezone="Europe/Madrid", odata.maxpagesize=50',
+          },
+        });
+
+        // 410 Gone: El delta token expiró en Microsoft Exchange. Reintentar con sincronización completa.
+        if (fetchRes.status === 410 && deltaTokenOrUrl) {
+          this.logger.warn(`Delta token expirado para ${userId}, reiniciando sync completo de calendario.`);
+          return await this.getCalendarEventsDelta(userId, undefined);
+        }
+
+        if (!fetchRes.ok) {
+          const errorText = await fetchRes.text();
+          this.logger.error(`Error en delta de calendario de Microsoft Graph: ${errorText}`);
+          return null;
+        }
+
+        const data: any = await fetchRes.json();
+        if (Array.isArray(data.value)) {
+          allEvents.push(...data.value);
+        }
+
+        if (data['@odata.nextLink']) {
+          currentUrl = data['@odata.nextLink'];
+        } else {
+          deltaLink = data['@odata.deltaLink'];
+          currentUrl = undefined;
+        }
+      }
+
+      return {
+        events: allEvents,
+        nextDeltaLink: deltaLink,
+      };
+    } catch (err) {
+      this.logger.error(`Excepción en getCalendarEventsDelta para ${userId}:`, err);
       return null;
     }
-
-    const data = await response.json();
-    return {
-      events: (data.value || []) as any[],
-      nextDeltaLink: (data['@odata.deltaLink'] || data['@odata.nextLink']) as string | undefined,
-    };
   }
 
   /**

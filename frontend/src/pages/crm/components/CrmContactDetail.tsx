@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
@@ -48,6 +48,26 @@ import apiClient from '../../../api/apiClient';
 const getContactById = async (id: string): Promise<any> => {
   const { data } = await apiClient.get(`/contacts/${id}`);
   return data;
+};
+
+/**
+ * Limpia y normaliza la descripción de una actividad de CRM, eliminando
+ * encabezados repetidos de Outlook, líneas divisorias de guiones bajos y saltos vacíos múltiples.
+ */
+export const cleanActivityDescription = (desc?: string | null): string => {
+  if (!desc) return '';
+  let clean = desc;
+  // Quitar prefijo de sistema de CRM dTS
+  clean = clean.replace(/Actividad de CRM dTS Instruments/gi, '');
+  clean = clean.replace(/Empresa:\s*[^\r\n]*/gi, '');
+  clean = clean.replace(/Contacto:\s*[^\r\n]*/gi, '');
+  // Quitar líneas divisorias tipo ________________ o ----------------
+  clean = clean.replace(/[_\-═]{3,}/g, '');
+  // Quitar posibles conclusiones incrustadas en el texto
+  clean = clean.replace(/Conclusiones:\s*[\s\S]*/gi, '');
+  // Normalizar saltos de línea (máximo 1 salto entre párrafos) y recortar
+  clean = clean.replace(/\r\n/g, '\n').replace(/\n{2,}/g, '\n').trim();
+  return clean;
 };
 
 const STAGES = [
@@ -167,7 +187,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const handleTabChange = (tabId: 'info' | 'timeline' | 'ofertas' | 'eventos' | 'emails') => {
     setActiveTab(tabId);
     if (tabId === 'eventos' || tabId === 'timeline') {
-      queryClient.invalidateQueries({ queryKey: ['crmContactActivities', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
       if (isExchangeConnected) {
         syncExchangeMutation.mutate();
       }
@@ -219,6 +239,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [newEmailSubject, setNewEmailSubject] = useState('');
   const [newEmailBody, setNewEmailBody] = useState('');
   const [newEmailAddress, setNewEmailAddress] = useState('');
+  const [newEmailCc, setNewEmailCc] = useState('');
+  const [showCcField, setShowCcField] = useState(false);
   const [selectedEmailTemplate, setSelectedEmailTemplate] = useState('');
   const [outlookTarget, setOutlookTarget] = useState<'desktop' | 'web'>(getPreferredOutlookClient());
   const [isCopied, setIsCopied] = useState(false);
@@ -244,6 +266,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
   // Filter chips in Eventos Tab
   const [eventFilter, setEventFilter] = useState<string>('ALL');
+  const [eventStatusFilter, setEventStatusFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
+
+  // Modal Rápido de Cierre y Conclusiones de Actividad
+  const [completingActivity, setCompletingActivity] = useState<any | null>(null);
+  const [closingConclusions, setClosingConclusions] = useState<string>('');
 
   // Queries
   const { data: exchangeStatus } = useQuery({
@@ -347,27 +374,44 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   });
 
   const prepareEmailMutation = useMutation({
-    mutationFn: async (payload: { to: string[]; subject: string; body: string; target: 'desktop' | 'web' }) => {
-      const recipient = payload.to[0] || '';
+    mutationFn: async (payload: {
+      to: string[];
+      cc?: string[];
+      subject: string;
+      body: string;
+      target: 'desktop' | 'web';
+      preOpenedWindow?: Window | null;
+    }) => {
+      const recipientStr = payload.to.join(', ');
       
       if (payload.target === 'web' && isExchangeConnected) {
-        // Crear borrador en Microsoft Graph y abrir su webLink en Outlook Web
-        const result = await createExchangeDraft({
-          contactId,
-          clientId: contact?.client_id,
-          to: payload.to,
-          subject: payload.subject,
-          body: payload.body,
-        });
+        try {
+          // Crear borrador en Microsoft Graph y abrir su webLink en Outlook Web
+          const result = await createExchangeDraft({
+            contactId,
+            clientId: contact?.client_id,
+            to: payload.to,
+            cc: payload.cc,
+            subject: payload.subject,
+            body: payload.body,
+          });
 
-        openInOutlook({
-          to: recipient,
-          subject: payload.subject,
-          body: payload.body,
-          target: 'web',
-          webLink: result.draft?.webLink,
-        });
-        return result;
+          openInOutlook({
+            to: payload.to,
+            cc: payload.cc,
+            subject: payload.subject,
+            body: payload.body,
+            target: 'web',
+            webLink: result.draft?.webLink,
+            preOpenedWindow: payload.preOpenedWindow,
+          });
+          return result;
+        } catch (error) {
+          if (payload.preOpenedWindow && !payload.preOpenedWindow.closed) {
+            payload.preOpenedWindow.close();
+          }
+          throw error;
+        }
       } else {
         // Registrar actividad de preparación en el CRM y lanzar Outlook Escritorio o Web
         const activity = await createCrmActivity({
@@ -376,14 +420,16 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           type: 'EMAIL',
           title: payload.subject,
           description: payload.body,
-          email: recipient,
+          email: recipientStr,
         });
 
         openInOutlook({
-          to: recipient,
+          to: payload.to,
+          cc: payload.cc,
           subject: payload.subject,
           body: payload.body,
           target: payload.target,
+          preOpenedWindow: payload.preOpenedWindow,
         });
         return { activity };
       }
@@ -393,6 +439,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
       setNewEmailSubject('');
       setNewEmailBody('');
+      setNewEmailCc('');
+      setShowCcField(false);
       setSelectedEmailTemplate('');
       setShowEmailModal(false);
     }
@@ -402,9 +450,55 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     mutationFn: ({ id, payload }: { id: string; payload: any }) => updateCrmActivity(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['crmActivities'] });
+      queryClient.invalidateQueries({ queryKey: ['crmActivitiesAgenda'] });
+      queryClient.invalidateQueries({ queryKey: ['crmWeeklyAgenda'] });
       queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
+      setCompletingActivity(null);
+      setClosingConclusions('');
     }
   });
+
+  const handleToggleActivityCompletion = (act: any) => {
+    const isDone = Boolean(act.done || act.hasConclusions);
+    if (isDone) {
+      // Si ya está marcada como realizada, desmarcar para reactivar
+      updateActivityMutation.mutate({
+        id: act.id,
+        payload: { isCompleted: false },
+      });
+    } else {
+      // Si está pendiente, abrir modal de cierre solicitando conclusiones
+      setCompletingActivity(act);
+      setClosingConclusions(act.conclusions || '');
+    }
+  };
+
+  const handleConfirmCompletionWithConclusions = () => {
+    if (!completingActivity) return;
+    updateActivityMutation.mutate({
+      id: completingActivity.id,
+      payload: {
+        isCompleted: true,
+        conclusions: closingConclusions.trim() || undefined,
+      },
+    });
+  };
+
+  const handleConfirmCompletionWithoutConclusions = () => {
+    if (!completingActivity) return;
+    updateActivityMutation.mutate({
+      id: completingActivity.id,
+      payload: {
+        isCompleted: true,
+      },
+    });
+  };
+
+  const handleCancelCompletion = () => {
+    setCompletingActivity(null);
+    setClosingConclusions('');
+  };
 
   const deleteActivityMutation = useMutation({
     mutationFn: deleteCrmActivity,
@@ -418,30 +512,84 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     mutationFn: syncExchangeNow,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['crmWeeklyAgenda'] });
+      queryClient.invalidateQueries({ queryKey: ['crmAgenda'] });
+      queryClient.invalidateQueries({ queryKey: ['crmActivities'] });
+      queryClient.invalidateQueries({ queryKey: ['todayActivities'] });
       queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
     }
   });
 
-  // Auto-sincronización silenciosa en segundo plano si hay borradores pendientes en la ficha
+  // Auto-sincronización reactiva con Outlook en tiempo real:
+  // 1. Al enfocar la ventana o cambiar de pestaña del navegador (window focus / visibilitychange):
+  //    Si el comercial editó o reprogramó la hora de un evento en Outlook, se actualiza automáticamente al instante.
+  // 2. Polling silencioso en segundo plano cada 25 segundos mientras la ventana esté visible.
+  // 3. Al cambiar entre las pestañas de eventos o timeline.
+  const lastAutoSyncTimeRef = useRef<number>(0);
+
+  const triggerAutoSync = useCallback(() => {
+    if (!isExchangeConnected || syncExchangeMutation.isPending) return;
+    const now = Date.now();
+    // Throttle de 5 segundos para evitar saturación en alternancias rápidas de ventana
+    if (now - lastAutoSyncTimeRef.current < 5000) return;
+    lastAutoSyncTimeRef.current = now;
+    syncExchangeMutation.mutate();
+  }, [isExchangeConnected, syncExchangeMutation.isPending]);
+
+  useEffect(() => {
+    if (!isExchangeConnected) return;
+
+    // Sincronizar al entrar a la pestaña de eventos o timeline
+    if (activeTab === 'eventos' || activeTab === 'timeline') {
+      triggerAutoSync();
+    }
+
+    const handleWindowFocus = () => {
+      triggerAutoSync();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        triggerAutoSync();
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Polling en segundo plano cada 25 segundos mientras la ventana esté activa/visible
+    const syncInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        triggerAutoSync();
+      }
+    }, 25000);
+
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(syncInterval);
+    };
+  }, [isExchangeConnected, activeTab, triggerAutoSync]);
+
+  // Auto-sincronización silenciosa en segundo plano si hay borradores de correo pendientes en la ficha
   const hasPendingDrafts = useMemo(() => {
     return (dbActivities || []).some((act: any) => act.type === 'EMAIL' && act.exchange_sync_status === 'draft');
   }, [dbActivities]);
 
-  const autoSyncedRef = useRef(false);
+  const autoSyncedDraftsRef = useRef(false);
 
   useEffect(() => {
-    if (isExchangeConnected && hasPendingDrafts && !autoSyncedRef.current && !syncExchangeMutation.isPending) {
-      autoSyncedRef.current = true;
+    if (isExchangeConnected && hasPendingDrafts && !autoSyncedDraftsRef.current && !syncExchangeMutation.isPending) {
+      autoSyncedDraftsRef.current = true;
       syncExchangeMutation.mutate(undefined, {
         onSettled: () => {
-          // Permitir re-comprobación tras 20 segundos
           setTimeout(() => {
-            autoSyncedRef.current = false;
-          }, 20000);
+            autoSyncedDraftsRef.current = false;
+          }, 15000);
         }
       });
     }
-  }, [isExchangeConnected, hasPendingDrafts, activeTab]);
+  }, [isExchangeConnected, hasPendingDrafts]);
 
   // CRM Quotes pipeline mutations
   const updateQuoteMutation = useMutation({
@@ -745,6 +893,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       location?: string | null;
       exchangeSyncStatus?: string | null;
       exchangeWebLink?: string | null;
+      exchangeItemId?: string | null;
       quoteDocumentNo?: string | null;
       attendees?: any;
       isPastDate: boolean;
@@ -844,9 +993,10 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       })();
 
       const isEmail = type === 'email';
+      const isNote = type === 'note';
       const isFinished = !isEmail && Boolean(act.is_completed || isPastDate);
       const hasConclusions = !isEmail && Boolean(act.conclusions && act.conclusions.trim());
-      const needsConclusions = !isEmail && Boolean(isFinished && !hasConclusions);
+      const needsConclusions = !isEmail && !isNote && Boolean(isFinished && !hasConclusions);
 
       list.push({
         id: act.id,
@@ -867,6 +1017,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         email: act.email || undefined,
         location: act.location || undefined,
         exchangeSyncStatus: act.exchange_sync_status || null,
+        exchangeWebLink: act.exchange_web_link || null,
+        exchangeItemId: act.exchange_item_id || null,
         quoteDocumentNo: (() => {
           const raw = act.quote_document_no || act.attendees?.quoteDocumentNo || act.attendees?.quote_document_no || null;
           if (!raw) return null;
@@ -1008,17 +1160,39 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const filteredEventsList = useMemo(() => {
     return timelineActivities.filter(act => {
       if (act.type === 'email') return false; // Emails have their own tab
-      if (eventFilter === 'ALL') return true;
-      if (eventFilter === 'TASK') return act.type === 'task';
-      if (eventFilter === 'NOTE') return act.type === 'note';
-      if (eventFilter === 'VISITA') return act.type === 'visita';
-      if (eventFilter === 'EVENT') return act.type === 'event';
-      if (eventFilter === 'REUNION') return act.type === 'reunion';
-      if (eventFilter === 'VIDEO') return act.type === 'videollamada';
-      if (eventFilter === 'CALL') return act.type === 'call';
+      
+      // 1. Filtro por tipología
+      if (eventFilter !== 'ALL') {
+        if (eventFilter === 'TASK' && act.type !== 'task') return false;
+        if (eventFilter === 'NOTE' && act.type !== 'note') return false;
+        if (eventFilter === 'VISITA' && act.type !== 'visita') return false;
+        if (eventFilter === 'EVENT' && act.type !== 'event') return false;
+        if (eventFilter === 'REUNION' && act.type !== 'reunion') return false;
+        if (eventFilter === 'VIDEO' && act.type !== 'videollamada') return false;
+        if (eventFilter === 'CALL' && act.type !== 'call') return false;
+      }
+
+      // 2. Filtro por estado de realización (Realizados vs Pendientes)
+      const isDone = Boolean(act.done || act.hasConclusions);
+      if (eventStatusFilter === 'PENDING' && isDone) return false;
+      if (eventStatusFilter === 'COMPLETED' && !isDone) return false;
+
       return true;
     });
-  }, [timelineActivities, eventFilter]);
+  }, [timelineActivities, eventFilter, eventStatusFilter]);
+
+  // Contadores reactivos por estado de realización
+  const eventStatusCounts = useMemo(() => {
+    let pending = 0;
+    let completed = 0;
+    timelineActivities.forEach((act) => {
+      if (act.type === 'email') return;
+      const isDone = Boolean(act.done || act.hasConclusions);
+      if (isDone) completed++;
+      else pending++;
+    });
+    return { all: pending + completed, pending, completed };
+  }, [timelineActivities]);
 
   // Contadores reactivos por tipología de evento para las píldoras de filtro
   const eventCounts = useMemo(() => {
@@ -1121,17 +1295,40 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     e.preventDefault();
     if (!newEmailSubject.trim() || !newEmailBody.trim()) return;
 
-    const recipient = newEmailAddress || contact?.email;
-    if (!recipient) {
-      alert('Por favor especifica una dirección de correo de destino.');
+    // Parsear destinatarios principales separados por coma, punto y coma o salto de línea
+    const toRecipients = (newEmailAddress || contact?.email || '')
+      .split(/[,;\n]+/)
+      .map((em: string) => em.trim())
+      .filter((em: string) => em.length > 0);
+
+    if (toRecipients.length === 0) {
+      alert('Por favor especifica al menos una dirección de correo de destino.');
       return;
     }
 
+    // Parsear destinatarios en copia (CC)
+    const ccRecipients = newEmailCc
+      .split(/[,;\n]+/)
+      .map((em: string) => em.trim())
+      .filter((em: string) => em.length > 0);
+
+    // Pre-apertura síncrona para burlar el bloqueador de popups en navegadores si el destino es Outlook Web
+    let preOpenedWindow: Window | null = null;
+    if (outlookTarget === 'web') {
+      try {
+        preOpenedWindow = window.open('about:blank', 'dts_outlook_web');
+      } catch (err) {
+        console.warn('No se pudo pre-abrir ventana para Outlook Web:', err);
+      }
+    }
+
     prepareEmailMutation.mutate({
-      to: [recipient],
+      to: toRecipients,
+      cc: ccRecipients,
       subject: newEmailSubject,
       body: newEmailBody,
       target: outlookTarget,
+      preOpenedWindow,
     });
   };
 
@@ -1222,9 +1419,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           <div className="flex flex-wrap gap-3 items-center pt-2 md:pt-0">
             {contact.email && (
               <button 
-                onClick={() => openExistingEmailInOutlook({ email: contact.email, target: outlookTarget })} 
+                onClick={() => openInOutlook({ to: contact.email, target: outlookTarget })} 
                 className="p-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/20 hover:border-cyan-200 dark:hover:border-cyan-800/40 text-gray-400 hover:text-dts-secondary transition-all cursor-pointer" 
-                title={`Abrir conversación en Outlook (${contact.email})`}
+                title={`Enviar correo en Outlook (${contact.email})`}
               >
                 <Mail size={16} />
               </button>
@@ -1636,9 +1833,13 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               <span className="font-bold text-gray-900 dark:text-zinc-100 group-hover/mini:text-dts-secondary transition-colors truncate text-[10px]">{act.title}</span>
                               <span className="text-[8px] text-gray-400 dark:text-zinc-400 font-mono shrink-0">{new Date(act.date).toLocaleDateString('es-ES')}</span>
                             </div>
-                            {act.description && (
-                              <p className="text-[9.5px] text-gray-450 dark:text-zinc-300 line-clamp-2 leading-relaxed">{act.description}</p>
-                            )}
+                            {act.description && (() => {
+                              const cleanMini = cleanActivityDescription(act.description);
+                              if (!cleanMini) return null;
+                              return (
+                                <p className="text-[9.5px] text-gray-450 dark:text-zinc-300 line-clamp-2 leading-snug">{cleanMini}</p>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}
@@ -1670,9 +1871,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       <div 
                         className={`group/box p-3.5 rounded-xl border transition-all duration-200 shadow-xs space-y-2.5 ${
                           act.needsConclusions
-                            ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300/80 dark:border-amber-500/40 hover:border-amber-400'
-                            : act.done
-                            ? 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 opacity-75 hover:border-dts-secondary/35'
+                            ? 'bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-400 dark:border-amber-500/60 hover:border-amber-500 shadow-xs ring-1 ring-amber-400/20'
+                            : (act.done || act.hasConclusions)
+                            ? 'bg-emerald-500/8 dark:bg-emerald-950/20 border-emerald-500/25 dark:border-emerald-500/30 hover:border-emerald-500/40'
                             : 'bg-white dark:bg-zinc-900/40 border-gray-200/60 dark:border-white/5 hover:border-dts-secondary/35'
                         }`}
                       >
@@ -1740,7 +1941,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                             })() : (
                               <span
                                 className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
-                                  act.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
+                                  (act.done || act.hasConclusions) ? 'line-through text-gray-400 dark:text-gray-400' : 'text-gray-900 dark:text-white'
                                 }`}
                               >
                                 {act.title}
@@ -1751,23 +1952,34 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                 <Check size={9} className="stroke-3" /> Tramitado
                               </span>
                             )}
-                            {act.isFinished && (
-                              <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold border ${
-                                act.done 
-                                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                                  : 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
-                              }`}>
-                                {act.done ? 'TERMINADO' : 'VENCIDO'}
+                            {act.needsConclusions ? (
+                              <span className="text-[9px] uppercase px-2 py-0.5 rounded-full font-black bg-amber-100 text-amber-800 border-2 border-amber-400 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-500/70 tracking-wider">
+                                {act.done ? 'TERMINADO · FALTAN CONCLUSIONES' : 'VENCIDO · FALTAN CONCLUSIONES'}
                               </span>
-                            )}
+                            ) : act.isFinished ? (
+                              <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold border ${
+                                (act.done || act.hasConclusions) 
+                                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                                  : 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                              }`}>
+                                {(act.done || act.hasConclusions) ? 'TERMINADO' : 'VENCIDO'}
+                              </span>
+                            ) : null}
                             {act.hasConclusions && (
                               <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800">
                                 Conclusiones
                               </span>
                             )}
                             {act.exchangeSyncStatus === 'synced' && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Sincronizado con Outlook">
-                                <Check size={9} /> Outlook
+                              <span 
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-semibold border ${
+                                  (act.done || act.hasConclusions)
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                    : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                                }`} 
+                                title={(act.done || act.hasConclusions) ? 'Sincronizado como Realizado en Outlook (Categoría Verde dTS CRM - Completado)' : 'Sincronizado con Outlook (Categoría Azul dTS)'}
+                              >
+                                <Check size={9} /> Outlook {(act.done || act.hasConclusions) ? '(Completado)' : ''}
                               </span>
                             )}
                             {act.quoteDocumentNo && (() => {
@@ -1819,6 +2031,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                   e.stopPropagation();
                                   openExistingEmailInOutlook({
                                     webLink: act.exchangeWebLink,
+                                    itemId: act.exchangeItemId,
                                     email: act.email || contact?.email,
                                     subject: act.title,
                                     target: outlookTarget,
@@ -1830,12 +2043,16 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               >
                                 <OutlookIcon size={13} />
                               </button>
-                            ) : act.exchangeWebLink ? (
+                            ) : (act.exchangeWebLink || act.exchangeItemId) ? (
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  openCalendarEventInOutlook({ webLink: act.exchangeWebLink });
+                                  openCalendarEventInOutlook({
+                                    webLink: act.exchangeWebLink,
+                                    itemId: act.exchangeItemId,
+                                    target: outlookTarget,
+                                  });
                                 }}
                                 className="p-1 rounded-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
                                 title={`Abrir evento en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
@@ -1878,16 +2095,18 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                         {/* Descripción / Contenido */}
                         {act.description && (() => {
                           const isEmail = act.type === 'email';
+                          const cleanDesc = isEmail ? act.description : cleanActivityDescription(act.description);
+                          if (!cleanDesc) return null;
                           const isExpanded = expandedEmailIds.has(act.id);
-                          const bodyLines = act.description.split('\n');
-                          const hasMoreThan5Lines = isEmail && (bodyLines.length > 5 || act.description.length > 350);
+                          const bodyLines = cleanDesc.split('\n');
+                          const hasMoreThan5Lines = isEmail && (bodyLines.length > 5 || cleanDesc.length > 350);
                           const visibleText = isEmail && !isExpanded && hasMoreThan5Lines
                             ? bodyLines.slice(0, 5).join('\n')
-                            : act.description;
+                            : cleanDesc;
 
                           return (
-                            <div className="space-y-1.5">
-                              <p className={`text-gray-600 dark:text-gray-300 leading-relaxed text-[11px] whitespace-pre-wrap ${
+                            <div className="space-y-1">
+                              <p className={`text-gray-600 dark:text-gray-300 leading-snug text-[11px] whitespace-pre-wrap ${
                                 isEmail ? 'font-mono bg-white/40 dark:bg-black/10 p-2 rounded-lg border border-gray-100 dark:border-white/5 wrap-break-word' : ''
                               }`}>
                                 {visibleText}
@@ -1934,12 +2153,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setEditingActivity(act.rawActivity || act);
-                              setShowEditModal(true);
+                              setCompletingActivity(act.rawActivity || act);
+                              setClosingConclusions(act.conclusions || '');
                             }}
-                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 font-black text-[10px] rounded-lg border border-amber-300/80 dark:border-amber-500/40 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-2xs"
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 hover:from-amber-500/30 hover:to-amber-500/40 text-amber-950 dark:text-amber-100 font-black text-[11px] rounded-lg border-2 border-amber-400 dark:border-amber-500/70 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-xs"
                           >
-                            <Plus size={12} className="stroke-3 group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
+                            <Plus size={13} className="stroke-3 group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
                             <span>AGREGAR CONCLUSIONES</span>
                           </button>
                         )}
@@ -2081,9 +2300,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           {/* Eventos Tab (Unificada: Tareas, Notas, Calendario) */}
           {activeTab === 'eventos' && (
             <div className="space-y-4">
-              {/* Cabecera unificada: Botones de Tipología + Acciones */}
+              {/* Cabecera unificada: Botones de Tipología + Filtro de Estado + Acciones */}
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pb-3 border-b border-gray-100 dark:border-white/5">
-                {/* Lado izquierdo: Botones de Tipología de Evento */}
+                {/* Lado izquierdo: Botones de Tipología de Evento + Filtro de Estado */}
                 <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px] no-scrollbar shrink-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 shrink-0 mr-0.5 flex items-center gap-1">
@@ -2128,6 +2347,50 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       );
                     })}
                   </div>
+
+                  {/* Separador sutil vertical */}
+                  <div className="h-5 w-px bg-gray-200 dark:bg-white/10 shrink-0 hidden md:block" />
+
+                  {/* Selector / Píldoras de Estado (Todos / Pendientes / Realizados) */}
+                  <div className="inline-flex items-center gap-1 bg-gray-100/90 dark:bg-zinc-800/60 p-0.5 rounded-lg border border-gray-200/70 dark:border-white/5 text-[11px] shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setEventStatusFilter('ALL')}
+                      className={`px-2 py-0.5 rounded-md font-bold text-xs transition-all cursor-pointer ${
+                        eventStatusFilter === 'ALL'
+                          ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-2xs'
+                          : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                      }`}
+                    >
+                      Todos ({eventStatusCounts.all})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEventStatusFilter('PENDING')}
+                      className={`px-2 py-0.5 rounded-md font-bold text-xs transition-all cursor-pointer flex items-center gap-1 ${
+                        eventStatusFilter === 'PENDING'
+                          ? 'bg-white dark:bg-zinc-700 text-amber-700 dark:text-amber-300 shadow-2xs'
+                          : 'text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-300'
+                      }`}
+                      title="Eventos pendientes de realizar o registrar conclusiones"
+                    >
+                      <Clock size={11} className="text-amber-500" />
+                      <span>Pendientes ({eventStatusCounts.pending})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEventStatusFilter('COMPLETED')}
+                      className={`px-2 py-0.5 rounded-md font-bold text-xs transition-all cursor-pointer flex items-center gap-1 ${
+                        eventStatusFilter === 'COMPLETED'
+                          ? 'bg-white dark:bg-zinc-700 text-emerald-700 dark:text-emerald-300 shadow-2xs'
+                          : 'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-300'
+                      }`}
+                      title="Eventos completados o con conclusiones (en Outlook con categoría verde)"
+                    >
+                      <Check size={11} className="text-emerald-600 dark:text-emerald-400 stroke-3" />
+                      <span>Realizados ({eventStatusCounts.completed})</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Lado derecho: Acciones */}
@@ -2158,106 +2421,201 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 {isLoadingActivities ? (
                   <div className="text-center py-10 text-xs text-gray-400 uppercase font-medium">Cargando actividades...</div>
                 ) : filteredEventsList.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400 italic text-xs">No se encontraron actividades del tipo seleccionado.</div>
+                  <div className="text-center py-12 text-gray-400 italic text-xs">No se encontraron actividades con los filtros seleccionados.</div>
                 ) : (
-                  <div className="divide-y divide-gray-50 dark:divide-white/5">
-                    {filteredEventsList.map(act => (
-                      <div key={act.id} className="py-4 flex gap-4 items-start hover:bg-gray-50/20 dark:hover:bg-white/2 transition-colors px-2 rounded-xl">
-                        {act.type === 'task' && (
-                          <input 
-                            type="checkbox" 
-                            checked={act.done || false}
-                            onChange={() => updateActivityMutation.mutate({ id: act.id, payload: { isCompleted: !act.done } })}
-                            className="mt-0.5 w-4 h-4 text-dts-secondary border-gray-300 rounded focus:ring-dts-secondary focus:ring-2 cursor-pointer"
-                          />
-                        )}
-                        <div className="flex-1 space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            {/* Badge del tipo de actividad */}
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
-                              act.type === 'task' ? 'bg-blue-500/10 text-blue-600' :
-                              act.type === 'note' ? 'bg-amber-500/10 text-amber-600' :
-                              act.type === 'reunion' ? 'bg-teal-500/10 text-teal-600' :
-                              act.type === 'videollamada' ? 'bg-violet-500/10 text-violet-600' :
-                              act.type === 'visita' ? 'bg-orange-500/10 text-orange-600' :
-                              act.type === 'call' ? 'bg-cyan-500/10 text-cyan-600' :
-                              'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                            }`}>
-                              {act.type === 'task' ? 'Tarea' :
-                               act.type === 'note' ? 'Nota' :
-                               act.type === 'reunion' ? 'Reunión Interna' :
-                               act.type === 'videollamada' ? 'Videollamada' :
-                               act.type === 'visita' ? 'Visita' :
-                               act.type === 'call' ? 'Llamada' : 'Visita no programada'}
-                            </span>
+                  <div className="space-y-2">
+                    {filteredEventsList.map(act => {
+                      const isDone = Boolean(act.done || act.hasConclusions);
+                      const needsConclusions = Boolean(act.needsConclusions);
+                      const cleanDesc = cleanActivityDescription(act.description);
 
-                            {act.exchangeSyncStatus === 'synced' && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Sincronizado con Outlook">
-                                <Check size={10} /> Outlook
+                      return (
+                        <div 
+                          key={act.id} 
+                          className={`p-2.5 sm:p-3 rounded-xl border transition-all duration-200 ${
+                            needsConclusions
+                              ? 'bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-400 dark:border-amber-500/60 hover:border-amber-500 shadow-xs ring-1 ring-amber-400/20'
+                              : isDone
+                              ? 'bg-emerald-500/8 dark:bg-emerald-950/20 border-emerald-500/25 dark:border-emerald-500/30 hover:border-emerald-500/40 shadow-2xs'
+                              : 'bg-white dark:bg-zinc-900/40 border-gray-200/70 dark:border-white/5 hover:border-dts-secondary/35 shadow-2xs'
+                          }`}
+                        >
+                          {/* Encabezado completo: Checkbox, Tipología, Título, Estado, Fecha/Hora y Acciones siempre visibles */}
+                          <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1.5 pb-1.5 border-b border-gray-200 dark:border-zinc-700/70">
+                            {/* Izquierda: Checkbox + Tipo + Título + Badges de estado */}
+                            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                              {act.type !== 'note' ? (
+                                <input 
+                                  type="checkbox" 
+                                  checked={isDone}
+                                  onChange={() => handleToggleActivityCompletion(act)}
+                                  title={isDone ? 'Marcar como pendiente (en Outlook volverá a categoría azul dTS)' : 'Marcar como realizado (solicita conclusiones y sincroniza a verde en Outlook)'}
+                                  className="w-4 h-4 text-emerald-600 rounded border-gray-300 dark:border-gray-600 focus:ring-emerald-500 focus:ring-1 cursor-pointer transition-all shrink-0"
+                                />
+                              ) : (
+                                <span className="w-4 h-4 shrink-0 flex items-center justify-center text-gray-300 dark:text-gray-600 font-bold" title="Nota interna">
+                                  •
+                                </span>
+                              )}
+
+                              {/* Badge del tipo de actividad */}
+                              <span className={`px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider shrink-0 ${
+                                act.type === 'task' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                                act.type === 'note' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                                act.type === 'reunion' ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400' :
+                                act.type === 'videollamada' ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' :
+                                act.type === 'visita' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
+                                act.type === 'call' ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400' :
+                                'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                              }`}>
+                                {act.type === 'task' ? 'Tarea' :
+                                 act.type === 'note' ? 'Nota' :
+                                 act.type === 'reunion' ? 'Reunión' :
+                                 act.type === 'videollamada' ? 'Videollamada' :
+                                 act.type === 'visita' ? 'Visita' :
+                                 act.type === 'call' ? 'Llamada' : 'Visita no programada'}
                               </span>
-                            )}
 
-                            <h4 className={`text-xs font-bold ${act.done && act.type === 'task' ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>
-                              {act.title}
-                            </h4>
+                              {/* Título de la actividad */}
+                              <h4 className={`text-[13.5px] font-semibold leading-none truncate max-w-sm sm:max-w-md transition-colors ${
+                                isDone 
+                                  ? 'line-through text-gray-400 dark:text-gray-400' 
+                                  : 'text-gray-900 dark:text-white'
+                              }`} title={act.title}>
+                                {act.title}
+                              </h4>
 
-                            {act.location && (
-                              <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                <MapPin size={10} className="text-gray-400" />
-                                {act.location}
+                              {/* Badge de estado: Letra SIN NEGRITA y tamaño aumentado un punto */}
+                              {needsConclusions ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCompletingActivity(act.rawActivity || act);
+                                    setClosingConclusions(act.conclusions || '');
+                                  }}
+                                  title="Clic para registrar conclusiones"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-normal bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-400/60 dark:border-amber-500/50 hover:bg-amber-500/25 transition-colors cursor-pointer shrink-0"
+                                >
+                                  <Clock size={9.5} className="text-amber-600 dark:text-amber-300 stroke-1.5 shrink-0" />
+                                  <span>{isDone ? 'TERMINADO · FALTAN CONCLUSIONES' : 'VENCIDO · FALTAN CONCLUSIONES'}</span>
+                                </button>
+                              ) : isDone ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-normal bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shrink-0">
+                                  <Check size={9.5} className="stroke-2 text-emerald-600 dark:text-emerald-400 shrink-0" /> Realizado
+                                </span>
+                              ) : null}
+
+                              {/* Badge de sincronización con Outlook */}
+                              {act.exchangeSyncStatus === 'synced' && (
+                                <span 
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-semibold border shrink-0 ${
+                                    isDone
+                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                                  }`} 
+                                  title={isDone ? 'Sincronizado como Realizado en Outlook (Categoría Verde dTS CRM - Completado)' : 'Sincronizado en el calendario de Outlook (Categoría Azul dTS)'}
+                                >
+                                  <Check size={9} /> Outlook {isDone ? '(Completado)' : ''}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Derecha: Ubicación + Fecha/Hora + Acciones (SIEMPRE VISIBLES) */}
+                            <div className="flex items-center gap-2 shrink-0 ml-auto">
+                              {act.location && (
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1" title={act.location}>
+                                  <MapPin size={11} className="text-gray-400 shrink-0" />
+                                  <span className="max-w-32 truncate">{act.location}</span>
+                                </span>
+                              )}
+
+                              <span className="text-[11px] text-gray-400 dark:text-gray-400 font-mono font-medium flex items-center gap-1">
+                                <Calendar size={11} className="text-gray-400 shrink-0" />
+                                {new Date(act.date).toLocaleDateString('es-ES')} {act.time || ''}
                               </span>
-                            )}
 
-                            <span className="text-[10px] text-gray-400 font-mono ml-auto">
-                              {new Date(act.date).toLocaleDateString('es-ES')} {act.time || ''}
-                            </span>
+                              {/* Acciones */}
+                              <div className="flex items-center gap-0.5 border-l border-gray-200 dark:border-white/10 pl-1.5 ml-0.5">
+                                {(act.exchangeWebLink || act.exchangeItemId) && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openCalendarEventInOutlook({
+                                        webLink: act.exchangeWebLink,
+                                        itemId: act.exchangeItemId,
+                                        target: outlookTarget,
+                                      });
+                                    }}
+                                    className="p-1 text-gray-400 hover:text-dts-secondary hover:bg-cyan-500/10 rounded-md transition-colors cursor-pointer"
+                                    title={`Abrir en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
+                                  >
+                                    <ExternalLink size={12} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setEditingActivity(act.rawActivity || act);
+                                    setShowEditModal(true);
+                                  }}
+                                  className="p-1 text-gray-400 hover:text-dts-secondary hover:bg-gray-100 dark:hover:bg-white/5 rounded-md transition-colors cursor-pointer"
+                                  title="Editar actividad"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
+                                      deleteActivityMutation.mutate(act.id);
+                                    }
+                                  }}
+                                  className="p-1 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-md transition-colors cursor-pointer"
+                                  title="Eliminar actividad"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                          {act.description && (
-                            <p className="text-xs text-gray-500 whitespace-pre-wrap">{act.description}</p>
-                          )}
-                          {act.conclusions && (
-                            <div className="text-[10px] border-l-2 border-emerald-500 pl-2 bg-emerald-50/10 dark:bg-emerald-950/5 py-0.5 text-emerald-600 dark:text-emerald-400 font-medium">
-                              <strong>Conclusiones:</strong> {act.conclusions}
+
+                          {/* Detalle del evento: Espacio ordenado y controlado debajo de la línea divisoria */}
+                          {(cleanDesc || act.conclusions || needsConclusions) && (
+                            <div className="pt-2 pl-5 space-y-1 text-xs">
+                              {cleanDesc && (
+                                <p className="text-[12.5px] text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-snug">
+                                  {cleanDesc}
+                                </p>
+                              )}
+
+                              {act.conclusions && (
+                                <div className="text-[11.5px] border-l-2 border-emerald-500 pl-2.5 py-0.5 bg-emerald-50/20 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-200 font-medium rounded-r">
+                                  <strong className="text-emerald-700 dark:text-emerald-400 uppercase tracking-wide text-[9.5px] block">Conclusiones:</strong>
+                                  <span className="whitespace-pre-wrap leading-snug">{act.conclusions}</span>
+                                </div>
+                              )}
+
+                              {needsConclusions && (
+                                <div className="pt-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCompletingActivity(act.rawActivity || act);
+                                      setClosingConclusions(act.conclusions || '');
+                                    }}
+                                    className="inline-flex items-center gap-1 text-[11.5px] font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline cursor-pointer transition-colors"
+                                  >
+                                    <Plus size={12} className="stroke-2" />
+                                    <span>Registrar conclusiones</span>
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2">
-                          {act.exchangeWebLink && (
-                            <a
-                              href={act.exchangeWebLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1.5 text-gray-400 hover:text-dts-secondary hover:bg-cyan-500/10 rounded-lg transition-colors"
-                              title="Abrir en Outlook Web / Microsoft Teams"
-                            >
-                              <ExternalLink size={13} />
-                            </a>
-                          )}
-                          <button
-                            onClick={() => {
-                              setEditingActivity(act.rawActivity || act);
-                              setShowEditModal(true);
-                            }}
-                            className="p-1 text-gray-400 hover:text-dts-secondary cursor-pointer"
-                            title="Editar actividad"
-                          >
-                            <Edit2 size={12} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
-                                deleteActivityMutation.mutate(act.id);
-                              }
-                            }}
-                            className="p-1 text-gray-400 hover:text-rose-500 cursor-pointer"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -2364,6 +2722,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   <button
                     onClick={() => {
                       setNewEmailAddress(contact.email || '');
+                      setNewEmailCc('');
+                      setShowCcField(false);
                       setShowEmailModal(true);
                     }}
                     className="px-3 py-1.5 bg-dts-secondary hover:brightness-110 text-white font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -2533,6 +2893,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                 type="button"
                                 onClick={() => openExistingEmailInOutlook({
                                   webLink: mail.exchangeWebLink,
+                                  itemId: mail.exchangeItemId,
                                   email: mail.email || contact?.email,
                                   subject: mail.title,
                                   target: outlookTarget,
@@ -2853,16 +3214,57 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
               </div>
 
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Destinatario</label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Destinatarios (Para)
+                  </label>
+                  {!showCcField && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCcField(true)}
+                      className="text-[10px] font-bold text-dts-secondary hover:underline cursor-pointer"
+                    >
+                      + Añadir CC (Copia)
+                    </button>
+                  )}
+                </div>
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={newEmailAddress}
                   onChange={(e) => setNewEmailAddress(e.target.value)}
-                  placeholder="destinatario@cliente.com"
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 font-medium"
+                  placeholder="ejemplo@cliente.com, otro@cliente.com (separados por coma)"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 font-medium text-xs"
                 />
+                <span className="text-[10px] text-gray-400 block">Puedes escribir varios correos separados por coma o punto y coma.</span>
               </div>
+
+              {showCcField && (
+                <div className="space-y-1 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      En Copia (CC)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCcField(false);
+                        setNewEmailCc('');
+                      }}
+                      className="text-[10px] text-gray-400 hover:text-red-500 cursor-pointer"
+                    >
+                      Quitar CC
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={newEmailCc}
+                    onChange={(e) => setNewEmailCc(e.target.value)}
+                    placeholder="copia1@empresa.com, copia2@empresa.com"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 font-medium text-xs"
+                  />
+                </div>
+              )}
 
               <div className="space-y-1">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Asunto</label>
@@ -2943,6 +3345,140 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         defaultLocation={getCompanyAddress()}
         contactId={contactId}
       />
+
+      {/* MODAL RÁPIDO: Cierre y Conclusiones de Actividad Comercial */}
+      {completingActivity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div 
+            className="bg-white dark:bg-[#00222C] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Cabecera */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-zinc-800/20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Check size={18} className="stroke-3" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                    {completingActivity.done || completingActivity.is_completed
+                      ? 'Añadir Conclusiones a la Actividad'
+                      : 'Completar Actividad Comercial'}
+                  </h3>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {completingActivity.done || completingActivity.is_completed
+                      ? 'Registra las conclusiones de la reunión o acuerdo alcanzado'
+                      : 'Registra las conclusiones para cerrar el evento y sincronizar en verde en Outlook'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancelCompletion}
+                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Contenido / Cuerpo */}
+            <div className="p-5 space-y-4">
+              {/* Contexto de la Actividad */}
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/60 dark:border-white/5 space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`px-2 py-0.5 rounded text-[8.5px] font-bold uppercase tracking-wider ${
+                    completingActivity.type === 'task' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                    completingActivity.type === 'visita' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
+                    completingActivity.type === 'videollamada' ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' :
+                    completingActivity.type === 'call' ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400' :
+                    completingActivity.type === 'reunion' ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400' :
+                    'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                  }`}>
+                    {completingActivity.type === 'task' ? 'Tarea' :
+                     completingActivity.type === 'visita' ? 'Visita a Cliente' :
+                     completingActivity.type === 'videollamada' ? 'Videollamada' :
+                     completingActivity.type === 'call' ? 'Llamada' :
+                     completingActivity.type === 'reunion' ? 'Reunión Interna' : 'Visita no programada'}
+                  </span>
+                  <span className="text-[11px] font-bold text-gray-900 dark:text-white">
+                    {completingActivity.title}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400 flex-wrap">
+                  <span className="flex items-center gap-1 font-mono">
+                    <Calendar size={12} className="text-gray-400" />
+                    {new Date(completingActivity.date || completingActivity.due_date || completingActivity.created_at || Date.now()).toLocaleDateString('es-ES')} {completingActivity.time || completingActivity.time_scheduled || ''}
+                  </span>
+                  {completingActivity.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin size={12} className="text-gray-400" />
+                      {completingActivity.location}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Aviso y Área de Conclusiones */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">
+                  Conclusiones o Acuerdos Alcanzados
+                </label>
+                <textarea
+                  autoFocus
+                  rows={4}
+                  value={closingConclusions}
+                  onChange={(e) => setClosingConclusions(e.target.value)}
+                  placeholder="Describe brevemente qué se trató, acuerdos con el cliente o siguientes pasos comerciales..."
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-900/60 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                />
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <Info size={11} className="text-emerald-500 shrink-0" />
+                  Las conclusiones se guardarán en la ficha del contacto y se sincronizarán en el cuerpo del evento en Outlook.
+                </p>
+              </div>
+            </div>
+
+            {/* Pie / Acciones */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 px-5 py-3.5 border-t border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-zinc-800/20">
+              <button
+                type="button"
+                onClick={handleConfirmCompletionWithoutConclusions}
+                disabled={updateActivityMutation.isPending}
+                className="text-xs text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 underline text-center sm:text-left cursor-pointer transition-colors"
+                title="Marcar como realizada sin redactar conclusiones"
+              >
+                Completar sin conclusiones
+              </button>
+
+              <div className="flex items-center gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={handleCancelCompletion}
+                  disabled={updateActivityMutation.isPending}
+                  className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmCompletionWithConclusions}
+                  disabled={updateActivityMutation.isPending}
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {updateActivityMutation.isPending ? (
+                    <span>Guardando...</span>
+                  ) : (
+                    <>
+                      <Check size={14} className="stroke-3" />
+                      <span>Guardar y Completar</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DRAWER: Detalle de Oferta CRM */}
       <Drawer isOpen={isQuoteDrawerOpen} onClose={() => setIsQuoteDrawerOpen(false)} title={`Oportunidad: ${selectedQuote?.document_no || ''}`} size="2xl">

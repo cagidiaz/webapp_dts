@@ -148,7 +148,7 @@ Al exportar los datos de esta vista se genera el libro multi-pestaña `presupues
 
 ## 8. Homogeneidad Total con Ventas vs Presupuestos 🔄
 
-| Dimensión de Análisis | [Ventas vs Presupuestos](file:///c:/proyectos/webapp_dts/docs/vistas/ventas_vs_presupuestos.md) (`/sales/budgets`) | [Presupuesto x Product Manager](file:///c:/proyectos/webapp_dts/docs/vistas/presupuestos_x_product_manager.md) (`/sales/product-budgets`) |
+| Dimensión de Análisis | [Ventas vs Presupuestos](file:///c:/proyectos/webapp_dts/docs/vistas/02_ventas/ventas_vs_presupuestos.md) (`/sales/budgets`) | [Presupuesto x Product Manager](file:///c:/proyectos/webapp_dts/docs/vistas/02_ventas/presupuestos_x_product_manager.md) (`/sales/product-budgets`) |
 | :--- | :--- | :--- |
 | **Concepto Central** | **Cliente y Vendedor** (Comercial) | **Producto y Cliente** (Técnico / SKU) |
 | **Tablas Fuente** | `sales_documents` + `sales_document_lines` | `sales_documents` + `sales_document_lines` |

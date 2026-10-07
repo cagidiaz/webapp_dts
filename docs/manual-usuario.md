@@ -150,7 +150,7 @@ Ubicado en `/sales/value-entries`, vista de auditoría transaccional directa res
 ---
 
 ### 2.8 Ofertas Comerciales (Seguimiento, KPIs y Totales)
-Ubicado en `/sales/quotes`. Para documentación técnica exhaustiva, consultar [Documentación de Vista: Ofertas Comerciales](file:///c:/proyectos/webapp_dts/docs/vistas/ofertas_comerciales.md).
+Ubicado en `/sales/quotes`. Para documentación técnica exhaustiva, consultar [Documentación de Vista: Ofertas Comerciales](file:///c:/proyectos/webapp_dts/docs/vistas/02_ventas/ofertas_comerciales.md).
 
 * **Bandeja de KPIs de Rendimiento Superior**:
   * **Cartera de Ofertas**: Total emitido acumulado con modal informativo (`ℹ️`) que desglosa propuestas ganadas, perdidas y volumen vivo en negociación.
@@ -202,20 +202,31 @@ Ubicado en `/crm/contacts` y `/crm/customers`.
 * **Timeline Histórico de Actividades**: Registro cronológico de reuniones, llamadas, notas comerciales y correos electrónicos vinculados al cliente.
 * **Gestión de Eventos, Visitas y Actividades Comerciales**:
   * **Visita no programada (`EVENT`)**: Diseñada para visitas presenciales espontáneas ("puerta fría" o visitas no planificadas). **No envía invitaciones ni correos electrónicos al contacto**, registrándose exclusivamente en la base de datos de la aplicación y en el calendario de Outlook del comercial bajo la categoría corporativa `dTS CRM` con el prefijo `[dTS CRM - Visita No Programada]`.
-  * **Visita a Cliente (`VISITA`)**: Registro de visitas comerciales agendadas, con soporte de ubicación.
+  * **Visita a Cliente (`VISITA`)**: Registro de visitas comerciales agendadas, con soporte de ubicación física y cálculo de ruta.
   * **Reunión Interna (`REUNION`)**: Sustituye a la anterior reunión presencial; reservada para coordinación interna de equipos dTS *(opción temporalmente en blanco para configuración en siguiente fase)*.
   * **Autocompletado de Ubicación de Empresa**: En visitas a clientes y visitas no programadas, botón directo para autocompletar la dirección con la sede social de la empresa o el centro de trabajo del contacto con un clic.
-  * **Barra de Filtrado Unificada con Contadores Reactivos**: Diseño visual compartido con la pestaña de Emails, incorporando contadores dinámicos en tiempo real para cada tipología (*Todos*, *Tareas*, *Notas*, *Visitas Cliente*, *Visitas no prog.*, *Videollamadas*, *Llamadas*, *Reuniones Internas*).
-* **Sincronización Bidireccional de Calendario con Microsoft Outlook**:
-  * Categorización visual automática con la etiqueta corporativa **`dTS CRM`** (Azul dTS).
-  * Control estricto de invitaciones: las visitas no programadas, tareas y notas no incluyen al cliente en la lista de asistentes (`attendees`), previniendo envíos no deseados de correo.
-  * Detección activa de eliminaciones: si una cita o tarea se elimina en Outlook, el CRM la detecta y purga de inmediato en la base de datos local.
-  * Botón directo de **"Sincronizar"** en la pestaña de Eventos y actualización en segundo plano al cambiar de pestaña.
+  * **Barra de Filtrado Unificada con Contadores Reactivos**: Diseño visual compartido con la pestaña de Emails, incorporando contadores dinámicos en tiempo real para cada tipología (*Todos*, *Tareas*, *Notas*, *Visitas Cliente*, *Visitas no prog.*, *Videollamadas*, *Llamadas*, *Reuniones Internas*) y filtro de estado (*Todos*, *Pendientes*, *Realizados*).
+* **Ciclo de Vida de Eventos, Conclusiones y Categorización por Color en Outlook**:
+  * **Checkbox de Finalización Rápida**: Disponible en todas las actividades comerciales para alternar entre pendiente y realizado con un clic.
+  * **Modal Ágil de Registro de Conclusiones**: Al marcar una actividad o hacer clic en el badge `VENCIDO · FALTAN CONCLUSIONES`, el sistema solicita registrar los acuerdos o conclusiones alcanzadas, guardándolas en el CRM y anexándolas limpiamente al cuerpo de la cita en Outlook.
+  * **Cambio Dinámico de Color en el Calendario de Outlook**:
+    * Eventos pendientes: clasificados bajo la categoría **`dTS CRM`** (**Azul corporativo `#003E51`**).
+    * Eventos completados o con conclusiones: reclasificados automáticamente por Microsoft Graph bajo la categoría **`dTS CRM - Completado`** (**Verde esmeralda `#059669`**), tiñendo el bloque del calendario de Outlook de color verde en tiempo real.
+    * Si el comercial desmarca la actividad, vuelve de forma automática a color azul.
+  * **Prevención de Duplicados en Apertura**: Enlace directo canónico (`/calendar/item/<id>`) sobre la misma pestaña unificada de navegador, evitando dobles renderizados en Outlook Web.
+* **Sincronización Bidireccional Automática en Tiempo Real**:
+  * **Refresco Reactivo por Foco (`onfocus` / `visibilitychange`)**: Si el comercial modifica la hora o fecha de una cita en Outlook y vuelve a la WebApp, el cambio se refleja en milisegundos sin requerir recargar la página.
+  * **Polling Silencioso (cada 25s)** y sincronización garantizada al cambiar de pestaña.
+  * **Sanitización Automática de Texto**: El sistema purga en backend y frontend cualquier línea de guiones bajos (`____________________`), encabezados repetidos o saltos de línea acumulados devueltos por el preview de Outlook.
+* **Diseño Ergonómico y Legibilidad Optimizada de Tarjetas**:
+  * Encabezado adaptable con visualización permanente de la fecha, hora, ubicación y acciones (`Abrir en Outlook`, `Editar`, `Eliminar`).
+  * Línea divisoria horizontal limpia que separa el encabezado del contenido.
+  * Tipografía equilibrada y descansada: títulos a 13.5px, badges a 9.5px, fecha/hora a 11px y descripción a 12.5px con interlineado ceñido (`leading-snug`).
 
 ---
 
 ### 3.3 Pestaña de Emails, Filtrado por Tipologías y Apertura en Outlook
-Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=emails`). Para especificaciones técnicas detalladas, consultar [Documentación de Vista: Contactos CRM y Pestaña de Emails](file:///c:/proyectos/webapp_dts/docs/vistas/crm_contactos_mails.md).
+Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=emails`). Para especificaciones técnicas detalladas, consultar [Documentación de Vista: Contactos CRM y Pestaña de Emails](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_contactos_mails.md).
 
 * **Barra Unificada de Filtrado por Tipología y Oferta**:
   * Ubicada en una misma fila horizontal compacta para máxima ergonomía visual.
@@ -275,7 +286,7 @@ Extensión oficial integrada en la cinta de opciones de Microsoft Outlook (Web, 
 ## 4. Módulo de Compras
 
 ### 4.1 Directorio de Proveedores
-Ubicado en `/purchases/vendors` (Acceso para roles `ADMIN`, `DIRECCION` y `OPERACIONES`). Para documentación técnica y operativa exhaustiva, consultar [Documentación de Vista: Cartera de Proveedores](file:///c:/proyectos/webapp_dts/docs/vistas/compras_proveedores.md).
+Ubicado en `/purchases/vendors` (Acceso para roles `ADMIN`, `DIRECCION` y `OPERACIONES`). Para documentación técnica y operativa exhaustiva, consultar [Documentación de Vista: Cartera de Proveedores](file:///c:/proyectos/webapp_dts/docs/vistas/04_compras/compras_proveedores.md).
 
 * **Directorio Maestro de Proveedores**: Listado sincronizado en tiempo real desde Business Central con filtros por búsqueda de texto, ejercicio anual y estado de bloqueo.
 * **Mapa Geoespacial Interactivo D3 Mundial (`WorldGeoVendorsMap`)**:

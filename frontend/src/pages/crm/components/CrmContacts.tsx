@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getContacts, updateContactLinkedin } from '../../../api';
+import { openInOutlook } from '../../../api/exchangeSync';
 import { 
   Search, User, Linkedin, Edit2, Check, X, 
   Mail, Phone, Smartphone, Users, MapPin, Briefcase
@@ -326,10 +327,15 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact, onOpe
                     </td>
                     <td className="px-6 py-4">
                       {contact.email ? (
-                        <a href={`mailto:${contact.email}`} className="text-gray-600 dark:text-gray-300 hover:text-dts-secondary transition-colors flex items-center gap-1">
-                          <Mail size={12} className="text-gray-400" />
-                          {contact.email}
-                        </a>
+                        <button
+                          type="button"
+                          onClick={() => openInOutlook({ to: contact.email })}
+                          className="text-gray-600 dark:text-gray-300 hover:text-dts-secondary transition-colors flex items-center gap-1 cursor-pointer text-left group"
+                          title={`Enviar correo en Outlook a ${contact.email}`}
+                        >
+                          <Mail size={12} className="text-gray-400 group-hover:text-dts-secondary transition-colors shrink-0" />
+                          <span className="group-hover:underline">{contact.email}</span>
+                        </button>
                       ) : (
                         <span className="text-gray-400 italic">No disponible</span>
                       )}

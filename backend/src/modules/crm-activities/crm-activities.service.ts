@@ -24,17 +24,6 @@ export class CrmActivitiesService {
         orderBy: { created_at: 'desc' },
       });
 
-      if (userId) {
-        const syncedActs = activities.filter(
-          (a) => a.exchange_item_id && a.created_by === userId && a.type !== 'EMAIL',
-        );
-        if (syncedActs.length > 0) {
-          const deletedIds = await this.exchangeSyncService.purgeDeletedCalendarActivities(userId, syncedActs);
-          if (deletedIds.length > 0) {
-            activities = activities.filter((a) => !deletedIds.includes(a.id));
-          }
-        }
-      }
 
       // Enriquecer con número de oferta asociada
       return await this.enrichActivitiesWithQuoteInfo(activities);
@@ -57,17 +46,6 @@ export class CrmActivitiesService {
         orderBy: { created_at: 'desc' },
       });
 
-      if (userId) {
-        const syncedActs = activities.filter(
-          (a) => a.exchange_item_id && a.created_by === userId && a.type !== 'EMAIL',
-        );
-        if (syncedActs.length > 0) {
-          const deletedIds = await this.exchangeSyncService.purgeDeletedCalendarActivities(userId, syncedActs);
-          if (deletedIds.length > 0) {
-            activities = activities.filter((a) => !deletedIds.includes(a.id));
-          }
-        }
-      }
 
       // Enriquecer con número de oferta asociada
       return await this.enrichActivitiesWithQuoteInfo(activities);
@@ -189,17 +167,6 @@ export class CrmActivitiesService {
         }
       });
 
-      // Purga de eventos eliminados en Outlook si corresponde
-      const purgeUserId = whereClause.created_by || requestingUserId;
-      if (purgeUserId) {
-        const syncedActs = activities.filter(a => a.exchange_item_id && a.created_by === purgeUserId && a.type !== 'EMAIL');
-        if (syncedActs.length > 0) {
-          const deletedIds = await this.exchangeSyncService.purgeDeletedCalendarActivities(purgeUserId, syncedActs);
-          if (deletedIds.length > 0) {
-            activities = activities.filter(a => !deletedIds.includes(a.id));
-          }
-        }
-      }
 
       return activities;
     } catch (error) {

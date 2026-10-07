@@ -59,7 +59,7 @@ En la parte superior se presentan 6 tarjetas resumen. Cada una cuenta con una ve
   > [!IMPORTANT]
   > El presupuesto comercial de dTS se elabora en base a la venta de productos e instrumental. Si incluyéramos en esta cifra los portes cobrados al cliente (cuenta 624) o facturas de prepago (que son anticipos de tesorería y no ventas de material devengadas), estaríamos falseando la consecución del objetivo. Por ello, el KPI principal muestra **únicamente producto**.
   > 
-  > **Homogeneidad con Presupuesto x Product Manager:** Esta misma fuente documental (`sales_documents` + `sales_document_lines`) y fórmula de cálculo se utiliza de forma idéntica en la vista de [**Presupuesto x Product Manager**](file:///c:/proyectos/webapp_dts/docs/vistas/presupuestos_x_product_manager.md), asegurando que los totales de facturación de producto, cartera y prepagos coincidan al céntimo (0,00 € de discrepancia) en ambas pantallas.
+  > **Homogeneidad con Presupuesto x Product Manager:** Esta misma fuente documental (`sales_documents` + `sales_document_lines`) y fórmula de cálculo se utiliza de forma idéntica en la vista de [**Presupuesto x Product Manager**](file:///c:/proyectos/webapp_dts/docs/vistas/02_ventas/presupuestos_x_product_manager.md), asegurando que los totales de facturación de producto, cartera y prepagos coincidan al céntimo (0,00 € de discrepancia) en ambas pantallas.
 
 #### Desglose Informativo en la Ventana Modal (`InfoPopover`):
 Para máxima transparencia, al pulsar `ℹ️` en Facturación se muestra un desglose con todas las magnitudes contables y documentales del periodo:

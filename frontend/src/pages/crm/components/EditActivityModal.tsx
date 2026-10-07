@@ -107,7 +107,16 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
       const rawTime = activity.time_scheduled || activity.time;
       setTime(rawTime ? rawTime.substring(0, 5) : '10:00');
       setLocation(activity.location || '');
-      setDescription(activity.description || '');
+      const rawDesc = activity.description || '';
+      const cleanDesc = (normType === 'EMAIL' || (activity.type || '').toUpperCase() === 'EMAIL')
+        ? rawDesc
+        : (rawDesc.replace(/Actividad de CRM dTS Instruments/gi, '')
+                  .replace(/Empresa:\s*[^\r\n]*/gi, '')
+                  .replace(/Contacto:\s*[^\r\n]*/gi, '')
+                  .replace(/[_\-═]{3,}/g, '')
+                  .replace(/Conclusiones:\s*[\s\S]*/gi, '')
+                  .replace(/\r\n/g, '\n').replace(/\n{2,}/g, '\n').trim());
+      setDescription(cleanDesc);
       setConclusions(activity.conclusions || '');
       setIsCompleted(activity.is_completed !== undefined ? !!activity.is_completed : !!activity.done);
     }

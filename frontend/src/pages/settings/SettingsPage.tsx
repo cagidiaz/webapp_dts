@@ -181,10 +181,10 @@ export const SettingsPage: React.FC = () => {
 
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                    Outlook de Escritorio
+                    Outlook de Escritorio (Classic / App)
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Abre la aplicación nativa de Microsoft Outlook instalada en tu ordenador (Windows / macOS).
+                    Abre la aplicación nativa de Microsoft Outlook (Classic o Nuevo) instalada en tu equipo mediante el protocolo predeterminado de correo de Windows.
                   </p>
                 </div>
               </button>
@@ -212,10 +212,10 @@ export const SettingsPage: React.FC = () => {
 
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                    Outlook Web (M365)
+                    Outlook Online (Web / M365)
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Abre tu bandeja de borradores y correos directamente en el navegador web en Microsoft 365.
+                    Abre tus correos y redacción directamente en el navegador en Microsoft 365 (outlook.office.com).
                   </p>
                 </div>
               </button>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { 
   getSalesBudgetPerformance, 
   getSalesBudgetEvolution, 
@@ -7,13 +7,16 @@ import {
   getWeeklyAgenda,
   openCalendarEventInOutlook,
   getPreferredOutlookClient,
+  getExchangeStatus,
+  syncExchangeNow,
   type CrmActivity
 } from '../../../api';
 import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
   TrendingUp, Target, Activity, Users, Package, BarChart2,
   TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock, MapPin, Video,
-  Edit2, Plus, User, ChevronDown, Building2, ChevronLeft, ChevronRight, RotateCcw, Loader2
+  Edit2, Plus, User, ChevronDown, Building2, ChevronLeft, ChevronRight, RotateCcw, Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
@@ -95,10 +98,70 @@ const OutlookIcon: React.FC<{ size?: number; className?: string }> = ({ size = 1
 
 
 export const SalesDashboard: React.FC = () => {
+  const queryClient = useQueryClient();
   const { setPageInfo } = useUIStore();
   const { profile } = useAuthStore();
   const year = new Date().getFullYear();
   const salespersonCode = profile?.code;
+
+  const { data: exchangeStatus } = useQuery({
+    queryKey: ['exchangeStatus'],
+    queryFn: getExchangeStatus,
+  });
+  const isExchangeConnected = !!exchangeStatus?.isConnected;
+
+  const syncExchangeMutation = useMutation({
+    mutationFn: syncExchangeNow,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crmWeeklyAgenda'] });
+      queryClient.invalidateQueries({ queryKey: ['todayActivities'] });
+      queryClient.invalidateQueries({ queryKey: ['crmActivities'] });
+    },
+  });
+
+  // Auto-sincronización reactiva con Outlook para la agenda comercial:
+  // - Al enfocar la ventana o volver a la pestaña (window focus / visibilitychange)
+  // - Polling periódico cada 25 segundos en segundo plano mientras la ventana esté visible
+  const lastAgendaSyncTimeRef = React.useRef<number>(0);
+
+  const triggerAgendaAutoSync = React.useCallback(() => {
+    if (!isExchangeConnected || syncExchangeMutation.isPending) return;
+    const now = Date.now();
+    if (now - lastAgendaSyncTimeRef.current < 5000) return;
+    lastAgendaSyncTimeRef.current = now;
+    syncExchangeMutation.mutate();
+  }, [isExchangeConnected, syncExchangeMutation.isPending]);
+
+  React.useEffect(() => {
+    if (!isExchangeConnected) return;
+
+    triggerAgendaAutoSync();
+
+    const handleWindowFocus = () => {
+      triggerAgendaAutoSync();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        triggerAgendaAutoSync();
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        triggerAgendaAutoSync();
+      }
+    }, 25000);
+
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(intervalId);
+    };
+  }, [isExchangeConnected, triggerAgendaAutoSync]);
 
   const formatYYYYMMDD = (date: Date) => {
     const yyyy = date.getFullYear();
@@ -620,6 +683,20 @@ export const SalesDashboard: React.FC = () => {
                 </button>
               )}
 
+              {/* Botón Sincronizar Outlook */}
+              {isExchangeConnected && (
+                <button
+                  type="button"
+                  onClick={() => syncExchangeMutation.mutate()}
+                  disabled={syncExchangeMutation.isPending}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                  title="Sincronizar cambios recientes de Outlook con la agenda"
+                >
+                  <RefreshCw size={11} className={syncExchangeMutation.isPending ? 'animate-spin text-dts-secondary' : ''} />
+                  <span>{syncExchangeMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}</span>
+                </button>
+              )}
+
               {/* Botón Exportar Informe */}
               <button
                 type="button"
@@ -777,7 +854,11 @@ export const SalesDashboard: React.FC = () => {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                openCalendarEventInOutlook({ webLink: act.exchange_web_link });
+                                openCalendarEventInOutlook({
+                                  webLink: act.exchange_web_link,
+                                  itemId: act.exchange_item_id,
+                                  target: preferredOutlook,
+                                });
                               }}
                               className="p-1 rounded-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
                               title={`Abrir en Outlook (${preferredOutlook === 'desktop' ? 'Escritorio' : 'Web'})`}
@@ -822,9 +903,9 @@ export const SalesDashboard: React.FC = () => {
                               setActivityToEdit(act);
                               setIsEditModalOpen(true);
                             }}
-                            className="mt-2.5 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 font-black text-[10px] rounded-lg border border-amber-300/80 dark:border-amber-500/40 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-2xs"
+                            className="mt-2.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 hover:from-amber-500/30 hover:to-amber-500/40 text-amber-950 dark:text-amber-100 font-black text-[11px] rounded-lg border-2 border-amber-400 dark:border-amber-500/70 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-xs"
                           >
-                            <Plus size={12} className="stroke-3 group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
+                            <Plus size={13} className="stroke-3 group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
                             <span>AGREGAR CONCLUSIONES</span>
                           </button>
                         )}

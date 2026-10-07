@@ -1,72 +1,112 @@
 # 📜 Reglas de Comportamiento e Instrucciones del Agente (AGENTS.md)
 
-Este archivo contiene las directrices críticas y reglas de desarrollo específicas para el proyecto **dTS Instruments WebApp**. Estas instrucciones extienden mi comportamiento y deben ser seguidas estrictamente en todas las interacciones.
+Este archivo contiene las directrices críticas, arquitectura técnica y reglas de desarrollo específicas para el proyecto **dTS Instruments WebApp**. Estas instrucciones extienden mi comportamiento y deben ser seguidas estrictamente en todas las interacciones.
 
 ---
 
 ## 1. PREFERENCIAS DE COMUNICACIÓN E IDIOMA 🗣️
-* **Idioma del Agente:** Háblame **SIEMPRE en español** en todas tus respuestas y explicaciones.
+* **Idioma del Agente:** Háblame **SIEMPRE en español** en todas tus respuestas, explicaciones y propuestas.
 * **Mensajes de Commit:** **TODOS** los mensajes de commit deben redactarse en **español** y su título debe ser un resumen claro de todos los cambios realizados.
-
----
-
-## 2. CONTROL DE VERSIONES (GIT) Y DESPLIEGUE 🚨
-* **PROHIBICIÓN TOTAL DE PUSH AUTOMÁTICO (REGLA INQUEBRANTABLE):** Está **estrictamente prohibido** que realices subidas (`git push`) a GitHub por tu cuenta bajo ninguna circunstancia.
-* **VERIFICACIÓN Y PRUEBAS PREVIAS DEL USUARIO:** **NUNCA** subas a GitHub hasta que el usuario haya probado y verificado personalmente en su entorno que todo funciona a la perfección. La subida a GitHub solo se realizará cuando el usuario lo solicite de forma explícita (ej. *"sube a producción"*, *"haz git push"*).
-* **Mensajes de Commit Semánticos:** Usar prefijos semánticos en español (`feat:`, `fix:`, `style:`, `docs:`, etc.) y opcionalmente etiquetas de rol: `[ADMIN]`, `[SALES]`, `[OPERACIONES]`.
+* **Prefijos Semánticos:** Usar prefijos semánticos en español (`feat:`, `fix:`, `style:`, `docs:`, `refactor:`) y opcionalmente etiquetas de rol/área: `[ADMIN]`, `[SALES]`, `[OPERACIONES]`, `[FINANZAS]`, `[CRM]`.
 * **Novedades de la App:** Solo los commits `feat:` y `style:` que sean descriptivos aparecerán en el modal de novedades de la aplicación. Los commits tipo `fix:` y cambios puramente técnicos deben filtrarse de esta vista.
 
 ---
 
-## 3. INMUTABILIDAD DE DATOS (REGLA DE ORO) 🔒
-* **Solo Lectura:** Los datos de negocio sincronizados desde Dynamics 365 Business Central (vía n8n) son de **SOLO LECTURA** (tablas de clientes, facturación, stock, etc.). Están prohibidas las operaciones `INSERT`, `UPDATE`, `PATCH` o `DELETE` sobre ellas.
-* **Excepción:** Solo se permite escribir en las tablas de control de acceso y perfiles gestionadas por Supabase (`auth`, `profiles`, `roles`, `role_modules`) o tablas del metadato local del CRM (`sales_quotes_crm`, `sales_quote_activities`, `crm_activities`).
+## 2. CONTROL DE VERSIONES (GIT) Y DESPLIEGUE 🚨
+* **PROHIBICIÓN TOTAL DE PUSH AUTOMÁTICO (REGLA INQUEBRANTABLE):** Está **estrictamente prohibido** que realices subidas (`git push`) a GitHub o servidores remotos por tu cuenta bajo ninguna circunstancia.
+* **VERIFICACIÓN Y PRUEBAS PREVIAS DEL USUARIO:** **NUNCA** subas a GitHub hasta que el usuario haya probado y verificado personalmente en su entorno que todo funciona a la perfección. La subida a GitHub solo se realizará cuando el usuario lo solicite de forma explícita (ej. *"sube a producción"*, *"haz git push"*).
+* **Compilación Limpia:** Antes de dar por finalizada cualquier tarea o cambio de código, es **mandatorio verificar** que tanto el frontend (`npm run build` / `tsc -b`) como el backend (`npm run build` en NestJS) compilen con **0 errores**.
 
 ---
 
-## 4. CONTROL DE ACCESO (RBAC) Y ROLES 👥
-* **Rol de Operaciones:** El rol de **Operaciones** (`OPERACIONES`) tiene acceso autorizado a la ruta de Ventas (`/sales`). Sin embargo, el acceso a las sub-vistas específicas se controla dinámicamente mediante los permisos configurados en la base de datos (tabla `role_modules`).
-* **Dashboard por Defecto:** El rol de `OPERACIONES` debe cargar por defecto el **Panel de Control Comercial** (`SalesDashboard`) en lugar del financiero, al igual que el rol `VENTAS`.
-* **Páginas Protegidas:** Asegurar que `App.tsx` y `Sidebar.tsx` permitan los accesos a `OPERACIONES` según corresponda.
-* **Registro Obligatorio de Nuevas Vistas en la Matriz de Permisos (`modules` y `role_modules`):**
-  Cada vez que se desarrolle una nueva vista o ruta en la WebApp, es **MANDATORIO** integrarla en el sistema RBAC:
+## 3. ARQUITECTURA TÉCNICA Y STACK DEL PROYECTO 🏗️
+* **Frontend:** React 18, Vite 8, TypeScript, Tailwind CSS, TanStack Query (React Query v5), Recharts, D3-Geo / TopoJSON (mapas interactivos), Headless UI, Lucide React, Zustand (`useUIStore`, `useAuthStore`).
+* **Backend:** NestJS, TypeScript, TypeORM, PostgreSQL (Supabase), Microsoft Graph API SDK, ExcelJS.
+* **Integración ERP:** Microsoft Dynamics 365 Business Central sincronizado de forma continua mediante flujos n8n a tablas PostgreSQL en Supabase.
+* **Sistema Operativo del Entorno:** Windows (PowerShell / CMD).
+
+---
+
+## 4. INMUTABILIDAD DE DATOS (REGLA DE ORO) 🔒
+* **Solo Lectura (Business Central):** Los datos de negocio sincronizados desde Dynamics 365 Business Central (vía n8n) son de **SOLO LECTURA** (tablas de clientes `customers`, pedidos `sales_headers`/`sales_lines`, facturación `sales_documents`/`sales_document_lines`, movimientos de valor `value_entries`, catálogo y stock `items`, presupuestos `sales_budget_entries`, etc.). Están prohibidas las operaciones `INSERT`, `UPDATE`, `PATCH` o `DELETE` sobre ellas.
+* **Escritura Autorizada:** Solo se permite escribir en:
+  1. Tablas de control de acceso y perfiles de Supabase (`auth.users`, `public.profiles`, `public.roles`, `public.modules`, `public.role_modules`).
+  2. Tablas del metadato local del CRM (`sales_quotes_crm`, `sales_quote_activities`, `crm_activities`, `crm_contacts`, `crm_pipeline_stages`, `crm_deals`).
+  3. Tokens de Microsoft 365 / Exchange (`user_exchange_tokens`).
+
+---
+
+## 5. CONTROL DE ACCESO (RBAC) Y ROLES 👥
+* **Roles Corporativos Oficiales:**
+  1. `ADMIN`: Control total y administración de permisos de rol.
+  2. `DIRECCION`: Visión ejecutiva 360° (Finanzas, Ventas, CRM, Compras).
+  3. `VENTAS`: Panel comercial, cartera de clientes/pedidos, pipeline CRM y presupuestos.
+  4. `OPERACIONES`: Acceso al área de ventas y pedidos con foco logístico/operativo. Carga por defecto `SalesDashboard`.
+  5. `PRODUCCION`: Consultas de catálogo, stock y pedidos pendientes.
+  6. `TESTER`: Rol de pruebas y validación sin privilegios de administración.
+* **Registro Obligatorio de Nuevas Vistas en la Matriz RBAC:**
+  Cada vez que se cree una nueva vista o ruta en la WebApp:
   1. **Base de Datos (`public.modules`):** Registrar el nuevo módulo con su nombre oficial descriptivo (`name`) y su ruta exacta (`route_path`).
-  2. **Permisos por Rol (`public.role_modules`):** Crear los registros correspondientes para **todos** los roles del sistema (`ADMIN`, `DIRECCION`, `VENTAS`, `OPERACIONES`, `PRODUCCION`, `TESTER`), inicializándolos en `true` o `false` según la lógica del rol para que el Administrador pueda encender o apagar el acceso dinámicamente desde la interfaz.
-  3. **Gestión de Permisos en Frontend (`pages/users/index.tsx`):** Comprobar que `groupedModules` agrupe la ruta dentro de su categoría padre correspondiente para que los administradores puedan verla y gestionarla en la pestaña "Permisos de Roles".
-  4. **Navegación y Rutas (`Sidebar.tsx` y `App.tsx`):** No limitar estáticamente las rutas a roles fijos (evitar `roles: ['ADMIN', 'DIRECCION']` hardcodeado en `Sidebar` o `RoleGuard` si el módulo debe ser asignable); delegar el control granular en `isPathAllowed(path)` (`role_modules`).
-  5. **Endpoints de Backend:** Si el backend protege los endpoints de esa vista, debe verificar dinámicamente los permisos en `role_modules` para el rol del usuario en lugar de comparar únicamente nombres de rol fijos.
+  2. **Permisos por Rol (`public.role_modules`):** Crear registros para **todos** los roles del sistema, inicializándolos en `true` o `false` para permitir al Administrador activarlos o desactivarlos desde la interfaz.
+  3. **Frontend (`pages/users/index.tsx`):** Asegurar que `groupedModules` clasifique la ruta dentro del módulo padre adecuado para su gestión visual en la pestaña "Permisos de Roles".
+  4. **Navegación Dinámica (`Sidebar.tsx` y `App.tsx`):** No limitar estáticamente las rutas a roles fijos; delegar el control granular en `isPathAllowed(path)`.
 
 ---
 
-## 5. CÁLCULO DE KPIS Y REGLAS DE NEGOCIO (BACKEND/FRONTEND) 📊
-* **Precio Efectivo (Neto):** No utilizar `unit_price` directamente para valorar pedidos/oportunidades si existen descuentos. La fórmula correcta de valoración es `(line_amount / quantity)`.
-* **Exclusión de Ceros:** Excluir del cálculo de KPIs cualquier línea cuyo precio efectivo o cantidad sea igual a cero.
-* **Comparativas YTD:** Las comparativas temporales de ventas acumuladas anuales deben ser "día a día" (YTD vs LYTD, soportando el parámetro `limitToToday` en consultas) para evitar sesgos con meses incompletos.
-* **Desglose de Cuentas (G/L Accounts):** En los KPIs de pedidos, mostrar de forma desglosada el total correspondiente a líneas de cuentas contables.
+## 6. CÁLCULO DE KPIS Y REGLAS DE NEGOCIO 📊
+* **Precio Efectivo (Neto):** No utilizar nunca `unit_price` bruto si existen descuentos. La valoración real es:
+  $$\text{Precio Efectivo} = \frac{\text{line\_amount}}{\text{quantity}}$$
+* **Exclusión de Ceros:** Excluir de los KPIs cualquier línea cuyo precio efectivo o cantidad sea igual a cero.
+* **Comparativas YTD Día a Día:** Las comparativas temporales de ventas acumuladas anuales deben ser estrictamente "día a día" (YTD vs LYTD con soporte del parámetro `limitToToday=true`) para evitar sesgos con meses incompletos.
+* **Homogeneidad Total de Producto (Items):**
+  Las vistas de **Ventas vs Presupuestos** y **Presupuesto x Product Manager** deben consumir **las mismas tablas documentales** (`sales_documents` + `sales_document_lines`) evaluando exclusivamente líneas `type = 'Item'`, garantizando **0,00 € de discrepancia** entre ambas pantallas. Portes (cuenta 624) y prepagos vivos (PFV) deben presentarse de forma desglosada y separada.
+* **Excepción de Seiko Flowcontrol:**
+  Para el cliente `CL100427` (Seiko Flowcontrol GmbH), la cuenta contable `7050004` (Comisiones Seiko) está expresamente autorizada y se unifica bajo el código de producto virtual `SEICOMIS`.
 * **Deducción de Prepagos (PFV) en Pedidos:**
-  * **Deducción Cliente a Cliente:** Los prepagos vivos de un cliente solo deben deducirse de los pedidos vivos de ese mismo cliente; está prohibido restar prepagos de un cliente sobre los pedidos de otros clientes.
-  * **Orden de Imputación:** El prepago vivo de un cliente compensa primero sus pedidos enviados pendientes de facturar (`qty_shipped_not_invoiced`). Si existe remanente, compensa su cartera de pedidos abierta (`outstanding_quantity`).
-  * **Compensaciones Parciales Acumuladas:** La verificación de liquidación de prepagos debe evaluar la suma acumulada de líneas de anticipo (`438%` en `FV`), ya que un prepago puede compensarse en varias entregas/facturas parciales.
-  * **Consistencia en Cuentas Contables:** El desglose de líneas de cuenta contable nunca debe exceder el valor neto total resultante del KPI ($\min(\text{cuentas}, \text{totalNeto})$), evitando incongruencias visuales donde las cuentas superen al total.
+  * **Deducción Cliente a Cliente:** Los prepagos vivos de un cliente solo compensan pedidos de ese mismo cliente.
+  * **Orden de Imputación:** Compensa primero lo enviado pendiente de facturar (`qty_shipped_not_invoiced`) y, si hay remanente, la cartera abierta (`outstanding_quantity`).
+  * **Compensaciones Parciales:** Comprobar la suma acumulada de líneas de anticipo (`438%` en `FV`).
+  * **Consistencia de Cuentas:** El desglose de cuentas contables nunca debe superar el total neto ($\min(\text{cuentas}, \text{totalNeto})$).
 
 ---
 
-## 6. CAPA VISUAL Y DISEÑO (UX/UI) 🎨
-* **Colores Corporativos:**
-  * **Primario:** `#003E51` (Azul corporativo dTS - representa datos Reales y menús).
-  * **Secundario/Acento:** `#00B0B9` (Cian corporativo dTS - representa Previsiones, botones y tendencias).
-* **Diseño Premium (Rich Aesthetics):** Interfaz moderna, limpia, responsiva, con buenas tipografías y efectos visuales de alta calidad.
-* **Estilo de KPIs:** Los porcentajes de desviación en el Dashboard deben usar clases grandes y ligeras (`text-xl`, `font-light`, `mt-0.5`).
+## 7. INTEGRACIÓN CON MICROSOFT 365 Y OUTLOOK 📧
+* **Modalidad Dual de Outlook:**
+  1. **Outlook Classic (Escritorio):** Debe lanzarse mediante el protocolo seguro `mailto:` usando un enlace DOM temporal e invisible (`triggerMailtoUri`) para evitar que el navegador aborte la ejecución de la SPA de React.
+  2. **Outlook Online (Web):** Si hay sesión activa en Microsoft Graph, genera el borrador en la nube (`/me/messages`) y abre su `webLink`. En caso contrario, recurre al enlace profundo canónico: `https://outlook.office.com/mail/deeplink/compose?to=...&cc=...&subject=...&body=...`.
+* **Prevención de Bloqueo de Ventanas Emergentes (Popup Blocker):**
+  En llamadas asíncronas hacia Graph API, **pre-abrir una pestaña en blanco (`window.open('about:blank', 'dts_outlook_web')`) de forma síncrona en el evento de clic del usuario** antes del `await`, redirigiendo su URL una vez que la API responda.
+* **Soporte Multi-destinatario:**
+  Los formularios de envío deben aceptar múltiples correos en "Para" y "CC" separados por comas o puntos y coma.
+* **Add-in de Outlook (Office.js):**
+  Cargar `Office.js` de forma dinámica y no bloqueante; fuera de Outlook, habilitar automáticamente el entorno de prueba simulado (*mock*). Aplicar siempre la limpieza inteligente de texto (`cleanBody`) para eliminar firmas y cláusulas RGPD.
+
+---
+
+## 8. CAPA VISUAL, DISEÑO Y EXPERIENCIA DE USUARIO (UX/UI) 🎨
+* **Colores Corporativos Oficiales:**
+  * **Primario:** `#003E51` (Azul corporativo dTS - representa datos Reales consolidados, menús y cabeceras).
+  * **Secundario/Acento:** `#00B0B9` (Turquesa/Cian corporativo dTS - representa Previsiones, presupuestos, botones de acción y tendencias).
+* **Diseño Premium (Rich Aesthetics):** Interfaz limpia, moderna, responsiva, con tipografías cuidadas, modo oscuro impecable y componentes visuales atractivos (micro-animaciones, gráficos Recharts interactivos y mapas vectoriales D3).
 * **Nomenclatura Oficial:**
-  * `VENTAS YTD VS VENTAS LYTD`: Para comparativas de ventas acumuladas.
-  * `OBJETIVO FACTURACIÓN ANUAL`: Para el seguimiento del presupuesto anual.
-  * `CARTERA DE PEDIDOS`: Título general para el bloque de pedidos abiertos.
-* **Responsividad:** El menú lateral (`Sidebar`) debe colapsarse automáticamente en pantallas de ancho inferior a 1024px.
+  * `VENTAS YTD VS VENTAS LYTD`: Comparativas de facturación acumulada.
+  * `OBJETIVO FACTURACIÓN ANUAL`: Presupuesto anual.
+  * `CARTERA DE PEDIDOS`: Pedidos abiertos.
+* **Persistencia de Foco en Buscadores (`keepPreviousData`):**
+  En tablas con filtros o búsqueda mediante React Query, **SIEMPRE** configurar `placeholderData: keepPreviousData`. Nunca destruir el input durante el estado de carga (`isLoading`), utilizando spinners no destructivos en el icono de búsqueda.
+* **Responsividad:** El menú lateral (`Sidebar`) debe colapsar automáticamente en pantallas inferiores a 1024px.
 
 ---
 
-## 7. BÚSQUEDAS EN TABLAS Y EXPERIENCIA DE USUARIO (UX) 🔍
-* **Persistencia de Foco en Buscadores (`keepPreviousData`):**
-  * Al implementar búsquedas o filtros en tablas con React Query (`useQuery` o `useInfiniteQuery`), **SIEMPRE** se debe configurar `placeholderData: keepPreviousData`.
-  * **Causa del problema:** Si no se incluye `placeholderData: keepPreviousData`, al cambiar el término de búsqueda se genera un nuevo `queryKey`, dejando `data` como `undefined` durante la carga. Esto activa condiciones de guarda como `if (isLoading && !data) return <Skeleton />`, lo que desmonta el componente y destruye el elemento `<input>` del DOM, provocando que el usuario pierda el foco y el cursor con cada letra que escribe.
-  * **Feedback Visual:** Utilizar indicadores no destructivos durante la búsqueda (ej. spinner `Loader2` en el propio icono de la lupa con `isFetching && debouncedSearch`) para informar al usuario de la consulta en curso sin desmontar el input ni entorpecer la escritura.
+## 9. GUÍAS TÉCNICAS Y DOCUMENTACIÓN DE VISTAS (`docs/vistas/`) 📚
+* **CONSULTA OBLIGATORIA DEL AGENTE ANTES DE REVISAR CÓDIGO (REGLA DE EFICIENCIA):**
+  Siempre que tengas que trabajar en una vista, resolver una duda, realizar modificaciones o comprender el funcionamiento de una pantalla, **DEBES consultar en primer lugar su guía técnica correspondiente en [`docs/vistas/`](file:///c:/proyectos/webapp_dts/docs/vistas/)** o el índice general [**`docs/vistas/README.md`**](file:///c:/proyectos/webapp_dts/docs/vistas/README.md) **ANTES** de ponerte a inspeccionar múltiples archivos de código fuente.
+  * En estas guías ya se detallan los componentes frontend clave, servicios/endpoints del backend, tablas de base de datos implicadas, fórmulas matemáticas de los KPIs, lógica de negocio y permisos RBAC.
+* **Estructura Oficial por Carpetas:**
+  * [`docs/vistas/01_dashboards/`](file:///c:/proyectos/webapp_dts/docs/vistas/01_dashboards/): Paneles comerciales y ejecutivos.
+  * [`docs/vistas/02_ventas/`](file:///c:/proyectos/webapp_dts/docs/vistas/02_ventas/): Clientes, pedidos, productos, facturación, movimientos de valor, presupuestos y ofertas.
+  * [`docs/vistas/03_crm/`](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/): Pipeline, clientes, contactos, correos y complemento de Outlook.
+  * [`docs/vistas/04_compras/`](file:///c:/proyectos/webapp_dts/docs/vistas/04_compras/): Proveedores y pedidos de aprovisionamiento.
+  * [`docs/vistas/05_finanzas/`](file:///c:/proyectos/webapp_dts/docs/vistas/05_finanzas/): Balances, ratios, análisis estructural y simulador.
+  * [`docs/vistas/06_administracion_configuracion/`](file:///c:/proyectos/webapp_dts/docs/vistas/06_administracion_configuracion/): Usuarios RBAC, ajustes generales y generador de presupuestos.
+* **Mantenimiento Continuo:** Cualquier modificación relevante en la lógica de negocio o en la interfaz de una vista debe actualizar de inmediato su documento markdown correspondiente y el catálogo general [`docs/vistas/README.md`](file:///c:/proyectos/webapp_dts/docs/vistas/README.md).
