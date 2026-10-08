@@ -244,6 +244,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [outlookTarget, setOutlookTarget] = useState<'desktop' | 'web'>(getPreferredOutlookClient());
   const [isCopied, setIsCopied] = useState(false);
 
+  // Sincronizar preferencia de cliente de Outlook si cambió en Ajustes Generales
+  useEffect(() => {
+    setOutlookTarget(getPreferredOutlookClient());
+  }, []);
+
   // Filtro de ofertas y tipologías en la pestaña de emails y control de expansión (5 líneas)
   const [selectedEmailQuoteFilter, setSelectedEmailQuoteFilter] = useState<string>('ALL');
   const [selectedEmailCategoryFilter, setSelectedEmailCategoryFilter] = useState<string>('ALL');
@@ -1418,7 +1423,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           <div className="flex flex-wrap gap-3 items-center pt-2 md:pt-0">
             {contact.email && (
               <button 
-                onClick={() => openInOutlook({ to: contact.email, target: outlookTarget })} 
+                onClick={() => openInOutlook({ to: contact.email, target: getPreferredOutlookClient() })} 
                 className="p-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/20 hover:border-cyan-200 dark:hover:border-cyan-800/40 text-gray-400 hover:text-dts-secondary transition-all cursor-pointer" 
                 title={`Enviar correo en Outlook (${contact.email})`}
               >
@@ -2033,12 +2038,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                     itemId: act.exchangeItemId,
                                     email: act.email || contact?.email,
                                     subject: act.title,
-                                    target: outlookTarget,
+                                    target: getPreferredOutlookClient(),
                                     exchangeSyncStatus: act.exchangeSyncStatus,
                                   });
                                 }}
                                 className="p-1 rounded-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
-                                title={`Abrir correo en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
+                                title={`Abrir correo en Outlook (${getPreferredOutlookClient() === 'web' ? 'Web' : 'Escritorio'})`}
                               >
                                 <OutlookIcon size={13} />
                               </button>
@@ -2862,11 +2867,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                   itemId: mail.exchangeItemId,
                                   email: mail.email || contact?.email,
                                   subject: mail.title,
-                                  target: outlookTarget,
+                                  target: getPreferredOutlookClient(),
                                   exchangeSyncStatus: mail.exchangeSyncStatus,
                                 })}
                                 className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-lg transition-colors cursor-pointer border border-dts-secondary/25 shadow-2xs"
-                                title={mail.exchangeSyncStatus === 'draft' ? 'Abrir bandeja de borradores en Outlook' : `Abrir en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
+                                title={mail.exchangeSyncStatus === 'draft' ? 'Abrir bandeja de borradores en Outlook' : `Abrir en Outlook (${getPreferredOutlookClient() === 'web' ? 'Web' : 'Escritorio'})`}
                               >
                                 <ExternalLink size={10} />
                                 <span>{mail.exchangeSyncStatus === 'draft' ? 'Ver Borradores' : 'Abrir en Outlook'}</span>

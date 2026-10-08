@@ -245,10 +245,11 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
 * **Preparación Directa en Outlook (Sin Envío Automático)**:
   * El comercial redacta el correo o carga una plantilla corporativa en la WebApp y, al pulsar **"Abrir y Preparar en Outlook"**, el sistema genera el nuevo correo en Outlook con todos los datos precargados (destinatario, asunto y cuerpo).
   * Permite al comercial revisar el texto, adjuntar archivos o catálogos PDF y pulsar **"Enviar"** directamente desde Outlook.
-* **Memorización de Preferencia (Escritorio vs Web)**:
-  * El usuario selecciona su cliente preferido (**Outlook de Escritorio** o **Outlook Web Microsoft 365**) y la WebApp **recuerda su elección de forma permanente en el navegador (`localStorage`)**, no teniendo que volver a seleccionarlo en usos posteriores.
-* **Botón Directo "Abrir en Outlook"**:
-  * En cada tarjeta de email de la pestaña *Emails*, en los eventos de correo del *Timeline* y en el botón de email de la cabecera del contacto, se incluye la acción **"Abrir en Outlook"** para acceder inmediatamente al mensaje o hilo en Outlook con un clic.
+* **Botón Directo "Abrir en Outlook" (Respeto Estricto de la Preferencia del Usuario)**:
+  * En cada tarjeta de email de la pestaña *Emails*, en los eventos de correo del *Timeline* y en el botón de email de la cabecera del contacto, se incluye la acción **"Abrir en Outlook"**.
+  * **Comportamiento Dual Determinista**:
+    * **Outlook Classic / Escritorio**: Si el usuario tiene configurada esta opción en Ajustes Generales, la WebApp invoca directamente la aplicación instalada de Outlook en Windows mediante el protocolo seguro `mailto:` con destinatario y asunto cargados (`Re: Asunto`), sin abrir pestañas innecesarias en el navegador.
+    * **Outlook Web (M365)**: Abre el mensaje exacto en la nube aprovechando el enlace directo `webLink` o `ItemID`.
 * **Utilidad "Copiar Texto"**: Botón rápido para copiar el asunto y cuerpo al portapapeles con un clic para pegarlo en hilos existentes.
 * **Trazabilidad Automática en el CRM**: Registra la actividad en el Timeline del contacto como interacción de correo electrónico.
 * **Plantillas Comerciales**: Modelos precargados (*Presentación dTS*, *Seguimiento de Oferta*, *Reunión técnica*) con tokenización dinámica del cliente y comercial.
@@ -342,7 +343,7 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * Botones para forzar sincronización manual de borradores y eventos o desconectar la cuenta.
 * **Cliente de Outlook Predeterminado**:
   * Selector dual entre **Outlook de Escritorio (App Windows/Mac)** y **Outlook Web (Microsoft 365)**.
-  * Memorización persistente en el navegador local (`localStorage`).
+  * **Memorización persistente en el navegador local (`localStorage`)**: El ajuste se recuerda de forma global para toda la WebApp y aplica tanto a la redacción como a la apertura de correos existentes en la ficha de contactos y el timeline del CRM.
   * Botón de prueba inmediata para validar la apertura de Outlook.
 
 ### 6.2 Generador de Presupuestos de Ventas (Plantillas Excel) (`/settings/budget-generator`)

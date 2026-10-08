@@ -204,45 +204,49 @@ export const openExistingEmailInOutlook = (options: {
   const target = options.target || getPreferredOutlookClient();
   const { webLink, itemId, email, subject, exchangeSyncStatus } = options;
 
-  // 1. Si existe enlace directo generado por Microsoft Graph/Exchange
+  // 1. Si el usuario tiene configurado Outlook de Escritorio (Classic / App)
+  if (target === 'desktop') {
+    const sub = subject ? (subject.startsWith('Re:') ? subject : `Re: ${subject}`) : '';
+    const params: string[] = [];
+    if (sub) params.push(`subject=${encodeURIComponent(sub)}`);
+    const queryString = params.length > 0 ? `?${params.join('&')}` : '';
+    const toParam = email ? encodeURIComponent(email) : '';
+    triggerMailtoUri(`mailto:${toParam}${queryString}`);
+    return;
+  }
+
+  // 2. Si el usuario tiene configurado Outlook Web (M365):
+  // 2.1 Si existe enlace directo generado por Microsoft Graph/Exchange
   if (webLink) {
     window.open(webLink, OUTLOOK_WEB_TAB_NAME);
     return;
   }
 
-  // 2. Si tenemos el ItemID de Exchange (guardado por ejemplo desde el Add-in de Outlook)
+  // 2.2 Si tenemos el ItemID de Exchange (guardado por ejemplo desde el Add-in de Outlook)
   if (itemId) {
     const directItemUrl = `https://outlook.office.com/mail/deeplink?ItemID=${encodeURIComponent(itemId)}&exvsurl=1`;
     window.open(directItemUrl, OUTLOOK_WEB_TAB_NAME);
     return;
   }
 
-  // 3. Si es un borrador sin enlace directo, abrir la bandeja de borradores
+  // 2.3 Si es un borrador sin enlace directo, abrir la bandeja de borradores
   if (exchangeSyncStatus === 'draft') {
     window.open('https://outlook.office.com/mail/drafts', OUTLOOK_WEB_TAB_NAME);
     return;
   }
 
-  // 4. Si tenemos email del contacto pero no enlace directo al mensaje
+  // 2.4 Si tenemos email del contacto pero no enlace directo al mensaje
   if (email) {
-    if (target === 'web') {
-      const composeUrl = new URL('https://outlook.office.com/mail/deeplink/compose');
-      composeUrl.searchParams.set('to', email);
-      if (subject) {
-        composeUrl.searchParams.set('subject', subject.startsWith('Re:') ? subject : `Re: ${subject}`);
-      }
-      window.open(composeUrl.toString(), OUTLOOK_WEB_TAB_NAME);
-    } else {
-      const sub = subject ? (subject.startsWith('Re:') ? subject : `Re: ${subject}`) : '';
-      const params: string[] = [];
-      if (sub) params.push(`subject=${encodeURIComponent(sub)}`);
-      const queryString = params.length > 0 ? `?${params.join('&')}` : '';
-      triggerMailtoUri(`mailto:${encodeURIComponent(email)}${queryString}`);
+    const composeUrl = new URL('https://outlook.office.com/mail/deeplink/compose');
+    composeUrl.searchParams.set('to', email);
+    if (subject) {
+      composeUrl.searchParams.set('subject', subject.startsWith('Re:') ? subject : `Re: ${subject}`);
     }
+    window.open(composeUrl.toString(), OUTLOOK_WEB_TAB_NAME);
     return;
   }
 
-  // 5. Fallback por defecto
+  // 2.5 Fallback por defecto en Outlook Web
   window.open('https://outlook.office.com/mail/inbox', OUTLOOK_WEB_TAB_NAME);
 };
 

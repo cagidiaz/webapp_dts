@@ -130,14 +130,11 @@ export const useUpdatesStore = create<UpdatesState>()(
       },
 
       fetchUpdates: async (userRole?: string) => {
-        // 1. En entorno de desarrollo local, no saturamos la cuota de GitHub API
-        if (import.meta.env.DEV) {
-          return;
-        }
+        const { lastFetchedAt, commits: currentCommits, lastSeenSha } = get();
 
-        const { lastFetchedAt } = get();
-        // 2. En producción: evitar saturar el límite de GitHub (60 req/h): caché/espera de 15 minutos
-        if (lastFetchedAt && Date.now() - lastFetchedAt < 15 * 60 * 1000) {
+        // 1. En desarrollo local usamos caché de 30 min si ya hay commits, en producción 15 min
+        const cacheDuration = import.meta.env.DEV ? 30 * 60 * 1000 : 15 * 60 * 1000;
+        if (lastFetchedAt && currentCommits.length > 0 && Date.now() - lastFetchedAt < cacheDuration) {
           return;
         }
 
@@ -164,36 +161,46 @@ export const useUpdatesStore = create<UpdatesState>()(
             const isFixOrTech = lowerMsg.startsWith('fix:') || 
                                 lowerMsg.startsWith('fix(') || 
                                 lowerMsg.startsWith('chore:') || 
-                                lowerMsg.startsWith('chore(') ||
+                                lowerMsg.startsWith('chore(') || 
                                 lowerMsg.startsWith('ci:') || 
                                 lowerMsg.startsWith('test:') ||
+                                lowerMsg.startsWith('docs:') ||
+                                lowerMsg.startsWith('docs(') ||
                                 lowerMsg.startsWith('merge ');
             if (isFixOrTech) return false;
 
             const msgUpper = rawMsg.toUpperCase();
-            const tagMatch = msgUpper.match(/\[([A-Z]+)\]/);
+            // Extraer todas las etiquetas entre corchetes ej: [CRM] [SALES]
+            const tagMatches = [...msgUpper.matchAll(/\[([A-Z]+)\]/g)].map(m => m[1]);
             
-            if (!tagMatch) {
+            // Si no contiene etiquetas entre corchetes
+            if (tagMatches.length === 0) {
               const isAdminContent = msgUpper.includes('ADMIN') || msgUpper.includes('SYSTEM') || msgUpper.includes('DATABASE') || msgUpper.includes('DB ');
               if (roleUpper === 'ADMIN') return true;
               return !isAdminContent;
             }
             
-            const tag = tagMatch[1];
-            if (roleUpper === 'ADMIN') return true;
+            // ADMIN y TESTER ven todas las novedades
+            if (roleUpper === 'ADMIN' || roleUpper === 'TESTER') return true;
+            
+            // Mapeo exhaustivo de etiquetas permitidas por rol
+            let allowedTags: string[] = ['GLOBAL'];
             if (roleUpper === 'VENTAS') {
-              const salesTags = ['VENTAS', 'COMERCIAL', 'SALES', 'GLOBAL'];
-              return salesTags.includes(tag);
-            }
-            if (roleUpper === 'DIRECCION' || roleUpper === 'GERENCIA') {
-              const dirTags = ['DIRECCION', 'GERENCIA', 'VENTAS', 'COMERCIAL', 'GLOBAL', 'FINANZAS'];
-              return dirTags.includes(tag);
+              allowedTags = ['VENTAS', 'COMERCIAL', 'SALES', 'CRM', 'GLOBAL'];
+            } else if (roleUpper === 'DIRECCION' || roleUpper === 'GERENCIA') {
+              allowedTags = ['DIRECCION', 'GERENCIA', 'VENTAS', 'COMERCIAL', 'SALES', 'CRM', 'GLOBAL', 'FINANZAS', 'COMPRAS', 'OPERACIONES', 'ADMIN'];
+            } else if (roleUpper === 'OPERACIONES') {
+              allowedTags = ['OPERACIONES', 'VENTAS', 'COMERCIAL', 'SALES', 'LOGISTICA', 'PRODUCCION', 'GLOBAL'];
+            } else if (roleUpper === 'PRODUCCION') {
+              allowedTags = ['PRODUCCION', 'VENTAS', 'COMERCIAL', 'SALES', 'OPERACIONES', 'GLOBAL'];
+            } else {
+              allowedTags = [roleUpper, 'GLOBAL'];
             }
 
-            return tag === roleUpper || tag === 'GLOBAL';
+            return tagMatches.some(tag => allowedTags.includes(tag));
           });
 
-          // Limpiar mensajes para UI
+          // Limpiar mensajes para UI (remover etiquetas [TAG])
           commits = commits.map(c => ({
             ...c,
             commit: {
@@ -203,18 +210,28 @@ export const useUpdatesStore = create<UpdatesState>()(
           }));
 
           commits = commits.slice(0, 10);
-          const { lastSeenSha } = get();
           
           if (commits.length > 0) {
             const latestSha = commits[0].sha;
             const hasSeenLatest = lastSeenSha === latestSha;
 
-            set({ 
+            // Auto-apertura si hay una nueva versión no vista en esta sesión
+            const sessionKey = `dts_updates_shown_${latestSha}`;
+            const alreadyShownThisSession = sessionStorage.getItem(sessionKey) === 'true';
+            const shouldOpen = !hasSeenLatest && !alreadyShownThisSession;
+
+            if (shouldOpen) {
+              sessionStorage.setItem(sessionKey, 'true');
+            }
+
+            set(state => ({ 
               commits, 
               hasSeenLatest, 
               isLoading: false, 
-              lastFetchedAt: Date.now() 
-            });
+              lastFetchedAt: Date.now(),
+              isModalOpen: shouldOpen ? true : state.isModalOpen,
+              activeTab: shouldOpen ? 'updates' : state.activeTab,
+            }));
           } else {
             set({ commits: [], isLoading: false, lastFetchedAt: Date.now() });
           }

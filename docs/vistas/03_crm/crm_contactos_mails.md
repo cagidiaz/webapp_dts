@@ -59,9 +59,11 @@ En cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline):
 
 ### 3.5 Acciones de Productividad con Microsoft Outlook (Online vs Classic)
 - **Apertura de Correos Existentes**:
-  - Cada tarjeta de correo (en la pestaña de Emails y en el Timeline) dispone del botón *"Abrir en Outlook"*.
-  - **Detección Directa (`webLink` y `exchangeItemId`)**: Si el correo fue sincronizado mediante Microsoft Graph o importado desde el Add-in oficial, el sistema utiliza su `webLink` directo o construye la URL canónica de Microsoft 365 (`https://outlook.office.com/mail/deeplink?ItemID=...&exvsurl=1`), permitiendo abrir el mensaje exacto en la sesión de Outlook del comercial.
-  - **Borradores**: Si el estado es `draft`, redirige a la carpeta de borradores de Outlook.
+  - Cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline de interacciones) dispone del botón *"Abrir en Outlook"*.
+  - **Respeto Estricto de la Preferencia del Usuario (`getPreferredOutlookClient`)**:
+    - **Outlook Classic / Escritorio (`target === 'desktop'`)**: Si el usuario tiene configurado el cliente de escritorio en Ajustes Generales, la WebApp **no abre ninguna pestaña en el navegador**. Construye de inmediato la URI nativa `mailto:` con el destinatario y el asunto formateado (`Re: [Asunto original]`) y la ejecuta mediante `triggerMailtoUri`, lanzando directamente la aplicación instalada de Microsoft Outlook en Windows para responder o consultar el mensaje.
+    - **Outlook Online / Web (`target === 'web'`)**: Si el usuario prefiere la versión web (M365) o no dispone del cliente de escritorio, el sistema aprovecha el `webLink` directo generado por Microsoft Graph o construye la URL canónica de Microsoft 365 (`https://outlook.office.com/mail/deeplink?ItemID=...&exvsurl=1`), abriendo la vista de lectura del mensaje en la pestaña unificada de OWA.
+  - **Borradores**: Si el estado del mensaje es `draft`, redirige a la carpeta de borradores de Outlook.
 - **Redacción de Nuevos Correos ("Abrir y Preparar en Outlook")**:
   - Botón superior para generar un nuevo correo con selector dual de cliente (*Outlook de Escritorio* vs. *Outlook Online*).
   - **Soporte Multi-destinatario**: Admite múltiples correos en el campo principal "Para" (separados por coma, punto y coma o espacio) y un campo opcional desplegable "+ Añadir CC (Copia)".

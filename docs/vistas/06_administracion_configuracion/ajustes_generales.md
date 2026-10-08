@@ -24,13 +24,15 @@ El usuario puede escoger entre dos modalidades de trabajo mediante selectores vi
    * Abre directamente la aplicación local instalada de Microsoft Outlook en Windows.
    * Utiliza el protocolo seguro de sistema operativo `mailto:` mediante un enlace invisible inyectado en el DOM (`triggerMailtoUri`) para evitar abortos de navegación en React.
    * Rellena automáticamente los destinatarios (`to`), copia (`cc`), asunto (`subject`) y cuerpo (`body`).
+   * **Alcance Universal en la WebApp:** Aplica tanto a la redacción de nuevos correos como al botón *"Abrir en Outlook"* de correos existentes en la pestaña de emails y en el timeline del CRM, garantizando que el usuario de Classic nunca vea pestañas innecesarias del navegador abiertas hacia Outlook Web.
 2. **Outlook Online / Web (Navegador):**
    * Si la cuenta de Microsoft 365 está vinculada por OAuth, genera un borrador en segundo plano en la nube mediante **Microsoft Graph API** (`/me/messages`) y abre la ventana web directamente en el mensaje creado (`webLink`).
    * Si la cuenta no está vinculada o el borrador remoto falla, utiliza un enlace profundo canónico optimizado:  
      `https://outlook.office.com/mail/deeplink/compose?to=...&cc=...&subject=...&body=...`
    * Para evitar que el bloqueador de ventanas emergentes de Chrome/Edge impida abrir la pestaña tras una llamada asíncrona, el sistema pre-abre una pestaña en blanco en el evento de clic del usuario (`window.open('about:blank')`) y redirige su ubicación al finalizar la API.
+   * Para correos existentes, abre la vista de lectura directa en la nube mediante `webLink` o `ItemID`.
 
-> **Persistencia Local:** La elección se guarda de inmediato en `localStorage` bajo la clave `dts_preferred_outlook_client` y muestra una notificación visual de guardado instantáneo sin recargar la página.
+> **Persistencia Local:** La elección se guarda de inmediato en `localStorage` bajo la clave `dts_outlook_preferred_client` y muestra una notificación visual de guardado instantáneo sin recargar la página. Todas las vistas del CRM consultan en tiempo real este ajuste.
 
 ### 3.2. Botón de Verificación y Prueba de Conexión
 * Permite verificar la configuración en tiempo real haciendo clic en **"Probar apertura de correo en Outlook"**.
