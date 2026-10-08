@@ -146,12 +146,13 @@ Para identificar al instante la situación operativa de cada cita o tarea, las t
 - **Identificación en el Asunto:**
   - Los eventos completados adoptan el prefijo `[✓ dTS CRM - Realizado: TipoActividad] Asunto (Cliente)`.
 
-### 5.6 Apertura Canónica de Eventos en Outlook y Prevención de Duplicados
-- **Deep Links Canónicos (`/calendar/item/<id>`):**
-  - Al abrir un evento en Outlook Web, el sistema utiliza el identificador único del elemento (`exchange_item_id`) para generar la URL canónica directa: `https://outlook.office.com/calendar/item/<itemId>`.
-  - Esta URL abre el evento directamente en modo visualización / lectura sobre la cuadrícula del calendario del usuario, evitando el compositor de eventos (`path=/calendar/item`) que en Outlook Web (OWA) provocaba dobles renderizados y la creación no intencionada de borradores o copias duplicadas.
+### 5.6 Sincronización Automática de Eventos con Microsoft Outlook y Retirada de Botón Deep Link
+- **Sincronización Transparente en Segundo Plano:**
+  - Todas las actividades tipo evento creadas en el CRM se sincronizan de forma bidireccional y transparente con el calendario personal de Outlook de cada comercial mediante Microsoft Graph.
+- **Retirada del Botón Directo "Abrir en Outlook" en Eventos:**
+  - Se eliminó el botón de apertura directa en Outlook (`openCalendarEventInOutlook` / `ExternalLink`) en la lista de eventos tras comprobar que los deep links de calendario en Outlook Web (`/calendar/item/<id>`) y el protocolo de escritorio (`outlook:calendar`) provocaban fallos de carga o comportamientos erráticos según el cliente/navegador del usuario. La visualización de citas se realiza directamente abriendo el calendario personal en Outlook o mediante la sincronización reactiva de la propia WebApp.
 - **Pestaña Unificada Nombrada (`OUTLOOK_WEB_TAB_NAME = 'dts_outlook_web'`):**
-  - Se reutiliza la misma pestaña en el navegador para todas las aperturas de Outlook (tanto correos como eventos), previniendo que múltiples instancias compitan por la caché de sesión y desincronicen el calendario.
+  - Mantiene el aislamiento para la apertura y redacción de correos electrónicos sin duplicar pestañas.
 - **Protección Backend Contra Concurrencia (`inFlightSyncs`) y Deduplicación:**
   - `ExchangeSyncService` implementa un semáforo en memoria (`inFlightSyncs`) por actividad que bloquea llamadas simultáneas a `createCalendarEvent`.
   - Se verifica de nuevo en base de datos si la actividad ya posee `exchange_item_id` antes de crear en Microsoft Graph.
@@ -172,7 +173,7 @@ Para identificar al instante la situación operativa de cada cita o tarea, las t
 
 ### 5.8 Ergonomía Visual Ultra-Compacta, Proporciones Tipográficas y Sanitización
 - **Encabezado y Línea Divisoria Integrados con `flex-wrap`:**
-  - El encabezado de la tarjeta agrupa en una fila adaptativa el checkbox de estado, badge de tipología, título, badges de sincronización/conclusiones, fecha/hora y acciones rápidas (`ExternalLink`, `Edit2`, `Trash2`).
+  - El encabezado de la tarjeta agrupa en una fila adaptativa el checkbox de estado, badge de tipología, título, badges de sincronización/conclusiones, fecha/hora y acciones rápidas de edición y eliminación (`Edit2`, `Trash2`).
   - La línea divisoria horizontal inferior (`border-b border-gray-200 dark:border-zinc-700/70`) separa nítidamente el encabezado del contenido.
 - **Tipografía Optimizada y Legible:**
   - Título del evento a 13.5px (`text-[13.5px] font-semibold`), badges a 9.5px, fecha/hora/ubicación a 11px, y cuerpo de descripción a 12.5px (`text-[12.5px] leading-snug`), logrando un equilibrio visual impecable entre compacidad y comodidad de lectura.

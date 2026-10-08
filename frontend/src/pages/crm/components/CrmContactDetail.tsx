@@ -8,8 +8,7 @@ import {
   getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
   getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
   createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
-  getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook,
-  openCalendarEventInOutlook
+  getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook
 } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
@@ -2023,8 +2022,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               {act.typeLabel}
                             </span>
 
-                            {/* Abrir en Outlook */}
-                            {act.type === 'email' ? (
+                            {/* Abrir en Outlook (solo correos) */}
+                            {act.type === 'email' && (
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -2043,23 +2042,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               >
                                 <OutlookIcon size={13} />
                               </button>
-                            ) : (act.exchangeWebLink || act.exchangeItemId) ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openCalendarEventInOutlook({
-                                    webLink: act.exchangeWebLink,
-                                    itemId: act.exchangeItemId,
-                                    target: outlookTarget,
-                                  });
-                                }}
-                                className="p-1 rounded-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
-                                title={`Abrir evento en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
-                              >
-                                <OutlookIcon size={13} />
-                              </button>
-                            ) : null}
+                            )}
 
                             {/* Editar actividad */}
                             <button
@@ -2537,23 +2520,6 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
                               {/* Acciones */}
                               <div className="flex items-center gap-0.5 border-l border-gray-200 dark:border-white/10 pl-1.5 ml-0.5">
-                                {(act.exchangeWebLink || act.exchangeItemId) && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openCalendarEventInOutlook({
-                                        webLink: act.exchangeWebLink,
-                                        itemId: act.exchangeItemId,
-                                        target: outlookTarget,
-                                      });
-                                    }}
-                                    className="p-1 text-gray-400 hover:text-dts-secondary hover:bg-cyan-500/10 rounded-md transition-colors cursor-pointer"
-                                    title={`Abrir en Outlook (${outlookTarget === 'web' ? 'Web' : 'Escritorio'})`}
-                                  >
-                                    <ExternalLink size={12} />
-                                  </button>
-                                )}
                                 <button
                                   onClick={() => {
                                     setEditingActivity(act.rawActivity || act);

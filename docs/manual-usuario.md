@@ -213,13 +213,13 @@ Ubicado en `/crm/contacts` y `/crm/customers`.
     * Eventos pendientes: clasificados bajo la categoría **`dTS CRM`** (**Azul corporativo `#003E51`**).
     * Eventos completados o con conclusiones: reclasificados automáticamente por Microsoft Graph bajo la categoría **`dTS CRM - Completado`** (**Verde esmeralda `#059669`**), tiñendo el bloque del calendario de Outlook de color verde en tiempo real.
     * Si el comercial desmarca la actividad, vuelve de forma automática a color azul.
-  * **Prevención de Duplicados en Apertura**: Enlace directo canónico (`/calendar/item/<id>`) sobre la misma pestaña unificada de navegador, evitando dobles renderizados en Outlook Web.
+  * **Sincronización Directa de Calendario**: Los eventos se sincronizan de forma transparente en segundo plano con el calendario de Outlook sin requerir aperturas manuales externas, garantizando que no se generen duplicados ni fallos de carga.
 * **Sincronización Bidireccional Automática en Tiempo Real**:
   * **Refresco Reactivo por Foco (`onfocus` / `visibilitychange`)**: Si el comercial modifica la hora o fecha de una cita en Outlook y vuelve a la WebApp, el cambio se refleja en milisegundos sin requerir recargar la página.
   * **Polling Silencioso (cada 25s)** y sincronización garantizada al cambiar de pestaña.
   * **Sanitización Automática de Texto**: El sistema purga en backend y frontend cualquier línea de guiones bajos (`____________________`), encabezados repetidos o saltos de línea acumulados devueltos por el preview de Outlook.
 * **Diseño Ergonómico y Legibilidad Optimizada de Tarjetas**:
-  * Encabezado adaptable con visualización permanente de la fecha, hora, ubicación y acciones (`Abrir en Outlook`, `Editar`, `Eliminar`).
+  * Encabezado adaptable con visualización permanente de la fecha, hora, ubicación y acciones rápidas (`Editar`, `Eliminar`).
   * Línea divisoria horizontal limpia que separa el encabezado del contenido.
   * Tipografía equilibrada y descansada: títulos a 13.5px, badges a 9.5px, fecha/hora a 11px y descripción a 12.5px con interlineado ceñido (`leading-snug`).
 

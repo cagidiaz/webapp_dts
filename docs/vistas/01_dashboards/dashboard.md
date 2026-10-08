@@ -79,7 +79,7 @@ return <FinancialDashboard />;
   - `CALL` (Verde, llamada telefónica).
   - `TASK` (Ámbar, tarea interna).
   - `EVENT` (Gris, visita no programada).
-* **Integración Outlook:** Botón de icono Outlook en cada evento para abrirlo directamente en el cliente de Outlook (`openCalendarEventInOutlook`).
+* **Integración Outlook:** Sincronización automática y transparente con el calendario personal de Microsoft 365 / Outlook (Graph API) con categorías dTS CRM, sin requerir enlaces directos inestables.
 
 ---
 
