@@ -3,14 +3,13 @@ import { markOutlookProtocolInstalled } from '../api/exchangeSync';
 /**
  * Utilidades para la descarga del paquete de configuración del protocolo dts-mail://
  * para Microsoft Outlook Classic en Windows.
- * Version 2.0: Busqueda inteligente por Asunto, Remitente y Apertura Directa en pantalla.
+ * Version 2.1: Blindaje total con On Error Resume Next y proteccion contra elementos no-Mail.
  */
 export const VBS_HANDLER_SCRIPT = `' ==============================================================================
 ' dTS Instruments - Manejador de Protocolo Nativo dts-mail:// para Microsoft Outlook
-' Version 2.0 - Busqueda Inteligente y Apertura Directa de Correos
+' Version 2.1 - Blindado contra tipos de elementos no-Mail y apertura directa
 ' ==============================================================================
 Option Explicit
-
 On Error Resume Next
 
 Dim rawUrl, action, idParam, fromParam, subjectParam, queryParam
@@ -39,6 +38,7 @@ If Right(action, 1) = "/" Then action = Left(action, Len(action) - 1)
 
 ' Decodificador de URL 100% nativo sin dependencias externas ni HTMLFILE
 Function URLDecode(s)
+    On Error Resume Next
     Dim res, i, ch, hCode
     res = ""
     i = 1
@@ -48,7 +48,6 @@ Function URLDecode(s)
             res = res & " "
             i = i + 1
         ElseIf ch = "%" And i + 2 <= Len(s) Then
-            On Error Resume Next
             hCode = Mid(s, i + 1, 2)
             res = res & Chr(CInt("&H" & hCode))
             If Err.Number <> 0 Then
@@ -58,7 +57,6 @@ Function URLDecode(s)
             Else
                 i = i + 3
             End If
-            On Error GoTo 0
         Else
             res = res & ch
             i = i + 1
@@ -68,6 +66,7 @@ Function URLDecode(s)
 End Function
 
 Function GetQueryParam(qs, paramName)
+    On Error Resume Next
     Dim pairs, i, kv
     GetQueryParam = ""
     pairs = Split(qs, "&")
@@ -83,6 +82,7 @@ Function GetQueryParam(qs, paramName)
 End Function
 
 Function CleanSubjectString(s)
+    On Error Resume Next
     Dim res
     res = Trim(s)
     Do
@@ -106,12 +106,10 @@ subjectParam = Trim(GetQueryParam(queryParam, "subject"))
 Dim objOutlook, objNamespace
 Set objOutlook = Nothing
 
-On Error Resume Next
 Set objOutlook = GetObject(, "Outlook.Application")
 If objOutlook Is Nothing Then
     Set objOutlook = CreateObject("Outlook.Application")
 End If
-On Error GoTo 0
 
 If objOutlook Is Nothing Then
     MsgBox "No se pudo iniciar Microsoft Outlook en este equipo.", vbExclamation, "dTS Instruments"
@@ -123,20 +121,19 @@ objNamespace.Logon "", "", False, False
 
 Sub FocusWindow(objItem)
     On Error Resume Next
+    If objItem Is Nothing Then Exit Sub
     objItem.Display
     Dim insp
     Set insp = objItem.GetInspector
     If Not insp Is Nothing Then insp.Activate
     Dim wsh
     Set wsh = CreateObject("WScript.Shell")
-    If Not objItem.Subject Is Nothing Then
-        wsh.AppActivate objItem.Subject
-    End If
+    wsh.AppActivate objItem.Subject
     wsh.AppActivate "Outlook"
-    On Error GoTo 0
 End Sub
 
 Function FindMailInFolder(folder, rawSub, cleanSub, emailFilter)
+    On Error Resume Next
     Set FindMailInFolder = Nothing
     If folder Is Nothing Then Exit Function
     
@@ -147,33 +144,39 @@ Function FindMailInFolder(folder, rawSub, cleanSub, emailFilter)
     Dim escapedSub
     If Len(rawSub) > 0 Then
         escapedSub = Replace(rawSub, "'", "''")
-        On Error Resume Next
         Set item = items.Find("[Subject] = '" & escapedSub & "'")
         If Not item Is Nothing Then
             Set FindMailInFolder = item
             Exit Function
         End If
-        On Error GoTo 0
     End If
 
     If Len(cleanSub) > 0 And cleanSub <> rawSub Then
         escapedSub = Replace(cleanSub, "'", "''")
-        On Error Resume Next
         Set item = items.Find("[Subject] = '" & escapedSub & "'")
         If Not item Is Nothing Then
             Set FindMailInFolder = item
             Exit Function
         End If
-        On Error GoTo 0
     End If
     
-    ' 2. Recorrido de los correos mas recientes con GetLast / GetPrevious
+    ' 2. Recorrido seguro de los elementos mas recientes
     Set item = items.GetLast()
     countChecked = 0
     Do While Not item Is Nothing And countChecked < 300
         countChecked = countChecked + 1
-        Dim itmSub
+        
+        Dim itmSub, itmSender, itmTo, itmCC
+        itmSub = ""
+        itmSender = ""
+        itmTo = ""
+        itmCC = ""
+        
+        ' Lectura protegida contra objetos que no son MailItem (ej. ReportItem, MeetingItem)
         itmSub = item.Subject
+        itmSender = item.SenderEmailAddress
+        itmTo = item.To
+        itmCC = item.CC
         
         Dim matchSub, matchEmail
         matchSub = False
@@ -188,9 +191,9 @@ Function FindMailInFolder(folder, rawSub, cleanSub, emailFilter)
         End If
         
         If Len(emailFilter) > 0 Then
-            If InStr(1, item.SenderEmailAddress, emailFilter, 1) > 0 Or _
-               InStr(1, item.To, emailFilter, 1) > 0 Or _
-               InStr(1, item.CC, emailFilter, 1) > 0 Then
+            If InStr(1, itmSender, emailFilter, 1) > 0 Or _
+               InStr(1, itmTo, emailFilter, 1) > 0 Or _
+               InStr(1, itmCC, emailFilter, 1) > 0 Then
                 matchEmail = True
             End If
         Else
@@ -216,9 +219,7 @@ Set targetMail = Nothing
 
 ' 1. Intentar por EntryID directo si existe y es valido en MAPI
 If Len(idParam) > 0 Then
-    On Error Resume Next
     Set targetMail = objNamespace.GetItemFromID(idParam)
-    On Error GoTo 0
 End If
 
 ' 2. Si no se encontro por ID, buscar en Entrada y Enviados
@@ -297,6 +298,7 @@ Select Case action
         If Not targetMail Is Nothing Then
             FocusWindow targetMail
         Else
+            ' Si no se encontro como item exacto, abrir el explorador de Outlook con busqueda global
             Dim mainExp
             Set mainExp = objOutlook.ActiveExplorer
             If mainExp Is Nothing Then
