@@ -16,9 +16,11 @@ La solución se complementa con un **menú desplegable de acciones secundarias**
 
 ## 2. Novedades y Mejoras Implementadas
 
-### 2.1. Protocolo Nativo de Windows (`dts-mail://`)
-* **Apertura Real en Modo Lectura:** Mediante el protocolo `dts-mail://` y la interfaz COM de Office, el sistema le ordena a `OUTLOOK.EXE` mostrar la ventana original del correo archivado.
-* **Búsqueda de Respaldo Automática:** Si el correo no se encuentra por su ID (ej. si fue archivado en un `.pst` o movido), el script ejecuta automáticamente una búsqueda en Outlook por remitente y asunto sin mostrar errores.
+### 2.1. Protocolo Nativo de Windows (`dts-mail://` v2.1)
+* **Apertura Real en Modo Lectura en Primer Plano:** Mediante el protocolo `dts-mail://` y la interfaz COM MAPI de Office, el sistema localiza en milisegundos el correo en la Bandeja de Entrada o en Elementos Enviados y ejecuta `item.Display` trayendo la ventana de Outlook al frente.
+* **Blindaje contra Elementos no-Mail (v2.1):** Acceso seguro y aislado a propiedades de cada elemento ignorando convocatorias de calendario (`MeetingItem`) o avisos del sistema (`ReportItem`) para eliminar excepciones `800A01B6`.
+* **Búsqueda Global de Respaldo:** Si el correo fue movido a archivadores personales o PSTs, el script ejecuta automáticamente una búsqueda global instantánea en todas las carpetas (`olSearchScopeAllFolders = 1`).
+* **Instalador Transparente Libre de Falsos Positivos:** El archivo `.bat` escribe el manejador VBS en texto plano limpio UTF-8, eliminando scripts PowerShell en Base64 para garantizar 0 alertas de Windows Defender o SmartScreen.
 * **Instalación sin Permisos de Administrador:** El manejador se registra en `HKEY_CURRENT_USER\Software\Classes\dts-mail`, permitiendo que cualquier comercial active el servicio en su ordenador en 5 segundos.
 
 ### 2.2. Asistente en Ajustes Generales (`/settings`)

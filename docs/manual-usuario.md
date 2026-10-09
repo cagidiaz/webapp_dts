@@ -248,7 +248,7 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
 * **Botón Directo "Abrir en Outlook" y Menú de Acciones Secundarias**:
   * En cada tarjeta de email de la pestaña *Emails*, en los eventos de correo del *Timeline* y en la cabecera del contacto, se incluye la acción **"Abrir en Outlook"** acompañada de un menú desplegable contextual (`...`):
   * **Comportamiento Determinista por Preferencia**:
-    * **Outlook Classic / Escritorio (`dts-mail://`)**: Si el usuario tiene seleccionada esta opción, la WebApp invoca el protocolo nativo de Windows, abriendo el correo archivado real en la ventana de `OUTLOOK.EXE` en modo lectura (con sus cabeceras, adjuntos y botones nativos), sin abrir redactores de correo nuevo ni pestañas del navegador.
+    * **Outlook Classic / Escritorio (`dts-mail://` v2.1)**: Si el usuario tiene seleccionada esta opción, la WebApp invoca el protocolo nativo de Windows. El manejador busca en milisegundos en la Bandeja de Entrada y en Elementos Enviados de Outlook por asunto y contacto, abriendo el mensaje real en su propia ventana en primer plano (`.Display`), con sus adjuntos, cabeceras y opciones completas de lectura.
     * **Outlook Web (M365)**: Abre el mensaje exacto en la nube aprovechando el deep link oficial `webLink` o `ItemID`.
   * **Menú Desplegable de Acciones Secundarias (`...`)**:
     1. **Abrir en Outlook Classic**: Fuerza la apertura en la aplicación de escritorio.
@@ -256,7 +256,7 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
     3. **Responder en Outlook**: Abre la ventana de redacción citando el correo y los destinatarios en copia.
     4. **Buscar conversación completa**: Activa la búsqueda en Outlook para ver todo el hilo y respuestas del contacto.
     5. **Copiar datos de búsqueda**: Copia la sintaxis `de:<email> asunto:"<asunto>"` para pegarla manualmente en Outlook.
-  * **Detección y Fallback Inteligente**: Si un comercial pulsa el botón en un equipo donde aún no ha configurado el protocolo `dts-mail://`, la WebApp detecta que Windows no abrió Outlook y le ofrece un modal asistido para abrir el correo en Web o descargar el instalador en 1 clic.
+  * **Detección y Fallback Inteligente**: Si un comercial pulsa el botón en un equipo donde aún no ha configurado el protocolo `dts-mail://`, la WebApp ofrece un modal asistido para abrir el correo en Web o descargar el instalador en 1 clic, con opción de silenciar avisos si ya lo tiene instalado.
 
 ---
 
@@ -347,7 +347,7 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * Botones para forzar sincronización manual de borradores y eventos o desconectar la cuenta.
 * **Cliente de Outlook Predeterminado**:
   * Selector dual entre **Outlook de Escritorio (App Windows/Mac)** y **Outlook Web (Microsoft 365)**.
-  * **Protocolo Nativo y Asistente en 1 Clic**: Al seleccionar Outlook de Escritorio, la pantalla ofrece el botón directo *"Descargar Configurador (1 Clic)"* para instalar el protocolo seguro `dts-mail://` mediante un archivo `.bat` normalizado con saltos de línea Windows CRLF (`\r\n`) y codificación UTF-8, garantizando una instalación desatendida y limpia sin requerir permisos de administrador. También incluye enlace para descargar el desinstalador limpio.
+  * **Protocolo Nativo y Asistente en 1 Clic (`dts-mail://` v2.1)**: Al seleccionar Outlook de Escritorio, la pantalla ofrece el botón directo *"Descargar Configurador (1 Clic)"* para instalar el protocolo seguro mediante un archivo `.bat` normalizado en texto plano limpio UTF-8, garantizando una instalación desatendida, libre de alertas de antivirus y sin requerir permisos de administrador (`HKCU`). Dispone de búsqueda inteligente por asunto y contacto en Entrada y Enviados, apertura directa de correos y enlace para el desinstalador limpio.
   * **Memorización persistente en el navegador local (`localStorage`)**: El ajuste se recuerda de forma global para toda la WebApp y aplica tanto a la redacción como a la apertura de correos existentes en la ficha de contactos y el timeline del CRM.
   * Botón de prueba inmediata para validar la apertura de Outlook.
 

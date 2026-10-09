@@ -157,6 +157,13 @@ Además de la sincronización de fondo, dispones del **Complemento oficial de Ou
 ### Pantalla de Configuración y Preferencias (`/settings`)
 En la nueva sección de **Ajustes** de la WebApp puedes:
 * **Elegir tu Cliente de Outlook Predeterminado**: Selecciona entre **Outlook de Escritorio (Windows/Mac)** o **Outlook Web (Microsoft 365)**. El sistema recordará tu preferencia de forma permanente en tu navegador para abrir los correos y borradores siempre en tu cliente favorito.
+* **Asistente de Enlace Nativo de Outlook Classic (Windows - Protocolo `dts-mail://` v2.1)**:
+  * Al seleccionar *Outlook de Escritorio*, dispones del botón **"Descargar Configurador (1 Clic)"** que genera el archivo `Instalar_Outlook_dTS.bat`.
+  * **Sin Permisos de Administrador:** Se instala a nivel de usuario en `HKEY_CURRENT_USER\Software\Classes\dts-mail` y en `%LOCALAPPDATA%\dTS\`.
+  * **Apertura Directa y Búsqueda Inteligente (v2.1):** Al pulsar "Abrir en Outlook" en cualquier tarjeta de correo del CRM, el manejador local busca instantáneamente en tu **Bandeja de Entrada** y en **Elementos Enviados** por asunto (exacto y normalizado sin prefijos `Re:`, `RV:`) y correo del interlocutor, abriendo directamente la ventana del mensaje en primer plano (`.Display`).
+  * **Blindaje Total contra Elementos del Calendario:** Ignora de forma segura convocatorias de reunión (`MeetingItem`) o avisos del sistema (`ReportItem`), evitando ventanas de error de VBScript.
+  * **Libre de Falsos Positivos de Antivirus:** El instalador genera el script en texto plano limpio y transparente, sin técnicas de PowerShell Base64 ni bypass de directivas.
+  * **Persistencia y Supresión de Avisos Innecesarios:** La WebApp recuerda que ya instalaste el configurador en ese navegador, evitando alertas emergentes mientras confirmas el cuadro de diálogo de Chrome/Edge.
 * **Probar la Apertura**: Dispone de un botón interactivo de validación para asegurar que tu cliente de Outlook abre correctamente.
 
 ### Detección Proactiva de Sesión Expirada y Reconexión
@@ -184,6 +191,8 @@ Si cambias de equipo o deseas revocar el acceso a tu cuenta:
 | **¿Qué ocurre si borro una reunión en Outlook?** | El sistema detectará la cancelación y actualizará o eliminará el evento del CRM para mantener la agenda al día. |
 | **¿Los clientes reciben invitaciones al crear un evento en CRM?** | **Sí.** Si el contacto tiene su dirección de correo configurada, Outlook enviará la invitación estándar de calendario con opción de aceptar/rechazar. |
 | **¿Puedo cambiar entre abrir los correos en Outlook Web o Outlook Escritorio?** | **Sí.** Puedes cambiarlo en cualquier momento desde **Ajustes** (`/settings`) y tu elección se guardará automáticamente. |
+| **¿Cómo funciona la apertura en Outlook Classic sin abrir ventanas de redacción?** | Utiliza el protocolo seguro `dts-mail://` v2.1. El script local busca el correo guardado en tu Bandeja de Entrada o Elementos Enviados y lo abre directamente en modo lectura (`.Display`), con sus cabeceras, adjuntos y botones nativos. |
+| **¿Requiere permisos de administrador el instalador de Outlook Classic?** | **No.** Se instala de forma desatendida exclusivamente en tu perfil de usuario de Windows (`HKEY_CURRENT_USER`). |
 
 ---
 
