@@ -93,6 +93,25 @@ export const createExchangeDraft = async (payload: {
 };
 
 const OUTLOOK_PREF_KEY = 'dts_outlook_preferred_client';
+export const OUTLOOK_PROTOCOL_INSTALLED_KEY = 'dts_outlook_protocol_installed';
+
+/**
+ * Comprueba si el usuario ya tiene registrado y validado el protocolo dts-mail:// en este equipo
+ */
+export const isOutlookProtocolInstalled = (): boolean => {
+  return localStorage.getItem(OUTLOOK_PROTOCOL_INSTALLED_KEY) === 'true';
+};
+
+/**
+ * Marca en localStorage que el protocolo dts-mail:// ya está instalado en este navegador
+ */
+export const markOutlookProtocolInstalled = (installed: boolean = true) => {
+  if (installed) {
+    localStorage.setItem(OUTLOOK_PROTOCOL_INSTALLED_KEY, 'true');
+  } else {
+    localStorage.removeItem(OUTLOOK_PROTOCOL_INSTALLED_KEY);
+  }
+};
 
 /**
  * Obtiene la preferencia guardada del cliente de Outlook del usuario ('desktop' o 'web')
@@ -198,17 +217,39 @@ export const triggerCustomProtocolWithFallback = (
   protocolUri: string,
   onFailed?: () => void
 ) => {
+  // 1. Invocar mediante iframe invisible y enlace directo para máxima compatibilidad Chromium/Firefox
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = protocolUri;
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    }, 1000);
+  } catch {
+    // Silencioso
+  }
+
+  triggerMailtoUri(protocolUri);
+
+  // 2. Si el usuario ya marcó o instaló el protocolo, no molestar con falsas alarmas
+  if (isOutlookProtocolInstalled()) {
+    return;
+  }
+
   let hasBlurred = false;
   const onBlurHandler = () => {
     hasBlurred = true;
   };
 
   window.addEventListener('blur', onBlurHandler);
-  triggerMailtoUri(protocolUri);
 
+  // Margen de 4.5 segundos para no interrumpir el cuadro de diálogo de Chrome/Edge
   setTimeout(() => {
     window.removeEventListener('blur', onBlurHandler);
-    if (!hasBlurred && document.hasFocus()) {
+    if (!hasBlurred && document.hasFocus() && !isOutlookProtocolInstalled()) {
       if (onFailed) {
         onFailed();
       }
@@ -218,7 +259,7 @@ export const triggerCustomProtocolWithFallback = (
         })
       );
     }
-  }, 1600);
+  }, 4500);
 };
 
 /**

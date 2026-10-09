@@ -1,7 +1,339 @@
+import { markOutlookProtocolInstalled } from '../api/exchangeSync';
+
 /**
  * Utilidades para la descarga del paquete de configuración del protocolo dts-mail://
  * para Microsoft Outlook Classic en Windows.
+ * Version 2.0: Busqueda inteligente por Asunto, Remitente y Apertura Directa en pantalla.
  */
+export const VBS_HANDLER_SCRIPT = `' ==============================================================================
+' dTS Instruments - Manejador de Protocolo Nativo dts-mail:// para Microsoft Outlook
+' Version 2.0 - Busqueda Inteligente y Apertura Directa de Correos
+' ==============================================================================
+Option Explicit
+
+On Error Resume Next
+
+Dim rawUrl, action, idParam, fromParam, subjectParam, queryParam
+If WScript.Arguments.Count = 0 Then WScript.Quit
+
+rawUrl = WScript.Arguments(0)
+rawUrl = Replace(rawUrl, """", "")
+
+Dim urlWithoutProtocol, qPos
+If InStr(LCase(rawUrl), "dts-mail://") = 1 Then
+    urlWithoutProtocol = Mid(rawUrl, 12)
+Else
+    urlWithoutProtocol = rawUrl
+End If
+
+qPos = InStr(urlWithoutProtocol, "?")
+If qPos > 0 Then
+    action = LCase(Left(urlWithoutProtocol, qPos - 1))
+    queryParam = Mid(urlWithoutProtocol, qPos + 1)
+Else
+    action = LCase(urlWithoutProtocol)
+    queryParam = ""
+End If
+
+If Right(action, 1) = "/" Then action = Left(action, Len(action) - 1)
+
+' Decodificador de URL 100% nativo sin dependencias externas ni HTMLFILE
+Function URLDecode(s)
+    Dim res, i, ch, hCode
+    res = ""
+    i = 1
+    Do While i <= Len(s)
+        ch = Mid(s, i, 1)
+        If ch = "+" Then
+            res = res & " "
+            i = i + 1
+        ElseIf ch = "%" And i + 2 <= Len(s) Then
+            On Error Resume Next
+            hCode = Mid(s, i + 1, 2)
+            res = res & Chr(CInt("&H" & hCode))
+            If Err.Number <> 0 Then
+                res = res & ch
+                Err.Clear
+                i = i + 1
+            Else
+                i = i + 3
+            End If
+            On Error GoTo 0
+        Else
+            res = res & ch
+            i = i + 1
+        End If
+    Loop
+    URLDecode = res
+End Function
+
+Function GetQueryParam(qs, paramName)
+    Dim pairs, i, kv
+    GetQueryParam = ""
+    pairs = Split(qs, "&")
+    For i = 0 To UBound(pairs)
+        kv = Split(pairs(i), "=")
+        If UBound(kv) >= 1 Then
+            If LCase(kv(0)) = LCase(paramName) Then
+                GetQueryParam = URLDecode(kv(1))
+                Exit Function
+            End If
+        End If
+    Next
+End Function
+
+Function CleanSubjectString(s)
+    Dim res
+    res = Trim(s)
+    Do
+        Dim changed
+        changed = False
+        If LCase(Left(res, 4)) = "re: " Or LCase(Left(res, 4)) = "rv: " Or LCase(Left(res, 4)) = "re:" Then
+            res = Trim(Mid(res, InStr(res, ":") + 1))
+            changed = True
+        ElseIf LCase(Left(res, 5)) = "fwd: " Or LCase(Left(res, 5)) = "fwd:" Then
+            res = Trim(Mid(res, InStr(res, ":") + 1))
+            changed = True
+        End If
+    Loop While changed
+    CleanSubjectString = res
+End Function
+
+idParam = Trim(GetQueryParam(queryParam, "id"))
+fromParam = Trim(GetQueryParam(queryParam, "from"))
+subjectParam = Trim(GetQueryParam(queryParam, "subject"))
+
+Dim objOutlook, objNamespace
+Set objOutlook = Nothing
+
+On Error Resume Next
+Set objOutlook = GetObject(, "Outlook.Application")
+If objOutlook Is Nothing Then
+    Set objOutlook = CreateObject("Outlook.Application")
+End If
+On Error GoTo 0
+
+If objOutlook Is Nothing Then
+    MsgBox "No se pudo iniciar Microsoft Outlook en este equipo.", vbExclamation, "dTS Instruments"
+    WScript.Quit
+End If
+
+Set objNamespace = objOutlook.GetNamespace("MAPI")
+objNamespace.Logon "", "", False, False
+
+Sub FocusWindow(objItem)
+    On Error Resume Next
+    objItem.Display
+    Dim insp
+    Set insp = objItem.GetInspector
+    If Not insp Is Nothing Then insp.Activate
+    Dim wsh
+    Set wsh = CreateObject("WScript.Shell")
+    If Not objItem.Subject Is Nothing Then
+        wsh.AppActivate objItem.Subject
+    End If
+    wsh.AppActivate "Outlook"
+    On Error GoTo 0
+End Sub
+
+Function FindMailInFolder(folder, rawSub, cleanSub, emailFilter)
+    Set FindMailInFolder = Nothing
+    If folder Is Nothing Then Exit Function
+    
+    Dim items, item, countChecked
+    Set items = folder.Items
+    
+    ' 1. Intentar busqueda indexada rapida si hay asunto
+    Dim escapedSub
+    If Len(rawSub) > 0 Then
+        escapedSub = Replace(rawSub, "'", "''")
+        On Error Resume Next
+        Set item = items.Find("[Subject] = '" & escapedSub & "'")
+        If Not item Is Nothing Then
+            Set FindMailInFolder = item
+            Exit Function
+        End If
+        On Error GoTo 0
+    End If
+
+    If Len(cleanSub) > 0 And cleanSub <> rawSub Then
+        escapedSub = Replace(cleanSub, "'", "''")
+        On Error Resume Next
+        Set item = items.Find("[Subject] = '" & escapedSub & "'")
+        If Not item Is Nothing Then
+            Set FindMailInFolder = item
+            Exit Function
+        End If
+        On Error GoTo 0
+    End If
+    
+    ' 2. Recorrido de los correos mas recientes con GetLast / GetPrevious
+    Set item = items.GetLast()
+    countChecked = 0
+    Do While Not item Is Nothing And countChecked < 300
+        countChecked = countChecked + 1
+        Dim itmSub
+        itmSub = item.Subject
+        
+        Dim matchSub, matchEmail
+        matchSub = False
+        matchEmail = False
+        
+        If Len(cleanSub) > 0 Then
+            If InStr(1, itmSub, cleanSub, 1) > 0 Or InStr(1, itmSub, rawSub, 1) > 0 Then
+                matchSub = True
+            End If
+        Else
+            matchSub = True
+        End If
+        
+        If Len(emailFilter) > 0 Then
+            If InStr(1, item.SenderEmailAddress, emailFilter, 1) > 0 Or _
+               InStr(1, item.To, emailFilter, 1) > 0 Or _
+               InStr(1, item.CC, emailFilter, 1) > 0 Then
+                matchEmail = True
+            End If
+        Else
+            matchEmail = True
+        End If
+        
+        If matchSub And matchEmail Then
+            Set FindMailInFolder = item
+            Exit Function
+        End If
+        
+        If matchSub And Len(cleanSub) >= 6 And Len(emailFilter) = 0 Then
+            Set FindMailInFolder = item
+            Exit Function
+        End If
+        
+        Set item = items.GetPrevious()
+    Loop
+End Function
+
+Dim targetMail
+Set targetMail = Nothing
+
+' 1. Intentar por EntryID directo si existe y es valido en MAPI
+If Len(idParam) > 0 Then
+    On Error Resume Next
+    Set targetMail = objNamespace.GetItemFromID(idParam)
+    On Error GoTo 0
+End If
+
+' 2. Si no se encontro por ID, buscar en Entrada y Enviados
+Dim cleanSubText
+cleanSubText = CleanSubjectString(subjectParam)
+
+If targetMail Is Nothing And (Len(subjectParam) > 0 Or Len(fromParam) > 0) Then
+    Dim inboxFolder, sentFolder
+    Set inboxFolder = objNamespace.GetDefaultFolder(6)  ' olFolderInbox
+    Set sentFolder = objNamespace.GetDefaultFolder(5)   ' olFolderSentMail
+    
+    Set targetMail = FindMailInFolder(inboxFolder, subjectParam, cleanSubText, fromParam)
+    
+    If targetMail Is Nothing Then
+        Set targetMail = FindMailInFolder(sentFolder, subjectParam, cleanSubText, fromParam)
+    End If
+End If
+
+' 3. Procesar segun accion solicitada
+Select Case action
+    Case "reply"
+        If Not targetMail Is Nothing Then
+            Dim replyMail
+            Set replyMail = targetMail.ReplyAll()
+            FocusWindow replyMail
+        Else
+            Dim newMail
+            Set newMail = objOutlook.CreateItem(0)
+            If Len(fromParam) > 0 Then newMail.To = fromParam
+            If Len(subjectParam) > 0 Then
+                If LCase(Left(subjectParam, 3)) <> "re:" Then
+                    newMail.Subject = "Re: " & subjectParam
+                Else
+                    newMail.Subject = subjectParam
+                End If
+            End If
+            FocusWindow newMail
+        End If
+
+    Case "search"
+        Dim searchExp
+        Set searchExp = objOutlook.ActiveExplorer
+        If searchExp Is Nothing Then
+            Dim searchInbox
+            Set searchInbox = objNamespace.GetDefaultFolder(6)
+            Set searchExp = searchInbox.GetExplorer
+            searchExp.Display
+        Else
+            searchExp.Activate
+        End If
+        
+        Dim searchCriteria
+        searchCriteria = ""
+        If Len(cleanSubText) > 0 Then
+            searchCriteria = """" & cleanSubText & """"
+        ElseIf Len(subjectParam) > 0 Then
+            searchCriteria = """" & subjectParam & """"
+        End If
+        If Len(fromParam) > 0 Then
+            If Len(searchCriteria) > 0 Then
+                searchCriteria = searchCriteria & " " & fromParam
+            Else
+                searchCriteria = fromParam
+            End If
+        End If
+        
+        If Len(searchCriteria) > 0 Then
+            searchExp.Search Trim(searchCriteria), 1 ' 1 = olSearchScopeAllFolders
+        End If
+        
+        Dim wshSearch
+        Set wshSearch = CreateObject("WScript.Shell")
+        wshSearch.AppActivate "Outlook"
+
+    Case Else ' Accion "open" por defecto
+        If Not targetMail Is Nothing Then
+            FocusWindow targetMail
+        Else
+            Dim mainExp
+            Set mainExp = objOutlook.ActiveExplorer
+            If mainExp Is Nothing Then
+                Dim defInbox
+                Set defInbox = objNamespace.GetDefaultFolder(6)
+                Set mainExp = defInbox.GetExplorer
+                mainExp.Display
+            Else
+                mainExp.Activate
+            End If
+            
+            Dim backupCriteria
+            backupCriteria = ""
+            If Len(cleanSubText) > 0 Then
+                backupCriteria = """" & cleanSubText & """"
+            ElseIf Len(subjectParam) > 0 Then
+                backupCriteria = """" & subjectParam & """"
+            End If
+            If Len(fromParam) > 0 Then
+                If Len(backupCriteria) > 0 Then
+                    backupCriteria = backupCriteria & " " & fromParam
+                Else
+                    backupCriteria = fromParam
+                End If
+            End If
+            
+            If Len(backupCriteria) > 0 Then
+                mainExp.Search Trim(backupCriteria), 1 ' 1 = olSearchScopeAllFolders
+            End If
+            
+            Dim wshOpen
+            Set wshOpen = CreateObject("WScript.Shell")
+            wshOpen.AppActivate "Outlook"
+        End If
+End Select
+`;
+
 export const INSTALLER_BAT_CONTENT = `@echo off
 chcp 65001 >nul
 title Configuracion de Outlook Classic - dTS Instruments
@@ -12,8 +344,10 @@ echo.
 echo [1/3] Creando directorio local de dTS...
 if not exist "%LOCALAPPDATA%\\dTS" mkdir "%LOCALAPPDATA%\\dTS"
 
-echo [2/3] Instalando manejador de Outlook...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$b='JyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KJyBkVFMgSW5zdHJ1bWVudHMgLSBNYW5lamFkb3IgZGUgUHJvdG9jb2xvIE5hdGl2byBkdHMtbWFpbDovLyBwYXJhIE1pY3Jvc29mdCBPdXRsb29rCicgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ck9wdGlvbiBFeHBsaWNpdAoKT24gRXJyb3IgUmVzdW1lIE5leHQKCkRpbSByYXdVcmwsIGFjdGlvbiwgaWRQYXJhbSwgZnJvbVBhcmFtLCBzdWJqZWN0UGFyYW0sIHF1ZXJ5UGFyYW0KSWYgV1NjcmlwdC5Bcmd1bWVudHMuQ291bnQgPSAwIFRoZW4gV1NjcmlwdC5RdWl0CgpyYXdVcmwgPSBXU2NyaXB0LkFyZ3VtZW50cygwKQpyYXdVcmwgPSBSZXBsYWNlKHJhd1VybCwgIiIiIiwgIiIpCgpEaW0gdXJsV2l0aG91dFByb3RvY29sLCBxUG9zCklmIEluU3RyKExDYXNlKHJhd1VybCksICJkdHMtbWFpbDovLyIpID0gMSBUaGVuCiAgICB1cmxXaXRob3V0UHJvdG9jb2wgPSBNaWQocmF3VXJsLCAxMikKRWxzZQogICAgdXJsV2l0aG91dFByb3RvY29sID0gcmF3VXJsCkVuZCBJZgoKcVBvcyA9IEluU3RyKHVybFdpdGhvdXRQcm90b2NvbCwgIj8iKQpJZiBxUG9zID4gMCBUaGVuCiAgICBhY3Rpb24gPSBMQ2FzZShMZWZ0KHVybFdpdGhvdXRQcm90b2NvbCwgcVBvcyAtIDEpKQogICAgcXVlcnlQYXJhbSA9IE1pZCh1cmxXaXRob3V0UHJvdG9jb2wsIHFQb3MgKyAxKQpFbHNlCiAgICBhY3Rpb24gPSBMQ2FzZSh1cmxXaXRob3V0UHJvdG9jb2wpCiAgICBxdWVyeVBhcmFtID0gIiIKRW5kIElmCgpJZiBSaWdodChhY3Rpb24sIDEpID0gIi8iIFRoZW4gYWN0aW9uID0gTGVmdChhY3Rpb24sIExlbihhY3Rpb24pIC0gMSkKCkZ1bmN0aW9uIEdldFF1ZXJ5UGFyYW0ocXMsIHBhcmFtTmFtZSkKICAgIERpbSBwYWlycywgaSwga3YKICAgIEdldFF1ZXJ5UGFyYW0gPSAiIgogICAgcGFpcnMgPSBTcGxpdChxcywgIiYiKQogICAgRm9yIGkgPSAwIFRvIFVCb3VuZChwYWlycykKICAgICAgICBrdiA9IFNwbGl0KHBhaXJzKGkpLCAiPSIpCiAgICAgICAgSWYgVUJvdW5kKGt2KSA+PSAxIFRoZW4KICAgICAgICAgICAgSWYgTENhc2Uoa3YoMCkpID0gTENhc2UocGFyYW1OYW1lKSBUaGVuCiAgICAgICAgICAgICAgICBHZXRRdWVyeVBhcmFtID0gVVJMRGVjb2RlKGt2KDEpKQogICAgICAgICAgICAgICAgRXhpdCBGdW5jdGlvbgogICAgICAgICAgICBFbmQgSWYKICAgICAgICBFbmQgSWYKICAgIE5leHQKRW5kIEZ1bmN0aW9uCgpGdW5jdGlvbiBVUkxEZWNvZGUoc3RyKQogICAgRGltIHMKICAgIHMgPSBSZXBsYWNlKHN0ciwgIisiLCAiICIpCiAgICBPbiBFcnJvciBSZXN1bWUgTmV4dAogICAgRGltIG9iakRvYwogICAgU2V0IG9iakRvYyA9IENyZWF0ZU9iamVjdCgiSFRNTEZJTEUiKQogICAgSWYgTm90IG9iakRvYyBJcyBOb3RoaW5nIFRoZW4KICAgICAgICBVUkxEZWNvZGUgPSBvYmpEb2MucGFyZW50V2luZG93LnVuZXNjYXBlKHMpCiAgICBFbHNlCiAgICAgICAgVVJMRGVjb2RlID0gcwogICAgRW5kIElmCiAgICBPbiBFcnJvciBHb1RvIDAKRW5kIEZ1bmN0aW9uCgppZFBhcmFtID0gR2V0UXVlcnlQYXJhbShxdWVyeVBhcmFtLCAiaWQiKQpmcm9tUGFyYW0gPSBHZXRRdWVyeVBhcmFtKHF1ZXJ5UGFyYW0sICJmcm9tIikKc3ViamVjdFBhcmFtID0gR2V0UXVlcnlQYXJhbShxdWVyeVBhcmFtLCAic3ViamVjdCIpCgpEaW0gb2JqT3V0bG9vaywgb2JqTmFtZXNwYWNlLCBvYmpNYWlsLCBvYmpFeHBsb3JlciwgZm91bmRNYWlsClNldCBvYmpPdXRsb29rID0gTm90aGluZwoKT24gRXJyb3IgUmVzdW1lIE5leHQKU2V0IG9iak91dGxvb2sgPSBHZXRPYmplY3QoLCAiT3V0bG9vay5BcHBsaWNhdGlvbiIpCklmIG9iak91dGxvb2sgSXMgTm90aGluZyBUaGVuCiAgICBTZXQgb2JqT3V0bG9vayA9IENyZWF0ZU9iamVjdCgiT3V0bG9vay5BcHBsaWNhdGlvbiIpCkVuZCBJZgpPbiBFcnJvciBHb1RvIDAKCklmIG9iak91dGxvb2sgSXMgTm90aGluZyBUaGVuCiAgICBNc2dCb3ggIk5vIHNlIHB1ZG8gaW5pY2lhciBNaWNyb3NvZnQgT3V0bG9vay4iLCB2YkV4Y2xhbWF0aW9uLCAiZFRTIEluc3RydW1lbnRzIgogICAgV1NjcmlwdC5RdWl0CkVuZCBJZgoKU2V0IG9iak5hbWVzcGFjZSA9IG9iak91dGxvb2suR2V0TmFtZXNwYWNlKCJNQVBJIikKb2JqTmFtZXNwYWNlLkxvZ29uICIiLCAiIiwgRmFsc2UsIEZhbHNlCgpTZWxlY3QgQ2FzZSBhY3Rpb24KICAgIENhc2UgInJlcGx5IgogICAgICAgIGZvdW5kTWFpbCA9IEZhbHNlCiAgICAgICAgSWYgTGVuKGlkUGFyYW0pID4gMCBUaGVuCiAgICAgICAgICAgIE9uIEVycm9yIFJlc3VtZSBOZXh0CiAgICAgICAgICAgIFNldCBvYmpNYWlsID0gb2JqTmFtZXNwYWNlLkdldEl0ZW1Gcm9tSUQoaWRQYXJhbSkKICAgICAgICAgICAgSWYgTm90IG9iak1haWwgSXMgTm90aGluZyBUaGVuCiAgICAgICAgICAgICAgICBEaW0gb2JqUmVwbHkKICAgICAgICAgICAgICAgIFNldCBvYmpSZXBseSA9IG9iak1haWwuUmVwbHlBbGwoKQogICAgICAgICAgICAgICAgb2JqUmVwbHkuRGlzcGxheQogICAgICAgICAgICAgICAgZm91bmRNYWlsID0gVHJ1ZQogICAgICAgICAgICBFbmQgSWYKICAgICAgICAgICAgT24gRXJyb3IgR29UbyAwCiAgICAgICAgRW5kIElmCiAgICAgICAgCiAgICAgICAgSWYgTm90IGZvdW5kTWFpbCBUaGVuCiAgICAgICAgICAgIERpbSBvYmpOZXdNYWlsCiAgICAgICAgICAgIFNldCBvYmpOZXdNYWlsID0gb2JqT3V0bG9vay5DcmVhdGVJdGVtKDApCiAgICAgICAgICAgIElmIExlbihmcm9tUGFyYW0pID4gMCBUaGVuIG9iak5ld01haWwuVG8gPSBmcm9tUGFyYW0KICAgICAgICAgICAgSWYgTGVuKHN1YmplY3RQYXJhbSkgPiAwIFRoZW4KICAgICAgICAgICAgICAgIElmIExlZnQoTENhc2Uoc3ViamVjdFBhcmFtKSwgMykgPD4gInJlOiIgVGhlbgogICAgICAgICAgICAgICAgICAgIG9iak5ld01haWwuU3ViamVjdCA9ICJSZTogIiAmIHN1YmplY3RQYXJhbQogICAgICAgICAgICAgICAgRWxzZQogICAgICAgICAgICAgICAgICAgIG9iak5ld01haWwuU3ViamVjdCA9IHN1YmplY3RQYXJhbQogICAgICAgICAgICAgICAgRW5kIElmCiAgICAgICAgICAgIEVuZCBJZgogICAgICAgICAgICBvYmpOZXdNYWlsLkRpc3BsYXkKICAgICAgICBFbmQgSWYKCiAgICBDYXNlICJzZWFyY2giCiAgICAgICAgU2V0IG9iakV4cGxvcmVyID0gb2JqT3V0bG9vay5BY3RpdmVFeHBsb3JlcgogICAgICAgIElmIG9iakV4cGxvcmVyIElzIE5vdGhpbmcgVGhlbgogICAgICAgICAgICBEaW0gb2JqSW5ib3gKICAgICAgICAgICAgU2V0IG9iakluYm94ID0gb2JqTmFtZXNwYWNlLkdldERlZmF1bHRGb2xkZXIoNikKICAgICAgICAgICAgU2V0IG9iakV4cGxvcmVyID0gb2JqSW5ib3guR2V0RXhwbG9yZXIKICAgICAgICAgICAgb2JqRXhwbG9yZXIuRGlzcGxheQogICAgICAgIEVsc2UKICAgICAgICAgICAgb2JqRXhwbG9yZXIuQWN0aXZhdGUKICAgICAgICBFbmQgSWYKICAgICAgICAKICAgICAgICBEaW0gc2VhcmNoVGVybXMKICAgICAgICBzZWFyY2hUZXJtcyA9ICIiCiAgICAgICAgSWYgTGVuKGZyb21QYXJhbSkgPiAwIFRoZW4gc2VhcmNoVGVybXMgPSAiZGU6IiAmIGZyb21QYXJhbSAmICIgIgogICAgICAgIElmIExlbihzdWJqZWN0UGFyYW0pID4gMCBUaGVuIHNlYXJjaFRlcm1zID0gc2VhcmNoVGVybXMgJiAiIiIiICYgc3ViamVjdFBhcmFtICYgIiIiIgogICAgICAgIElmIExlbihzZWFyY2hUZXJtcykgPiAwIFRoZW4KICAgICAgICAgICAgb2JqRXhwbG9yZXIuU2VhcmNoIFRyaW0oc2VhcmNoVGVybXMpLCAwCiAgICAgICAgRW5kIElmCgogICAgQ2FzZSBFbHNlCiAgICAgICAgZm91bmRNYWlsID0gRmFsc2UKICAgICAgICBJZiBMZW4oaWRQYXJhbSkgPiAwIFRoZW4KICAgICAgICAgICAgT24gRXJyb3IgUmVzdW1lIE5leHQKICAgICAgICAgICAgU2V0IG9iak1haWwgPSBvYmpOYW1lc3BhY2UuR2V0SXRlbUZyb21JRChpZFBhcmFtKQogICAgICAgICAgICBJZiBOb3Qgb2JqTWFpbCBJcyBOb3RoaW5nIFRoZW4KICAgICAgICAgICAgICAgIG9iak1haWwuRGlzcGxheQogICAgICAgICAgICAgICAgZm91bmRNYWlsID0gVHJ1ZQogICAgICAgICAgICBFbmQgSWYKICAgICAgICAgICAgT24gRXJyb3IgR29UbyAwCiAgICAgICAgRW5kIElmCiAgICAgICAgCiAgICAgICAgSWYgTm90IGZvdW5kTWFpbCBUaGVuCiAgICAgICAgICAgIFNldCBvYmpFeHBsb3JlciA9IG9iak91dGxvb2suQWN0aXZlRXhwbG9yZXIKICAgICAgICAgICAgSWYgb2JqRXhwbG9yZXIgSXMgTm90aGluZyBUaGVuCiAgICAgICAgICAgICAgICBEaW0gb2JqSW5ib3gyCiAgICAgICAgICAgICAgICBTZXQgb2JqSW5ib3gyID0gb2JqTmFtZXNwYWNlLkdldERlZmF1bHRGb2xkZXIoNikKICAgICAgICAgICAgICAgIFNldCBvYmpFeHBsb3JlciA9IG9iakluYm94Mi5HZXRFeHBsb3JlcgogICAgICAgICAgICAgICAgb2JqRXhwbG9yZXIuRGlzcGxheQogICAgICAgICAgICBFbHNlCiAgICAgICAgICAgICAgICBvYmpFeHBsb3Jlci5BY3RpdmF0ZQogICAgICAgICAgICBFbmQgSWYKICAgICAgICAgICAgCiAgICAgICAgICAgIERpbSBzZWFyY2hCYWNrdXAKICAgICAgICAgICAgc2VhcmNoQmFja3VwID0gIiIKICAgICAgICAgICAgSWYgTGVuKGZyb21QYXJhbSkgPiAwIFRoZW4gc2VhcmNoQmFja3VwID0gImRlOiIgJiBmcm9tUGFyYW0gJiAiICIKICAgICAgICAgICAgSWYgTGVuKHN1YmplY3RQYXJhbSkgPiAwIFRoZW4gc2VhcmNoQmFja3VwID0gc2VhcmNoQmFja3VwICYgIiIiIiAmIHN1YmplY3RQYXJhbSAmICIiIiIKICAgICAgICAgICAgSWYgTGVuKHNlYXJjaEJhY2t1cCkgPiAwIFRoZW4KICAgICAgICAgICAgICAgIG9iakV4cGxvcmVyLlNlYXJjaCBUcmltKHNlYXJjaEJhY2t1cCksIDAKICAgICAgICAgICAgRW5kIElmCiAgICAgICAgRW5kIElmCkVuZCBTZWxlY3QK'; [IO.File]::WriteAllBytes($env:LOCALAPPDATA + '\\dTS\\outlook_handler.vbs', [Convert]::FromBase64String($b))" >nul
+echo [2/3] Instalando manejador inteligente de Outlook...
+powershell -NoProfile -Command "[IO.File]::WriteAllText($env:LOCALAPPDATA + '\\dTS\\outlook_handler.vbs', @'
+${VBS_HANDLER_SCRIPT}
+'@, [System.Text.Encoding]::UTF8)" >nul
 
 echo [3/3] Registrando protocolo en Windows (sin permisos de Administrador)...
 reg add "HKCU\\Software\\Classes\\dts-mail" /ve /d "URL:dTS Instruments Mail Protocol" /f >nul
@@ -25,7 +359,7 @@ echo ======================================================================
 echo    Configuracion completada con exito!
 echo ======================================================================
 echo.
-echo Ya puedes abrir correos en tu Outlook de escritorio desde la WebApp dTS.
+echo Ya puedes abrir correos en tu Outlook Classic desde la WebApp dTS.
 echo La primera vez que abras un correo, el navegador te preguntara:
 echo "¿Abrir dTS Instruments Mail Protocol?".
 echo Marca la casilla "Permitir siempre" y haz clic en Abrir.
@@ -60,7 +394,6 @@ pause
  * forzando terminaciones de linea CRLF (\r\n) para compatibilidad con Windows cmd.exe.
  */
 const triggerFileDownload = (content: string, fileName: string) => {
-  // Asegurar explícitamente saltos de línea Windows CRLF (\r\n)
   const normalizedContent = content.replace(/\r?\n/g, '\r\n');
   const blob = new Blob([normalizedContent], { type: 'application/x-bat;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -80,6 +413,7 @@ const triggerFileDownload = (content: string, fileName: string) => {
  * Descarga el instalador automático en 1 clic de Outlook Classic
  */
 export const downloadOutlookClassicInstaller = () => {
+  markOutlookProtocolInstalled(true);
   triggerFileDownload(INSTALLER_BAT_CONTENT, 'Instalar_Outlook_dTS.bat');
 };
 
@@ -87,5 +421,6 @@ export const downloadOutlookClassicInstaller = () => {
  * Descarga el desinstalador limpio de Outlook Classic
  */
 export const downloadOutlookClassicUninstaller = () => {
+  markOutlookProtocolInstalled(false);
   triggerFileDownload(UNINSTALLER_BAT_CONTENT, 'Desinstalar_Outlook_dTS.bat');
 };

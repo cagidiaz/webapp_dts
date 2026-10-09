@@ -9,7 +9,8 @@ import {
   getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
   createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
   getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook,
-  replyInOutlook, searchConversationInOutlook, copyEmailSearchToClipboard
+  replyInOutlook, searchConversationInOutlook, copyEmailSearchToClipboard,
+  markOutlookProtocolInstalled
 } from '../../../api';
 import { downloadOutlookClassicInstaller } from '../../../utils/outlookInstaller';
 import { formatCurrency } from '../../../api/formatters';
@@ -4194,6 +4195,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 type="button"
                 onClick={() => {
                   downloadOutlookClassicInstaller();
+                  setShowProtocolFallbackModal(false);
                 }}
                 className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-800 dark:text-gray-200 transition-all flex items-center justify-center gap-2 cursor-pointer border border-gray-200 dark:border-gray-700"
               >
@@ -4203,8 +4205,19 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
               <button
                 type="button"
+                onClick={() => {
+                  markOutlookProtocolInstalled(true);
+                  setShowProtocolFallbackModal(false);
+                }}
+                className="w-full py-2 text-center text-xs text-dts-secondary hover:underline font-semibold cursor-pointer"
+              >
+                Ya lo tengo instalado en este equipo (No volver a mostrar)
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setShowProtocolFallbackModal(false)}
-                className="w-full py-2 text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
+                className="w-full py-1.5 text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
               >
                 Cerrar
               </button>
