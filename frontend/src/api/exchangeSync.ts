@@ -263,6 +263,22 @@ export const triggerCustomProtocolWithFallback = (
 };
 
 /**
+ * Limpia el asunto del correo eliminando prefijos de tipología del CRM (ej. [📥 Recibido · 📋 Petición oferta]),
+ * normalizando caracteres especiales, emojis y guiones tipográficos para compatibilidad total con Outlook.
+ */
+export const cleanEmailSubjectForOutlook = (rawSubject?: string | null): string => {
+  if (!rawSubject) return '';
+  return rawSubject
+    // Eliminar cualquier etiqueta entre corchetes al inicio ej. [📥 Recibido · 📋 ...]
+    .replace(/^\[.*?\]\s*/, '')
+    // Reemplazar guiones largos/tipográficos por guión estándar
+    .replace(/[—–]/g, '-')
+    // Eliminar caracteres no estándar o emojis restantes al inicio o fin
+    .replace(/^[\p{Extended_Pictographic}\s]+/u, '')
+    .trim();
+};
+
+/**
  * Abre un correo existente en Outlook respetando la preferencia del usuario
  */
 export const openExistingEmailInOutlook = (options: {
@@ -275,14 +291,15 @@ export const openExistingEmailInOutlook = (options: {
   onProtocolFailed?: () => void;
 }) => {
   const target = options.target || getPreferredOutlookClient();
-  const { webLink, itemId, email, subject, exchangeSyncStatus, onProtocolFailed } = options;
+  const { webLink, itemId, email, exchangeSyncStatus, onProtocolFailed } = options;
+  const cleanSubject = cleanEmailSubjectForOutlook(options.subject);
 
   // 1. Si el usuario tiene configurado Outlook de Escritorio (Classic / App)
   if (target === 'desktop') {
     const params: string[] = [];
     if (itemId) params.push(`id=${encodeURIComponent(itemId)}`);
     if (email) params.push(`from=${encodeURIComponent(email)}`);
-    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+    if (cleanSubject) params.push(`subject=${encodeURIComponent(cleanSubject)}`);
 
     const queryString = params.length > 0 ? `?${params.join('&')}` : '';
     const dtsMailUri = `dts-mail://open${queryString}`;
@@ -292,7 +309,7 @@ export const openExistingEmailInOutlook = (options: {
         onProtocolFailed();
       } else {
         // Fallback estándar en caso de fallo: ventana de redacción o diálogo de protocolo
-        const sub = subject ? (subject.startsWith('Re:') ? subject : `Re: ${subject}`) : '';
+        const sub = cleanSubject ? (cleanSubject.startsWith('Re:') ? cleanSubject : `Re: ${cleanSubject}`) : '';
         const mailtoParams: string[] = [];
         if (sub) mailtoParams.push(`subject=${encodeURIComponent(sub)}`);
         const qStr = mailtoParams.length > 0 ? `?${mailtoParams.join('&')}` : '';
@@ -327,8 +344,8 @@ export const openExistingEmailInOutlook = (options: {
   if (email) {
     const composeUrl = new URL('https://outlook.office.com/mail/deeplink/compose');
     composeUrl.searchParams.set('to', email);
-    if (subject) {
-      composeUrl.searchParams.set('subject', subject.startsWith('Re:') ? subject : `Re: ${subject}`);
+    if (cleanSubject) {
+      composeUrl.searchParams.set('subject', cleanSubject.startsWith('Re:') ? cleanSubject : `Re: ${cleanSubject}`);
     }
     window.open(composeUrl.toString(), OUTLOOK_WEB_TAB_NAME);
     return;
@@ -349,13 +366,14 @@ export const replyInOutlook = (options: {
   onProtocolFailed?: () => void;
 }) => {
   const target = options.target || getPreferredOutlookClient();
-  const { itemId, email, subject, onProtocolFailed } = options;
+  const { itemId, email, onProtocolFailed } = options;
+  const cleanSubject = cleanEmailSubjectForOutlook(options.subject);
 
   if (target === 'desktop') {
     const params: string[] = [];
     if (itemId) params.push(`id=${encodeURIComponent(itemId)}`);
     if (email) params.push(`from=${encodeURIComponent(email)}`);
-    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+    if (cleanSubject) params.push(`subject=${encodeURIComponent(cleanSubject)}`);
 
     const queryString = params.length > 0 ? `?${params.join('&')}` : '';
     const dtsMailUri = `dts-mail://reply${queryString}`;
@@ -367,8 +385,8 @@ export const replyInOutlook = (options: {
   // Si es Web, abrir compositor con Re:
   const composeUrl = new URL('https://outlook.office.com/mail/deeplink/compose');
   if (email) composeUrl.searchParams.set('to', email);
-  if (subject) {
-    composeUrl.searchParams.set('subject', subject.startsWith('Re:') ? subject : `Re: ${subject}`);
+  if (cleanSubject) {
+    composeUrl.searchParams.set('subject', cleanSubject.startsWith('Re:') ? cleanSubject : `Re: ${cleanSubject}`);
   }
   window.open(composeUrl.toString(), OUTLOOK_WEB_TAB_NAME);
 };
@@ -383,12 +401,13 @@ export const searchConversationInOutlook = (options: {
   onProtocolFailed?: () => void;
 }) => {
   const target = options.target || getPreferredOutlookClient();
-  const { email, subject, onProtocolFailed } = options;
+  const { email, onProtocolFailed } = options;
+  const cleanSubject = cleanEmailSubjectForOutlook(options.subject);
 
   if (target === 'desktop') {
     const params: string[] = [];
     if (email) params.push(`from=${encodeURIComponent(email)}`);
-    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+    if (cleanSubject) params.push(`subject=${encodeURIComponent(cleanSubject)}`);
 
     const queryString = params.length > 0 ? `?${params.join('&')}` : '';
     const dtsMailUri = `dts-mail://search${queryString}`;
@@ -398,10 +417,10 @@ export const searchConversationInOutlook = (options: {
   }
 
   // Si es Web, enlace canónico de búsqueda en Outlook Web (M365)
-  const cleanSubject = subject ? subject.replace(/^Re:\s*/i, '').trim() : '';
+  const baseSub = cleanSubject ? cleanSubject.replace(/^Re:\s*/i, '').trim() : '';
   const queryParts: string[] = [];
   if (email) queryParts.push(`from:${email}`);
-  if (cleanSubject) queryParts.push(`subject:"${cleanSubject}"`);
+  if (baseSub) queryParts.push(`subject:"${baseSub}"`);
 
   const searchUrl = `https://outlook.office.com/mail/search?q=${encodeURIComponent(queryParts.join(' '))}`;
   window.open(searchUrl, OUTLOOK_WEB_TAB_NAME);
@@ -414,16 +433,18 @@ export const copyEmailSearchToClipboard = async (options: {
   email?: string | null;
   subject?: string | null;
 }): Promise<boolean> => {
-  const { email, subject } = options;
-  const cleanSubject = subject ? subject.replace(/^Re:\s*/i, '').trim() : '';
+  const { email } = options;
+  const cleanSubject = cleanEmailSubjectForOutlook(options.subject);
+  const baseSub = cleanSubject ? cleanSubject.replace(/^Re:\s*/i, '').trim() : '';
+
   const parts: string[] = [];
   if (email) parts.push(`de:${email}`);
-  if (cleanSubject) parts.push(`asunto:"${cleanSubject}"`);
+  if (baseSub) parts.push(`asunto:"${baseSub}"`);
+  const text = parts.join(' ');
 
-  const textToCopy = parts.join(' ');
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(textToCopy);
+      await navigator.clipboard.writeText(text);
       return true;
     }
   } catch (err) {

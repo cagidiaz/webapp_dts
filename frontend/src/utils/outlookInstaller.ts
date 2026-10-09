@@ -3,11 +3,11 @@ import { markOutlookProtocolInstalled } from '../api/exchangeSync';
 /**
  * Utilidades para la descarga del paquete de configuración del protocolo dts-mail://
  * para Microsoft Outlook Classic en Windows.
- * Version 2.1: Blindaje total con On Error Resume Next y proteccion contra elementos no-Mail.
+ * Version 2.2: Limpieza total de etiquetas/corchetes CRM y busqueda por nucleo de asunto.
  */
 export const VBS_HANDLER_SCRIPT = `' ==============================================================================
 ' dTS Instruments - Manejador de Protocolo Nativo dts-mail:// para Microsoft Outlook
-' Version 2.1 - Blindado contra tipos de elementos no-Mail y apertura directa
+' Version 2.2 - Limpieza total de tipologias CRM y busqueda por nucleo de asunto
 ' ==============================================================================
 Option Explicit
 On Error Resume Next
@@ -36,7 +36,7 @@ End If
 
 If Right(action, 1) = "/" Then action = Left(action, Len(action) - 1)
 
-' Decodificador de URL 100% nativo sin dependencias externas ni HTMLFILE
+' Decodificador de URL nativo
 Function URLDecode(s)
     On Error Resume Next
     Dim res, i, ch, hCode
@@ -83,8 +83,26 @@ End Function
 
 Function CleanSubjectString(s)
     On Error Resume Next
-    Dim res
+    Dim res, pClose
     res = Trim(s)
+    
+    ' Eliminar corchetes iniciales de tipologia CRM ej. [📥 Recibido · 📋 Petición oferta] o [ðŸ“¥...]
+    If InStr(res, "[") = 1 Then
+        pClose = InStr(res, "]")
+        If pClose > 0 Then
+            res = Trim(Mid(res, pClose + 1))
+        End If
+    End If
+    
+    ' Normalizar guiones tipograficos y caracteres mojibake
+    res = Replace(res, ChrW(8211), "-")
+    res = Replace(res, ChrW(8212), "-")
+    res = Replace(res, "â€”", "-")
+    res = Replace(res, "â€“", "-")
+    res = Replace(res, "—", "-")
+    res = Replace(res, "–", "-")
+    
+    ' Limpiar prefijos de respuesta y reenvio
     Do
         Dim changed
         changed = False
@@ -96,7 +114,19 @@ Function CleanSubjectString(s)
             changed = True
         End If
     Loop While changed
+    
     CleanSubjectString = res
+End Function
+
+Function ExtractCoreSubject(s)
+    On Error Resume Next
+    Dim res
+    res = CleanSubjectString(s)
+    ' Si el asunto contiene " - dTS Instruments" o sufijo similar, obtener la parte principal
+    If InStr(res, " - ") > 0 Then
+        res = Trim(Left(res, InStr(res, " - ") - 1))
+    End If
+    ExtractCoreSubject = res
 End Function
 
 idParam = Trim(GetQueryParam(queryParam, "id"))
@@ -132,7 +162,7 @@ Sub FocusWindow(objItem)
     wsh.AppActivate "Outlook"
 End Sub
 
-Function FindMailInFolder(folder, rawSub, cleanSub, emailFilter)
+Function FindMailInFolder(folder, rawSub, cleanSub, coreSub, emailFilter)
     On Error Resume Next
     Set FindMailInFolder = Nothing
     If folder Is Nothing Then Exit Function
@@ -142,18 +172,28 @@ Function FindMailInFolder(folder, rawSub, cleanSub, emailFilter)
     
     ' 1. Intentar busqueda indexada rapida si hay asunto
     Dim escapedSub
-    If Len(rawSub) > 0 Then
-        escapedSub = Replace(rawSub, "'", "''")
+    If Len(cleanSub) > 0 Then
+        escapedSub = Replace(cleanSub, "'", "''")
         Set item = items.Find("[Subject] = '" & escapedSub & "'")
+        If Not item Is Nothing Then
+            Set FindMailInFolder = item
+            Exit Function
+        End If
+        Set item = items.Find("[Subject] = 'Re: " & escapedSub & "'")
         If Not item Is Nothing Then
             Set FindMailInFolder = item
             Exit Function
         End If
     End If
 
-    If Len(cleanSub) > 0 And cleanSub <> rawSub Then
-        escapedSub = Replace(cleanSub, "'", "''")
+    If Len(coreSub) > 0 And coreSub <> cleanSub Then
+        escapedSub = Replace(coreSub, "'", "''")
         Set item = items.Find("[Subject] = '" & escapedSub & "'")
+        If Not item Is Nothing Then
+            Set FindMailInFolder = item
+            Exit Function
+        End If
+        Set item = items.Find("[Subject] = 'Re: " & escapedSub & "'")
         If Not item Is Nothing Then
             Set FindMailInFolder = item
             Exit Function
@@ -172,7 +212,6 @@ Function FindMailInFolder(folder, rawSub, cleanSub, emailFilter)
         itmTo = ""
         itmCC = ""
         
-        ' Lectura protegida contra objetos que no son MailItem (ej. ReportItem, MeetingItem)
         itmSub = item.Subject
         itmSender = item.SenderEmailAddress
         itmTo = item.To
@@ -182,8 +221,12 @@ Function FindMailInFolder(folder, rawSub, cleanSub, emailFilter)
         matchSub = False
         matchEmail = False
         
-        If Len(cleanSub) > 0 Then
-            If InStr(1, itmSub, cleanSub, 1) > 0 Or InStr(1, itmSub, rawSub, 1) > 0 Then
+        If Len(coreSub) >= 4 Then
+            If InStr(1, itmSub, coreSub, 1) > 0 Or InStr(1, itmSub, cleanSub, 1) > 0 Then
+                matchSub = True
+            End If
+        ElseIf Len(cleanSub) > 0 Then
+            If InStr(1, itmSub, cleanSub, 1) > 0 Then
                 matchSub = True
             End If
         Else
@@ -205,7 +248,7 @@ Function FindMailInFolder(folder, rawSub, cleanSub, emailFilter)
             Exit Function
         End If
         
-        If matchSub And Len(cleanSub) >= 6 And Len(emailFilter) = 0 Then
+        If matchSub And Len(coreSub) >= 8 And Len(emailFilter) = 0 Then
             Set FindMailInFolder = item
             Exit Function
         End If
@@ -223,18 +266,19 @@ If Len(idParam) > 0 Then
 End If
 
 ' 2. Si no se encontro por ID, buscar en Entrada y Enviados
-Dim cleanSubText
+Dim cleanSubText, coreSubText
 cleanSubText = CleanSubjectString(subjectParam)
+coreSubText = ExtractCoreSubject(subjectParam)
 
-If targetMail Is Nothing And (Len(subjectParam) > 0 Or Len(fromParam) > 0) Then
+If targetMail Is Nothing And (Len(cleanSubText) > 0 Or Len(fromParam) > 0) Then
     Dim inboxFolder, sentFolder
     Set inboxFolder = objNamespace.GetDefaultFolder(6)  ' olFolderInbox
     Set sentFolder = objNamespace.GetDefaultFolder(5)   ' olFolderSentMail
     
-    Set targetMail = FindMailInFolder(inboxFolder, subjectParam, cleanSubText, fromParam)
+    Set targetMail = FindMailInFolder(inboxFolder, subjectParam, cleanSubText, coreSubText, fromParam)
     
     If targetMail Is Nothing Then
-        Set targetMail = FindMailInFolder(sentFolder, subjectParam, cleanSubText, fromParam)
+        Set targetMail = FindMailInFolder(sentFolder, subjectParam, cleanSubText, coreSubText, fromParam)
     End If
 End If
 
@@ -249,12 +293,8 @@ Select Case action
             Dim newMail
             Set newMail = objOutlook.CreateItem(0)
             If Len(fromParam) > 0 Then newMail.To = fromParam
-            If Len(subjectParam) > 0 Then
-                If LCase(Left(subjectParam, 3)) <> "re:" Then
-                    newMail.Subject = "Re: " & subjectParam
-                Else
-                    newMail.Subject = subjectParam
-                End If
+            If Len(cleanSubText) > 0 Then
+                newMail.Subject = "Re: " & cleanSubText
             End If
             FocusWindow newMail
         End If
@@ -273,10 +313,10 @@ Select Case action
         
         Dim searchCriteria
         searchCriteria = ""
-        If Len(cleanSubText) > 0 Then
+        If Len(coreSubText) > 0 Then
+            searchCriteria = """" & coreSubText & """"
+        ElseIf Len(cleanSubText) > 0 Then
             searchCriteria = """" & cleanSubText & """"
-        ElseIf Len(subjectParam) > 0 Then
-            searchCriteria = """" & subjectParam & """"
         End If
         If Len(fromParam) > 0 Then
             If Len(searchCriteria) > 0 Then
@@ -298,7 +338,7 @@ Select Case action
         If Not targetMail Is Nothing Then
             FocusWindow targetMail
         Else
-            ' Si no se encontro como item exacto, abrir el explorador de Outlook con busqueda global
+            ' Si no se encontro como item exacto, abrir el explorador de Outlook con busqueda limpia
             Dim mainExp
             Set mainExp = objOutlook.ActiveExplorer
             If mainExp Is Nothing Then
@@ -312,10 +352,10 @@ Select Case action
             
             Dim backupCriteria
             backupCriteria = ""
-            If Len(cleanSubText) > 0 Then
+            If Len(coreSubText) > 0 Then
+                backupCriteria = """" & coreSubText & """"
+            ElseIf Len(cleanSubText) > 0 Then
                 backupCriteria = """" & cleanSubText & """"
-            ElseIf Len(subjectParam) > 0 Then
-                backupCriteria = """" & subjectParam & """"
             End If
             If Len(fromParam) > 0 Then
                 If Len(backupCriteria) > 0 Then
