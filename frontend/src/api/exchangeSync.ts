@@ -191,6 +191,37 @@ export const openInOutlook = (options: {
 };
 
 /**
+ * Lanza una URI de protocolo personalizado (ej. dts-mail://) y detecta si el sistema operativo
+ * atendió la llamada o si el protocolo no está instalado (Mejora B: Fallback inteligente).
+ */
+export const triggerCustomProtocolWithFallback = (
+  protocolUri: string,
+  onFailed?: () => void
+) => {
+  let hasBlurred = false;
+  const onBlurHandler = () => {
+    hasBlurred = true;
+  };
+
+  window.addEventListener('blur', onBlurHandler);
+  triggerMailtoUri(protocolUri);
+
+  setTimeout(() => {
+    window.removeEventListener('blur', onBlurHandler);
+    if (!hasBlurred && document.hasFocus()) {
+      if (onFailed) {
+        onFailed();
+      }
+      window.dispatchEvent(
+        new CustomEvent('dts:outlook-protocol-not-installed', {
+          detail: { protocolUri },
+        })
+      );
+    }
+  }, 1600);
+};
+
+/**
  * Abre un correo existente en Outlook respetando la preferencia del usuario
  */
 export const openExistingEmailInOutlook = (options: {
@@ -200,18 +231,34 @@ export const openExistingEmailInOutlook = (options: {
   subject?: string | null;
   target?: 'desktop' | 'web';
   exchangeSyncStatus?: string | null;
+  onProtocolFailed?: () => void;
 }) => {
   const target = options.target || getPreferredOutlookClient();
-  const { webLink, itemId, email, subject, exchangeSyncStatus } = options;
+  const { webLink, itemId, email, subject, exchangeSyncStatus, onProtocolFailed } = options;
 
   // 1. Si el usuario tiene configurado Outlook de Escritorio (Classic / App)
   if (target === 'desktop') {
-    const sub = subject ? (subject.startsWith('Re:') ? subject : `Re: ${subject}`) : '';
     const params: string[] = [];
-    if (sub) params.push(`subject=${encodeURIComponent(sub)}`);
+    if (itemId) params.push(`id=${encodeURIComponent(itemId)}`);
+    if (email) params.push(`from=${encodeURIComponent(email)}`);
+    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+
     const queryString = params.length > 0 ? `?${params.join('&')}` : '';
-    const toParam = email ? encodeURIComponent(email) : '';
-    triggerMailtoUri(`mailto:${toParam}${queryString}`);
+    const dtsMailUri = `dts-mail://open${queryString}`;
+
+    triggerCustomProtocolWithFallback(dtsMailUri, () => {
+      if (onProtocolFailed) {
+        onProtocolFailed();
+      } else {
+        // Fallback estándar en caso de fallo: ventana de redacción o diálogo de protocolo
+        const sub = subject ? (subject.startsWith('Re:') ? subject : `Re: ${subject}`) : '';
+        const mailtoParams: string[] = [];
+        if (sub) mailtoParams.push(`subject=${encodeURIComponent(sub)}`);
+        const qStr = mailtoParams.length > 0 ? `?${mailtoParams.join('&')}` : '';
+        const toParam = email ? encodeURIComponent(email) : '';
+        triggerMailtoUri(`mailto:${toParam}${qStr}`);
+      }
+    });
     return;
   }
 
@@ -248,6 +295,100 @@ export const openExistingEmailInOutlook = (options: {
 
   // 2.5 Fallback por defecto en Outlook Web
   window.open('https://outlook.office.com/mail/inbox', OUTLOOK_WEB_TAB_NAME);
+};
+
+/**
+ * Abre Outlook en modo respuesta (Reply / Responder a todos) citando el correo (Mejora D)
+ */
+export const replyInOutlook = (options: {
+  itemId?: string | null;
+  email?: string | null;
+  subject?: string | null;
+  target?: 'desktop' | 'web';
+  onProtocolFailed?: () => void;
+}) => {
+  const target = options.target || getPreferredOutlookClient();
+  const { itemId, email, subject, onProtocolFailed } = options;
+
+  if (target === 'desktop') {
+    const params: string[] = [];
+    if (itemId) params.push(`id=${encodeURIComponent(itemId)}`);
+    if (email) params.push(`from=${encodeURIComponent(email)}`);
+    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+
+    const queryString = params.length > 0 ? `?${params.join('&')}` : '';
+    const dtsMailUri = `dts-mail://reply${queryString}`;
+
+    triggerCustomProtocolWithFallback(dtsMailUri, onProtocolFailed);
+    return;
+  }
+
+  // Si es Web, abrir compositor con Re:
+  const composeUrl = new URL('https://outlook.office.com/mail/deeplink/compose');
+  if (email) composeUrl.searchParams.set('to', email);
+  if (subject) {
+    composeUrl.searchParams.set('subject', subject.startsWith('Re:') ? subject : `Re: ${subject}`);
+  }
+  window.open(composeUrl.toString(), OUTLOOK_WEB_TAB_NAME);
+};
+
+/**
+ * Abre la búsqueda de la conversación o hilo completo en Outlook (Mejora E)
+ */
+export const searchConversationInOutlook = (options: {
+  email?: string | null;
+  subject?: string | null;
+  target?: 'desktop' | 'web';
+  onProtocolFailed?: () => void;
+}) => {
+  const target = options.target || getPreferredOutlookClient();
+  const { email, subject, onProtocolFailed } = options;
+
+  if (target === 'desktop') {
+    const params: string[] = [];
+    if (email) params.push(`from=${encodeURIComponent(email)}`);
+    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+
+    const queryString = params.length > 0 ? `?${params.join('&')}` : '';
+    const dtsMailUri = `dts-mail://search${queryString}`;
+
+    triggerCustomProtocolWithFallback(dtsMailUri, onProtocolFailed);
+    return;
+  }
+
+  // Si es Web, enlace canónico de búsqueda en Outlook Web (M365)
+  const cleanSubject = subject ? subject.replace(/^Re:\s*/i, '').trim() : '';
+  const queryParts: string[] = [];
+  if (email) queryParts.push(`from:${email}`);
+  if (cleanSubject) queryParts.push(`subject:"${cleanSubject}"`);
+
+  const searchUrl = `https://outlook.office.com/mail/search?q=${encodeURIComponent(queryParts.join(' '))}`;
+  window.open(searchUrl, OUTLOOK_WEB_TAB_NAME);
+};
+
+/**
+ * Copia los criterios de búsqueda al portapapeles para pegarlos en Outlook
+ */
+export const copyEmailSearchToClipboard = async (options: {
+  email?: string | null;
+  subject?: string | null;
+}): Promise<boolean> => {
+  const { email, subject } = options;
+  const cleanSubject = subject ? subject.replace(/^Re:\s*/i, '').trim() : '';
+  const parts: string[] = [];
+  if (email) parts.push(`de:${email}`);
+  if (cleanSubject) parts.push(`asunto:"${cleanSubject}"`);
+
+  const textToCopy = parts.join(' ');
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(textToCopy);
+      return true;
+    }
+  } catch (err) {
+    console.warn('No se pudo copiar automáticamente al portapapeles:', err);
+  }
+  return false;
 };
 
 /**

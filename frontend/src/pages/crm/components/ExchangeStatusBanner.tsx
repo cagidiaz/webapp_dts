@@ -85,7 +85,7 @@ export const ExchangeStatusBanner: React.FC = () => {
       {/* Indicador de proceso de vinculación */}
       {callbackMutation.isPending && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800/60 rounded-xl text-xs text-cyan-800 dark:text-cyan-200 animate-pulse shadow-sm">
-          <RefreshCw size={16} className="animate-spin text-[#00B0B9] shrink-0" />
+          <RefreshCw size={16} className="animate-spin text-dts-secondary shrink-0" />
           <span className="font-semibold flex-1">Completando vinculación con Microsoft 365 / Outlook...</span>
         </div>
       )}
@@ -107,9 +107,9 @@ export const ExchangeStatusBanner: React.FC = () => {
 
       {/* Banner de Invitación a Conectar (Solo cuando no esté conectado) */}
       {!isConnected && (
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-4 shadow-md border border-slate-700/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="bg-linear-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-4 shadow-md border border-slate-700/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-inner bg-cyan-500/20 text-[#00B0B9] border border-[#00B0B9]/30">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-inner bg-cyan-500/20 text-dts-secondary border border-dts-secondary/30">
               <Mail size={20} />
             </div>
             
@@ -139,7 +139,7 @@ export const ExchangeStatusBanner: React.FC = () => {
             <button
               onClick={() => connectMutation.mutate()}
               disabled={connectMutation.isPending}
-              className="px-4 py-2 bg-[#00B0B9] hover:brightness-110 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2 bg-dts-secondary hover:brightness-110 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               <Link2 size={15} />
               {connectMutation.isPending ? 'Conectando...' : statusData?.requiresConsent ? 'Reconectar con Microsoft 365' : 'Conectar con Microsoft 365'}

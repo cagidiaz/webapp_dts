@@ -8,15 +8,17 @@ import {
   getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
   getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
   createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
-  getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook
+  getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook,
+  replyInOutlook, searchConversationInOutlook, copyEmailSearchToClipboard
 } from '../../../api';
+import { downloadOutlookClassicInstaller } from '../../../utils/outlookInstaller';
 import { formatCurrency } from '../../../api/formatters';
 import { 
   ArrowLeft, Phone, Mail, MapPin, Smartphone,
   Linkedin, Edit2, Check, X, Plus, Calendar, Clock, Percent,
   Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users, ExternalLink,
   Copy, CheckCheck, Laptop, Globe, RefreshCw, Building2, PhoneCall,
-  ChevronDown, ChevronUp, Info
+  ChevronDown, ChevronUp, Info, MoreVertical, Reply, Search, Download, Terminal
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 import { EditActivityModal } from './EditActivityModal';
@@ -248,6 +250,39 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   useEffect(() => {
     setOutlookTarget(getPreferredOutlookClient());
   }, []);
+
+  // Estados para acciones secundarias de correo y fallback inteligente (Mejoras B y C)
+  const [activeEmailMenuId, setActiveEmailMenuId] = useState<string | null>(null);
+  const [showProtocolFallbackModal, setShowProtocolFallbackModal] = useState(false);
+  const [fallbackEmailData, setFallbackEmailData] = useState<{
+    webLink?: string | null;
+    itemId?: string | null;
+    email?: string | null;
+    subject?: string | null;
+  } | null>(null);
+  const [copiedEmailMenuId, setCopiedEmailMenuId] = useState<string | null>(null);
+
+  // Escuchar si Windows no pudo abrir el protocolo dts-mail://
+  useEffect(() => {
+    const handleProtocolFailure = () => {
+      setShowProtocolFallbackModal(true);
+    };
+    window.addEventListener('dts:outlook-protocol-not-installed', handleProtocolFailure);
+    return () => {
+      window.removeEventListener('dts:outlook-protocol-not-installed', handleProtocolFailure);
+    };
+  }, []);
+
+  // Cerrar menú desplegable al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (activeEmailMenuId) setActiveEmailMenuId(null);
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => {
+      window.removeEventListener('click', handleClickOutside);
+    };
+  }, [activeEmailMenuId]);
 
   // Filtro de ofertas y tipologías en la pestaña de emails y control de expansión (5 líneas)
   const [selectedEmailQuoteFilter, setSelectedEmailQuoteFilter] = useState<string>('ALL');
@@ -2027,26 +2062,152 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               {act.typeLabel}
                             </span>
 
-                            {/* Abrir en Outlook (solo correos) */}
+                            {/* Abrir en Outlook con Menú de Acciones Secundarias (solo correos) */}
                             {act.type === 'email' && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openExistingEmailInOutlook({
-                                    webLink: act.exchangeWebLink,
-                                    itemId: act.exchangeItemId,
-                                    email: act.email || contact?.email,
-                                    subject: act.title,
-                                    target: getPreferredOutlookClient(),
-                                    exchangeSyncStatus: act.exchangeSyncStatus,
-                                  });
-                                }}
-                                className="p-1 rounded-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
-                                title={`Abrir correo en Outlook (${getPreferredOutlookClient() === 'web' ? 'Web' : 'Escritorio'})`}
-                              >
-                                <OutlookIcon size={13} />
-                              </button>
+                              <div className="relative inline-flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const emailData = {
+                                      webLink: act.exchangeWebLink,
+                                      itemId: act.exchangeItemId,
+                                      email: act.email || contact?.email,
+                                      subject: act.title,
+                                      exchangeSyncStatus: act.exchangeSyncStatus,
+                                    };
+                                    setFallbackEmailData(emailData);
+                                    openExistingEmailInOutlook({
+                                      ...emailData,
+                                      target: getPreferredOutlookClient(),
+                                      onProtocolFailed: () => setShowProtocolFallbackModal(true),
+                                    });
+                                  }}
+                                  className="p-1 rounded-l-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
+                                  title={`Abrir en Outlook (${getPreferredOutlookClient() === 'web' ? 'Web' : 'Escritorio'})`}
+                                >
+                                  <OutlookIcon size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveEmailMenuId(activeEmailMenuId === act.id ? null : act.id);
+                                  }}
+                                  className="p-1 rounded-r-md text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                                  title="Más opciones de Outlook"
+                                >
+                                  <MoreVertical size={12} />
+                                </button>
+
+                                {/* Desplegable de opciones secundarias */}
+                                {activeEmailMenuId === act.id && (
+                                  <div 
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="absolute right-0 top-full mt-1 z-30 w-56 bg-white dark:bg-surface-card-dark rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 py-1.5 text-xs animate-in fade-in zoom-in-95 duration-150"
+                                  >
+                                    <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-white/5">
+                                      Opciones de Outlook
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveEmailMenuId(null);
+                                        const emailData = {
+                                          webLink: act.exchangeWebLink,
+                                          itemId: act.exchangeItemId,
+                                          email: act.email || contact?.email,
+                                          subject: act.title,
+                                        };
+                                        setFallbackEmailData(emailData);
+                                        openExistingEmailInOutlook({
+                                          ...emailData,
+                                          target: 'desktop',
+                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
+                                        });
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
+                                    >
+                                      <Laptop size={13} className="text-blue-500" />
+                                      <span>Abrir en Outlook Classic</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveEmailMenuId(null);
+                                        openExistingEmailInOutlook({
+                                          webLink: act.exchangeWebLink,
+                                          itemId: act.exchangeItemId,
+                                          email: act.email || contact?.email,
+                                          subject: act.title,
+                                          target: 'web',
+                                        });
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
+                                    >
+                                      <Globe size={13} className="text-dts-secondary" />
+                                      <span>Abrir en Outlook Web (M365)</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveEmailMenuId(null);
+                                        replyInOutlook({
+                                          itemId: act.exchangeItemId,
+                                          email: act.email || contact?.email,
+                                          subject: act.title,
+                                          target: getPreferredOutlookClient(),
+                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
+                                        });
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
+                                    >
+                                      <Reply size={13} className="text-amber-500" />
+                                      <span>Responder en Outlook</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveEmailMenuId(null);
+                                        searchConversationInOutlook({
+                                          email: act.email || contact?.email,
+                                          subject: act.title,
+                                          target: getPreferredOutlookClient(),
+                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
+                                        });
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
+                                    >
+                                      <Search size={13} className="text-purple-500" />
+                                      <span>Buscar conversación completa</span>
+                                    </button>
+                                    <div className="my-1 border-t border-gray-100 dark:border-white/5" />
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        await copyEmailSearchToClipboard({
+                                          email: act.email || contact?.email,
+                                          subject: act.title,
+                                        });
+                                        setCopiedEmailMenuId(act.id);
+                                        setTimeout(() => {
+                                          setCopiedEmailMenuId(null);
+                                          setActiveEmailMenuId(null);
+                                        }, 1500);
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-between text-gray-600 dark:text-gray-300 cursor-pointer"
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <Copy size={13} />
+                                        <span>Copiar datos de búsqueda</span>
+                                      </span>
+                                      {copiedEmailMenuId === act.id && (
+                                        <span className="text-[10px] text-emerald-500 font-bold">¡Copiado!</span>
+                                      )}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             )}
 
                             {/* Editar actividad */}
@@ -2144,7 +2305,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               setCompletingActivity(act.rawActivity || act);
                               setClosingConclusions(act.conclusions || '');
                             }}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 hover:from-amber-500/30 hover:to-amber-500/40 text-amber-950 dark:text-amber-100 font-black text-[11px] rounded-lg border-2 border-amber-400 dark:border-amber-500/70 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-xs"
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-linear-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 hover:from-amber-500/30 hover:to-amber-500/40 text-amber-950 dark:text-amber-100 font-black text-[11px] rounded-lg border-2 border-amber-400 dark:border-amber-500/70 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-xs"
                           >
                             <Plus size={13} className="stroke-3 group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
                             <span>AGREGAR CONCLUSIONES</span>
@@ -2860,22 +3021,151 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               >
                                 <Edit2 size={12} />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => openExistingEmailInOutlook({
-                                  webLink: mail.exchangeWebLink,
-                                  itemId: mail.exchangeItemId,
-                                  email: mail.email || contact?.email,
-                                  subject: mail.title,
-                                  target: getPreferredOutlookClient(),
-                                  exchangeSyncStatus: mail.exchangeSyncStatus,
-                                })}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-lg transition-colors cursor-pointer border border-dts-secondary/25 shadow-2xs"
-                                title={mail.exchangeSyncStatus === 'draft' ? 'Abrir bandeja de borradores en Outlook' : `Abrir en Outlook (${getPreferredOutlookClient() === 'web' ? 'Web' : 'Escritorio'})`}
-                              >
-                                <ExternalLink size={10} />
-                                <span>{mail.exchangeSyncStatus === 'draft' ? 'Ver Borradores' : 'Abrir en Outlook'}</span>
-                              </button>
+                              {/* Botones de acción de Outlook en la pestaña de emails */}
+                              <div className="relative inline-flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const emailData = {
+                                      webLink: mail.exchangeWebLink,
+                                      itemId: mail.exchangeItemId,
+                                      email: mail.email || contact?.email,
+                                      subject: mail.title,
+                                      exchangeSyncStatus: mail.exchangeSyncStatus,
+                                    };
+                                    setFallbackEmailData(emailData);
+                                    openExistingEmailInOutlook({
+                                      ...emailData,
+                                      target: getPreferredOutlookClient(),
+                                      onProtocolFailed: () => setShowProtocolFallbackModal(true),
+                                    });
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-l-lg transition-colors cursor-pointer border border-r-0 border-dts-secondary/25 shadow-2xs"
+                                  title={mail.exchangeSyncStatus === 'draft' ? 'Abrir bandeja de borradores en Outlook' : `Abrir en Outlook (${getPreferredOutlookClient() === 'web' ? 'Web' : 'Escritorio'})`}
+                                >
+                                  <ExternalLink size={10} />
+                                  <span>{mail.exchangeSyncStatus === 'draft' ? 'Ver Borradores' : 'Abrir en Outlook'}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveEmailMenuId(activeEmailMenuId === mail.id ? null : mail.id);
+                                  }}
+                                  className="px-1.5 py-0.5 text-[10px] text-dts-secondary hover:bg-dts-secondary/10 rounded-r-lg transition-colors cursor-pointer border border-dts-secondary/25 shadow-2xs"
+                                  title="Más opciones de Outlook"
+                                >
+                                  <MoreVertical size={11} />
+                                </button>
+
+                                {/* Desplegable de opciones secundarias */}
+                                {activeEmailMenuId === mail.id && (
+                                  <div 
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="absolute right-0 top-full mt-1 z-30 w-56 bg-white dark:bg-surface-card-dark rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 py-1.5 text-xs animate-in fade-in zoom-in-95 duration-150"
+                                  >
+                                    <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-white/5">
+                                      Opciones de Outlook
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveEmailMenuId(null);
+                                        const emailData = {
+                                          webLink: mail.exchangeWebLink,
+                                          itemId: mail.exchangeItemId,
+                                          email: mail.email || contact?.email,
+                                          subject: mail.title,
+                                        };
+                                        setFallbackEmailData(emailData);
+                                        openExistingEmailInOutlook({
+                                          ...emailData,
+                                          target: 'desktop',
+                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
+                                        });
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
+                                    >
+                                      <Laptop size={13} className="text-blue-500" />
+                                      <span>Abrir en Outlook Classic</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveEmailMenuId(null);
+                                        openExistingEmailInOutlook({
+                                          webLink: mail.exchangeWebLink,
+                                          itemId: mail.exchangeItemId,
+                                          email: mail.email || contact?.email,
+                                          subject: mail.title,
+                                          target: 'web',
+                                        });
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
+                                    >
+                                      <Globe size={13} className="text-dts-secondary" />
+                                      <span>Abrir en Outlook Web (M365)</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveEmailMenuId(null);
+                                        replyInOutlook({
+                                          itemId: mail.exchangeItemId,
+                                          email: mail.email || contact?.email,
+                                          subject: mail.title,
+                                          target: getPreferredOutlookClient(),
+                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
+                                        });
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
+                                    >
+                                      <Reply size={13} className="text-amber-500" />
+                                      <span>Responder en Outlook</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveEmailMenuId(null);
+                                        searchConversationInOutlook({
+                                          email: mail.email || contact?.email,
+                                          subject: mail.title,
+                                          target: getPreferredOutlookClient(),
+                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
+                                        });
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
+                                    >
+                                      <Search size={13} className="text-purple-500" />
+                                      <span>Buscar conversación completa</span>
+                                    </button>
+                                    <div className="my-1 border-t border-gray-100 dark:border-white/5" />
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        await copyEmailSearchToClipboard({
+                                          email: mail.email || contact?.email,
+                                          subject: mail.title,
+                                        });
+                                        setCopiedEmailMenuId(mail.id);
+                                        setTimeout(() => {
+                                          setCopiedEmailMenuId(null);
+                                          setActiveEmailMenuId(null);
+                                        }, 1500);
+                                      }}
+                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-between text-gray-600 dark:text-gray-300 cursor-pointer"
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <Copy size={13} />
+                                        <span>Copiar datos de búsqueda</span>
+                                      </span>
+                                      {copiedEmailMenuId === mail.id && (
+                                        <span className="text-[10px] text-emerald-500 font-bold">¡Copiado!</span>
+                                      )}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
 
@@ -3850,6 +4140,75 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Fallback Inteligente si Outlook Classic no está configurado (Mejora B) */}
+      {showProtocolFallbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-surface-card-dark rounded-2xl max-w-md w-full p-6 border border-gray-100 dark:border-gray-800 shadow-xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3">
+              <div className="p-3 rounded-xl bg-cyan-500/10 text-dts-secondary shrink-0">
+                <Terminal className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                  ¿No se abrió tu Outlook de escritorio?
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                  Parece que este ordenador aún no tiene configurado el enlace directo seguro con Outlook Classic (<code className="px-1 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-[10px] font-mono text-dts-secondary">dts-mail://</code>).
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/15 space-y-2 text-xs text-gray-600 dark:text-gray-300">
+              <div className="flex items-center gap-2 font-bold text-blue-600 dark:text-blue-400">
+                <Info size={14} />
+                <span>¿Qué deseas hacer?</span>
+              </div>
+              <p className="text-[11px] leading-relaxed">
+                Puedes abrir este correo de inmediato en Outlook Web (M365) o descargar el configurador rápido de 1 clic para activar Outlook Classic en este equipo.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProtocolFallbackModal(false);
+                  if (fallbackEmailData) {
+                    openExistingEmailInOutlook({
+                      ...fallbackEmailData,
+                      target: 'web',
+                    });
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-dts-secondary text-white hover:opacity-95 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              >
+                <Globe size={14} />
+                <span>Abrir en Outlook Web (M365) ahora</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  downloadOutlookClassicInstaller();
+                }}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-800 dark:text-gray-200 transition-all flex items-center justify-center gap-2 cursor-pointer border border-gray-200 dark:border-gray-700"
+              >
+                <Download size={14} />
+                <span>Descargar Configurador de Windows (1 Clic)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowProtocolFallbackModal(false)}
+                className="w-full py-2 text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}

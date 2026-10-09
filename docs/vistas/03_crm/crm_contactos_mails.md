@@ -185,3 +185,19 @@ Para identificar al instante la situación operativa de cada cita o tarea, las t
 - **Sanitización y Supresión de Boilerplate de Outlook (`cleanActivityDescription` / `cleanOutlookBody`):**
   - Se eliminan tanto en frontend como en backend las líneas de separación con guiones bajos (`________________________________`), bloques de encabezado repetidos (`Actividad de CRM dTS Instruments...`) y saltos vacíos múltiples que Microsoft Graph introducía al sincronizar citas hacia la base de datos.
   - El detalle muestra exclusivamente el contenido real y útil del evento, logrando una presentación ordenada, limpia y profesional.
+
+### 5.9 Apertura Nativa en Outlook Classic (`dts-mail://`), Menú Secundario y Fallback Inteligente
+- **Protocolo de Enlace Nativo (`dts-mail://`):**
+  - Permite a los usuarios que prefieren la aplicación de escritorio abrir los correos archivados directamente en la ventana nativa de `OUTLOOK.EXE` en modo lectura del correo original, sin abrir ventanas de redacción de nuevo correo.
+  - Se instala mediante un script de 1 solo clic (`Instalar_Outlook_dTS.bat`) que registra el protocolo en `HKEY_CURRENT_USER` sin requerir permisos de administrador.
+- **Menú de Acciones Secundarias en Cada Correo:**
+  - Junto al botón principal de Outlook, un selector desplegable (`...`) proporciona acceso directo e inmediato a:
+    1. **Abrir en Outlook Classic:** Fuerza la apertura nativa en escritorio mediante `dts-mail://open`.
+    2. **Abrir en Outlook Web (M365):** Abre el deep link oficial de Microsoft 365 en una pestaña del navegador.
+    3. **Responder en Outlook:** Invoca `dts-mail://reply` (o compositor web) citando el correo y cargando destinatarios y asunto automáticamente.
+    4. **Buscar conversación completa:** Invoca `dts-mail://search` activando la búsqueda global del hilo en Outlook Classic o en la nube.
+    5. **Copiar datos de búsqueda:** Copia al portapapeles la sintaxis `de:<remitente> asunto:"<asunto>"` para pegarla manualmente en Outlook.
+- **Detección y Fallback Inteligente:**
+  - Si un usuario pulsa el botón de escritorio en un ordenador donde aún no se ha ejecutado el archivo de configuración, el sistema detecta que la ventana no perdió el foco y despliega un modal elegante ofreciendo:
+    - *Abrir en Outlook Web ahora* (solución instantánea).
+    - *Descargar Configurador de Windows (1 Clic)*.

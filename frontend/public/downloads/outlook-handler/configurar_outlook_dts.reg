@@ -1,0 +1,12 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Classes\dts-mail]
+@="URL:dTS Instruments Mail Protocol"
+"URL Protocol"=""
+
+[HKEY_CURRENT_USER\Software\Classes\dts-mail\shell]
+
+[HKEY_CURRENT_USER\Software\Classes\dts-mail\shell\open]
+
+[HKEY_CURRENT_USER\Software\Classes\dts-mail\shell\open\command]
+@="wscript.exe \"%LOCALAPPDATA%\\dTS\\outlook_handler.vbs\" \"%1\""

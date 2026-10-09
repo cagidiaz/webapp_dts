@@ -22,9 +22,10 @@ Esta configuración determina cómo la aplicación interactúa con el correo ele
 El usuario puede escoger entre dos modalidades de trabajo mediante selectores visuales:
 1. **Outlook Classic / Escritorio (Recomendado para Windows):**
    * Abre directamente la aplicación local instalada de Microsoft Outlook en Windows.
-   * Utiliza el protocolo seguro de sistema operativo `mailto:` mediante un enlace invisible inyectado en el DOM (`triggerMailtoUri`) para evitar abortos de navegación en React.
-   * Rellena automáticamente los destinatarios (`to`), copia (`cc`), asunto (`subject`) y cuerpo (`body`).
-   * **Alcance Universal en la WebApp:** Aplica tanto a la redacción de nuevos correos como al botón *"Abrir en Outlook"* de correos existentes en la pestaña de emails y en el timeline del CRM, garantizando que el usuario de Classic nunca vea pestañas innecesarias del navegador abiertas hacia Outlook Web.
+   * **Protocolo Nativo `dts-mail://`:** Para correos existentes, invoca el protocolo de Windows conectando con la aplicación COM de Outlook para abrir el mensaje exacto en modo lectura real sin abrir ventanas de nuevo correo.
+   * **Asistente de Configuración en 1 Clic:** Al seleccionar este modo, la interfaz ofrece un botón directo *"Descargar Configurador (1 Clic)"* que genera el archivo `Instalar_Outlook_dTS.bat`. Este script configura el manejador en `HKEY_CURRENT_USER` y en `%LOCALAPPDATA%\dTS\` sin requerir permisos de administrador.
+   * También incluye enlace directo para descargar el desinstalador limpio (`Desinstalar_Outlook_dTS.bat`).
+   * Para redacción de correos nuevos, utiliza el protocolo estándar `mailto:` mediante enlace invisible en el DOM (`triggerMailtoUri`).
 2. **Outlook Online / Web (Navegador):**
    * Si la cuenta de Microsoft 365 está vinculada por OAuth, genera un borrador en segundo plano en la nube mediante **Microsoft Graph API** (`/me/messages`) y abre la ventana web directamente en el mensaje creado (`webLink`).
    * Si la cuenta no está vinculada o el borrador remoto falla, utiliza un enlace profundo canónico optimizado:  

@@ -868,7 +868,7 @@ export const SalesDashboard: React.FC = () => {
                               setActivityToEdit(act);
                               setIsEditModalOpen(true);
                             }}
-                            className="mt-2.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 hover:from-amber-500/30 hover:to-amber-500/40 text-amber-950 dark:text-amber-100 font-black text-[11px] rounded-lg border-2 border-amber-400 dark:border-amber-500/70 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-xs"
+                            className="mt-2.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-linear-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 hover:from-amber-500/30 hover:to-amber-500/40 text-amber-950 dark:text-amber-100 font-black text-[11px] rounded-lg border-2 border-amber-400 dark:border-amber-500/70 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-xs"
                           >
                             <Plus size={13} className="stroke-3 group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
                             <span>AGREGAR CONCLUSIONES</span>

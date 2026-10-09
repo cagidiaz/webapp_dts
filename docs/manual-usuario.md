@@ -245,14 +245,18 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
 * **Preparación Directa en Outlook (Sin Envío Automático)**:
   * El comercial redacta el correo o carga una plantilla corporativa en la WebApp y, al pulsar **"Abrir y Preparar en Outlook"**, el sistema genera el nuevo correo en Outlook con todos los datos precargados (destinatario, asunto y cuerpo).
   * Permite al comercial revisar el texto, adjuntar archivos o catálogos PDF y pulsar **"Enviar"** directamente desde Outlook.
-* **Botón Directo "Abrir en Outlook" (Respeto Estricto de la Preferencia del Usuario)**:
-  * En cada tarjeta de email de la pestaña *Emails*, en los eventos de correo del *Timeline* y en el botón de email de la cabecera del contacto, se incluye la acción **"Abrir en Outlook"**.
-  * **Comportamiento Dual Determinista**:
-    * **Outlook Classic / Escritorio**: Si el usuario tiene configurada esta opción en Ajustes Generales, la WebApp invoca directamente la aplicación instalada de Outlook en Windows mediante el protocolo seguro `mailto:` con destinatario y asunto cargados (`Re: Asunto`), sin abrir pestañas innecesarias en el navegador.
-    * **Outlook Web (M365)**: Abre el mensaje exacto en la nube aprovechando el enlace directo `webLink` o `ItemID`.
-* **Utilidad "Copiar Texto"**: Botón rápido para copiar el asunto y cuerpo al portapapeles con un clic para pegarlo en hilos existentes.
-* **Trazabilidad Automática en el CRM**: Registra la actividad en el Timeline del contacto como interacción de correo electrónico.
-* **Plantillas Comerciales**: Modelos precargados (*Presentación dTS*, *Seguimiento de Oferta*, *Reunión técnica*) con tokenización dinámica del cliente y comercial.
+* **Botón Directo "Abrir en Outlook" y Menú de Acciones Secundarias**:
+  * En cada tarjeta de email de la pestaña *Emails*, en los eventos de correo del *Timeline* y en la cabecera del contacto, se incluye la acción **"Abrir en Outlook"** acompañada de un menú desplegable contextual (`...`):
+  * **Comportamiento Determinista por Preferencia**:
+    * **Outlook Classic / Escritorio (`dts-mail://`)**: Si el usuario tiene seleccionada esta opción, la WebApp invoca el protocolo nativo de Windows, abriendo el correo archivado real en la ventana de `OUTLOOK.EXE` en modo lectura (con sus cabeceras, adjuntos y botones nativos), sin abrir redactores de correo nuevo ni pestañas del navegador.
+    * **Outlook Web (M365)**: Abre el mensaje exacto en la nube aprovechando el deep link oficial `webLink` o `ItemID`.
+  * **Menú Desplegable de Acciones Secundarias (`...`)**:
+    1. **Abrir en Outlook Classic**: Fuerza la apertura en la aplicación de escritorio.
+    2. **Abrir en Outlook Web (M365)**: Abre el correo en Microsoft 365 en el navegador.
+    3. **Responder en Outlook**: Abre la ventana de redacción citando el correo y los destinatarios en copia.
+    4. **Buscar conversación completa**: Activa la búsqueda en Outlook para ver todo el hilo y respuestas del contacto.
+    5. **Copiar datos de búsqueda**: Copia la sintaxis `de:<email> asunto:"<asunto>"` para pegarla manualmente en Outlook.
+  * **Detección y Fallback Inteligente**: Si un comercial pulsa el botón en un equipo donde aún no ha configurado el protocolo `dts-mail://`, la WebApp detecta que Windows no abrió Outlook y le ofrece un modal asistido para abrir el correo en Web o descargar el instalador en 1 clic.
 
 ---
 
@@ -343,6 +347,7 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * Botones para forzar sincronización manual de borradores y eventos o desconectar la cuenta.
 * **Cliente de Outlook Predeterminado**:
   * Selector dual entre **Outlook de Escritorio (App Windows/Mac)** y **Outlook Web (Microsoft 365)**.
+  * **Protocolo Nativo y Asistente en 1 Clic**: Al seleccionar Outlook de Escritorio, la pantalla ofrece el botón directo *"Descargar Configurador (1 Clic)"* para instalar el protocolo seguro `dts-mail://` mediante un archivo `.bat` que no requiere permisos de administrador. También incluye enlace para descargar el desinstalador limpio.
   * **Memorización persistente en el navegador local (`localStorage`)**: El ajuste se recuerda de forma global para toda la WebApp y aplica tanto a la redacción como a la apertura de correos existentes en la ficha de contactos y el timeline del CRM.
   * Botón de prueba inmediata para validar la apertura de Outlook.
 
@@ -389,5 +394,5 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
 
 ---
 
-*Manual de dTS Instruments v6.3 — Actualizado a 28 de septiembre de 2026.*
+*Manual de dTS Instruments v6.4 — Actualizado a 9 de octubre de 2026.*
 

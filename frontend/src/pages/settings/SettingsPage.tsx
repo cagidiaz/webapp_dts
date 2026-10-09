@@ -28,8 +28,15 @@ import {
   LogOut, 
   Check, 
   Info,
-  Sparkles
+  Sparkles,
+  Download,
+  Terminal,
+  Trash2
 } from 'lucide-react';
+import { 
+  downloadOutlookClassicInstaller, 
+  downloadOutlookClassicUninstaller 
+} from '../../utils/outlookInstaller';
 
 export const SettingsPage: React.FC = () => {
   const { setPageInfo } = useUIStore();
@@ -220,6 +227,72 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </button>
             </div>
+
+            {/* Asistente de Configuración para Outlook Classic (Windows) */}
+            {preferredOutlook === 'desktop' && (
+              <div className="p-4 rounded-xl bg-linear-to-r from-blue-500/5 via-cyan-500/5 to-transparent border border-blue-500/15 dark:border-blue-400/20 space-y-4 animate-in fade-in duration-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                      <Terminal className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        Enlace Nativo con Outlook Classic (Protocolo Windows)
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          Recomendado
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Permite que el CRM abra los correos archivados directamente en tu ventana de Outlook en modo lectura.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={downloadOutlookClassicInstaller}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-linear-to-r from-[#003E51] to-dts-secondary hover:opacity-90 shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                  >
+                    <Download size={14} />
+                    <span>Descargar Configurador (1 Clic)</span>
+                  </button>
+                </div>
+
+                {/* Pasos visuales simples */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-[11px] text-gray-600 dark:text-gray-300">
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-white/60 dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                    <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-black text-[10px] flex items-center justify-center shrink-0">
+                      1
+                    </span>
+                    <p>
+                      Descarga y ejecuta <strong>Instalar_Outlook_dTS.bat</strong>. Configura el enlace de forma segura sin requerir permisos de administrador.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-white/60 dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/10 text-dts-secondary font-black text-[10px] flex items-center justify-center shrink-0">
+                      2
+                    </span>
+                    <p>
+                      La primera vez que abras un correo en el CRM, marca <strong>"Permitir siempre"</strong> en la ventana de confirmación del navegador.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-white/5 text-[10px] text-gray-400">
+                  <span>No afecta a otros programas ni consume espacio en disco.</span>
+                  <button
+                    type="button"
+                    onClick={downloadOutlookClassicUninstaller}
+                    className="hover:text-red-500 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                    title="Eliminar asociación del registro de Windows"
+                  >
+                    <Trash2 size={11} />
+                    <span>Descargar desinstalador</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Pie de tarjeta con botón de prueba */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-white/5">

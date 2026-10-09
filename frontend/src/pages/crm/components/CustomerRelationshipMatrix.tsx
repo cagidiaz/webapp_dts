@@ -336,10 +336,10 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
             )}
 
             {/* Subtotal Grupo 2 */}
-            {renderSubtotal(block.subtotalOpportunity, 'bg-cyan-50/40 dark:bg-cyan-950/20 text-cyan-950 dark:text-cyan-200', 'bg-[#00B0B9]')}
+            {renderSubtotal(block.subtotalOpportunity, 'bg-cyan-50/40 dark:bg-cyan-950/20 text-cyan-950 dark:text-cyan-200', 'bg-dts-secondary')}
 
             {/* Fila Total General */}
-            <tr className="bg-gray-100 dark:bg-[#002A38] text-gray-900 dark:text-white font-black text-xs border-t-2 border-[#003E51] dark:border-[#00B0B9]">
+            <tr className="bg-gray-100 dark:bg-[#002A38] text-gray-900 dark:text-white font-black text-xs border-t-2 border-[#003E51] dark:border-dts-secondary">
               <td className="py-3.5 px-4 tracking-wider">
                 {block.salespersonCode === 'TOTAL' ? (
                   <span className="font-black">TOTAL <span className="normal-case">dTS</span></span>
@@ -347,7 +347,7 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
                   <span className="font-black uppercase">TOTAL {block.salespersonName}</span>
                 )}
               </td>
-              <td className="py-3.5 px-4 text-right font-mono text-sm text-[#003E51] dark:text-[#00B0B9]">
+              <td className="py-3.5 px-4 text-right font-mono text-sm text-[#003E51] dark:text-dts-secondary">
                 {formatCurrency(block.total.facturacion, 0)}
               </td>
               <td className="py-3.5 px-4 text-right font-mono">
@@ -460,10 +460,10 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
       {!isLoading && !isError && totalGlobal && activeBlock && (
         <>
           {/* Bloque Resumen Ejecutivo Pareto */}
-          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-surface-card-dark dark:to-[#002A38]/50 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
+          <div className="bg-linear-to-br from-white to-gray-50 dark:from-surface-card-dark dark:to-[#002A38]/50 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <Sparkles size={18} className="text-[#00B0B9]" />
+                <Sparkles size={18} className="text-dts-secondary" />
                 <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">
                   Equilibrio Estratégico de Cartera (Ley de Pareto)
                 </h3>
@@ -510,7 +510,7 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
                 <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-xl pointer-events-none" />
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-black uppercase text-cyan-900 dark:text-cyan-300 tracking-wider flex items-center gap-1.5">
-                    <Users size={14} className="text-[#00B0B9]" />
+                    <Users size={14} className="text-dts-secondary" />
                     Bloque Desarrollo & Oportunidades (C + D + E + F)
                   </span>
                   <span className="text-xs font-black font-mono text-cyan-800 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-200 dark:border-cyan-800">
@@ -526,7 +526,7 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
                   </div>
                   <div>
                     <span className="text-[10px] text-gray-400 uppercase font-bold block">Nº Clientes</span>
-                    <span className="text-lg font-black font-mono text-[#00B0B9]">
+                    <span className="text-lg font-black font-mono text-dts-secondary">
                       {activeBlock.subtotalOpportunity.numClientes} <span className="text-xs font-normal text-gray-400">({formatNumber(activeBlock.subtotalOpportunity.clientesPct, 1)}%)</span>
                     </span>
                   </div>
@@ -543,7 +543,7 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
                 <span className="text-emerald-600 dark:text-emerald-400">
                   Retención: {formatNumber(activeBlock.subtotalLoyalty.facturacionPct, 1)}% ventas / {formatNumber(activeBlock.subtotalLoyalty.clientesPct, 1)}% cuentas
                 </span>
-                <span className="text-[#00B0B9]">
+                <span className="text-dts-secondary">
                   Desarrollo: {formatNumber(activeBlock.subtotalOpportunity.facturacionPct, 1)}% ventas / {formatNumber(activeBlock.subtotalOpportunity.clientesPct, 1)}% cuentas
                 </span>
               </div>
@@ -554,7 +554,7 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
                   title={`Retención: ${formatNumber(activeBlock.subtotalLoyalty.facturacionPct, 1)}%`}
                 />
                 <div 
-                  className="h-full bg-[#00B0B9] transition-all duration-500" 
+                  className="h-full bg-dts-secondary transition-all duration-500" 
                   style={{ width: `${Math.min(100, activeBlock.subtotalOpportunity.facturacionPct)}%` }}
                   title={`Desarrollo: ${formatNumber(activeBlock.subtotalOpportunity.facturacionPct, 1)}%`}
                 />
@@ -566,7 +566,7 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#003E51] dark:bg-[#00B0B9]" />
+                <div className="w-3 h-3 rounded-full bg-[#003E51] dark:bg-dts-secondary" />
                 <h2 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">
                   Matriz de Análisis por Tipo de Relación
                 </h2>
@@ -608,10 +608,10 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
             <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-100 dark:border-gray-800 shadow-card overflow-hidden">
               <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2.5">
-                  <div className={`w-2.5 h-2.5 rounded-full ${activeCommercialTab === 'TOTAL' ? 'bg-[#003E51] dark:bg-[#00B0B9]' : 'bg-dts-secondary'}`} />
+                  <div className={`w-2.5 h-2.5 rounded-full ${activeCommercialTab === 'TOTAL' ? 'bg-[#003E51] dark:bg-dts-secondary' : 'bg-dts-secondary'}`} />
                   <h4 className="text-sm font-bold text-gray-900 dark:text-white tracking-wide">
                     {activeBlock.salespersonCode === 'TOTAL' ? (
-                      <span>TOTAL EMPRESA (<span className="text-[#00B0B9] font-black">dTS</span>)</span>
+                      <span>TOTAL EMPRESA (<span className="text-dts-secondary font-black">dTS</span>)</span>
                     ) : (
                       <span className="uppercase">{activeBlock.salespersonName}</span>
                     )} 

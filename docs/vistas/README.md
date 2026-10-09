@@ -36,7 +36,7 @@ Los documentos están organizados físicamente en **carpetas temáticas estructu
 | :--- | :--- | :--- | :--- |
 | [**CRM: Pipeline y Oportunidades**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_pipeline.md) | `/crm/pipeline` | `CrmPipeline.tsx`<br>`CrmDealModal.tsx` | Tablero Kanban con 5 etapas comerciales, valor ponderado, cálculo de días en etapa y registro de actividades. |
 | [**CRM: Clientes y Matriz de Relación**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_clientes.md) | `/crm/customers` | `CrmCustomers.tsx`<br>`CustomerRelationshipMatrix.tsx` | Segmentación de clientes en categorías de fidelidad (A–F), matriz YTD interanual y seguimiento de cuentas activas. |
-| [**CRM: Contactos y Sincronización de Correo**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_contactos_mails.md) | `/crm/contacts` | `CrmContacts.tsx`<br>`CrmContactDetail.tsx`<br>`CrmEmails.tsx` | Directorio de personas de contacto, timeline de actividades, integración dual con Outlook (Classic/Web) y soporte multi-destinatario. |
+| [**CRM: Contactos y Sincronización de Correo**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_contactos_mails.md) | `/crm/contacts` | `CrmContacts.tsx`<br>`CrmContactDetail.tsx`<br>`CrmEmails.tsx` | Directorio de personas de contacto, timeline de actividades, apertura nativa en Outlook Classic (`dts-mail://`), menú secundario de acciones y fallback inteligente. |
 | [**Complemento de Outlook para CRM**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/complemento_outlook_crm.md) | `/outlook-addin` | `OutlookAddinPage.tsx`<br>`outlook-addin.service.ts` | Add-in Office.js para registrar correos en el CRM desde Outlook, detección automática de cliente, limpieza de firmas y tipificación comercial. |
 
 ---
@@ -64,7 +64,7 @@ Los documentos están organizados físicamente en **carpetas temáticas estructu
 | Vista / Documento | Ruta WebApp | Componentes Clave | Propósito Principal |
 | :--- | :--- | :--- | :--- |
 | [**Administración: Usuarios y Permisos RBAC**](file:///c:/proyectos/webapp_dts/docs/vistas/06_administracion_configuracion/administracion_usuarios_rbac.md) | `/users` | `pages/users/index.tsx`<br>`RoleGuard.tsx` | CRUD de usuarios, gestión de 6 roles del sistema y matriz granular dinámica de permisos por módulo (`role_modules`). |
-| [**Ajustes Generales y Conexión Outlook**](file:///c:/proyectos/webapp_dts/docs/vistas/06_administracion_configuracion/ajustes_generales.md) | `/settings` | `SettingsPage.tsx`<br>`exchangeSync.ts` | Selección de cliente Outlook (Classic vs Web), conexión OAuth con Microsoft Graph API y prueba interactiva de apertura de correos. |
+| [**Ajustes Generales y Conexión Outlook**](file:///c:/proyectos/webapp_dts/docs/vistas/06_administracion_configuracion/ajustes_generales.md) | `/settings` | `SettingsPage.tsx`<br>`exchangeSync.ts` | Selección de cliente Outlook (Classic vs Web), asistente de instalación en 1 clic de protocolo Windows, conexión OAuth M365 y pruebas interactivas. |
 | [**Generador de Presupuestos de Ventas**](file:///c:/proyectos/webapp_dts/docs/vistas/06_administracion_configuracion/generador_presupuestos.md) | `/settings/budget-generator` | `BudgetGeneratorPage.tsx`<br>`budget-generator.service.ts` | Generación del libro Excel de 23 columnas para el proceso presupuestario anual con fórmulas protegidas y excepción Seiko Flowcontrol. |
 
 ---
