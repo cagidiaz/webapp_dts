@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Configuración de Outlook Classic - dTS Instruments
+title Configuracion de Outlook Classic - dTS Instruments
 echo ======================================================================
 echo    dTS Instruments - Configurador de Enlace con Outlook Classic
 echo ======================================================================
@@ -22,11 +22,11 @@ reg add "HKCU\Software\Classes\dts-mail\shell\open\command" /ve /d "wscript.exe 
 
 echo.
 echo ======================================================================
-echo    ¡Configuración completada con éxito!
+echo    Configuracion completada con exito!
 echo ======================================================================
 echo.
 echo Ya puedes abrir correos en tu Outlook de escritorio desde la WebApp dTS.
-echo La primera vez que abras un correo, el navegador te preguntará:
+echo La primera vez que abras un correo, el navegador te preguntara:
 echo "¿Abrir dTS Instruments Mail Protocol?".
 echo Marca la casilla "Permitir siempre" y haz clic en Abrir.
 echo.

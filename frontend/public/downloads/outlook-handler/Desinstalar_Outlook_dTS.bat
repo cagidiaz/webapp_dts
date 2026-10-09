@@ -5,7 +5,7 @@ echo ======================================================================
 echo    dTS Instruments - Desinstalador de Protocolo de Outlook
 echo ======================================================================
 echo.
-echo Eliminando asociación del registro de Windows...
+echo Eliminando asociacion del registro de Windows...
 reg delete "HKCU\Software\Classes\dts-mail" /f >nul 2>&1
 
 echo Eliminando archivos locales...
@@ -13,7 +13,7 @@ if exist "%LOCALAPPDATA%\dTS\outlook_handler.vbs" del /f /q "%LOCALAPPDATA%\dTS\
 
 echo.
 echo ======================================================================
-echo    ¡Desinstalación completada con éxito!
+echo    Desinstalacion completada con exito!
 echo ======================================================================
 echo El protocolo dts-mail ha sido eliminado de tu equipo.
 echo.
