@@ -189,7 +189,7 @@ Para identificar al instante la situación operativa de cada cita o tarea, las t
 ### 5.9 Apertura Nativa en Outlook Classic (`dts-mail://`), Menú Secundario y Fallback Inteligente
 - **Protocolo de Enlace Nativo (`dts-mail://`):**
   - Permite a los usuarios que prefieren la aplicación de escritorio abrir los correos archivados directamente en la ventana nativa de `OUTLOOK.EXE` en modo lectura del correo original, sin abrir ventanas de redacción de nuevo correo.
-  - Se instala mediante un script de 1 solo clic (`Instalar_Outlook_dTS.bat`) que registra el protocolo en `HKEY_CURRENT_USER` sin requerir permisos de administrador.
+  - Se instala mediante un script autocontenido de 1 solo clic (`Instalar_Outlook_dTS.bat`) que normaliza saltos de línea Windows CRLF (`\r\n`) para ejecución fiable en `cmd.exe`, registrando el protocolo en `HKEY_CURRENT_USER` y guardando el manejador en `%LOCALAPPDATA%\dTS\` sin requerir permisos de administrador.
 - **Menú de Acciones Secundarias en Cada Correo:**
   - Junto al botón principal de Outlook, un selector desplegable (`...`) proporciona acceso directo e inmediato a:
     1. **Abrir en Outlook Classic:** Fuerza la apertura nativa en escritorio mediante `dts-mail://open`.

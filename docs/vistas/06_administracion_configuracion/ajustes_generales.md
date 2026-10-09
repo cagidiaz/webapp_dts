@@ -23,8 +23,9 @@ El usuario puede escoger entre dos modalidades de trabajo mediante selectores vi
 1. **Outlook Classic / Escritorio (Recomendado para Windows):**
    * Abre directamente la aplicación local instalada de Microsoft Outlook en Windows.
    * **Protocolo Nativo `dts-mail://`:** Para correos existentes, invoca el protocolo de Windows conectando con la aplicación COM de Outlook para abrir el mensaje exacto en modo lectura real sin abrir ventanas de nuevo correo.
-   * **Asistente de Configuración en 1 Clic:** Al seleccionar este modo, la interfaz ofrece un botón directo *"Descargar Configurador (1 Clic)"* que genera el archivo `Instalar_Outlook_dTS.bat`. Este script configura el manejador en `HKEY_CURRENT_USER` y en `%LOCALAPPDATA%\dTS\` sin requerir permisos de administrador.
+   * **Asistente de Configuración en 1 Clic:** Al seleccionar este modo, la interfaz ofrece un botón directo *"Descargar Configurador (1 Clic)"* que genera el archivo autocontenido `Instalar_Outlook_dTS.bat`. Este script está normalizado con saltos de línea Windows CRLF (`\r\n`) y codificación UTF-8, garantizando que el intérprete `cmd.exe` lo procese sin desalineamientos ni errores de comandos desconocidos. Configura el manejador en `HKEY_CURRENT_USER` y en `%LOCALAPPDATA%\dTS\` sin requerir permisos de administrador.
    * También incluye enlace directo para descargar el desinstalador limpio (`Desinstalar_Outlook_dTS.bat`).
+   * **Blindaje en Git:** El repositorio cuenta con directivas en `.gitattributes` para preservar siempre terminaciones de línea CRLF en los archivos `.bat` y `.cmd`.
    * Para redacción de correos nuevos, utiliza el protocolo estándar `mailto:` mediante enlace invisible en el DOM (`triggerMailtoUri`).
 2. **Outlook Online / Web (Navegador):**
    * Si la cuenta de Microsoft 365 está vinculada por OAuth, genera un borrador en segundo plano en la nube mediante **Microsoft Graph API** (`/me/messages`) y abre la ventana web directamente en el mensaje creado (`webLink`).

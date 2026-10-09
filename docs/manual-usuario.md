@@ -347,7 +347,7 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * Botones para forzar sincronización manual de borradores y eventos o desconectar la cuenta.
 * **Cliente de Outlook Predeterminado**:
   * Selector dual entre **Outlook de Escritorio (App Windows/Mac)** y **Outlook Web (Microsoft 365)**.
-  * **Protocolo Nativo y Asistente en 1 Clic**: Al seleccionar Outlook de Escritorio, la pantalla ofrece el botón directo *"Descargar Configurador (1 Clic)"* para instalar el protocolo seguro `dts-mail://` mediante un archivo `.bat` que no requiere permisos de administrador. También incluye enlace para descargar el desinstalador limpio.
+  * **Protocolo Nativo y Asistente en 1 Clic**: Al seleccionar Outlook de Escritorio, la pantalla ofrece el botón directo *"Descargar Configurador (1 Clic)"* para instalar el protocolo seguro `dts-mail://` mediante un archivo `.bat` normalizado con saltos de línea Windows CRLF (`\r\n`) y codificación UTF-8, garantizando una instalación desatendida y limpia sin requerir permisos de administrador. También incluye enlace para descargar el desinstalador limpio.
   * **Memorización persistente en el navegador local (`localStorage`)**: El ajuste se recuerda de forma global para toda la WebApp y aplica tanto a la redacción como a la apertura de correos existentes en la ficha de contactos y el timeline del CRM.
   * Botón de prueba inmediata para validar la apertura de Outlook.
 
@@ -394,5 +394,5 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
 
 ---
 
-*Manual de dTS Instruments v6.4 — Actualizado a 9 de octubre de 2026.*
+*Manual de dTS Instruments v6.5 — Actualizado a 9 de octubre de 2026.*
 

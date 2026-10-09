@@ -42,9 +42,13 @@ Junto al botón principal de Outlook en la pestaña de Emails y en el Timeline d
 ### 2.5. Corrección Preventiva de Sintaxis de Estilo Tailwind CSS v4
 * Se normalizaron todas las clases de gradientes arbitrarios (`bg-gradient-to-r` ➔ `bg-linear-to-r`, `bg-gradient-to-br` ➔ `bg-linear-to-br`) y colores hexadecimales (`[#00B0B9]` ➔ `dts-secondary`) en `SettingsPage.tsx`, `CrmContactDetail.tsx`, `CustomerRelationshipMatrix.tsx`, `SalesDashboard.tsx` y `ExchangeStatusBanner.tsx`, garantizando 0 advertencias de linter y compatibilidad total con Vite 8.
 
+### 2.6. Robustez y Compatibilidad CRLF en Windows cmd.exe
+* Se forzó la conversión estricta de saltos de línea a Windows CRLF (`\r\n`) en la generación dinámica de blobs de descarga en el navegador (`outlookInstaller.ts`) y en los archivos `.bat` estáticos, eliminando errores de lectura de buffers en `cmd.exe`.
+* Se añadió directiva `*.bat text eol=crlf` en `.gitattributes` para blindar los scripts en el control de versiones.
+
 ---
 
 ## 3. Verificación y Calidad
 * **Compilación Frontend (`tsc -b && vite build`):** 0 errores, 0 advertencias.
 * **Compilación Backend (`nest build`):** 0 errores.
-* **Manuales de Usuario y Vistas:** Actualizados en [`docs/manual-usuario.md`](file:///c:/proyectos/webapp_dts/docs/manual-usuario.md), [`docs/vistas/03_crm/crm_contactos_mails.md`](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_contactos_mails.md) y [`docs/vistas/06_administracion_configuracion/ajustes_generales.md`](file:///c:/proyectos/webapp_dts/docs/vistas/06_administracion_configuracion/ajustes_generales.md).
+* **Manuales de Usuario y Vistas:** Actualizados en [`docs/manual-usuario.md`](file:///c:/proyectos/webapp_dts/docs/manual-usuario.md) (v6.5), [`docs/vistas/03_crm/crm_contactos_mails.md`](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_contactos_mails.md) y [`docs/vistas/06_administracion_configuracion/ajustes_generales.md`](file:///c:/proyectos/webapp_dts/docs/vistas/06_administracion_configuracion/ajustes_generales.md).
