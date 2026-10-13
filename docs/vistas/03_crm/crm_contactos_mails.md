@@ -77,6 +77,23 @@ En cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline):
 - **Sincronización Bidireccional**: Botón para actualizar estados de borradores que hayan sido completados o enviados desde Outlook.
 - **Acceso desde el Listado de Contactos**: Al pulsar sobre el email de cualquier contacto en la tabla general de contactos (`/crm/contacts`), la WebApp respeta la preferencia del usuario y abre la ventana de redacción en su cliente preferido (Online o Classic).
 
+### 3.6 Homogeneidad Total de Diseño y Colores con el Timeline
+Para evitar discrepancias visuales entre la pestaña de **Emails** y el **Timeline de Interacciones**, ambas vistas comparten de forma unificada la misma paleta y arquitectura de componentes:
+- **Contenedor y Fondo de la Tarjeta (`card`)**:
+  - *Estado Estándar*: Fondo blanco limpio en modo claro y zinc translúcido en modo oscuro (`bg-white dark:bg-zinc-900/40 border-gray-200/60 dark:border-white/5`), con sombra suave `shadow-xs` y resaltado hover en azul acento dTS (`hover:border-dts-secondary/35`).
+  - *Estado Tramitado / Realizado (`done` / `hasConclusions`)*: Fondo y borde verde esmeralda idéntico (`bg-emerald-500/8 dark:bg-emerald-950/20 border-emerald-500/25 dark:border-emerald-500/30 hover:border-emerald-500/40`).
+  - *Pendiente de Conclusiones (`needsConclusions`)*: Resaltado de atención en ámbar (`bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-400 dark:border-amber-500/60 ring-1 ring-amber-400/20`).
+- **Encabezado y Asunto**:
+  - Línea divisoria inferior (`border-b border-gray-100 dark:border-white/5 pb-2`).
+  - Efecto interactivo al pasar el ratón sobre el asunto cambiando al color acento dTS (`group-hover/box:text-dts-secondary transition-colors`).
+- **Acciones y Botones Homogéneos**:
+  - Icono oficial interactivo `OutlookIcon` (`hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20`).
+  - Menú contextual desplegable `MoreVertical` para opciones avanzadas de Outlook.
+  - Botón de edición rápida `Edit2` (turquesa en hover) y de eliminación `Trash2` (rojo en hover).
+- **Cuerpo y Pie del Mensaje**:
+  - Bloque de contenido en tipografía monoespaciada (`bg-white/40 dark:bg-black/10 border border-gray-100 dark:border-white/5`) con expansor dinámico `Ver más (+N líneas)`.
+  - Bloque visual de conclusiones registradas y pie con remitente/destinatario y empresa cliente vinculada.
+
 ---
 
 ## 4. Integración con el Add-in de Outlook (`OutlookAddinPage.tsx` y `outlook-addin.service.ts`)

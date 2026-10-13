@@ -244,6 +244,8 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
   * **Indicador de Fecha y Hora**: Cada correo muestra su fecha en formato corporativo y la hora exacta de recepción o envío (`13 oct. 2026 🕒 14:35`) con el icono de reloj `Clock` en azul dTS (`text-dts-secondary`).
   * Cada correo muestra por defecto exclusivamente sus primeras **5 líneas** para garantizar una navegación ágil y compacta sin saturar la pantalla.
   * Botón interactivo **"Ver más (+N líneas)"** / **"Mostrar menos"** que expande y colapsa el texto íntegro en tiempo real.
+* **Diseño y Colores Unificados con el Timeline**:
+  * Las tarjetas de la pestaña *Emails* y las entradas de correo en el *Timeline* utilizan exactamente la misma paleta y arquitectura visual: fondo blanco/zinc translúcido (`bg-white dark:bg-zinc-900/40`), borde suave con hover en azul turquesa dTS (`hover:border-dts-secondary/35`), fondos de estado consistentes (verde esmeralda para tramitados/conclusiones y ámbar para pendientes de conclusiones) y botones homogéneos de Outlook (`OutlookIcon`), edición y borrado.
 * **Badge Interactivo de Oferta Comercial (Distinción Estricta)**:
   * Si el correo fue asociado a una cotización de Business Central, se muestra un distintivo azul independiente con su código e importe (ej. `📄 Oferta: OF-2024-001 (4.500 €)`), claramente diferenciado del badge de tipología.
   * Al hacer clic sobre el badge de la oferta, se abre de inmediato el **Drawer lateral** de la oferta con todos sus detalles sin abandonar la ficha del contacto.

@@ -140,6 +140,7 @@ El sistema sincroniza automáticamente todas las actividades con fecha y hora en
   * El CRM detecta que la conversación pertenece a un contacto registrado.
   * Indexa el mensaje en la pestaña **Emails** y en el **Timeline** del contacto, limpiando pies legales repetitivos para mantener notas legibles.
   * **Ordenación Cronológica por Fecha y Hora**: Todos los mensajes se ordenan de forma descendente estricta según su momento exacto de llegada o envío, permitiendo que múltiples correos cruzados en un mismo día se lean en perfecto orden temporal.
+  * **Diseño Homogéneo de Tarjetas**: Las tarjetas de correo en la pestaña Emails y en el Timeline comparten la misma presentación estética (fondos blanco/zinc translúcido, tonos verdes esmeralda para tramitados, ámbar para pendientes de conclusiones y botones interactivos oficiales de Outlook).
 
 ---
 

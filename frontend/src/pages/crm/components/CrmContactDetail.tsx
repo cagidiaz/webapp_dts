@@ -3001,98 +3001,139 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       const DirectionIcon = parsed.directionIcon;
 
                       return (
-                        <div key={mail.id} className="bg-gray-50/50 dark:bg-zinc-800/10 p-4 rounded-xl border border-gray-100 dark:border-gray-800/50 space-y-2.5 transition-all hover:border-dts-secondary/35">
-                          <div className="flex flex-col sm:flex-row justify-between items-start gap-2.5">
-                            <div className="space-y-1.5 flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {/* Asunto limpio destacado */}
-                                <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate max-w-md" title={parsed.cleanSubject}>
-                                  {parsed.cleanSubject}
-                                </h4>
+                        <div 
+                          key={mail.id} 
+                          className={`group/box p-3.5 rounded-xl border transition-all duration-200 shadow-xs space-y-2.5 ${
+                            mail.needsConclusions
+                              ? 'bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-400 dark:border-amber-500/60 hover:border-amber-500 shadow-xs ring-1 ring-amber-400/20'
+                              : (mail.done || mail.hasConclusions)
+                              ? 'bg-emerald-500/8 dark:bg-emerald-950/20 border-emerald-500/25 dark:border-emerald-500/30 hover:border-emerald-500/40'
+                              : 'bg-white dark:bg-zinc-900/40 border-gray-200/60 dark:border-white/5 hover:border-dts-secondary/35'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2 border-b border-gray-100 dark:border-white/5 pb-2">
+                            <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+                              {/* Asunto limpio con hover en dts-secondary */}
+                              <span
+                                className="font-bold text-xs text-gray-900 dark:text-white group-hover/box:text-dts-secondary transition-colors truncate max-w-sm"
+                                title={parsed.cleanSubject}
+                              >
+                                {parsed.cleanSubject}
+                              </span>
 
-                                {/* Badge de Dirección (Recibido / Enviado) */}
-                                {parsed.directionLabel && DirectionIcon && (
-                                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+                              {/* Badge de Dirección (Recibido / Enviado) */}
+                              {parsed.directionLabel && DirectionIcon && (
+                                <span
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-bold border ${
                                     parsed.direction === 'OUTGOING'
                                       ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20'
                                       : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20'
-                                  }`}>
-                                    <DirectionIcon size={10} />
-                                    <span>{parsed.directionLabel}</span>
-                                  </span>
-                                )}
+                                  }`}
+                                >
+                                  <DirectionIcon size={9} />
+                                  <span>{parsed.directionLabel}</span>
+                                </span>
+                              )}
 
-                                {/* Badge Interactivo de Tipología con Selector Rápido */}
-                                <div className="relative inline-flex items-center" title="Haz clic para cambiar la tipología del correo">
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${parsed.categoryConfig.badgeClass} shadow-2xs hover:brightness-95 transition-all cursor-pointer`}>
-                                    <CategoryIcon size={11} className={parsed.categoryConfig.color} />
-                                    <span>{parsed.categoryConfig.label}</span>
-                                    <ChevronDown size={10} className="opacity-60 ml-0.5" />
-                                  </span>
-                                  <select
-                                    value={parsed.categoryKey}
-                                    onChange={(e) => {
-                                      updateEmailCategoryMutation.mutate({
-                                        id: mail.id,
-                                        categoryTag: e.target.value,
-                                      });
-                                    }}
-                                    disabled={updateEmailCategoryMutation.isPending}
-                                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full text-xs dark:bg-[#00222C] text-gray-900 dark:text-gray-100 scheme-light dark:scheme-dark"
-                                    title="Cambiar tipología del correo"
-                                  >
-                                    {EMAIL_CATEGORY_LIST.map((c) => (
-                                      <option
-                                        key={c.key}
-                                        value={c.key}
-                                        className="bg-white dark:bg-[#00222C] text-gray-900 dark:text-gray-100 py-1.5"
-                                      >
-                                        {c.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-
-                                {mail.exchangeSyncStatus === 'draft' ? (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0">
-                                    Borrador en Outlook
-                                  </span>
-                                ) : (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/10 text-dts-secondary border border-dts-secondary/20 shrink-0">
-                                    Sincronizado
-                                  </span>
-                                )}
-
-                                {/* Badge de Oferta Comercial Asociada */}
-                                {mail.quoteDocumentNo && (
-                                  <button
-                                    type="button"
-                                    onClick={() => matchingQuote && openQuoteDrawer(matchingQuote)}
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-tight border transition-colors shadow-2xs ${
-                                      matchingQuote
-                                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 cursor-pointer'
-                                        : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10'
-                                    }`}
-                                    title={matchingQuote ? `Abrir detalles de la oferta ${mail.quoteDocumentNo}` : `Oferta ${mail.quoteDocumentNo}`}
-                                  >
-                                    <FileText size={10} className="text-blue-600 dark:text-blue-400" />
-                                    <span>Oferta: {mail.quoteDocumentNo}</span>
-                                    {matchingQuote?.amount ? (
-                                      <span className="text-[9px] font-mono text-blue-600/80 dark:text-blue-400/80 ml-0.5 font-normal">
-                                        ({formatCurrency(matchingQuote.amount, 0)})
-                                      </span>
-                                    ) : null}
-                                  </button>
-                                )}
+                              {/* Badge Interactivo de Tipología con Selector Rápido */}
+                              <div className="relative inline-flex items-center" title="Cambiar tipología del correo">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${parsed.categoryConfig.badgeClass} shadow-2xs hover:brightness-95 transition-all cursor-pointer`}
+                                >
+                                  <CategoryIcon size={10} className={parsed.categoryConfig.color} />
+                                  <span>{parsed.categoryConfig.label}</span>
+                                  <ChevronDown size={8} className="opacity-60 ml-0.5" />
+                                </span>
+                                <select
+                                  value={parsed.categoryKey}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    updateEmailCategoryMutation.mutate({
+                                      id: mail.id,
+                                      categoryTag: e.target.value,
+                                    });
+                                  }}
+                                  disabled={updateEmailCategoryMutation.isPending}
+                                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full text-xs dark:bg-[#00222C] text-gray-900 dark:text-gray-100 scheme-light dark:scheme-dark"
+                                  title="Cambiar tipología del correo"
+                                >
+                                  {EMAIL_CATEGORY_LIST.map((c) => (
+                                    <option
+                                      key={c.key}
+                                      value={c.key}
+                                      className="bg-white dark:bg-[#00222C] text-gray-900 dark:text-gray-100 py-1.5"
+                                    >
+                                      {c.label}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
 
-                              <span className="text-[10px] text-gray-400 font-mono block truncate">
-                                {parsed.direction === 'INCOMING' ? 'Remitente' : 'Destinatario'}: {mail.email || contact?.email}
-                              </span>
+                              {mail.done && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Correo tramitado / completado">
+                                  <Check size={9} className="stroke-3" /> Tramitado
+                                </span>
+                              )}
+
+                              {mail.needsConclusions && (
+                                <span className="text-[9px] uppercase px-2 py-0.5 rounded-full font-black bg-amber-100 text-amber-800 border-2 border-amber-400 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-500/70 tracking-wider">
+                                  FALTAN CONCLUSIONES
+                                </span>
+                              )}
+
+                              {mail.hasConclusions && (
+                                <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800">
+                                  Conclusiones
+                                </span>
+                              )}
+
+                              {mail.exchangeSyncStatus === 'synced' && (
+                                <span 
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-semibold border ${
+                                    (mail.done || mail.hasConclusions)
+                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                                  }`} 
+                                  title={(mail.done || mail.hasConclusions) ? 'Sincronizado como Realizado en Outlook' : 'Sincronizado con Outlook'}
+                                >
+                                  <Check size={9} /> Outlook {(mail.done || mail.hasConclusions) ? '(Completado)' : ''}
+                                </span>
+                              )}
+
+                              {mail.exchangeSyncStatus === 'draft' && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                                  Borrador en Outlook
+                                </span>
+                              )}
+
+                              {/* Badge de Oferta Comercial Asociada */}
+                              {mail.quoteDocumentNo && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (matchingQuote) openQuoteDrawer(matchingQuote);
+                                  }}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-tight border transition-colors shadow-2xs ${
+                                    matchingQuote
+                                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 cursor-pointer'
+                                      : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10'
+                                  }`}
+                                  title={matchingQuote ? `Abrir oferta ${mail.quoteDocumentNo}` : `Oferta ${mail.quoteDocumentNo}`}
+                                >
+                                  <FileText size={9} className="text-blue-600 dark:text-blue-400" />
+                                  <span>Oferta: {mail.quoteDocumentNo}</span>
+                                  {matchingQuote?.amount ? (
+                                    <span className="text-[9px] font-mono text-blue-600/80 dark:text-blue-400/80 ml-0.5 font-normal">
+                                      ({formatCurrency(matchingQuote.amount, 0)})
+                                    </span>
+                                  ) : null}
+                                </button>
+                              )}
                             </div>
-                            
-                            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                              <div className="flex items-center gap-1.5 text-[10px] font-mono text-gray-400 dark:text-gray-400">
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className="flex items-center gap-1 text-[10px] font-mono text-gray-400 dark:text-gray-400">
                                 <Calendar size={11} className="text-gray-400 shrink-0" />
                                 <span className="font-bold text-dts-secondary uppercase">
                                   {new Date(mail.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -3104,23 +3145,17 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                   </span>
                                 )}
                               </div>
-                              {/* Botón de editar correo */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingActivity(mail.rawActivity || mail);
-                                  setShowEditModal(true);
-                                }}
-                                className="p-1 text-gray-400 hover:text-dts-secondary hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
-                                title="Editar correo y detalles"
-                              >
-                                <Edit2 size={12} />
-                              </button>
-                              {/* Botones de acción de Outlook en la pestaña de emails */}
+
+                              <span className="text-[9px] uppercase px-2 py-0.5 rounded-full font-bold border border-transparent bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">
+                                Correo
+                              </span>
+
+                              {/* Abrir en Outlook con Menú de Acciones Secundarias */}
                               <div className="relative inline-flex items-center">
                                 <button
                                   type="button"
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     const emailData = {
                                       webLink: mail.exchangeWebLink,
                                       itemId: mail.exchangeItemId,
@@ -3135,11 +3170,10 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                       onProtocolFailed: () => setShowProtocolFallbackModal(true),
                                     });
                                   }}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-l-lg transition-colors cursor-pointer border border-r-0 border-dts-secondary/25 shadow-2xs"
-                                  title={mail.exchangeSyncStatus === 'draft' ? 'Abrir bandeja de borradores en Outlook' : `Abrir en Outlook (${getPreferredOutlookClient() === 'web' ? 'Web' : 'Escritorio'})`}
+                                  className="p-1 rounded-l-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
+                                  title={`Abrir en Outlook (${getPreferredOutlookClient() === 'web' ? 'Web' : 'Escritorio'})`}
                                 >
-                                  <ExternalLink size={10} />
-                                  <span>{mail.exchangeSyncStatus === 'draft' ? 'Ver Borradores' : 'Abrir en Outlook'}</span>
+                                  <OutlookIcon size={13} />
                                 </button>
                                 <button
                                   type="button"
@@ -3147,10 +3181,10 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                     e.stopPropagation();
                                     setActiveEmailMenuId(activeEmailMenuId === mail.id ? null : mail.id);
                                   }}
-                                  className="px-1.5 py-0.5 text-[10px] text-dts-secondary hover:bg-dts-secondary/10 rounded-r-lg transition-colors cursor-pointer border border-dts-secondary/25 shadow-2xs"
+                                  className="p-1 rounded-r-md text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                   title="Más opciones de Outlook"
                                 >
-                                  <MoreVertical size={11} />
+                                  <MoreVertical size={12} />
                                 </button>
 
                                 {/* Desplegable de opciones secundarias */}
@@ -3261,33 +3295,90 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                   </div>
                                 )}
                               </div>
+
+                              {/* Botón de editar correo */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingActivity(mail.rawActivity || mail);
+                                  setShowEditModal(true);
+                                }}
+                                className="p-1 rounded-md text-gray-400 hover:text-dts-secondary hover:bg-cyan-500/10 dark:hover:bg-cyan-500/20 transition-colors cursor-pointer"
+                                title="Editar correo y detalles"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+
+                              {/* Botón de eliminar correo */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm('¿Estás seguro de que deseas eliminar este correo?')) {
+                                    deleteActivityMutation.mutate(mail.id);
+                                  }
+                                }}
+                                className="p-1 rounded-md text-gray-400 hover:text-rose-500 hover:bg-rose-500/10 dark:hover:bg-rose-500/20 transition-colors cursor-pointer"
+                                title="Eliminar correo"
+                              >
+                                <Trash2 size={13} />
+                              </button>
                             </div>
                           </div>
 
                           {/* Cuerpo del Correo (Recortado a 5 líneas con botón Ver más / Ver menos) */}
-                          <div className="bg-white/40 dark:bg-black/10 p-2.5 rounded-lg border border-gray-100 dark:border-white/5 space-y-1.5">
-                            <p className="whitespace-pre-wrap leading-relaxed font-mono text-[11px] text-gray-600 dark:text-gray-300 wrap-break-word">
+                          <div className="space-y-1">
+                            <p className="text-gray-600 dark:text-gray-300 leading-snug text-[11px] whitespace-pre-wrap font-mono bg-white/40 dark:bg-black/10 p-2 rounded-lg border border-gray-100 dark:border-white/5 wrap-break-word">
                               {visibleText}
                               {!isExpanded && hasMoreThan5Lines && '...'}
                             </p>
 
                             {hasMoreThan5Lines && (
-                              <div className="pt-1 flex items-center justify-between border-t border-gray-100 dark:border-white/5 text-[10px]">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleEmailExpansion(mail.id)}
-                                  className="font-bold text-dts-secondary hover:underline cursor-pointer flex items-center gap-1"
-                                >
-                                  {isExpanded ? (
-                                    <>Mostrar menos</>
-                                  ) : (
-                                    <>Ver más ({bodyLines.length > 5 ? `+${bodyLines.length - 5} líneas` : 'completo'})</>
-                                  )}
-                                </button>
-                                <span className="text-gray-400 font-mono text-[9px]">
-                                  {bodyLines.length} líneas en total
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleEmailExpansion(mail.id);
+                                }}
+                                className="text-[10px] font-bold text-dts-secondary hover:text-cyan-600 dark:hover:text-cyan-400 flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <ChevronUp size={11} /> Mostrar menos
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown size={11} /> Ver más (+{Math.max(0, bodyLines.length - 5)} líneas)
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Bloque Conclusiones */}
+                          {mail.hasConclusions && (
+                            <div className="text-[11px] border-l-2 border-teal-500 pl-2.5 py-1 bg-teal-50/40 dark:bg-teal-950/20 rounded-r-md text-gray-700 dark:text-gray-300">
+                              <span className="text-teal-700 dark:text-teal-400 font-bold block text-[10px] uppercase tracking-wide">
+                                Conclusiones:
+                              </span>
+                              <p className="whitespace-pre-wrap leading-relaxed mt-0.5">{mail.conclusions}</p>
+                            </div>
+                          )}
+
+                          {/* Pie con Destinatario/Remitente y Empresa */}
+                          <div className="pt-2 border-t border-gray-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[10px] text-gray-500 dark:text-gray-400 font-semibold">
+                            <span className="flex items-center gap-1 font-mono text-[9.5px]">
+                              <Mail size={10} className="text-gray-400" />
+                              <span>{parsed.direction === 'INCOMING' ? 'De:' : 'Para:'} {mail.email || contact?.email}</span>
+                            </span>
+                            {contact?.customer && (
+                              <span className="flex items-center gap-1.5 hover:text-dts-secondary transition-colors" title="Empresa / Cliente">
+                                <span>🏢</span>
+                                <span className="text-gray-800 dark:text-gray-200 font-bold">
+                                  {contact.customer.company_name || contact.customer.name}
                                 </span>
-                              </div>
+                              </span>
                             )}
                           </div>
                         </div>
