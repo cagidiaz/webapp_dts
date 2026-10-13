@@ -199,7 +199,10 @@ Ubicado en `/crm/contacts` y `/crm/customers`.
   * Registro de dirección específica del interlocutor (`address`, `address2`, `city`, `post_code`, `county`, `territory_code`).
   * Tarjeta de centro de trabajo en la pestaña *Información* con enlace directo a Google Maps y modal de edición rápida.
   * Búsqueda global y en tabla filtrable por localidad, provincia o código de territorio.
-* **Timeline Histórico de Actividades**: Registro cronológico de reuniones, llamadas, notas comerciales y correos electrónicos vinculados al cliente.
+* **Timeline Histórico de Actividades y Ordenación Cronológica Exacta**: 
+  * Registro cronológico descendente de reuniones, llamadas, notas comerciales y correos electrónicos vinculados al cliente.
+  * **Ordenación por Fecha y Hora**: Todos los registros, en especial los correos de entrada y salida, se ordenan considerando la **hora exacta de envío o recepción** (`sortTimestamp` con desempate por segundos), garantizando que los correos del mismo día aparezcan en perfecto orden cronológico.
+  * **Visualización de Hora**: Cada actividad en el Timeline y en el mini-timeline de la pestaña *Información* refleja su fecha y hora precisa (`13 oct. 🕒 14:35`) con el icono de reloj corporativo.
 * **Gestión de Eventos, Visitas y Actividades Comerciales**:
   * **Visita no programada (`EVENT`)**: Diseñada para visitas presenciales espontáneas ("puerta fría" o visitas no planificadas). **No envía invitaciones ni correos electrónicos al contacto**, registrándose exclusivamente en la base de datos de la aplicación y en el calendario de Outlook del comercial bajo la categoría corporativa `dTS CRM` con el prefijo `[dTS CRM - Visita No Programada]`.
   * **Visita a Cliente (`VISITA`)**: Registro de visitas comerciales agendadas, con soporte de ubicación física y cálculo de ruta.
@@ -236,7 +239,9 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
   * En cada tarjeta de correo (tanto en *Emails* como en el *Timeline*), el badge de tipología (`🚚 Oferta proveedor ▾`, `📋 Petición oferta ▾`, etc.) funciona como un selector directo en 1 clic para corregir rápidamente la tipología si el comercial se equivocó al clasificarlo.
   * Diseñado con soporte nativo de alto contraste para **Modo Claro** y **Modo Oscuro** corporativo.
   * Alternativamente, se puede editar mediante el modal completo de actividad (icono de lápiz).
-* **Visualización Optimizada de Correos (Límite de 5 Líneas)**:
+* **Visualización Optimizada de Correos (Límite de 5 Líneas) y Ordenación Precisa**:
+  * **Ordenación Cronológica por Hora**: La lista de correos se ordena de forma descendente estricta según su momento exacto de llegada o envío (`sortTimestamp`), resolviendo desempates incluso al nivel de segundos.
+  * **Indicador de Fecha y Hora**: Cada correo muestra su fecha en formato corporativo y la hora exacta de recepción o envío (`13 oct. 2026 🕒 14:35`) con el icono de reloj `Clock` en azul dTS (`text-dts-secondary`).
   * Cada correo muestra por defecto exclusivamente sus primeras **5 líneas** para garantizar una navegación ágil y compacta sin saturar la pantalla.
   * Botón interactivo **"Ver más (+N líneas)"** / **"Mostrar menos"** que expande y colapsa el texto íntegro en tiempo real.
 * **Badge Interactivo de Oferta Comercial (Distinción Estricta)**:

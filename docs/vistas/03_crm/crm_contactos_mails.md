@@ -35,7 +35,11 @@ La parte superior de la pestaña integra en una sola fila compacta y responsive:
    - Permite filtrar simultáneamente por cotización comercial concreta sin romper la línea visual.
 4. **Acciones de Cabecera**: Botones de `Sincronizar` y `Redactar Correo en Outlook`.
 
-### 3.2 Visualización Ergonómica de Correos (Límite de 5 Líneas)
+### 3.2 Visualización Ergonómica de Correos (Límite de 5 Líneas) y Ordenación Cronológica Exacta
+- **Ordenación Cronológica Precisa (Fecha y Hora)**:
+  - Los correos en la pestaña de Emails y en el Timeline se ordenan de forma descendente considerando la **fecha y hora exacta de llegada o envío** (`sortTimestamp`).
+  - Para correos procedentes de Outlook o Exchange, se computa la hora real desde `attendees.sentDate`, `attendees.receivedDateTime` o `created_at` (con desempate por segundos/milisegundos).
+  - Cada tarjeta de correo y entrada del Timeline incluye el indicador de fecha y hora completa (`13 oct. 2026 🕒 14:35`) con icono de reloj `Clock` en azul dTS (`text-dts-secondary`).
 - **Recorte Automático Inteligente**: Para evitar que correos extensos o hilos kilométricos saturen la vista y demanden desplazamientos interminables, cada correo muestra por defecto exclusivamente sus primeras **5 líneas** de contenido.
 - **Expansor Interactivo "Ver más / Mostrar menos"**:
   - Al pie del mensaje aparece un botón sutil `Ver más (+N líneas)` que indica cuántas líneas adicionales contiene el cuerpo.

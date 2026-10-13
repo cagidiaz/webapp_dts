@@ -139,6 +139,7 @@ El sistema sincroniza automáticamente todas las actividades con fecha y hora en
 * Cuando intercambias correos con un cliente desde Outlook (tanto recibidos en tu Bandeja de Entrada como enviados desde tu Outlook):
   * El CRM detecta que la conversación pertenece a un contacto registrado.
   * Indexa el mensaje en la pestaña **Emails** y en el **Timeline** del contacto, limpiando pies legales repetitivos para mantener notas legibles.
+  * **Ordenación Cronológica por Fecha y Hora**: Todos los mensajes se ordenan de forma descendente estricta según su momento exacto de llegada o envío, permitiendo que múltiples correos cruzados en un mismo día se lean en perfecto orden temporal.
 
 ---
 

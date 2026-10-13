@@ -346,6 +346,9 @@ export class ExchangeSyncService {
     });
 
     // 2. Registrar actividad de correo en CRM
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
     const createdActivity = await this.prisma.crm_activities.create({
       data: {
         client_id: resolvedClientId,
@@ -355,9 +358,13 @@ export class ExchangeSyncService {
         title: subject,
         description: body,
         email: to.join(', '),
-        due_date: new Date(),
+        due_date: now,
+        time_scheduled: `${hh}:${mm}`,
         exchange_sync_status: 'synced',
-        exchange_last_synced_at: new Date(),
+        exchange_last_synced_at: now,
+        attendees: {
+          sentDate: now.toISOString(),
+        },
       },
     });
 
@@ -412,6 +419,9 @@ export class ExchangeSyncService {
     });
 
     // 2. Registrar actividad de correo en CRM como borrador pendiente
+    const draftNow = new Date();
+    const draftHh = String(draftNow.getHours()).padStart(2, '0');
+    const draftMm = String(draftNow.getMinutes()).padStart(2, '0');
     const createdActivity = await this.prisma.crm_activities.create({
       data: {
         client_id: resolvedClientId,
@@ -421,11 +431,15 @@ export class ExchangeSyncService {
         title: subject,
         description: body,
         email: to.join(', '),
-        due_date: new Date(),
+        due_date: draftNow,
+        time_scheduled: `${draftHh}:${draftMm}`,
         exchange_item_id: draft.id,
         exchange_web_link: draft.webLink,
         exchange_sync_status: 'draft',
-        exchange_last_synced_at: new Date(),
+        exchange_last_synced_at: draftNow,
+        attendees: {
+          sentDate: draftNow.toISOString(),
+        },
       },
     });
 

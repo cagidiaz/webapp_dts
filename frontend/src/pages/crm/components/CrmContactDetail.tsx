@@ -452,7 +452,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           }
           throw error;
         }
-      } else {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
         // Registrar actividad de preparación en el CRM y lanzar Outlook Escritorio o Web
         const activity = await createCrmActivity({
           contactId,
@@ -461,6 +463,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           title: payload.subject,
           description: payload.body,
           email: recipientStr,
+          dueDate: now.toISOString().split('T')[0],
+          timeScheduled: `${hh}:${mm}`,
         });
 
         openInOutlook({
@@ -921,6 +925,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       description?: string;
       date: string;
       time?: string;
+      sortTimestamp: number;
       icon: any;
       iconBg: string;
       iconColor: string;
@@ -1020,11 +1025,81 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       }
 
       const actDateStr = act.due_date || act.created_at;
+
+      // 1. Determinar hora computada (para correos de llegada/enviada y actividades con o sin time_scheduled)
+      let computedTime = act.time_scheduled || undefined;
+      if (!computedTime && (upperType === 'EMAIL' || act.created_at)) {
+        const timeSource = (upperType === 'EMAIL' && (act.attendees?.sentDate || act.attendees?.receivedDateTime)) || act.created_at;
+        if (timeSource) {
+          const d = new Date(timeSource);
+          if (!isNaN(d.getTime())) {
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            computedTime = `${hh}:${mm}`;
+          }
+        }
+      }
+
+      // 2. Determinar timestamp exacto para ordenación cronológica precisa por fecha y hora
+      let sortTimestamp = 0;
+      if (upperType === 'EMAIL') {
+        const emailDateSource = act.attendees?.sentDate || act.attendees?.receivedDateTime || act.created_at;
+        if (emailDateSource) {
+          const emailDateObj = new Date(emailDateSource);
+          if (!isNaN(emailDateObj.getTime())) {
+            if (act.due_date) {
+              const dueDay = String(act.due_date).split('T')[0];
+              const emailDay = String(emailDateSource).split('T')[0];
+              if (dueDay !== emailDay) {
+                const combinedDate = new Date(act.due_date);
+                if (!isNaN(combinedDate.getTime())) {
+                  combinedDate.setHours(emailDateObj.getHours(), emailDateObj.getMinutes(), emailDateObj.getSeconds(), emailDateObj.getMilliseconds());
+                  sortTimestamp = combinedDate.getTime();
+                } else {
+                  sortTimestamp = emailDateObj.getTime();
+                }
+              } else {
+                sortTimestamp = emailDateObj.getTime();
+              }
+            } else {
+              sortTimestamp = emailDateObj.getTime();
+            }
+          }
+        }
+        if (!sortTimestamp && actDateStr) {
+          const fallbackDate = new Date(actDateStr);
+          sortTimestamp = !isNaN(fallbackDate.getTime()) ? fallbackDate.getTime() : 0;
+        }
+      } else {
+        if (actDateStr) {
+          const dateObj = new Date(actDateStr);
+          if (!isNaN(dateObj.getTime())) {
+            if (computedTime && /^\d{1,2}:\d{2}/.test(computedTime)) {
+              const [hh, mm] = computedTime.split(':');
+              dateObj.setHours(Number(hh) || 0, Number(mm) || 0, 0, 0);
+              if (act.created_at) {
+                const cObj = new Date(act.created_at);
+                if (!isNaN(cObj.getTime())) {
+                  dateObj.setSeconds(cObj.getSeconds(), cObj.getMilliseconds());
+                }
+              }
+            } else if (act.created_at) {
+              const cObj = new Date(act.created_at);
+              if (!isNaN(cObj.getTime())) {
+                dateObj.setHours(cObj.getHours(), cObj.getMinutes(), cObj.getSeconds(), cObj.getMilliseconds());
+              }
+            }
+            sortTimestamp = dateObj.getTime();
+          }
+        }
+      }
+
       const isPastDate = (() => {
         if (!actDateStr) return false;
         const dateObj = new Date(actDateStr);
-        if (act.time_scheduled) {
-          const [hh, mm] = act.time_scheduled.split(':');
+        const timeToUse = computedTime || act.time_scheduled;
+        if (timeToUse && /^\d{1,2}:\d{2}/.test(timeToUse)) {
+          const [hh, mm] = timeToUse.split(':');
           dateObj.setHours(Number(hh) || 0, Number(mm) || 0, 0, 0);
         } else {
           dateObj.setHours(23, 59, 59, 999);
@@ -1045,7 +1120,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         title: act.title,
         description: act.description || '',
         date: actDateStr,
-        time: act.time_scheduled || undefined,
+        time: computedTime,
+        sortTimestamp,
         icon,
         iconBg,
         iconColor,
@@ -1075,7 +1151,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       });
     });
 
-    return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return list.sort((a, b) => b.sortTimestamp - a.sortTimestamp);
   }, [dbActivities]);
 
   // KPIs de ofertas para este contacto específico
@@ -1130,7 +1206,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           ...mail,
           parsedEmail: parsed,
         };
-      });
+      })
+      .sort((a, b) => b.sortTimestamp - a.sortTimestamp);
 
     // Contadores por tipología
     const counts: Record<string, number> = {
@@ -1871,7 +1948,15 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                           >
                             <div className="flex justify-between items-center gap-2">
                               <span className="font-bold text-gray-900 dark:text-zinc-100 group-hover/mini:text-dts-secondary transition-colors truncate text-[10px]">{act.title}</span>
-                              <span className="text-[8px] text-gray-400 dark:text-zinc-400 font-mono shrink-0">{new Date(act.date).toLocaleDateString('es-ES')}</span>
+                              <div className="flex items-center gap-1.5 text-[8.5px] text-gray-400 dark:text-zinc-400 font-mono shrink-0">
+                                <span>{new Date(act.date).toLocaleDateString('es-ES')}</span>
+                                {act.time && (
+                                  <span className="flex items-center gap-0.5 text-dts-secondary font-bold">
+                                    <Clock size={8.5} />
+                                    {act.time.substring(0, 5)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             {act.description && (() => {
                               const cleanMini = cleanActivityDescription(act.description);
@@ -2052,8 +2137,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                 {new Date(act.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                               </span>
                               {act.time && (
-                                <span className="flex items-center gap-0.5 ml-1 text-gray-400 font-bold">
-                                  <Clock size={10} />
+                                <span className="flex items-center gap-0.5 ml-1 text-gray-500 dark:text-gray-400 font-bold">
+                                  <Clock size={10} className="text-dts-secondary shrink-0" />
                                   {act.time.substring(0, 5)}
                                 </span>
                               )}
@@ -3007,9 +3092,18 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                             </div>
                             
                             <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                              <span className="text-[9px] font-mono text-gray-400">
-                                {new Date(mail.date).toLocaleDateString('es-ES')}
-                              </span>
+                              <div className="flex items-center gap-1.5 text-[10px] font-mono text-gray-400 dark:text-gray-400">
+                                <Calendar size={11} className="text-gray-400 shrink-0" />
+                                <span className="font-bold text-dts-secondary uppercase">
+                                  {new Date(mail.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </span>
+                                {mail.time && (
+                                  <span className="flex items-center gap-0.5 ml-1 text-gray-500 dark:text-gray-400 font-bold">
+                                    <Clock size={10} className="text-dts-secondary shrink-0" />
+                                    {mail.time.substring(0, 5)}
+                                  </span>
+                                )}
+                              </div>
                               {/* Botón de editar correo */}
                               <button
                                 type="button"

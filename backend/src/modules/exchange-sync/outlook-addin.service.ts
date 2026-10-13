@@ -401,6 +401,9 @@ export class OutlookAddinService {
     const formattedTitle = `[${directionBadge} · ${prefix}] ${subject || '(Sin Asunto)'}`;
 
     const activityDate = sentDate ? new Date(sentDate) : new Date();
+    const hours = String(activityDate.getHours()).padStart(2, '0');
+    const minutes = String(activityDate.getMinutes()).padStart(2, '0');
+    const timeScheduled = `${hours}:${minutes}`;
 
     // Resolver correo del cliente (interlocutor) a guardar
     let emailToSave = params.interlocutorEmail;
@@ -422,6 +425,7 @@ export class OutlookAddinService {
         title: formattedTitle,
         description: processedBody || null,
         due_date: activityDate,
+        time_scheduled: timeScheduled,
         is_completed: true,
         email: emailToSave || null,
         exchange_item_id: exchangeItemId || null,
@@ -431,6 +435,7 @@ export class OutlookAddinService {
         attendees: {
           ...(quoteDocumentNo ? { quoteDocumentNo } : {}),
           categoryTag: categoryTag || 'PETICION_OFERTA',
+          sentDate: activityDate.toISOString(),
         },
         created_at: activityDate,
       },
