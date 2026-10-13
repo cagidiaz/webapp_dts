@@ -61,7 +61,7 @@ En cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline):
 - **Apertura de Correos Existentes**:
   - Cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline de interacciones) dispone del botón *"Abrir en Outlook"*.
   - **Respeto Estricto de la Preferencia del Usuario (`getPreferredOutlookClient`)**:
-    - **Outlook Classic / Escritorio (`target === 'desktop'`)**: Si el usuario tiene configurado el cliente de escritorio en Ajustes Generales, la WebApp invoca el protocolo nativo `dts-mail://open?id=...&from=...&subject=...`. El manejador local de Windows busca en milisegundos el mensaje exacto en la **Bandeja de Entrada** o en **Elementos Enviados** de Outlook mediante el modelo MAPI COM y ejecuta `item.Display`, abriendo directamente el correo en su ventana propia en primer plano sin necesidad de buscarlo a mano. Si el mensaje se encuentra en archivadores personales o subcarpetas, ejecuta automáticamente una búsqueda global en todos los almacenes (`olSearchScopeAllFolders`).
+    - **Outlook Classic / Escritorio (`target === 'desktop'`)**: Si el usuario tiene configurado el cliente de escritorio en Ajustes Generales, la WebApp invoca el protocolo nativo `dts-mail://open?id=...&from=...&subject=...`. Antes de invocar a Windows, la función `cleanEmailSubjectForOutlook` despoja automáticamente cualquier prefijo o corchete de tipología comercial del CRM (`[📥 Recibido · 📋 Petición oferta]`, `[📤 Enviado]`), normaliza guiones largos (`—`, `–`) y emojis para evitar corrupción de caracteres (mojibake). El manejador local de Windows v2.3 extrae el núcleo del asunto (`ExtractCoreSubject`), localiza en milisegundos el mensaje exacto en la **Bandeja de Entrada** o en **Elementos Enviados** de Outlook mediante MAPI COM y ejecuta `item.Display` con activación de inspector en primer plano. Si el mensaje se encuentra en archivadores personales o subcarpetas, ejecuta automáticamente una búsqueda limpia en todos los almacenes (`olSearchScopeAllFolders`).
     - **Outlook Online / Web (`target === 'web'`)**: Si el usuario prefiere la versión web (M365) o no dispone del cliente de escritorio, el sistema aprovecha el `webLink` directo generado por Microsoft Graph o construye la URL canónica de Microsoft 365 (`https://outlook.office.com/mail/deeplink?ItemID=...&exvsurl=1`), abriendo la vista de lectura del mensaje en la pestaña unificada de OWA.
   - **Borradores**: Si el estado del mensaje es `draft`, redirige a la carpeta de borradores de Outlook.
 - **Redacción de Nuevos Correos ("Abrir y Preparar en Outlook")**:
@@ -186,18 +186,25 @@ Para identificar al instante la situación operativa de cada cita o tarea, las t
   - Se eliminan tanto en frontend como en backend las líneas de separación con guiones bajos (`________________________________`), bloques de encabezado repetidos (`Actividad de CRM dTS Instruments...`) y saltos vacíos múltiples que Microsoft Graph introducía al sincronizar citas hacia la base de datos.
   - El detalle muestra exclusivamente el contenido real y útil del evento, logrando una presentación ordenada, limpia y profesional.
 
-### 5.9 Apertura Nativa en Outlook Classic (`dts-mail://`), Menú Secundario y Fallback Inteligente
-- **Protocolo de Enlace Nativo (`dts-mail://`):**
+### 5.9 Apertura Nativa en Outlook Classic (`dts-mail://` v2.3), Menú Secundario y Fallback Inteligente
+- **Protocolo de Enlace Nativo (`dts-mail://` v2.3):**
   - Permite a los usuarios que prefieren la aplicación de escritorio abrir los correos archivados directamente en la ventana nativa de `OUTLOOK.EXE` en modo lectura del correo original, sin abrir ventanas de redacción de nuevo correo.
-  - Se instala mediante un script autocontenido de 1 solo clic (`Instalar_Outlook_dTS.bat`) que normaliza saltos de línea Windows CRLF (`\r\n`) para ejecución fiable en `cmd.exe`, registrando el protocolo en `HKEY_CURRENT_USER` y guardando el manejador en `%LOCALAPPDATA%\dTS\` sin requerir permisos de administrador.
+  - **Sanitización de Asunto (`cleanEmailSubjectForOutlook`):** Filtra automáticamente cualquier prefijo o corchete comercial inyectado por el CRM (`[📥 Recibido · 📋 Petición oferta]`, `[📤 Enviado]`), normaliza guiones tipográficos (`—`, `–`) y suprime emojis para evitar desajustes de codificación de caracteres en Windows (mojibake).
+  - **Manejador Inteligente Local (`outlook_handler.vbs` v2.3):**
+    1. Extrae el núcleo del asunto (`ExtractCoreSubject`) aislando el asunto real de la conversación.
+    2. Realiza una búsqueda segura en la Bandeja de Entrada (`olFolderInbox`) y Elementos Enviados (`olFolderSentMail`) protegiendo el acceso a propiedades ante elementos del calendario (`MeetingItem`) o avisos del sistema (`ReportItem`).
+    3. Al localizarlo, ejecuta `item.Display` con activación de inspector (`insp.Activate`) y retardo de estabilidad de proceso (`WScript.Sleep 400`) para garantizar la persistencia de la ventana en pantalla.
+    4. Si el correo fue movido a archivadores personales, activa la búsqueda limpia en todas las carpetas (`olSearchScopeAllFolders = 1`).
+  - Se instala mediante un script autocontenido de 1 solo clic (`Instalar_Outlook_dTS.bat`) en texto plano UTF-8 (sin PowerShell Base64 ni políticas Bypass para evitar falsas alertas de Windows Defender), registrando el protocolo en `HKEY_CURRENT_USER\Software\Classes\dts-mail` y guardando el manejador en `%LOCALAPPDATA%\dTS\` sin requerir permisos de administrador.
 - **Menú de Acciones Secundarias en Cada Correo:**
   - Junto al botón principal de Outlook, un selector desplegable (`...`) proporciona acceso directo e inmediato a:
     1. **Abrir en Outlook Classic:** Fuerza la apertura nativa en escritorio mediante `dts-mail://open`.
     2. **Abrir en Outlook Web (M365):** Abre el deep link oficial de Microsoft 365 en una pestaña del navegador.
     3. **Responder en Outlook:** Invoca `dts-mail://reply` (o compositor web) citando el correo y cargando destinatarios y asunto automáticamente.
     4. **Buscar conversación completa:** Invoca `dts-mail://search` activando la búsqueda global del hilo en Outlook Classic o en la nube.
-    5. **Copiar datos de búsqueda:** Copia al portapapeles la sintaxis `de:<remitente> asunto:"<asunto>"` para pegarla manualmente en Outlook.
+    5. **Copiar datos de búsqueda:** Copia al portapapeles la sintaxis `de:<remitente> asunto:"<asunto_limpio>"` para pegarla manualmente en Outlook.
 - **Detección y Fallback Inteligente:**
-  - Si un usuario pulsa el botón de escritorio en un ordenador donde aún no se ha ejecutado el archivo de configuración, el sistema detecta que la ventana no perdió el foco y despliega un modal elegante ofreciendo:
+  - Si un usuario pulsa el botón de escritorio en un ordenador donde aún no se ha ejecutado el archivo de configuración, el sistema detecta si la llamada no fue atendida y despliega un modal elegante ofreciendo:
     - *Abrir en Outlook Web ahora* (solución instantánea).
     - *Descargar Configurador de Windows (1 Clic)*.
+    - *Ya lo tengo instalado en este equipo (No volver a mostrar)*: Guarda la confirmación en `localStorage` (`dts_outlook_protocol_installed`) para silenciar alertas futuras mientras Chrome o Edge procesan el diálogo de apertura.

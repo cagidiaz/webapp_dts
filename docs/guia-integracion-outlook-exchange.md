@@ -157,10 +157,10 @@ Además de la sincronización de fondo, dispones del **Complemento oficial de Ou
 ### Pantalla de Configuración y Preferencias (`/settings`)
 En la nueva sección de **Ajustes** de la WebApp puedes:
 * **Elegir tu Cliente de Outlook Predeterminado**: Selecciona entre **Outlook de Escritorio (Windows/Mac)** o **Outlook Web (Microsoft 365)**. El sistema recordará tu preferencia de forma permanente en tu navegador para abrir los correos y borradores siempre en tu cliente favorito.
-* **Asistente de Enlace Nativo de Outlook Classic (Windows - Protocolo `dts-mail://` v2.1)**:
+* **Asistente de Enlace Nativo de Outlook Classic (Windows - Protocolo `dts-mail://` v2.3)**:
   * Al seleccionar *Outlook de Escritorio*, dispones del botón **"Descargar Configurador (1 Clic)"** que genera el archivo `Instalar_Outlook_dTS.bat`.
   * **Sin Permisos de Administrador:** Se instala a nivel de usuario en `HKEY_CURRENT_USER\Software\Classes\dts-mail` y en `%LOCALAPPDATA%\dTS\`.
-  * **Apertura Directa y Búsqueda Inteligente (v2.1):** Al pulsar "Abrir en Outlook" en cualquier tarjeta de correo del CRM, el manejador local busca instantáneamente en tu **Bandeja de Entrada** y en **Elementos Enviados** por asunto (exacto y normalizado sin prefijos `Re:`, `RV:`) y correo del interlocutor, abriendo directamente la ventana del mensaje en primer plano (`.Display`).
+  * **Apertura Directa y Sanitización de Tipologías (v2.3):** Al pulsar "Abrir en Outlook", la WebApp purga previamente con `cleanEmailSubjectForOutlook` cualquier metadato entre corchetes (`[📥 Recibido · 📋 Petición oferta]`) y emojis para evitar corrupción de caracteres en Windows (mojibake). El manejador local extrae el núcleo del asunto (`ExtractCoreSubject`) y busca instantáneamente en tu **Bandeja de Entrada** y en **Elementos Enviados** por asunto e interlocutor, abriendo directamente la ventana del mensaje en primer plano (`.Display`) con retardo de persistencia.
   * **Blindaje Total contra Elementos del Calendario:** Ignora de forma segura convocatorias de reunión (`MeetingItem`) o avisos del sistema (`ReportItem`), evitando ventanas de error de VBScript.
   * **Libre de Falsos Positivos de Antivirus:** El instalador genera el script en texto plano limpio y transparente, sin técnicas de PowerShell Base64 ni bypass de directivas.
   * **Persistencia y Supresión de Avisos Innecesarios:** La WebApp recuerda que ya instalaste el configurador en ese navegador, evitando alertas emergentes mientras confirmas el cuadro de diálogo de Chrome/Edge.
