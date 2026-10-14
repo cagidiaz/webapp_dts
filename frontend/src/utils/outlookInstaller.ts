@@ -376,6 +376,18 @@ Select Case action
 End Select
 `;
 
+export const encodeBase64Utf8 = (str: string): string => {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+};
+
+export const VBS_HANDLER_BASE64 = encodeBase64Utf8(VBS_HANDLER_SCRIPT);
+
 export const INSTALLER_BAT_CONTENT = `@echo off
 chcp 65001 >nul
 title Configuracion de Outlook Classic - dTS Instruments
@@ -387,9 +399,7 @@ echo [1/3] Creando directorio local de dTS...
 if not exist "%LOCALAPPDATA%\\dTS" mkdir "%LOCALAPPDATA%\\dTS"
 
 echo [2/3] Instalando manejador inteligente de Outlook...
-powershell -NoProfile -Command "[IO.File]::WriteAllText($env:LOCALAPPDATA + '\\dTS\\outlook_handler.vbs', @'
-${VBS_HANDLER_SCRIPT}
-'@, [System.Text.Encoding]::UTF8)" >nul
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Join-Path $env:LOCALAPPDATA 'dTS\\outlook_handler.vbs'; $b = '${VBS_HANDLER_BASE64}'; [System.IO.File]::WriteAllBytes($p, [System.Convert]::FromBase64String($b))"
 
 echo [3/3] Registrando protocolo en Windows (sin permisos de Administrador)...
 reg add "HKCU\\Software\\Classes\\dts-mail" /ve /d "URL:dTS Instruments Mail Protocol" /f >nul
