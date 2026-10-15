@@ -1029,7 +1029,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
       // 1. Determinar hora computada (para correos de llegada/enviada y actividades con o sin time_scheduled)
       let computedTime = act.time_scheduled || undefined;
-      if (!computedTime && (upperType === 'EMAIL' || act.created_at)) {
+      if (upperType === 'EMAIL' || (!computedTime && act.created_at)) {
         const timeSource = (upperType === 'EMAIL' && (act.attendees?.sentDate || act.attendees?.receivedDateTime)) || act.created_at;
         if (timeSource) {
           const d = new Date(timeSource);
