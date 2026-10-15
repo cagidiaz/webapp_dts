@@ -32,9 +32,11 @@ import {
   type OutlookEmailCategory,
 } from '../../api/outlookAddin';
 
+import { OutlookAddinSession } from './OutlookAddinSession';
+
 declare const Office: any;
 
-export const OutlookAddinPage: React.FC = () => {
+const OutlookAddinContent: React.FC = () => {
   const [isInsideOutlook, setIsInsideOutlook] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -223,7 +225,8 @@ export const OutlookAddinPage: React.FC = () => {
       // Iniciar búsqueda en backend inmediatamente sin esperar a descargar el cuerpo completo
       resolveSubject((finalSubject) => {
         setSubject(finalSubject);
-        const activeUser = currentMailboxUser || 'gdiaz@dtsinstruments.com';
+        const activeUser = currentMailboxUser || '';
+        if (!activeUser) { setError('No se pudo identificar la cuenta de Outlook.'); setIsLoading(false); return; }
         setUserEmail(activeUser);
 
         // Disparo inmediato de la consulta al CRM (ahorra hasta 1.5s de espera)
@@ -234,6 +237,7 @@ export const OutlookAddinPage: React.FC = () => {
           toEmails: toList,
           subject: finalSubject,
           itemId: mailItemId,
+          itemIdType: 'ewsId',
         });
 
         // Lectura del cuerpo del correo en segundo plano de forma no bloqueante
@@ -437,9 +441,11 @@ export const OutlookAddinPage: React.FC = () => {
     }
 
     try {
+      if (!isInsideOutlook) { setError('La vista previa no registra correos. Abre el complemento dentro de Outlook.'); return; }
       const result = await logEmailToAddin({
         userEmail,
         exchangeItemId: itemId,
+        itemIdType: 'ewsId',
         subject,
         body: finalBody,
         sentDate,
@@ -1026,5 +1032,7 @@ export const OutlookAddinPage: React.FC = () => {
     </div>
   );
 };
+
+export const OutlookAddinPage: React.FC = () => <OutlookAddinSession><OutlookAddinContent /></OutlookAddinSession>;
 
 export default OutlookAddinPage;

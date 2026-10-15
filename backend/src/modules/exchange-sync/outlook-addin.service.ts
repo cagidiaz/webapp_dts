@@ -3,13 +3,17 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { OfferSourceContext } from '../quotes/offer-source-context';
 import { loadOfferContacts } from '../quotes/offer-contacts';
-import { manualMailQuoteSeed, pilotQuoteUsesManualState } from './pilot-quote-state';
+import { EmailIdentityService } from './email-identity.service';
+import { OutlookAddinAccessService } from './outlook-addin-access.service';
 import { IsString, IsNotEmpty, IsOptional, IsArray, IsBoolean, IsIn } from 'class-validator';
 
 export class EmailLookupDto {
   @IsString()
   @IsNotEmpty()
   userEmail: string;
+
+  @IsOptional() @IsIn(['ewsId','restId','restImmutableEntryId'])
+  itemIdType?: 'ewsId' | 'restId' | 'restImmutableEntryId';
 
   @IsString()
   @IsOptional()
@@ -36,6 +40,9 @@ export class LogEmailDto {
   @IsString()
   @IsNotEmpty()
   userEmail: string;
+
+  @IsOptional() @IsIn(['ewsId','restId','restImmutableEntryId'])
+  itemIdType?: 'ewsId' | 'restId' | 'restImmutableEntryId';
 
   @IsString()
   @IsNotEmpty()
@@ -111,7 +118,7 @@ export class LogEmailDto {
 export class OutlookAddinService {
   private readonly logger = new Logger(OutlookAddinService.name);
 
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly identities: EmailIdentityService, private readonly access: OutlookAddinAccessService) {}
 
   /**
    * Limpia firmas corporativas pesadas, separadores de citas y cláusulas legales / RGPD.
@@ -176,21 +183,24 @@ export class OutlookAddinService {
   /**
    * Busca contactos, clientes, ofertas abiertas y estado previo de registro para el correo actual.
    */
-  async lookup(params: EmailLookupDto) {
+  async lookup(params: EmailLookupDto, userId: string) {
     const { userEmail, fromEmail, toEmails, itemId } = params;
 
     // 1. Identificar usuario del CRM
-    const userProfile = await this.prisma.profiles.findFirst({
-      where: { email: { equals: userEmail, mode: 'insensitive' } },
-    });
+    const actor = await this.access.actor(userId, userEmail);
+    const userProfile = actor.profile;
 
     // 2. Verificar si este correo ya está registrado en crm_activities
     let isAlreadyLogged = false;
     let existingActivity: any = null;
 
+    const identity = itemId ? await this.identities.prepare(userId, itemId, params.itemIdType || 'ewsId') : null;
     if (itemId) {
       existingActivity = await this.prisma.crm_activities.findFirst({
-        where: { exchange_item_id: itemId },
+        where: { type: 'EMAIL', created_by: userId, customer: actor.customerScope, OR: [
+          ...(identity?.patch.exchange_immutable_id ? [{ exchange_tenant_id: identity.patch.exchange_tenant_id, exchange_mailbox_id: identity.patch.exchange_mailbox_id, exchange_immutable_id: identity.patch.exchange_immutable_id }] : []),
+          { exchange_item_id: itemId, exchange_immutable_id: null },
+        ] },
         include: {
           customer: { select: { client_id: true, name: true } },
           contact: { select: { id: true, name: true, email: true } },
@@ -228,6 +238,7 @@ export class OutlookAddinService {
     const matchedContacts = await this.prisma.contacts.findMany({
       where: {
         email: { in: candidateEmails, mode: 'insensitive' },
+        customer: actor.customerScope,
       },
       include: {
         customer: true,
@@ -249,6 +260,7 @@ export class OutlookAddinService {
       if (emailDomain && !['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.es'].includes(emailDomain)) {
         matchedCustomer = await this.prisma.customers.findFirst({
           where: {
+            ...actor.customerScope,
             OR: [
               { email: { contains: emailDomain, mode: 'insensitive' } },
               { home_page: { contains: emailDomain, mode: 'insensitive' } },
@@ -264,6 +276,7 @@ export class OutlookAddinService {
       const quotes = await this.prisma.sales_quotes.findMany({
         where: {
           customer_no: matchedCustomer.client_id,
+          ...actor.customerScope,
         },
         include: {
           sales_quotes_crm: true,
@@ -323,7 +336,7 @@ export class OutlookAddinService {
   /**
    * Registra el correo en dTS CRM (crm_activities y opcionalmente en sales_quote_activities).
    */
-  async logEmail(params: LogEmailDto) {
+  async logEmail(params: LogEmailDto, userId: string) {
     const {
       userEmail,
       exchangeItemId,
@@ -340,9 +353,8 @@ export class OutlookAddinService {
     } = params;
 
     // 1. Validar usuario creador
-    const userProfile = await this.prisma.profiles.findFirst({
-      where: { email: { equals: userEmail, mode: 'insensitive' } },
-    });
+    const actor = await this.access.actor(userId, userEmail);
+    const userProfile = actor.profile;
 
     if (!userProfile) {
       throw new BadRequestException(`No se encontró un perfil de usuario asociado al correo ${userEmail}`);
@@ -365,10 +377,18 @@ export class OutlookAddinService {
       throw new BadRequestException('Se requiere asociar el correo a un cliente de dTS Instruments.');
     }
 
-    // 3. Comprobar duplicidad por exchangeItemId
+    await this.access.company(userId, resolvedClientId);
+    if (resolvedContactId && !await this.prisma.contacts.findFirst({ where: { id: resolvedContactId, client_id: resolvedClientId }, select: { id: true } })) throw new BadRequestException('El contacto no pertenece a la empresa seleccionada.');
+    if (quoteDocumentNo && !await this.prisma.sales_quotes.findFirst({ where: { document_no: quoteDocumentNo, customer_no: resolvedClientId, ...actor.customerScope }, select: { id: true } })) throw new BadRequestException('La oferta no pertenece a la empresa o cartera seleccionada.');
+    const identity = await this.identities.prepare(userId, exchangeItemId, params.itemIdType || 'ewsId');
+
+    // 3. Comprobar duplicidad dentro del buzón y la actividad comercial
     if (exchangeItemId) {
       const existing = await this.prisma.crm_activities.findFirst({
-        where: { exchange_item_id: exchangeItemId },
+        where: { type: 'EMAIL', created_by: userId, client_id: resolvedClientId, contact_id: resolvedContactId || null, OR: [
+          ...(identity.patch.exchange_immutable_id ? [{ exchange_tenant_id: identity.patch.exchange_tenant_id, exchange_mailbox_id: identity.patch.exchange_mailbox_id, exchange_immutable_id: identity.patch.exchange_immutable_id }] : []),
+          { exchange_item_id: exchangeItemId, exchange_immutable_id: null },
+        ] },
       });
       if (existing) {
         return {
@@ -433,7 +453,8 @@ export class OutlookAddinService {
         is_completed: true,
         email: emailToSave || null,
         exchange_item_id: exchangeItemId || null,
-        exchange_web_link: exchangeWebLink || null,
+        exchange_web_link: identity.enabled ? identity.webLink || null : exchangeWebLink || null,
+        ...identity.patch,
         exchange_sync_status: 'synced',
         exchange_last_synced_at: new Date(),
         attendees: {
@@ -454,27 +475,13 @@ export class OutlookAddinService {
     if (quoteDocumentNo) {
       try {
         const pilot = this.config.get('CRM_PROSPECTS_PILOT_ENABLED') === 'true' ? await this.prisma.crm_offer_followups.findUnique({ where: { document_no: quoteDocumentNo } }) : null;
-        const manualState = await pilotQuoteUsesManualState(this.prisma,this.config.get('CRM_PROSPECTS_PILOT_ENABLED') === 'true',this.config.get<string>('CRM_PROSPECTS_PILOT_EMAIL')||'aciurans@dtsinstruments.com',quoteDocumentNo,pilot);
         if (pilot) {
           await this.prisma.crm_offer_activities.upsert({ where: { id: createdActivity.id }, update: {}, create: { id: createdActivity.id, followup_id: pilot.id, tipo: 'Email', notas: `${formattedTitle}\n\n${processedBody ? processedBody.substring(0, 500) : ''}`, fecha: activityDate, hecho: true } });
           quoteLinked = true;
         } else {
-        let quoteCrm = await this.prisma.sales_quotes_crm.findUnique({
+        const quoteCrm = await this.prisma.sales_quotes_crm.findUnique({
           where: { document_no: quoteDocumentNo },
         });
-
-        // Si aún no tiene metadatos en sales_quotes_crm, crearlo
-        if (!quoteCrm) {
-          const originalQuote = manualState ? await this.prisma.sales_quotes.findFirst({where:{document_no:quoteDocumentNo}}) : null;
-          quoteCrm = await this.prisma.sales_quotes_crm.create({
-            data: {
-              document_no: quoteDocumentNo,
-              contacto_id: resolvedContactId || null,
-              // Antes de inicializar el piloto, conservar el correo sin decidir su fase.
-              ...(manualState ? manualMailQuoteSeed(originalQuote) : {estado_oferta: (categoryTag === 'CIERRE_ACEPTACION' || categoryTag === 'ACEPTACION') ? 'ganada' : 'en_negociacion'}),
-            },
-          });
-        }
 
         if (quoteCrm) {
           await this.prisma.sales_quote_activities.create({
@@ -495,7 +502,7 @@ export class OutlookAddinService {
     }
 
     this.logger.log(
-      `Correo "${subject}" registrado exitosamente en CRM para cliente ${resolvedClientId} por ${userEmail}`,
+      `Correo registrado en CRM por el usuario ${userId}`,
     );
 
     return {
@@ -509,18 +516,21 @@ export class OutlookAddinService {
         customerName: createdActivity.customer?.name,
         contactName: createdActivity.contact?.name,
       },
-      message: 'Correo registrado exitosamente en el CRM.',
+      message: identity.enabled && identity.patch.exchange_resolution_status !== 'resolved' ? 'Correo registrado. Su apertura en Outlook queda pendiente de verificar la referencia de Microsoft 365.' : 'Correo registrado exitosamente en el CRM.',
+      identityStatus: identity.patch.exchange_resolution_status || null,
     };
   }
 
   /**
    * Busca empresas clientes para el selector del panel cuando el remitente no está registrado.
    */
-  async searchCompanies(query: string) {
+  async searchCompanies(query: string, userId: string) {
+    const actor = await this.access.actor(userId);
     if (!query || query.trim().length < 2) return [];
 
     return await this.prisma.customers.findMany({
       where: {
+        ...actor.customerScope,
         OR: [
           { name: { contains: query.trim(), mode: 'insensitive' } },
           { client_id: { contains: query.trim(), mode: 'insensitive' } },
@@ -539,7 +549,8 @@ export class OutlookAddinService {
   /**
    * Obtiene la lista de contactos asociados a un cliente específico.
    */
-  async getCompanyContacts(clientId: string) {
+  async getCompanyContacts(clientId: string, userId: string) {
+    await this.access.company(userId, clientId);
     if (!clientId) return [];
 
     return await this.prisma.contacts.findMany({
@@ -565,12 +576,14 @@ export class OutlookAddinService {
   /**
    * Obtiene las ofertas abiertas asociadas a un cliente específico.
    */
-  async getCompanyQuotes(clientId: string) {
+  async getCompanyQuotes(clientId: string, userId: string) {
+    const actor = await this.access.company(userId, clientId);
     if (!clientId) return [];
 
     const quotes = await this.prisma.sales_quotes.findMany({
       where: {
         customer_no: clientId,
+        ...actor.customerScope,
       },
       include: {
         sales_quotes_crm: true,

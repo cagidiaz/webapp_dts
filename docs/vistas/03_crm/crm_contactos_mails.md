@@ -26,7 +26,7 @@ Para unificar la trazabilidad del proceso comercial y sincronizar el Add-in de O
 | `CIERRE_ACEPTACION` | **Cierre/Aceptación** | `CheckCircle2` | Esmeralda (`#059669`) | Aceptación formal de la oferta, adjudicación o confirmación de pedido. |
 
 > **Comportamiento Automático de Cierre:**  
-> Al registrar o modificar un correo con la tipología `CIERRE_ACEPTACION` vinculándolo a una oferta (`quoteDocumentNo`), el sistema actualiza automáticamente el estado de la oferta comercial en el CRM a **`ganada`** (100% de probabilidad de éxito).
+> Al registrar o modificar un correo con la tipología `CIERRE_ACEPTACION` vinculándolo a una oferta (`quoteDocumentNo`), el sistema actualiza automáticamente el estado de la oferta comercial en el CRM a **`ganada`** (100% de probabilidad de éxito), siempre que no pertenezca al piloto de ofertas con gestión manual de motivo de cierre.
 
 ---
 
@@ -43,15 +43,12 @@ La parte superior de la pestaña integra en una sola fila compacta y responsive:
    - Permite filtrar simultáneamente por cotización comercial concreta sin romper la línea visual.
 4. **Acciones de Cabecera**: Botones de `Sincronizar` y `Redactar Correo en Outlook`.
 
-### 3.2 Visualización Ergonómica de Correos (Límite de 5 Líneas) y Ordenación Cronológica Exacta
+### 3.2 Visualización Ergonómica de Correos y Ordenación Cronológica Exacta
 - **Ordenación Cronológica Precisa (Fecha y Hora)**:
   - Los correos en la pestaña de Emails y en el Timeline se ordenan de forma descendente considerando la **fecha y hora exacta de llegada o envío** (`sortTimestamp`).
   - Para correos procedentes de Outlook o Exchange, se computa la hora real desde `attendees.sentDate`, `attendees.receivedDateTime` o `created_at` (con desempate por segundos/milisegundos).
   - Cada tarjeta de correo y entrada del Timeline incluye el indicador de fecha y hora completa (`13 oct. 2026 🕒 14:35`) con icono de reloj `Clock` en azul dTS (`text-dts-secondary`).
-- **Recorte Automático Inteligente**: Para evitar que correos extensos o hilos kilométricos saturen la vista y demanden desplazamientos interminables, cada correo muestra por defecto exclusivamente sus primeras **5 líneas** de contenido.
-- **Expansor Interactivo "Ver más / Mostrar menos"**:
-  - Al pie del mensaje aparece un botón sutil `Ver más (+N líneas)` que indica cuántas líneas adicionales contiene el cuerpo.
-  - Al pulsar, expande el contenido íntegro y conmuta a `Mostrar menos` sin recargar la página.
+- **Recorte Automático Inteligente**: Para evitar saturar la vista, cada correo muestra por defecto exclusivamente sus primeras **5 líneas** de contenido con botón `Ver más (+N líneas)`.
 - **Formato Monoespaciado y Legible**: El cuerpo del correo se renderiza en bloque estilizado con tipografía monoespaciada para respetar sangrías, tablas de texto y cotizaciones.
 
 ### 3.3 Badge Interactivo de Tipología con Selector Rápido
@@ -59,69 +56,52 @@ En cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline):
 - Se muestra un badge redondeado con la tipología actual, su icono y flecha indicadora (`🚚 Oferta proveedor ▾`).
 - **Cambio en 1 Clic**: El badge funciona como un `<select>` interactivo transparente superpuesto que permite reasignar la tipología en tiempo real sin abrir modales.
 - **Consistencia en Base de Datos y Título**: Al cambiar la tipología, la mutación actualiza el campo `attendees.categoryTag` y reescribe de forma limpia el prefijo del título `[Dirección · Tipología] Asunto`.
-- **Compatibilidad con Modo Oscuro**: Configurado con `scheme-light dark:scheme-dark` y opciones nativas con fondo corporativo `dark:bg-[#00222C]` y tipografía clara para máxima legibilidad en temas oscuros.
 
 ### 3.4 Vinculación y Badge de Oferta Comercial vs Tipología
 - **Diferenciación Visual Estricta**:
   - El badge de tipología (`[ 🚚 Oferta proveedor ▾ ]`) define la naturaleza del email.
   - El badge de oferta (`[ 📄 Oferta: OFT-2026-XXXX (Importe €) ]`) representa el documento de Business Central vinculado.
 - **Detección Blindada de Ofertas en Backend**:
-  - El método de backend `enrichActivitiesWithQuoteInfo` descarta los prefijos entre corchetes (`^\[.*?\]\s*`) y exige dígitos numéricos obligatorios en el código de oferta (`/(?:OFT|COT|OFERTA|OF)[-_ ]?([0-9][A-Z0-9\-\/]*)/i`).
-  - Esto evita falsos positivos donde la palabra "Oferta" de la tipología "Oferta proveedor" pudiera duplicarse como si fuera un número de documento comercial.
+  - El método de backend `enrichActivitiesWithQuoteInfo` descarta los prefijos entre corchetes (`^\[.*?\]\s*`) y exige dígitos numéricos obligatorios en el código de oferta (`/(?:OFT|COT|OFERTA|OF)[-_ ]?([0-9][A-Z0-9\-\/]*)/i`), evitando falsos positivos con la palabra "Oferta" de la tipología.
 
 ### 3.5 Acciones de Productividad con Microsoft Outlook (Online vs Classic)
 - **Apertura de Correos Existentes**:
-  - Cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline de interacciones) dispone del botón *"Abrir en Outlook"*.
+  - Cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline) dispone del botón *"Abrir en Outlook"*.
   - **Respeto Estricto de la Preferencia del Usuario (`getPreferredOutlookClient`)**:
-    - **Outlook Classic / Escritorio (`target === 'desktop'`)**: Si el usuario tiene configurado el cliente de escritorio en Ajustes Generales, la WebApp invoca el protocolo nativo `dts-mail://open?id=...&from=...&subject=...`. Antes de invocar a Windows, la función `cleanEmailSubjectForOutlook` despoja automáticamente cualquier prefijo o corchete de tipología comercial del CRM (`[📥 Recibido · 📋 Petición oferta]`, `[📤 Enviado]`), normaliza guiones largos (`—`, `–`) y emojis para evitar corrupción de caracteres (mojibake). El manejador local de Windows v2.3 extrae el núcleo del asunto (`ExtractCoreSubject`), localiza en milisegundos el mensaje exacto en la **Bandeja de Entrada** o en **Elementos Enviados** de Outlook mediante MAPI COM y ejecuta `item.Display` con activación de inspector en primer plano. Si el mensaje se encuentra en archivadores personales o subcarpetas, ejecuta automáticamente una búsqueda limpia en todos los almacenes (`olSearchScopeAllFolders`).
-    - **Outlook Online / Web (`target === 'web'`)**: Si el usuario prefiere la versión web (M365) o no dispone del cliente de escritorio, el sistema aprovecha el `webLink` directo generado por Microsoft Graph o construye la URL canónica de Microsoft 365 (`https://outlook.office.com/mail/deeplink?ItemID=...&exvsurl=1`), abriendo la vista de lectura del mensaje en la pestaña unificada de OWA.
-  - **Borradores**: Si el estado del mensaje es `draft`, redirige a la carpeta de borradores de Outlook.
+    - **Outlook Classic / Escritorio (`target === 'desktop'`)**: Si el usuario tiene configurado el cliente de escritorio en Ajustes Generales, la WebApp invoca el protocolo nativo `dts-mail://open?id=...&from=...&subject=...`. Antes de invocar a Windows, la función `cleanEmailSubjectForOutlook` despoja automáticamente cualquier prefijo comercial, normaliza guiones tipográficos y emojis para evitar corrupción de caracteres (mojibake). El manejador local v2.3 extrae el núcleo del asunto, localiza en milisegundos el mensaje exacto en la **Bandeja de Entrada** o en **Elementos Enviados** mediante MAPI COM y ejecuta `item.Display`. Si el mensaje se encuentra en archivadores o subcarpetas, ejecuta automáticamente una búsqueda limpia en todas las carpetas (`olSearchScopeAllFolders`).
+    - **Outlook Online / Web (`target === 'web'`)**: Si el usuario prefiere la versión web (M365), el sistema aprovecha el `webLink` directo generado por Microsoft Graph o construye la URL canónica de Microsoft 365 (`https://outlook.office.com/mail/deeplink?ItemID=...&exvsurl=1`).
+- **Ciclo de Vida de Borradores y Envío Directo**:
+  - `draft`: El correo es un borrador registrado localmente en espera de edición o envío desde Outlook.
+  - `send_unconfirmed`: Se ha solicitado el envío a Microsoft Graph pero la confirmación de entrega está en curso. La interfaz muestra el badge ámbar: `Envío sin confirmar: revisar Outlook` para prevenir reenvíos accidentales.
+  - `sent_pending`: Microsoft 365 ha aceptado el envío pero la copia archivada en "Elementos enviados" aún está generándose o resolviendo su identificador inmutable. La interfaz muestra el badge ámbar: `Referencia de envío pendiente`.
+  - `synced`: Correo completamente enviado y sincronizado con referencia inmutable resuelta (`resolved`).
 - **Redacción de Nuevos Correos ("Abrir y Preparar en Outlook")**:
-  - Botón superior para generar un nuevo correo con selector dual de cliente (*Outlook de Escritorio* vs. *Outlook Online*).
-  - **Soporte Multi-destinatario**: Admite múltiples correos en el campo principal "Para" (separados por coma, punto y coma o espacio) y un campo opcional desplegable "+ Añadir CC (Copia)".
-  - **Plantillas Corporativas**: Carga plantillas tokenizadas (*Presentación*, *Seguimiento*, *Reunión*) que autocompletan el destinatario, asunto y cuerpo.
-  - **Prevención de Popup Blocker en Outlook Online**: La WebApp pre-abre la pestaña (`about:blank`) de forma síncrona en el evento `click` del usuario, evitando que Chrome o Edge bloqueen la ventana emergente mientras Microsoft Graph genera el borrador en segundo plano. Al terminar, la pestaña navega directamente al borrador generado.
-  - **Outlook Classic (Escritorio)**: Construye la URI nativa `mailto:destinatarios?cc=...&subject=...&body=...` y la dispara de forma no intrusiva para abrir Outlook Classic en Windows con todos los campos pre-cargados en un mensaje nuevo listo para revisar y enviar.
-- **Sincronización Bidireccional**: Botón para actualizar estados de borradores que hayan sido completados o enviados desde Outlook.
+  - Selector dual de cliente (*Outlook de Escritorio* vs. *Outlook Online*).
+  - Soporte multi-destinatario ("Para", "+ Añadir CC"), plantillas corporativas tokenizadas (*Presentación*, *Seguimiento*, *Reunión*) y prevención de popup blocker mediante pre-apertura de pestaña `about:blank`.
+- **Sincronización Bidireccional e Identidad Estable (`ImmutableId`)**:
+  - Auto-sincronización silenciosa en segundo plano al montar la ficha de contacto si existen actividades en estado `draft`, `sent_pending` o `send_unconfirmed`.
+  - El backend consulta las referencias pendientes en lotes de hasta 25 elementos rotados por `exchange_last_synced_at`, evitando barridos masivos de buzón.
+  - Conciliación determinista: requiere coincidencia exacta de tenant, buzón y `ImmutableId`, eliminando heurísticas inseguras por coincidencia aproximada de asunto o fecha.
 - **Acceso desde el Listado de Contactos**: Al pulsar sobre el email de cualquier contacto en la tabla general de contactos (`/crm/contacts`), la WebApp respeta la preferencia del usuario y abre la ventana de redacción en su cliente preferido (Online o Classic).
 
 ### 3.6 Homogeneidad Total de Diseño y Colores con el Timeline
-Para evitar discrepancias visuales entre la pestaña de **Emails** y el **Timeline de Interacciones**, ambas vistas comparten de forma unificada la misma paleta y arquitectura de componentes:
-- **Contenedor y Fondo de la Tarjeta (`card`)**:
-  - *Estado Estándar*: Fondo blanco limpio en modo claro y zinc translúcido en modo oscuro (`bg-white dark:bg-zinc-900/40 border-gray-200/60 dark:border-white/5`), con sombra suave `shadow-xs` y resaltado hover en azul acento dTS (`hover:border-dts-secondary/35`).
-  - *Estado Tramitado / Realizado (`done` / `hasConclusions`)*: Fondo y borde verde esmeralda idéntico (`bg-emerald-500/8 dark:bg-emerald-950/20 border-emerald-500/25 dark:border-emerald-500/30 hover:border-emerald-500/40`).
-  - *Pendiente de Conclusiones (`needsConclusions`)*: Resaltado de atención en ámbar (`bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-400 dark:border-amber-500/60 ring-1 ring-amber-400/20`).
-- **Encabezado y Asunto**:
-  - Línea divisoria inferior (`border-b border-gray-100 dark:border-white/5 pb-2`).
-  - Efecto interactivo al pasar el ratón sobre el asunto cambiando al color acento dTS (`group-hover/box:text-dts-secondary transition-colors`).
-- **Acciones y Botones Homogéneos**:
-  - Icono oficial interactivo `OutlookIcon` (`hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20`).
-  - Menú contextual desplegable `MoreVertical` para opciones avanzadas de Outlook.
-  - Botón de edición rápida `Edit2` (turquesa en hover) y de eliminación `Trash2` (rojo en hover).
-- **Cuerpo y Pie del Mensaje**:
-  - Bloque de contenido en tipografía monoespaciada (`bg-white/40 dark:bg-black/10 border border-gray-100 dark:border-white/5`) con expansor dinámico `Ver más (+N líneas)`.
-  - Bloque visual de conclusiones registradas y pie con remitente/destinatario y empresa cliente vinculada.
+- Ambas vistas comparten la misma paleta y arquitectura de componentes:
+  - Fondo blanco en modo claro y zinc translúcido en modo oscuro (`bg-white dark:bg-zinc-900/40 border-gray-200/60 dark:border-white/5`).
+  - Estado realizado (`done` / `hasConclusions`) con fondo y borde verde esmeralda (`bg-emerald-500/8 dark:bg-emerald-950/20 border-emerald-500/25 dark:border-emerald-500/30`).
+  - Pendiente de conclusiones (`needsConclusions`) resaltado en ámbar (`bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-400`).
+  - Menú contextual desplegable `MoreVertical` para opciones avanzadas de Outlook (Classic, Web, Responder, Buscar conversación, Copiar sintaxis).
 
 ---
 
-## 4. Integración con el Add-in de Outlook (`OutlookAddinPage.tsx` y `outlook-addin.service.ts`)
-
-### 4.1 Selección de Tipología en el Add-in
-- Distribución equilibrada en 2 columnas de las 5 tipologías con sus iconos y colores correspondientes.
-- La tipología seleccionada se envía en el payload como `categoryTag` y se persiste en `attendees: { categoryTag, quoteDocumentNo }`.
-
-### 4.2 Detección, Búsqueda y Selección Manual de Contacto
-- **Empresas y Contactos No Registrados**: Cuando entra o se envía un correo a un interlocutor no registrado en Supabase, el comercial puede buscar la empresa cliente (`customers`).
-- **Selector Dinámico de Contactos**: Lista los contactos de Business Central para esa cuenta (`Nombre`, `Cargo/Rol`, `Email`) con buscador rápido.
-
-### 4.3 Limpieza y Acortado de Contenido
-- **Depuración de Firmas y Cláusulas Legales**: Eliminación automática de cláusulas RGPD/LOPD, avisos de confidencialidad y firmas pesadas.
+## 4. Integración con el Add-in de Outlook (`OutlookAddinPage.tsx`)
+- **Autenticación Obligatoria:** Las llamadas API requieren JWT del CRM; el contenedor [`OutlookAddinSession.tsx`](file:///c:/proyectos/webapp_dts/frontend/src/pages/outlook-addin/OutlookAddinSession.tsx) gestiona la sesión sin redirigir fuera de Outlook.
+- **Aislamiento por Cartera Comercial (RBAC):** Búsqueda de clientes y selección de contactos/ofertas restringida a los clientes asignados al comercial autenticado.
+- **Identidad Estable (`ImmutableId`):** Conversión de IDs volátiles EWS devueltos por Office.js a `ImmutableId` mediante Microsoft Graph (`/me/translateExchangeIds`), persistiendo los 7 campos de identidad en `crm_activities`.
+- **Limpieza de Firmas y RGPD:** Depuración automática mediante expresiones regulares inteligentes para conservar únicamente el cuerpo útil del mensaje.
 
 ---
 
 ## 5. Tipologías de Eventos y Actividades Comerciales
-
-**Outlook de prospectos, preparado sin activar:** `ProspectOutlookService` reutiliza Microsoft Graph para el calendario del propietario, condicionado a los interruptores `CRM_PROSPECTS_PILOT_ENABLED` y `CRM_PROSPECTS_OUTLOOK_ENABLED` (apagados por defecto). Guarda estado/ID/versionado en `crm_prospect_activities`; las notas son locales. Solo Videollamada envía convocatoria y requiere email válido. Admin puede sincronizar en el calendario del propietario; Dirección consulta. `POST /crm-prospects/:id/activities/:activityId/sync` verifica ámbito y permite reintentos seguros de actualizaciones. Las creaciones inciertas se conservan para revisión y no se repiten automáticamente. El delta recibe fecha/hora/ubicación, preserva cambios locales pendientes y conserva registros retirados en Outlook. SQL sin aplicar; pruebas con Graph simulado. La vista previa identifica expresamente Outlook simulado.
 
 En la pestaña de **Eventos** y en el botón **"Nueva Actividad"** de la ficha de contacto, el CRM clasifica las interacciones comerciales mediante tipologías oficiales:
 
@@ -145,100 +125,35 @@ En la pestaña de **Eventos** y en el botón **"Nueva Actividad"** de la ficha d
 - Al seleccionarla en el modal de nueva actividad, se presenta en blanco con un aviso de que dicha funcionalidad se configurará en una fase posterior para coordinar agendas internas del equipo.
 
 ### 5.3 Barra de Filtros Unificada (Mismo Diseño que la Pestaña de Emails)
-- **Consistencia Visual Absoluta:** La barra de filtros por tipología de la pestaña de Eventos replica de forma exacta la experiencia y diseño de la pestaña de Emails:
-  - Botón principal de **"Todos (N)"** con fondo azul corporativo (`bg-dts-primary text-white border-dts-primary shadow-xs`) cuando está activo.
-  - Píldoras con bordes suaves (`rounded-lg border`), icono Lucide corporativo con su color semántico, etiqueta descriptiva y badge redondeado (`rounded-full font-mono`) con el contador dinámico en tiempo real (`count`).
-  - Al seleccionarse un chip, este adopta su fondo semántico activo con texto blanco y badge traslúcido (`bg-white/25 text-white`).
-  - Separador vertical sutil y selector de estado: `Todos` | `Pendientes (Clock)` | `Realizados (Check)`.
+- **Consistencia Visual Absoluta:** La barra de filtros por tipología de la pestaña de Eventos replica de forma exacta la experiencia y diseño de la pestaña de Emails con contadores dinámicos y separador para el estado (*Todos*, *Pendientes*, *Realizados*).
 
 ### 5.4 Estados de Finalización y Colores de Fondo en la WebApp
-Para identificar al instante la situación operativa de cada cita o tarea, las tarjetas de la pestaña de Eventos y del Timeline aplican estilos semánticos dinámicos:
-1. **Completado / Realizado (`isCompleted === true` o con conclusiones registradas):**
-   - Fondo verde esmeralda sutil (`bg-emerald-500/8 dark:bg-emerald-950/20 border-emerald-500/25 dark:border-emerald-500/30`).
-   - Badge distintivo `✓ Realizado` y título atenuado.
-   - Badge de sincronización `Outlook (Completado)`.
-2. **Vencido pendiente de conclusiones (`isPastDate && !conclusions`):**
-   - Fondo ámbar de advertencia sutil (`bg-amber-500/8 dark:bg-amber-500/12 border-amber-300/70 dark:border-amber-500/30`).
-   - Badge `Vencido · Pendiente` y acceso directo con 1 clic: `Añadir conclusiones para cerrar la actividad`.
-3. **Pendiente / Programado a futuro:**
-   - Fondo estándar limpio (`bg-white dark:bg-zinc-900/40 border-gray-200/70 dark:border-white/5`).
-   - Badge `Outlook` en azul corporativo dTS.
-4. **Checkbox de Realización Universal:**
-   - Disponible en todas las actividades comerciales que no sean notas internas (visitas, videollamadas, llamadas, tareas y eventos espontáneos), permitiendo al comercial marcar o desmarcar la actividad en 1 solo clic.
-5. **Modal Rápido de Cierre y Conclusiones:**
-   - Al marcar una actividad pendiente, el sistema abre automáticamente un modal ligero y centrado que solicita registrar las conclusiones o acuerdos alcanzados.
-   - Cuenta con botón principal *"Guardar y Completar"* (actualiza la actividad e inserta las conclusiones en el evento de Outlook) y opción rápida *"Completar sin conclusiones"*. Al reactivar una actividad completada, el checkbox conmuta directamente a pendiente.
+1. **Completado / Realizado (`isCompleted === true` o con conclusiones registradas):** Fondo verde esmeralda sutil (`bg-emerald-500/8 dark:bg-emerald-950/20`), badge `✓ Realizado` y sincronización `Outlook (Completado)`.
+2. **Vencido pendiente de conclusiones (`isPastDate && !conclusions`):** Fondo ámbar (`bg-amber-500/8 dark:bg-amber-500/12`), badge `Vencido · Pendiente` y acceso rápido para agregar conclusiones.
+3. **Pendiente / Programado a futuro:** Fondo estándar limpio (`bg-white dark:bg-zinc-900/40`) y badge `Outlook` en azul corporativo dTS.
+4. **Checkbox de Realización Universal:** Alterna de forma ágil entre pendiente y realizado.
+5. **Modal Rápido de Cierre y Conclusiones:** Solicita registrar conclusiones alcanzadas y las sincroniza en el cuerpo de la cita en Outlook.
 
 ### 5.5 Sincronización de Color y Estado en Microsoft Outlook
 - **Categorías Maestras de Microsoft 365 (`outlook/masterCategories`):**
-  - **Pendiente / Activo:** Categoría `"dTS CRM"` con preset de color **`preset7` (Azul corporativo dTS `#003E51`)**.
-  - **Completado / Realizado:** Categoría `"dTS CRM - Completado"` con preset de color **`preset4` (Verde esmeralda / Green)**.
-- **Cambio Automático de Color en el Calendario:**
-  - Al marcar una actividad como realizada dentro de la app (o guardar conclusiones), Microsoft Graph actualiza el evento en el calendario de Outlook asignándole la categoría `"dTS CRM - Completado"`. Outlook tiñe automáticamente el bloque del evento en **verde**.
-  - Si el usuario desmarca la actividad para reactivarla, Microsoft Graph reasigna la categoría `"dTS CRM"` y el evento vuelve a su color **azul corporativo**.
-- **Identificación en el Asunto:**
-  - Los eventos completados adoptan el prefijo `[✓ dTS CRM - Realizado: TipoActividad] Asunto (Cliente)`.
+  - **Pendiente / Activo:** Categoría `"dTS CRM"` con preset **`preset7` (Azul corporativo dTS `#003E51`)**.
+  - **Completado / Realizado:** Categoría `"dTS CRM - Completado"` con preset **`preset4` (Verde esmeralda)**.
+- **Cambio Automático de Color:** Al completar la actividad en la app, Microsoft Graph actualiza la categoría y tiñe el bloque en verde; al desmarcarla, retorna al azul corporativo.
 
-### 5.6 Sincronización Automática de Eventos con Microsoft Outlook y Retirada de Botón Deep Link
-- **Sincronización Transparente en Segundo Plano:**
-  - Todas las actividades tipo evento creadas en el CRM se sincronizan de forma bidireccional y transparente con el calendario personal de Outlook de cada comercial mediante Microsoft Graph.
-- **Retirada del Botón Directo "Abrir en Outlook" en Eventos:**
-  - Se eliminó el botón de apertura directa en Outlook (`openCalendarEventInOutlook` / `ExternalLink`) en la lista de eventos tras comprobar que los deep links de calendario en Outlook Web (`/calendar/item/<id>`) y el protocolo de escritorio (`outlook:calendar`) provocaban fallos de carga o comportamientos erráticos según el cliente/navegador del usuario. La visualización de citas se realiza directamente abriendo el calendario personal en Outlook o mediante la sincronización reactiva de la propia WebApp.
-- **Pestaña Unificada Nombrada (`OUTLOOK_WEB_TAB_NAME = 'dts_outlook_web'`):**
-  - Mantiene el aislamiento para la apertura y redacción de correos electrónicos sin duplicar pestañas.
-- **Protección Backend Contra Concurrencia (`inFlightSyncs`) y Deduplicación:**
-  - `ExchangeSyncService` implementa un semáforo en memoria (`inFlightSyncs`) por actividad que bloquea llamadas simultáneas a `createCalendarEvent`.
-  - Se verifica de nuevo en base de datos si la actividad ya posee `exchange_item_id` antes de crear en Microsoft Graph.
-  - Se limpian de forma iterativa prefijos tipo `[dTS CRM...]` y sufijos de cliente repetidos para impedir acumulación de textos redundantes en el asunto de la cita.
-  - Se protege la integridad de los datos evitando la eliminación destructiva de actividades locales si una consulta temporal a Graph devuelve 404 durante la replicación inicial de Exchange.
+### 5.6 Sincronización Automática de Eventos con Microsoft Outlook
+- Sincronización transparente bidireccional en segundo plano.
+- Retirada de enlaces directos inestables de calendario; visualización garantizada en el calendario personal de Outlook.
+- Protección backend contra concurrencia (`inFlightSyncs`) y deduplicación estricta de citas.
 
 ### 5.7 Sincronización Bidireccional de Fecha y Hora (Cambios en Outlook -> WebApp)
-- **Actualización Prioritaria de Eventos Existentes:**
-  - Cuando se procesa el delta de Microsoft Graph (`syncOutlookToCrm`), el sistema localiza en primer lugar si el evento ya existe en el CRM por su `exchange_item_id`.
-  - No se exige la presencia de asistentes de correo (`attendees`) para eventos ya vinculados, permitiendo que citas individuales, visitas, tareas y reuniones sin convocatoria externa actualicen su fecha y hora en el CRM inmediatamente.
-- **Extracción Exacta de Zona Horaria (Europe/Madrid):**
-  - La fecha (`due_date`) y la hora (`time_scheduled`) se extraen de forma determinista descomponiendo directamente la cadena ISO `YYYY-MM-DDTHH:mm:ss` devuelta por Microsoft Graph bajo el encabezado `Prefer: outlook.timezone="Europe/Madrid"`, eliminando desfasajes provocados por diferencias horarias en servidores UTC.
-- **Sincronización Reactiva y Automática en Tiempo Real:**
-  - **Detección Inmediata por Foco y Visibilidad (`window.onfocus` / `document.visibilitychange`):** Al modificar o reprogramar un evento en Outlook (web o escritorio) y regresar a la WebApp (haciendo clic o cambiando de ventana), el navegador dispara de inmediato la sincronización con Microsoft Graph con un throttle inteligente de 5 segundos, reflejando la nueva hora en pantalla en milisegundos sin requerir interacción manual.
-  - **Polling Silencioso en Segundo Plano (cada 25s):** Mientras la ventana permanezca visible (ideal para configuraciones multipantalla), un intervalo silencioso actualiza en segundo plano cualquier cambio originado en Outlook.
-  - **Refresco Automático por Pestañas:** Al alternar entre las pestañas de **Eventos** y **Timeline**, el sistema asegura que la información de fechas y horas se mantenga 100% al día.
-  - **Aviso Llamativo de Conclusiones Pendientes:** En eventos vencidos o marcados como realizados sin conclusiones registradas, la tarjeta se resalta en tono ámbar vibrante (`border-2 border-amber-400 bg-amber-500/10`) con el badge `FALTAN CONCLUSIONES` y un botón prominente `AGREGAR CONCLUSIONES` que abre directamente el modal ágil de cierre y conclusiones.
+- Actualización reactiva por foco y visibilidad (`window.onfocus` / `document.visibilitychange`).
+- Polling silencioso en segundo plano (cada 25s) y extracción exacta de hora bajo zona horaria `Europe/Madrid`.
 
-### 5.8 Ergonomía Visual Ultra-Compacta, Proporciones Tipográficas y Sanitización
-- **Encabezado y Línea Divisoria Integrados con `flex-wrap`:**
-  - El encabezado de la tarjeta agrupa en una fila adaptativa el checkbox de estado, badge de tipología, título, badges de sincronización/conclusiones, fecha/hora y acciones rápidas de edición y eliminación (`Edit2`, `Trash2`).
-  - La línea divisoria horizontal inferior (`border-b border-gray-200 dark:border-zinc-700/70`) separa nítidamente el encabezado del contenido.
-- **Tipografía Optimizada y Legible:**
-  - Título del evento a 13.5px (`text-[13.5px] font-semibold`), badges a 9.5px, fecha/hora/ubicación a 11px, y cuerpo de descripción a 12.5px (`text-[12.5px] leading-snug`), logrando un equilibrio visual impecable entre compacidad y comodidad de lectura.
-- **Badge Interactivo de Conclusiones:**
-  - El badge `VENCIDO · FALTAN CONCLUSIONES` se presenta sin negrita (`font-normal text-[9px]`) y actúa como un disparador directo (`cursor-pointer`) que abre el modal de registro de conclusiones al hacer clic sobre él.
-  - Al pie del detalle se proporciona un enlace discreto `+ Registrar conclusiones` en lugar de barras desproporcionadas.
-- **Sanitización y Supresión de Boilerplate de Outlook (`cleanActivityDescription` / `cleanOutlookBody`):**
-  - Se eliminan tanto en frontend como en backend las líneas de separación con guiones bajos (`________________________________`), bloques de encabezado repetidos (`Actividad de CRM dTS Instruments...`) y saltos vacíos múltiples que Microsoft Graph introducía al sincronizar citas hacia la base de datos.
-  - El detalle muestra exclusivamente el contenido real y útil del evento, logrando una presentación ordenada, limpia y profesional.
+### 5.8 Ergonomía Visual Ultra-Compacta y Sanitización
+- Encabezado adaptable con visualización permanente de fecha, hora, ubicación y acciones rápidas.
+- Sanitización de texto para suprimir guiones bajos acumulados (`____`) y firmas reiteradas.
 
 ### 5.9 Apertura Nativa en Outlook Classic (`dts-mail://` v2.3), Menú Secundario y Fallback Inteligente
-- **Protocolo de Enlace Nativo (`dts-mail://` v2.3):**
-  - Permite a los usuarios que prefieren la aplicación de escritorio abrir los correos archivados directamente en la ventana nativa de `OUTLOOK.EXE` en modo lectura del correo original, sin abrir ventanas de redacción de nuevo correo.
-  - **Sanitización de Asunto (`cleanEmailSubjectForOutlook`):** Filtra automáticamente cualquier prefijo o corchete comercial inyectado por el CRM (`[📥 Recibido · 📋 Petición oferta]`, `[📤 Enviado]`), normaliza guiones tipográficos (`—`, `–`) y suprime emojis para evitar desajustes de codificación de caracteres en Windows (mojibake).
-  - **Manejador Inteligente Local (`outlook_handler.vbs` v2.3):**
-    1. Extrae el núcleo del asunto (`ExtractCoreSubject`) aislando el asunto real de la conversación.
-    2. Realiza una búsqueda segura en la Bandeja de Entrada (`olFolderInbox`) y Elementos Enviados (`olFolderSentMail`) protegiendo el acceso a propiedades ante elementos del calendario (`MeetingItem`) o avisos del sistema (`ReportItem`).
-    3. Al localizarlo, ejecuta `item.Display` con activación de inspector (`insp.Activate`) y retardo de estabilidad de proceso (`WScript.Sleep 400`) para garantizar la persistencia de la ventana en pantalla.
-    4. Si el correo fue movido a archivadores personales, activa la búsqueda limpia en todas las carpetas (`olSearchScopeAllFolders = 1`).
-  - Se instala mediante un script autocontenido de 1 solo clic (`Instalar_Outlook_dTS.bat`) en texto plano UTF-8 (sin PowerShell Base64 ni políticas Bypass para evitar falsas alertas de Windows Defender), registrando el protocolo en `HKEY_CURRENT_USER\Software\Classes\dts-mail` y guardando el manejador en `%LOCALAPPDATA%\dTS\` sin requerir permisos de administrador.
-- **Menú de Acciones Secundarias en Cada Correo:**
-  - Junto al botón principal de Outlook, un selector desplegable (`...`) proporciona acceso directo e inmediato a:
-    1. **Abrir en Outlook Classic:** Fuerza la apertura nativa en escritorio mediante `dts-mail://open`.
-    2. **Abrir en Outlook Web (M365):** Abre el deep link oficial de Microsoft 365 en una pestaña del navegador.
-    3. **Responder en Outlook:** Invoca `dts-mail://reply` (o compositor web) citando el correo y cargando destinatarios y asunto automáticamente.
-    4. **Buscar conversación completa:** Invoca `dts-mail://search` activando la búsqueda global del hilo en Outlook Classic o en la nube.
-    5. **Copiar datos de búsqueda:** Copia al portapapeles la sintaxis `de:<remitente> asunto:"<asunto_limpio>"` para pegarla manualmente en Outlook.
-- **Detección y Fallback Inteligente:**
-  - Si un usuario pulsa el botón de escritorio en un ordenador donde aún no se ha ejecutado el archivo de configuración, el sistema detecta si la llamada no fue atendida y despliega un modal elegante ofreciendo:
-    - *Abrir en Outlook Web ahora* (solución instantánea).
-    - *Descargar Configurador de Windows (1 Clic)*.
-    - *Ya lo tengo instalado en este equipo (No volver a mostrar)*: Guarda la confirmación en `localStorage` (`dts_outlook_protocol_installed`) para silenciar alertas futuras mientras Chrome o Edge procesan el diálogo de apertura.
-
-### Seguimiento de ofertas del piloto
-Cuando el contacto tiene ofertas con seguimiento APP, la pestaña Ofertas reutiliza CrmPipeline con contactId: seis fases abiertas, porcentajes automáticos, cierre mediante motivo y nota obligatorios y tablas de ganadas/perdidas. El resto de contactos conserva el tablero anterior. Se mantiene el filtro servidor por contacto y cartera; Dirección consulta sin arrastre. La nota y la fase del piloto se guardan conjuntamente en las tablas locales.
+- Protocolo `dts-mail://` v2.3 para apertura directa en ventana nativa en modo lectura en primer plano.
+- Menú de 5 acciones secundarias (`Abrir Classic`, `Abrir Web`, `Responder`, `Buscar conversación`, `Copiar datos de búsqueda`).
+- Detección asistida con modal de fallback para descargar el configurador `.bat` o abrir en versión web de forma instantánea.

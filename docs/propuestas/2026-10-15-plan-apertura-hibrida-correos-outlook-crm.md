@@ -1,7 +1,8 @@
 # Plan de apertura híbrida de correos de Outlook desde el CRM
 
 **Fecha:** 15 de octubre de 2026  
-**Estado:** Propuesta para revisión, sin implementación funcional autorizada todavía  
+**Estado:** Fase 0 principal verificada con una cuenta; fase 1 aplicada y verificada en Supabase; fase 2 implementada y comprobada automáticamente, pendiente de aceptación del complemento en Outlook.
+
 **Destinatario:** Dirección y responsable de la aplicación  
 **Ámbito:** Tarjetas de correos en Emails y Timeline, complemento de Outlook, integración Microsoft 365 y componente de escritorio.
 
@@ -13,7 +14,9 @@ Se propone sustituir progresivamente el manejador VBS por un componente local ma
 
 La rama `codex/inicio-trabajo` se ha actualizado mediante avance directo al commit local `ccb4372`, que corrige la generación del instalador BAT. También se han incorporado las modificaciones locales pendientes de `docs/manual-usuario.md`, `docs/vistas/03_crm/crm_pipeline.md` y `docs/vistas/README.md`, conservando los demás cambios del piloto. Las diferencias restantes detectadas entre los archivos comparados eran de terminaciones de línea.
 
-Este plan no modifica la aplicación, la instalación de Outlook ni Supabase. La sincronización inicial solo incorpora trabajo ya existente en la carpeta local. La limpieza descrita se ejecutará dentro de las fases posteriores, tras revisar el plan.
+La preparación inicial no modificó la aplicación ni la instalación de Outlook. Tras la autorización de ejecución, se han añadido herramientas independientes para la fase 0, sin conectarlas a las rutas de producción ni aplicar migraciones. El [estado de la fase 0](2026-10-15-fase-0-apertura-outlook.md) distingue pruebas automáticas, comprobaciones reales y casos pendientes. La limpieza se ejecutará dentro de las fases posteriores cuando se verifique su sustitución.
+
+La [fase 1 de identidad y migración](2026-10-15-fase-1-contrato-identidad-correos.md) contiene el contrato de datos, los permisos, el diseño previsto de resolución y el orden seguro de activación. Su SQL se ha comprobado en una base aislada y todavía no se ha ejecutado en Supabase.
 
 El primer alcance propuesto cubre Microsoft 365 y movimientos entre carpetas del mismo buzón, con apertura web o en Outlook Classic de Windows. El nuevo Outlook utilizará la vía web mientras no se valide una apertura nativa específica. Los buzones compartidos, el archivo en línea y los PST se inventariarán antes de fijar su cobertura; no se prometen como equivalentes al buzón principal.
 
@@ -194,4 +197,4 @@ La aceptación exige cero aperturas de mensajes incorrectos en la matriz de prue
 5. Designar usuarios del piloto y quién valida la ampliación.
 6. Confirmar que los correos antiguos no recuperables quedarán visibles en el CRM con opción de revinculación manual.
 
-El siguiente trabajo tras revisar el plan será la prueba de viabilidad de la fase 0. La limpieza del código anterior se hará después de verificar su sustitución, y no durante la preparación de este documento.
+La [fase 2](2026-10-15-fase-2-registro-identidad-correos.md) incorpora el registro de referencias verificadas y elimina la conciliación aproximada de borradores. El siguiente paso funcional es la fase 3: resolver por identidad y abrir el enlace web actual desde las tarjetas. El componente local y sus instaladores se mantienen hasta validar su sustitución en las fases 4 y 7.

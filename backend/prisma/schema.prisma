@@ -1037,6 +1037,13 @@ model crm_activities {
   conclusions             String?         @db.Text
   exchange_item_id        String?         @db.VarChar(255)
   exchange_change_key     String?         @db.VarChar(255)
+  exchange_tenant_id String? @db.VarChar(255)
+  exchange_mailbox_id String? @db.VarChar(255)
+  exchange_immutable_id String? @db.Text
+  exchange_original_id_type String? @db.VarChar(32)
+  exchange_internet_message_id String? @db.Text
+  exchange_resolution_status String? @db.VarChar(32)
+  exchange_resolved_at DateTime? @db.Timestamptz(6)
   exchange_web_link       String?         @db.Text
   exchange_sync_status    String?         @default("local_only") @db.VarChar(50)
   exchange_last_synced_at DateTime?       @db.Timestamptz(6)

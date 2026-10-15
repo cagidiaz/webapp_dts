@@ -317,9 +317,14 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
 * **Badge Interactivo de Oferta Comercial (Distinción Estricta)**:
   * Si el correo fue asociado a una cotización de Business Central, se muestra un distintivo azul independiente con su código e importe (ej. `📄 Oferta: OF-2024-001 (4.500 €)`), claramente diferenciado del badge de tipología.
   * Al hacer clic sobre el badge de la oferta, se abre de inmediato el **Drawer lateral** de la oferta con todos sus detalles sin abandonar la ficha del contacto.
-* **Preparación Directa en Outlook (Sin Envío Automático)**:
+* **Preparación Directa en Outlook y Ciclo de Estados de Envío**:
   * El comercial redacta el correo o carga una plantilla corporativa en la WebApp y, al pulsar **"Abrir y Preparar en Outlook"**, el sistema genera el nuevo correo en Outlook con todos los datos precargados (destinatario, asunto y cuerpo).
-  * Permite al comercial revisar el texto, adjuntar archivos o catálogos PDF y pulsar **"Enviar"** directamente desde Outlook.
+  * **Ciclo de Estados y Badges Informativos**:
+    * `draft` (Borrador): Guardado localmente esperando revisión o despacho en Outlook.
+    * `send_unconfirmed` (Envío sin confirmar): El sistema ha disparado el envío vía Microsoft Graph pero la respuesta está en proceso. Muestra el badge ámbar: `Envío sin confirmar: revisar Outlook` para prevenir duplicación accidental de envíos.
+    * `sent_pending` (Referencia de envío pendiente): Correo entregado exitosamente por Microsoft 365, en proceso de archivar su copia en "Elementos enviados" y obtener el identificador estable inmutable. Muestra el badge ámbar: `Referencia de envío pendiente`.
+    * `synced` (Sincronizado): Identidad inmutable confirmada y resuelta (`resolved`).
+  * **Auto-sincronización Inteligente**: Al acceder a la ficha del contacto, si hay correos en estado transitorio (`draft`, `sent_pending`, `send_unconfirmed`), la aplicación sincroniza en segundo plano mediante lotes rotativos de hasta 25 referencias para verificar si ya fueron despachados.
 * **Botón Directo "Abrir en Outlook" y Menú de Acciones Secundarias**:
   * En cada tarjeta de email de la pestaña *Emails*, en los eventos de correo del *Timeline* y en la cabecera del contacto, se incluye la acción **"Abrir en Outlook"** acompañada de un menú desplegable contextual (`...`):
   * **Comportamiento Determinista por Preferencia**:
@@ -338,27 +343,27 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
 ### 3.4 Complemento de Outlook (Add-in dTS CRM)
 Extensión oficial integrada en la cinta de opciones de Microsoft Outlook (Web, Escritorio Windows y Mac). Para instrucciones completas de instalación ver [Guía de Instalación y Despliegue del Add-in de Outlook](file:///c:/proyectos/webapp_dts/docs/manual-instalacion-addin-outlook.md).
 
+* **Autenticación Integrada y Sesión Segura en Panel (`OutlookAddinSession`)**:
+  * Todas las operaciones del panel están protegidas por autenticación JWT del CRM. Si la sesión no está iniciada o caduca, el panel muestra un formulario de login corporativo embebido, impidiendo que el iframe de Outlook sea expulsado o redirigido a páginas externas.
+* **Aislamiento y Seguridad por Cartera Comercial (RBAC)**:
+  * Los comerciales (`VENTAS`, `OPERACIONES`) solo pueden buscar clientes, seleccionar contactos y asociar ofertas pertenecientes a su propia cartera asignada (`customerScope`), blindando la confidencialidad entre áreas de venta.
+* **Persistencia con Identidad Inmutable Estable (`ImmutableId`)**:
+  * Al registrar un correo, el backend traduce el identificador volátil de Office.js (`ewsId`) a un `ImmutableId` binario permanente en Microsoft Graph, almacenando el tenant, buzón y estado de resolución determinista (`resolved`), lo que garantiza que el correo pueda reabrirse fielmente en el futuro aunque sea movido de carpeta en Outlook.
+* **Bloqueo en Modo Demostración**: Si el complemento se abre fuera de Outlook (navegador estándar), se activa el modo de prueba visual pero se bloquea el guardado real para proteger los datos de producción.
 * **Botón Ribbon "Registrar en dTS CRM"**: Acceso en caliente desde la barra superior de Outlook mientras se lee o redacta cualquier correo en Windows, Mac o Web.
 * **Carga Inmediata y Skeleton Loading**: Apertura instantánea con animación estructurada corporativa dTS, desacoplando la lectura pesada del cuerpo del correo para iniciar la consulta al CRM en milisegundos.
 * **Presentación Limpia y Ergonómica**: Visualización directa de las direcciones de correo en los campos **De:** y **Para:**, eliminando etiquetas superfluas y aprovechando todo el ancho del panel.
 * **Detección Contextual Inteligente**: Reconocimiento automático del contacto y empresa (evalúa el remitente en recibidos o el destinatario en enviados).
 * **Asociación y Selección Manual de Contactos por Empresa**:
-  * Cuando el remitente no está registrado previamente, el comercial puede buscar la empresa cliente (`customers`).
-  * Al seleccionar o detectar una empresa, se despliega un **selector dinámico de contactos** con todos los interlocutores de dicha cuenta registrados en Business Central (`Nombre`, `Cargo/Rol`, `Email`), incluyendo un buscador rápido por texto.
-  * Sugerencia automática del contacto si el nombre del interlocutor coincide con alguno de los contactos de la empresa.
-  * Opción flexible de asignación manual de contacto o archivo a nivel general de empresa.
+  * Cuando el remitente no está registrado previamente, el comercial puede buscar la empresa cliente (`customers`) de su cartera.
+  * Selector dinámico con todos los contactos de dicha cuenta registrados en Business Central (`Nombre`, `Cargo/Rol`, `Email`), incluyendo buscador por texto y sugerencias inteligentes.
 * **Vinculación a Ofertas Dinámica y Opcional**:
   * Al asociar una empresa, se cargan de inmediato sus ofertas comerciales abiertas para vincular el correo a la cotización correspondiente.
-  * El número de oferta se persiste de forma estructurada en `attendees: { quoteDocumentNo }` para su explotación en el CRM.
-* **Etiquetado Comercial en 5 Tipologías Oficiales**: Clasificación en un clic distribuida en cuadrícula:
-  1. `📋 Petición oferta` (`PETICION_OFERTA`)
-  2. `📦 Oferta proveedor` (`OFERTA_PROVEEDOR`)
-  3. `📝 Revisión oferta` (`REVISION_OFERTA`)
-  4. `💬 Negociación` (`NEGOCIACION`)
-  5. `📄 Cierre/Aceptación` (`CIERRE_ACEPTACION`) - *Marca automáticamente la oferta asociada como Ganada*.
+  * Si la oferta forma parte del seguimiento comercial local, el correo se registra como actividad sin alterar de forma automática su fase de cierre.
+* **Etiquetado Comercial en 5 Tipologías Oficiales**: Clasificación en un clic (`📋 Petición oferta`, `📦 Oferta proveedor`, `📝 Revisión oferta`, `💬 Negociación`, `📄 Cierre/Aceptación`).
 * **Limpieza y Acortado Inteligente de RGPD y Firmas**:
-  * Filtro automático robusto de cláusulas legales de privacidad (RGPD / LOPD en español e inglés), cadenas repetitivas de reenvíos (`De: ... Enviado el: ...`), firmas pesadas y normalización de saltos de línea continuos.
-* **Prevención Activa de Duplicados**: Detección por identificador único de Microsoft Graph (`✓ Ya registrado en dTS CRM`).
+  * Filtro automático robusto de cláusulas legales de privacidad (RGPD / LOPD), cadenas repetitivas de reenvíos, firmas pesadas y saltos de línea acumulados.
+* **Prevención Activa de Duplicados en Cartera**: Detección determinista por `ImmutableId` cruzado con el comercial, empresa y contacto (`✓ Ya registrado en dTS CRM`).
 * **Resumen de Destino Previo al Guardado**: Tarjeta de confirmación visual que muestra la empresa cliente y el contacto vinculado antes de pulsar guardar.
 
 ---

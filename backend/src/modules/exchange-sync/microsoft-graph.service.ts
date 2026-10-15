@@ -1,4 +1,5 @@
 import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { emailIdentityEnabled } from './email-identity-settings';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -593,6 +594,8 @@ export class MicrosoftGraphService {
       throw new BadRequestException('Tu cuenta de Microsoft 365 / Exchange no está conectada. Conéctala para preparar borradores en Outlook.');
     }
 
+    const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, select: { email: true, is_active: true } });
+    const immutable = !!profile?.is_active && emailIdentityEnabled(this.configService, profile.email);
     const message: any = {
       subject: mailPayload.subject,
       body: {
@@ -621,6 +624,7 @@ export class MicrosoftGraphService {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(immutable ? { Prefer: 'IdType="ImmutableId"' } : {}),
       },
       body: JSON.stringify(message),
     });
@@ -634,6 +638,7 @@ export class MicrosoftGraphService {
     const createdDraft = await response.json();
     return {
       id: createdDraft.id as string,
+      idType: immutable ? 'restImmutableEntryId' as const : 'restId' as const,
       webLink: createdDraft.webLink as string,
       conversationId: createdDraft.conversationId as string,
       subject: createdDraft.subject as string,
@@ -706,55 +711,19 @@ export class MicrosoftGraphService {
     }
   }
 
-  /**
-   * Obtiene mensajes recientes de las carpetas de Entrada y Enviados para sincronización con contactos del CRM.
-   */
-  /**
-   * Obtiene mensajes recientes de las carpetas de Entrada y Enviados para sincronización con contactos del CRM.
-   */
-  async getRecentMessages(userId: string) {
-    const accessToken = await this.getValidAccessToken(userId);
-    if (!accessToken) return [];
-
-    // Consultar los últimos 40 correos recibidos y enviados
-    const url = `https://graph.microsoft.com/v1.0/me/messages?$top=40&$select=id,conversationId,subject,bodyPreview,receivedDateTime,sentDateTime,from,toRecipients,ccRecipients,webLink&$orderby=receivedDateTime desc`;
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      this.logger.warn(`Error al consultar mensajes recientes de Graph para ${userId}`);
-      return [];
+  /** Send only the draft explicitly created by this request. Never retries a send. */
+  async sendDraft(userId: string, immutableId: string): Promise<void> {
+    if (!immutableId || /[\s\x00-\x1f]/.test(immutableId)) throw new BadRequestException('Referencia de borrador no válida.');
+    const token = await this.getValidAccessToken(userId);
+    if (!token) throw new BadRequestException('Reconecta tu cuenta de Microsoft 365.');
+    try {
+      const response = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(immutableId)}/send`, {
+        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15000),
+        headers: { Authorization: `Bearer ${token}`, Prefer: 'IdType="ImmutableId"' },
+      });
+      if (!response.ok) throw new Error('SEND_NOT_CONFIRMED');
+    } catch {
+      throw new BadRequestException('No se pudo confirmar el envío. Comprueba Outlook antes de volver a enviar para evitar duplicados.');
     }
-
-    const data = await response.json();
-    return (data.value || []) as any[];
-  }
-
-  /**
-   * Obtiene los mensajes enviados recientemente desde la carpeta 'sentitems' de Microsoft 365.
-   */
-  async getRecentSentMessages(userId: string) {
-    const accessToken = await this.getValidAccessToken(userId);
-    if (!accessToken) return [];
-
-    const url = `https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$top=30&$select=id,conversationId,subject,bodyPreview,sentDateTime,toRecipients,ccRecipients,webLink&$orderby=sentDateTime desc`;
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      this.logger.warn(`Error al consultar mensajes enviados en sentitems para ${userId}`);
-      return [];
-    }
-
-    const data = await response.json();
-    return (data.value || []) as any[];
   }
 }

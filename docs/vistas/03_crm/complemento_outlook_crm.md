@@ -5,17 +5,21 @@ El **Complemento de Outlook para dTS CRM** es una aplicación integrada dentro d
 
 Su función principal es permitir que los comerciales y gestores de cuentas registren correos electrónicos recibidos o enviados directamente en el CRM sin salir de Outlook, asociándolos automáticamente con:
 1. El **Contacto** de la empresa.
-2. La **Empresa / Cliente** en Business Central.
+2. La **Empresa / Cliente** en Business Central (limitado a su cartera comercial).
 3. Una **Oferta Comercial viva (Quote)** existente en el CRM.
 4. Una **Categoría comercial tipificada** (Petición de oferta, seguimiento, dudas técnicas, pedido confirmado, etc.).
+5. Su **Identidad Inmutable Estable (`ImmutableId`)** en Microsoft Graph para garantizar aperturas futuras fiables y deterministas.
 
 ---
 
 ## 2. Ficheros y Rutas del Código
-* **Componente Frontend:** [`frontend/src/pages/outlook-addin/OutlookAddinPage.tsx`](file:///c:/proyectos/webapp_dts/frontend/src/pages/outlook-addin/OutlookAddinPage.tsx)
+* **Componente Contenedor de Sesión:** [`frontend/src/pages/outlook-addin/OutlookAddinSession.tsx`](file:///c:/proyectos/webapp_dts/frontend/src/pages/outlook-addin/OutlookAddinSession.tsx)
+* **Componente Principal Frontend:** [`frontend/src/pages/outlook-addin/OutlookAddinPage.tsx`](file:///c:/proyectos/webapp_dts/frontend/src/pages/outlook-addin/OutlookAddinPage.tsx)
 * **API Client Frontend:** [`frontend/src/api/outlookAddin.ts`](file:///c:/proyectos/webapp_dts/frontend/src/api/outlookAddin.ts)
 * **Controlador NestJS:** [`backend/src/modules/exchange-sync/outlook-addin.controller.ts`](file:///c:/proyectos/webapp_dts/backend/src/modules/exchange-sync/outlook-addin.controller.ts)
 * **Servicio NestJS:** [`backend/src/modules/exchange-sync/outlook-addin.service.ts`](file:///c:/proyectos/webapp_dts/backend/src/modules/exchange-sync/outlook-addin.service.ts)
+* **Control de Acceso y Cartera RBAC:** [`backend/src/modules/exchange-sync/outlook-addin-access.service.ts`](file:///c:/proyectos/webapp_dts/backend/src/modules/exchange-sync/outlook-addin-access.service.ts)
+* **Servicio de Identidad Estable Graph:** [`backend/src/modules/exchange-sync/email-identity.service.ts`](file:///c:/proyectos/webapp_dts/backend/src/modules/exchange-sync/email-identity.service.ts)
 * **Ruta de Carga del Panel:** `/outlook-addin`
 * **Manifiesto XML de Office:** Fichero de configuración que registra el botón "Exportar a dTS CRM" en la cinta de opciones de Outlook.
 
@@ -27,13 +31,23 @@ Su función principal es permitir que los comerciales y gestores de cuentas regi
 Para garantizar máxima robustez y facilidad de prueba:
 * El componente detecta si se está ejecutando dentro del iframe de Microsoft Office (`window.Office?.context?.mailbox` o query string `_host_info`).
 * **Dentro de Outlook:** Carga la librería oficial `https://appsforoffice.microsoft.com/lib/1/hosted/office.js` y extrae los datos del elemento seleccionado en tiempo real (`item.subject`, `item.from`, `item.to`, `item.itemId`, `item.body.getAsync`).
-* **Fuera de Outlook (Navegador normal):** Activa automáticamente un entorno de prueba simulado (*mock*) con datos de prueba realistas para permitir su depuración y diseño visual sin necesidad de abrir Outlook.
+* **Fuera de Outlook (Navegador normal):** Activa automáticamente un entorno de prueba simulado (*mock*) con datos de prueba realistas para permitir su depuración y diseño visual. **El modo vista previa bloquea el registro real** de correos para evitar crear registros ficticios en la base de datos de producción.
 
-### 3.2. Proceso de Búsqueda y Coincidencia Automática (Lookup)
+### 3.2. Autenticación Integrada y Aislamiento de Sesión (`OutlookAddinSession.tsx`)
+* **Protección JWT por Endpoint:** Todas las rutas del controlador (`lookup`, `log`, `companies`, `contacts`, `quotes`) exigen autenticación con token JWT del CRM validado mediante `@UseGuards(JwtAuthGuard)`.
+* **Manejo de Expiración en Iframe:** Si la sesión expira o no se comparten cookies entre Outlook y el navegador, el interceptor de `apiClient.ts` emite el evento `dts:outlook-session-expired`. El panel presenta un formulario de login embebido con branding corporativo sin expulsar ni redirigir al comercial fuera de Outlook (`window.location.href = '/login'`).
+
+### 3.3. Control de Acceso y Ámbito de Cartera Comercial (RBAC)
+* **Validación de Cartera (`customerScope`):**
+  * Los comerciales con roles `VENTAS` u `OPERACIONES` solo pueden buscar clientes, seleccionar contactos y asociar ofertas que pertenezcan estrictamente a su código de comercial asignado (`salesperson_code`).
+  * Los roles `ADMIN` y `DIRECCION` mantienen visión consolidada global del CRM, pero no obtienen acceso a buzones de correo de otros usuarios.
+* **Integridad Cruzada:** Se valida que el contacto pertenezca a la empresa seleccionada y que la oferta comercial pertenezca al cliente y a la cartera autorizada antes de persistir cualquier actividad.
+
+### 3.4. Proceso de Búsqueda y Coincidencia Automática (Lookup)
 Al abrir el correo en el panel, el frontend llama a `POST /outlook-addin/lookup`:
-1. **Búsqueda por Correo Exacto:** Consulta si el remitente existe en `crm_contacts`. Si existe, recupera su ficha, empresa asociada y ofertas comerciales vivas.
-2. **Búsqueda por Dominio de Correo:** Si el correo exacto no existe (ej. nuevo contacto de un cliente existente), analiza el dominio del remitente (ej. `@cliente.com`) y localiza empresas registradas con ese dominio web.
-3. **Búsqueda Manual Asistida:** Si no hay coincidencia automática, el comercial dispone de un buscador en tiempo real para buscar cualquier empresa del catálogo, seleccionar contactos existentes o crear la vinculación al vuelo.
+1. **Búsqueda por Correo Exacto:** Consulta si el remitente existe en `contacts` dentro de la cartera del usuario. Si existe, recupera su ficha, empresa asociada y ofertas comerciales vivas.
+2. **Búsqueda por Dominio de Correo:** Si el correo exacto no existe (ej. nuevo contacto de un cliente existente), analiza el dominio del remitente (ej. `@cliente.com`) y localiza empresas registradas con ese dominio dentro de su cartera autorizada.
+3. **Búsqueda Manual Asistida:** Si no hay coincidencia automática, el comercial dispone de un buscador en tiempo real limitado a su cartera para seleccionar empresas, contactos existentes u ofertas.
 
 ---
 
@@ -59,11 +73,17 @@ Los correos corporativos suelen incluir largos hilos citados ("De: ... Enviado e
 
 ---
 
-## 6. Persistencia y Apertura Posterior desde la WebApp
+## 6. Persistencia e Identidad Estable (`ImmutableId`)
 Al pulsar **"Registrar en dTS CRM"**:
-1. Se inserta una actividad de tipo `EMAIL` en `crm_activities` y `sales_quote_activities`.
-2. Se guarda el `exchange_item_id` y el enlace web directo de Microsoft `exchange_web_link`.
-3. Esto permite que posteriormente, desde la vista web del CRM (Ficha del Contacto, Timeline o Pestaña de Mails), cualquier usuario pueda pulsar el icono de Outlook y abrir este correo original directamente en su Outlook (Web o Clásico) usando su identificador único.
-
-### Convivencia del cierre manual del piloto
-Una oferta APP conserva el correo como actividad local y no se gana automáticamente. Una oferta nueva del código real del TESTER configurado tampoco se gana por una categoría de aceptación antes de inicializar el seguimiento: si hace falta metadato CRM para registrar el correo, se copian los valores actuales BC y se conservan nulos/ceros. Los otros comerciales mantienen su flujo anterior. Piloto desactivado: no se consultan sus tablas ni perfiles para esta decisión. Validar con cuenta/cartera aisladas antes de conectar Outlook real.
+1. Se inserta una actividad de tipo `EMAIL` en `crm_activities` y opcionalmente en el seguimiento comercial de ofertas.
+2. **Transformación a Identidad Inmutable:** El backend toma el `exchangeItemId` (en formato `ewsId` devuelto por Office.js) y, mediante Microsoft Graph API (`/me/translateExchangeIds`), lo traduce a un `ImmutableId` binario estable que no cambia aunque el correo se mueva de carpeta en el buzón.
+3. **Contrato de 7 Campos de Identidad:**
+   * `exchange_tenant_id`: Tenant verificado de Microsoft 365.
+   * `exchange_mailbox_id`: Identificador del buzón del comercial.
+   * `exchange_immutable_id`: Identificador estable inmutable de Graph.
+   * `exchange_item_id_type`: Tipo de ID recibido (`ewsId` / `restImmutableEntryId`).
+   * `exchange_internet_message_id`: Cabecera estándar RFC 822 (`InternetMessageId`).
+   * `exchange_resolution_status`: Estado determinista (`resolved`, `pending`, `not_found`, `access_denied`, `temporary_error`).
+   * `exchange_resolved_at`: Timestamp de verificación de identidad.
+4. **Control de Duplicados en Cartera:** La comprobación de duplicados evalúa `exchange_immutable_id` junto con el creador, cliente y contacto, evitando falsos duplicados cruzados entre diferentes comerciales o asociaciones comerciales independientes del mismo correo.
+5. **Convivencia con Piloto de Ofertas:** Si la oferta pertenece al seguimiento local de ofertas, el correo se vincula como actividad local en `crm_offer_activities` sin alterar automáticamente la fase de la cotización ni su estado de cierre.

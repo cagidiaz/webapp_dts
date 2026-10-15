@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException, NotFoundException } from '@nes
 import { PrismaService } from '../../prisma/prisma.service';
 import { MicrosoftGraphService } from './microsoft-graph.service';
 import { CrmActivityType } from '@prisma/client';
+import { EmailIdentityService } from './email-identity.service';
 import { ProspectOutlookService } from './prospect-outlook.service';
 
 @Injectable()
@@ -13,6 +14,7 @@ export class ExchangeSyncService {
     private readonly prisma: PrismaService,
     private readonly graphService: MicrosoftGraphService,
     private readonly prospectOutlook: ProspectOutlookService,
+    private readonly identities: EmailIdentityService,
   ) {}
 
   /**
@@ -336,6 +338,20 @@ export class ExchangeSyncService {
       throw new BadRequestException('No se especificó la empresa o contacto destinatario.');
     }
 
+    if (await this.identities.enabledFor(userId)) {
+      // Persist the exact draft before sending. An uncertain send is never retried automatically.
+      const prepared = await this.createDraftFromCrm(userId, params);
+      await this.prisma.crm_activities.update({ where: { id: prepared.activity.id }, data: { exchange_sync_status: 'send_unconfirmed' } });
+      await this.graphService.sendDraft(userId, prepared.draft.id);
+      const identity = await this.identities.prepare(userId, prepared.draft.id, prepared.draft.idType);
+      const activity = await this.prisma.crm_activities.update({ where: { id: prepared.activity.id }, data: {
+        ...identity.patch, exchange_web_link: identity.webLink || prepared.draft.webLink,
+        exchange_sync_status: identity.patch.exchange_resolution_status === 'resolved' ? 'synced' : 'sent_pending',
+        exchange_last_synced_at: new Date(),
+      } });
+      return { success: true, activity };
+    }
+
     // 1. Enviar correo vía Microsoft Graph
     await this.graphService.sendMail(userId, {
       to,
@@ -420,6 +436,8 @@ export class ExchangeSyncService {
       isHtml: isHtml ?? false,
     });
 
+    const identity = await this.identities.prepare(userId, draft.id, draft.idType);
+
     // 2. Registrar actividad de correo en CRM como borrador pendiente
     const draftNow = new Date();
     const draftHh = String(draftNow.getHours()).padStart(2, '0');
@@ -435,6 +453,7 @@ export class ExchangeSyncService {
         email: to.join(', '),
         due_date: draftNow,
         time_scheduled: `${draftHh}:${draftMm}`,
+        ...identity.patch,
         exchange_item_id: draft.id,
         exchange_web_link: draft.webLink,
         exchange_sync_status: 'draft',
@@ -658,46 +677,35 @@ export class ExchangeSyncService {
           where: {
             created_by: userId,
             type: 'EMAIL',
-            exchange_sync_status: 'draft',
+            exchange_sync_status: { in: ['draft', 'sent_pending', 'send_unconfirmed'] },
+            exchange_immutable_id: { not: null },
+            exchange_mailbox_id: { not: null },
+            exchange_tenant_id: { not: null },
           },
-          include: { contact: true },
+          orderBy: [{ exchange_last_synced_at: { sort: 'asc', nulls: 'first' } }, { id: 'asc' }],
+          take: 25,
         });
 
-        if (pendingDrafts.length > 0) {
-          const recentSent = await this.graphService.getRecentSentMessages(userId);
-
-          if (recentSent.length > 0) {
-            for (const draftAct of pendingDrafts) {
-              const targetEmail = (draftAct.contact?.email || draftAct.email || '').toLowerCase().trim();
-              const draftDate = draftAct.created_at ? new Date(draftAct.created_at) : new Date();
-
-              const matchingSent = recentSent.find((msg: any) => {
-                const toRecipients = (msg.toRecipients || []).map((r: any) => r.emailAddress?.address?.toLowerCase().trim());
-                const ccRecipients = (msg.ccRecipients || []).map((r: any) => r.emailAddress?.address?.toLowerCase().trim());
-                const allRecipients = [...toRecipients, ...ccRecipients];
-                const matchesRecipient = targetEmail && allRecipients.includes(targetEmail);
-                const sentDate = msg.sentDateTime ? new Date(msg.sentDateTime) : null;
-                const isSentAfterDraft = sentDate && (sentDate.getTime() >= draftDate.getTime() - 120000); // 2 minutos de margen
-
-                return matchesRecipient && isSentAfterDraft;
-              });
-
-              if (matchingSent) {
-                await this.prisma.crm_activities.update({
-                  where: { id: draftAct.id },
-                  data: {
-                    title: matchingSent.subject || draftAct.title,
-                    description: matchingSent.bodyPreview ? matchingSent.bodyPreview.substring(0, 1000) : draftAct.description,
-                    exchange_item_id: matchingSent.id,
-                    exchange_web_link: matchingSent.webLink,
-                    exchange_sync_status: 'synced',
-                    exchange_last_synced_at: new Date(),
-                  },
-                });
-                syncedEmails++;
-              }
-            }
+        for (const draftAct of pendingDrafts) {
+          // Historic drafts lack a verified immutable reference: never guess by recipient or date.
+          if (!draftAct.exchange_immutable_id || !draftAct.exchange_mailbox_id || !draftAct.exchange_tenant_id) continue;
+          const identity = await this.identities.prepare(userId, draftAct.exchange_immutable_id, 'restImmutableEntryId');
+          if (!identity.enabled) continue;
+          const sameMailbox = identity.patch.exchange_mailbox_id === draftAct.exchange_mailbox_id
+            && identity.patch.exchange_tenant_id === draftAct.exchange_tenant_id;
+          if (identity.isDraft !== false || identity.patch.exchange_resolution_status !== 'resolved' || !sameMailbox) {
+            // Rotate bounded batches; preserve references and never rebind a reconnected account.
+            await this.prisma.crm_activities.updateMany({
+              where: { id: draftAct.id, created_by: userId, type: 'EMAIL', exchange_sync_status: draftAct.exchange_sync_status, exchange_immutable_id: draftAct.exchange_immutable_id },
+              data: { exchange_last_synced_at: new Date(), exchange_resolution_status: identity.patch.exchange_mailbox_id && !sameMailbox ? 'access_denied' : identity.patch.exchange_resolution_status },
+            });
+            continue;
           }
+          const result = await this.prisma.crm_activities.updateMany({
+            where: { id: draftAct.id, created_by: userId, type: 'EMAIL', exchange_sync_status: draftAct.exchange_sync_status, exchange_immutable_id: draftAct.exchange_immutable_id },
+            data: { ...identity.patch, exchange_original_id_type: draftAct.exchange_original_id_type || identity.patch.exchange_original_id_type, exchange_web_link: identity.webLink, exchange_sync_status: 'synced', exchange_last_synced_at: new Date() },
+          });
+          syncedEmails += result.count;
         }
       } catch (mailError) {
         this.logger.error(`Error al reconciliar borradores enviados para ${userId}:`, mailError);

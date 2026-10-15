@@ -147,10 +147,11 @@ El sistema sincroniza automáticamente todas las actividades con fecha y hora en
 ### C. Complemento de Outlook (Add-in dTS CRM)
 
 Además de la sincronización de fondo, dispones del **Complemento oficial de Outlook** (Add-in dTS CRM):
-* **Panel Lateral en Outlook**: Permite abrir la ficha rápida del cliente sin salir de tu correo.
-* **Presentación Limpia**: Muestra directamente los correos remitente y destinatarios sin etiquetas superfluas.
-* **Carga Inmediata (Skeleton Loading)**: Abre el panel de forma instantánea gracias a la desacoplación de lectura pesada del cuerpo.
-* **Clasificación a Ofertas Específicas**: Por defecto se mantiene en *(Sin vincular a oferta)*, permitiendo asociar una cotización concreta del embudo (`sales_quotes_crm`) con un solo clic.
+* **Panel Lateral en Outlook con Sesión Integrada (`OutlookAddinSession`)**: Permite abrir la ficha rápida del cliente sin salir de tu correo. Si tu sesión expira, presenta un formulario de inicio de sesión embebido sin redirigir fuera del panel de Outlook.
+* **Aislamiento y Confidencialidad por Cartera Comercial (RBAC)**: Búsqueda y vinculación restringida a los clientes y contactos asignados a tu código de comercial (`salesperson_code`).
+* **Persistencia con Identidad Inmutable Estable (`ImmutableId`)**: Traduce de forma determinista el identificador volátil de Office.js (`ewsId`) a un `ImmutableId` inalterable en Microsoft Graph, garantizando que el correo pueda volver a abrirse fielmente aunque se traslade de carpeta en el buzón.
+* **Presentación Limpia y Clasificación en 5 Tipologías**: Selección de categorías oficiales (`Petición oferta`, `Oferta proveedor`, `Revisión oferta`, `Negociación`, `Cierre/Aceptación`) con limpieza automática de avisos de confidencialidad y firmas extensas.
+* **Clasificación a Ofertas Específicas**: Vinculación ágil con cotizaciones abiertas del cliente conservando las reglas comerciales correspondientes.
 
 ---
 

@@ -618,7 +618,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
   // Auto-sincronización silenciosa en segundo plano si hay borradores de correo pendientes en la ficha
   const hasPendingDrafts = useMemo(() => {
-    return (dbActivities || []).some((act: any) => act.type === 'EMAIL' && act.exchange_sync_status === 'draft');
+    return (dbActivities || []).some((act: any) => act.type === 'EMAIL' && ['draft', 'sent_pending', 'send_unconfirmed'].includes(act.exchange_sync_status));
   }, [dbActivities]);
 
   const autoSyncedDraftsRef = useRef(false);
@@ -3106,6 +3106,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               {mail.exchangeSyncStatus === 'draft' && (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0">
                                   Borrador en Outlook
+                                </span>
+                              )}
+
+                              {['sent_pending', 'send_unconfirmed'].includes(mail.exchangeSyncStatus || '') && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0" title="Comprueba Outlook antes de volver a enviar. La app verificará el mismo correo sin repetir el envío.">
+                                  {mail.exchangeSyncStatus === 'sent_pending' ? 'Referencia de envío pendiente' : 'Envío sin confirmar: revisar Outlook'}
                                 </span>
                               )}
 

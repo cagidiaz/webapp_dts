@@ -2,6 +2,7 @@ import apiClient from './apiClient';
 
 export interface EmailLookupPayload {
   userEmail: string;
+  itemIdType?: 'ewsId' | 'restId' | 'restImmutableEntryId';
   fromEmail: string;
   fromName?: string;
   toEmails: string[];
@@ -53,6 +54,7 @@ export type OutlookEmailCategory =
 
 export interface LogEmailPayload {
   userEmail: string;
+  itemIdType?: 'ewsId' | 'restId' | 'restImmutableEntryId';
   exchangeItemId: string;
   exchangeWebLink?: string;
   contactId?: string;
