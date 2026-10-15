@@ -1,7 +1,7 @@
 # Plan de apertura híbrida de correos de Outlook desde el CRM
 
 **Fecha:** 15 de octubre de 2026  
-**Estado:** Fase 0 principal verificada con una cuenta; fase 1 aplicada y verificada en Supabase; fase 2 implementada y comprobada automáticamente, pendiente de aceptación del complemento en Outlook.
+**Estado:** Fases 0 y 1 verificadas; fases 2 y 3 implementadas localmente. Consulta Graph real verificada. Registro y apertura completos con Local Dev pendientes de aceptación; la importación confirmada por el usuario se realizó en producción.
 
 **Destinatario:** Dirección y responsable de la aplicación  
 **Ámbito:** Tarjetas de correos en Emails y Timeline, complemento de Outlook, integración Microsoft 365 y componente de escritorio.
@@ -197,4 +197,6 @@ La aceptación exige cero aperturas de mensajes incorrectos en la matriz de prue
 5. Designar usuarios del piloto y quién valida la ampliación.
 6. Confirmar que los correos antiguos no recuperables quedarán visibles en el CRM con opción de revinculación manual.
 
-La [fase 2](2026-10-15-fase-2-registro-identidad-correos.md) incorpora el registro de referencias verificadas y elimina la conciliación aproximada de borradores. El siguiente paso funcional es la fase 3: resolver por identidad y abrir el enlace web actual desde las tarjetas. El componente local y sus instaladores se mantienen hasta validar su sustitución en las fases 4 y 7.
+La [fase 2](2026-10-15-fase-2-registro-identidad-correos.md) incorpora el registro de referencias verificadas y elimina la conciliación aproximada de borradores. La fase 3 ya implementa la resolución por identidad y el enlace web actual desde las tarjetas. Tras aceptar esta apertura local, el siguiente paso funcional es la fase 4 para Classic. El componente local y sus instaladores se mantienen hasta validar su sustitución en las fases 4 y 7.
+
+La [fase 3 de resolución y apertura web](2026-10-15-fase-3-resolucion-apertura-web.md) documenta la ruta única, permisos, selección de copias, límites del piloto y prueba de aceptación local. La apertura exacta de Classic sigue en fase 4.

@@ -1,3 +1,4 @@
+import type { EmailResolveResult } from '../../../utils/resolvedEmailWindow';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -8,7 +9,7 @@ import {
   getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
   getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
   createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
-  getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook,
+  getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook as openLegacyEmailInOutlook, openVerifiedEmailInWeb,
   replyInOutlook, searchConversationInOutlook, copyEmailSearchToClipboard,
   markOutlookProtocolInstalled
 } from '../../../api';
@@ -257,11 +258,13 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [activeEmailMenuId, setActiveEmailMenuId] = useState<string | null>(null);
   const [showProtocolFallbackModal, setShowProtocolFallbackModal] = useState(false);
   const [fallbackEmailData, setFallbackEmailData] = useState<{
+    activityId?: string;
     webLink?: string | null;
     itemId?: string | null;
     email?: string | null;
     subject?: string | null;
   } | null>(null);
+  const [emailOpenNotice, setEmailOpenNotice] = useState<(EmailResolveResult & { activityId?: string; canOpenWeb?: boolean }) | null>(null);
   const [copiedEmailMenuId, setCopiedEmailMenuId] = useState<string | null>(null);
 
   // Escuchar si Windows no pudo abrir el protocolo dts-mail://
@@ -319,6 +322,26 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     queryFn: getExchangeStatus,
   });
   const isExchangeConnected = !!exchangeStatus?.isConnected;
+
+  const resolveWebEmail = async (activityId: string, candidateId?: string) => {
+    const request = openVerifiedEmailInWeb(activityId, candidateId);
+    setEmailOpenNotice({ activityId, status: 'pending', message: 'Comprobando el correo con Microsoft 365…' });
+    const result = await request;
+    if (result.status === 'resolved') setEmailOpenNotice(previous => previous?.activityId === activityId ? null : previous);
+    else setEmailOpenNotice({ ...result, activityId });
+  };
+
+  const openExistingEmailInOutlook = (options: Parameters<typeof openLegacyEmailInOutlook>[0] & { activityId?: string }) => {
+    if (!exchangeStatus) { setEmailOpenNotice({ status: 'pending', message: 'Espera a que se compruebe la conexión de Microsoft 365.' }); return; }
+    if (!exchangeStatus.emailIdentityEnabled) { openLegacyEmailInOutlook(options); return; }
+    if (!options.activityId) { setEmailOpenNotice({ status: 'legacy_unverified', message: 'Este registro no dispone de una actividad de correo verificable.' }); return; }
+    if ((options.target || getPreferredOutlookClient()) === 'desktop') {
+      setEmailOpenNotice({ activityId: options.activityId, canOpenWeb: true, status: 'pending', message: 'La apertura verificada en Classic todavía no está disponible. Puedes abrir este correo en Outlook Web.' });
+      return;
+    }
+    void resolveWebEmail(options.activityId);
+  };
+
 
   const { data: contact, isLoading: isLoadingContact } = useQuery({
     queryKey: ['crmContactDetail', contactId],
@@ -1496,6 +1519,17 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {emailOpenNotice && (
+        <div role="status" className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs text-gray-700 dark:text-gray-200 space-y-2">
+          <div className="flex justify-between gap-3"><span>{emailOpenNotice.message}{emailOpenNotice.retryAfterSeconds ? ` Espera ${emailOpenNotice.retryAfterSeconds} segundos.` : ''}</span><button type="button" aria-label="Cerrar aviso de Outlook" onClick={() => setEmailOpenNotice(null)}><X size={14} /></button></div>
+          {emailOpenNotice.activityId && emailOpenNotice.canOpenWeb && <button type="button" className="font-semibold text-dts-primary dark:text-sky-400" onClick={() => { void resolveWebEmail(emailOpenNotice.activityId!); }}>Abrir en Outlook Web</button>}
+          {emailOpenNotice.candidates?.map((candidate, index) => <button type="button" key={candidate.id} className="block rounded-lg border border-gray-200 dark:border-white/10 px-3 py-2 hover:bg-white dark:hover:bg-white/5 text-left" onClick={() => { void resolveWebEmail(emailOpenNotice.activityId!, candidate.id); }}>
+            Copia {index + 1} · {candidate.folder}{candidate.sentDate && Number.isFinite(Date.parse(candidate.sentDate)) ? ` · ${new Date(candidate.sentDate).toLocaleString('es-ES')}` : ''}
+          </button>)}
+          {emailOpenNotice.truncated && <p>Se muestran las primeras cinco copias. Si no identificas la correcta, revisa la vinculación antes de abrirla.</p>}
+        </div>
+      )}
+
       
       {/* Top Header Card */}
       <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
@@ -2157,6 +2191,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     const emailData = {
+                                      activityId: act.id,
                                       webLink: act.exchangeWebLink,
                                       itemId: act.exchangeItemId,
                                       email: act.email || contact?.email,
@@ -2201,6 +2236,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                       onClick={() => {
                                         setActiveEmailMenuId(null);
                                         const emailData = {
+                                          activityId: act.id,
                                           webLink: act.exchangeWebLink,
                                           itemId: act.exchangeItemId,
                                           email: act.email || contact?.email,
@@ -2223,6 +2259,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                       onClick={() => {
                                         setActiveEmailMenuId(null);
                                         openExistingEmailInOutlook({
+                                          activityId: act.id,
                                           webLink: act.exchangeWebLink,
                                           itemId: act.exchangeItemId,
                                           email: act.email || contact?.email,
@@ -3166,6 +3203,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     const emailData = {
+                                      activityId: mail.id,
                                       webLink: mail.exchangeWebLink,
                                       itemId: mail.exchangeItemId,
                                       email: mail.email || contact?.email,
@@ -3210,6 +3248,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                       onClick={() => {
                                         setActiveEmailMenuId(null);
                                         const emailData = {
+                                          activityId: mail.id,
                                           webLink: mail.exchangeWebLink,
                                           itemId: mail.exchangeItemId,
                                           email: mail.email || contact?.email,
@@ -3232,6 +3271,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                       onClick={() => {
                                         setActiveEmailMenuId(null);
                                         openExistingEmailInOutlook({
+                                          activityId: mail.id,
                                           webLink: mail.exchangeWebLink,
                                           itemId: mail.exchangeItemId,
                                           email: mail.email || contact?.email,

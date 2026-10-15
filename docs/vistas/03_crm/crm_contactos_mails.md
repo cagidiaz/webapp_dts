@@ -44,9 +44,9 @@ La parte superior de la pestaña integra en una sola fila compacta y responsive:
 4. **Acciones de Cabecera**: Botones de `Sincronizar` y `Redactar Correo en Outlook`.
 
 ### 3.2 Visualización Ergonómica de Correos y Ordenación Cronológica Exacta
-- **Ordenación Cronológica Precisa (Fecha y Hora)**:
+- **Ordenación Cronológica Precisa y Priorización Horaria de Exchange**:
   - Los correos en la pestaña de Emails y en el Timeline se ordenan de forma descendente considerando la **fecha y hora exacta de llegada o envío** (`sortTimestamp`).
-  - Para correos procedentes de Outlook o Exchange, se computa la hora real desde `attendees.sentDate`, `attendees.receivedDateTime` o `created_at` (con desempate por segundos/milisegundos).
+  - **Regla Estricta para `EMAIL`**: Para correos electrónicos, la hora computada (`computedTime`) evalúa **con máxima prioridad** la marca temporal real de Microsoft 365 (`attendees.sentDate` o `attendees.receivedDateTime`) antes que cualquier valor manual de `time_scheduled`, garantizando que la hora visible y la ordenación reflejen fielmente el momento en que se despachó o recibió el mensaje.
   - Cada tarjeta de correo y entrada del Timeline incluye el indicador de fecha y hora completa (`13 oct. 2026 🕒 14:35`) con icono de reloj `Clock` en azul dTS (`text-dts-secondary`).
 - **Recorte Automático Inteligente**: Para evitar saturar la vista, cada correo muestra por defecto exclusivamente sus primeras **5 líneas** de contenido con botón `Ver más (+N líneas)`.
 - **Formato Monoespaciado y Legible**: El cuerpo del correo se renderiza en bloque estilizado con tipografía monoespaciada para respetar sangrías, tablas de texto y cotizaciones.
@@ -65,11 +65,16 @@ En cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline):
   - El método de backend `enrichActivitiesWithQuoteInfo` descarta los prefijos entre corchetes (`^\[.*?\]\s*`) y exige dígitos numéricos obligatorios en el código de oferta (`/(?:OFT|COT|OFERTA|OF)[-_ ]?([0-9][A-Z0-9\-\/]*)/i`), evitando falsos positivos con la palabra "Oferta" de la tipología.
 
 ### 3.5 Acciones de Productividad con Microsoft Outlook (Online vs Classic)
-- **Apertura de Correos Existentes**:
+- **Apertura de Correos Existentes y Resolución Exacta (`email-open.service.ts`)**:
   - Cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline) dispone del botón *"Abrir en Outlook"*.
   - **Respeto Estricto de la Preferencia del Usuario (`getPreferredOutlookClient`)**:
     - **Outlook Classic / Escritorio (`target === 'desktop'`)**: Si el usuario tiene configurado el cliente de escritorio en Ajustes Generales, la WebApp invoca el protocolo nativo `dts-mail://open?id=...&from=...&subject=...`. Antes de invocar a Windows, la función `cleanEmailSubjectForOutlook` despoja automáticamente cualquier prefijo comercial, normaliza guiones tipográficos y emojis para evitar corrupción de caracteres (mojibake). El manejador local v2.3 extrae el núcleo del asunto, localiza en milisegundos el mensaje exacto en la **Bandeja de Entrada** o en **Elementos Enviados** mediante MAPI COM y ejecuta `item.Display`. Si el mensaje se encuentra en archivadores o subcarpetas, ejecuta automáticamente una búsqueda limpia en todas las carpetas (`olSearchScopeAllFolders`).
-    - **Outlook Online / Web (`target === 'web'`)**: Si el usuario prefiere la versión web (M365), el sistema aprovecha el `webLink` directo generado por Microsoft Graph o construye la URL canónica de Microsoft 365 (`https://outlook.office.com/mail/deeplink?ItemID=...&exvsurl=1`).
+    - **Outlook Online / Web (`target === 'web'`) — Resolución Dinámica Segura (`POST /api/exchange-sync/emails/:activityId/resolve`)**:
+      * Al pulsar abrir, la WebApp pre-abre síncronamente una pestaña en blanco para evitar el bloqueo de ventanas emergentes (Popup Blocker) y aísla el contexto mediante `window.opener = null` ([`resolvedEmailWindow.ts`](file:///c:/proyectos/webapp_dts/frontend/src/utils/resolvedEmailWindow.ts)).
+      * El backend NestJS ([`EmailOpenService`](file:///c:/proyectos/webapp_dts/backend/src/modules/exchange-sync/email-open.service.ts)) verifica la autenticación JWT, rol y cartera comercial (`customerScope`), comprobando que el buzón de Microsoft 365 pertenezca al usuario autenticado (se bloquea la apertura de buzones ajenos incluso para roles Admin o Dirección).
+      * **Búsqueda por Identidad Inmutable:** Si el correo se ha movido entre carpetas del buzón, Microsoft Graph lo localiza de forma determinista mediante su `exchange_immutable_id` o `exchange_internet_message_id`.
+      * **Gestión de Copias Múltiples:** Si existen varias copias en el buzón (máximo 5), se cierra la ventana temporal y se despliega un selector modal para que el usuario elija la copia por carpeta y fecha.
+      * **Validación de Destino:** Se valida en backend y frontend que la URL sea un destino oficial HTTPS de Outlook (`outlook.office.com` o `outlook.office365.com`). Si la resolución falla, la ventana temporal se cierra limpiamente y se muestra una notificación explicativa en la ficha.
 - **Ciclo de Vida de Borradores y Envío Directo**:
   - `draft`: El correo es un borrador registrado localmente en espera de edición o envío desde Outlook.
   - `send_unconfirmed`: Se ha solicitado el envío a Microsoft Graph pero la confirmación de entrega está en curso. La interfaz muestra el badge ámbar: `Envío sin confirmar: revisar Outlook` para prevenir reenvíos accidentales.

@@ -2,7 +2,7 @@
 export type ExchangeIdFormat = 'ewsId' | 'restId' | 'restImmutableEntryId' | 'entryId';
 
 export class OutlookIdentityError extends Error {
-  constructor(readonly code: string, readonly httpStatus?: number) { super(code); }
+  constructor(readonly code: string, readonly httpStatus?: number, readonly retryAfterSeconds?: number) { super(code); }
 }
 
 export function mapiHexToExchangeId(hex: string): string {
@@ -51,7 +51,9 @@ export class OutlookMessageIdentityClient {
     } catch { throw new OutlookIdentityError('GRAPH_UNAVAILABLE'); }
     if (!response.ok) {
       const code = ({ 401: 'ACCOUNT_RECONNECT_REQUIRED', 403: 'MAILBOX_ACCESS_DENIED', 404: 'MESSAGE_NOT_FOUND', 429: 'GRAPH_RATE_LIMITED' } as Record<number, string>)[response.status] || 'GRAPH_REQUEST_FAILED';
-      throw new OutlookIdentityError(code, response.status);
+      const retry = response.headers.get('Retry-After');
+      const seconds = retry ? (/^\d+$/.test(retry) ? Number(retry) : Math.ceil((Date.parse(retry) - Date.now()) / 1000)) : NaN;
+      throw new OutlookIdentityError(code, response.status, response.status === 429 || response.status === 503 ? (Number.isFinite(seconds) && seconds > 0 ? seconds : 15) : undefined);
     }
     try { return await response.json(); } catch { throw new OutlookIdentityError('INVALID_GRAPH_RESPONSE'); }
   }
@@ -84,5 +86,20 @@ export class OutlookMessageIdentityClient {
       parentFolderId: id(message.parentFolderId), webLink: message.webLink ? checkedOutlookWebLink(message.webLink) : null,
       observedAt: new Date().toISOString(),
     };
+  }
+
+  async findByInternetMessageId(internetMessageId: string) {
+    if (!internetMessageId || internetMessageId.length > 32768 || /[\r\n\x00]/.test(internetMessageId)) throw new OutlookIdentityError('INVALID_INTERNET_MESSAGE_ID');
+    const filter = `internetMessageId eq '${internetMessageId.replace(/'/g, "''")}'`;
+    const result = await this.graph(`/me/messages?$filter=${encodeURIComponent(filter)}&$select=id,internetMessageId,parentFolderId,sentDateTime&$top=6`);
+    if (!Array.isArray(result.value)) throw new OutlookIdentityError('INVALID_GRAPH_RESPONSE');
+    const values: Array<Record<string, unknown>> = result.value;
+    if (values.some(value => !value || value.internetMessageId !== internetMessageId)) throw new OutlookIdentityError('MESSAGE_ID_MISMATCH');
+    return { candidates: values.slice(0, 5).map(value => ({ id: id(value.id), parentFolderId: id(value.parentFolderId), sentDate: typeof value.sentDateTime === 'string' ? value.sentDateTime : null })), truncated: !!result['@odata.nextLink'] || values.length > 5 };
+  }
+
+  async folderName(folderId: string): Promise<string> {
+    const folder = await this.graph(`/me/mailFolders/${encodeURIComponent(id(folderId))}?$select=displayName`);
+    return typeof folder.displayName === 'string' ? folder.displayName : 'Carpeta sin nombre';
   }
 }

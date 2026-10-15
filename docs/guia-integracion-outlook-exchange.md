@@ -139,7 +139,8 @@ El sistema sincroniza automáticamente todas las actividades con fecha y hora en
 * Cuando intercambias correos con un cliente desde Outlook (tanto recibidos en tu Bandeja de Entrada como enviados desde tu Outlook):
   * El CRM detecta que la conversación pertenece a un contacto registrado.
   * Indexa el mensaje en la pestaña **Emails** y en el **Timeline** del contacto, limpiando pies legales repetitivos para mantener notas legibles.
-  * **Ordenación Cronológica por Fecha y Hora**: Todos los mensajes se ordenan de forma descendente estricta según su momento exacto de llegada o envío, permitiendo que múltiples correos cruzados en un mismo día se lean en perfecto orden temporal.
+  * **Ordenación Cronológica por Fecha y Hora**: Todos los mensajes se ordenan de forma descendente estricta según su momento exacto de llegada o envío. En correos electrónicos, la hora se extrae prioritariamente de `attendees.sentDate` o `attendees.receivedDateTime`, permitiendo que múltiples correos cruzados en un mismo día se lean en perfecto orden temporal.
+  * **Resolución Dinámica Segura para Apertura Web**: La acción "Abrir en Outlook Web" invoca el resolvedor backend (`POST /api/exchange-sync/emails/:activityId/resolve`) que localiza el mensaje exacto mediante su `ImmutableId` incluso si se ha movido entre carpetas, abriéndolo de forma segura sin riesgo de bloqueo por ventanas emergentes (`window.opener = null`).
   * **Diseño Homogéneo de Tarjetas**: Las tarjetas de correo en la pestaña Emails y en el Timeline comparten la misma presentación estética (fondos blanco/zinc translúcido, tonos verdes esmeralda para tramitados, ámbar para pendientes de conclusiones y botones interactivos oficiales de Outlook).
 
 ---

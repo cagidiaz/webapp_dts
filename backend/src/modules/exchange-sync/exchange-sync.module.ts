@@ -1,3 +1,5 @@
+import { EmailOpenController } from './email-open.controller';
+import { EmailOpenService } from './email-open.service';
 import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AuthModule } from '../../auth/auth.module';
@@ -12,8 +14,8 @@ import { ProspectOutlookService } from './prospect-outlook.service';
 
 @Module({
   imports: [PrismaModule, AuthModule],
-  controllers: [ExchangeSyncController, OutlookAddinController],
-  providers: [MicrosoftGraphService, ExchangeSyncService, OutlookAddinService, ProspectOutlookService, EmailIdentityService, OutlookAddinAccessService],
+  controllers: [ExchangeSyncController, OutlookAddinController, EmailOpenController],
+  providers: [EmailOpenService, MicrosoftGraphService, ExchangeSyncService, OutlookAddinService, ProspectOutlookService, EmailIdentityService, OutlookAddinAccessService],
   exports: [MicrosoftGraphService, ExchangeSyncService, OutlookAddinService, ProspectOutlookService, EmailIdentityService, OutlookAddinAccessService],
 })
 export class ExchangeSyncModule {}

@@ -1,6 +1,9 @@
+import { resolvedEmailWindow, type EmailResolveResult } from '../utils/resolvedEmailWindow';
+import { isAxiosError } from 'axios';
 import apiClient from './apiClient';
 
 export interface ExchangeStatus {
+  emailIdentityEnabled?: boolean;
   isConnected: boolean;
   requiresConsent?: boolean;
   account: {
@@ -501,3 +504,16 @@ export const openCalendarEventInOutlook = (options: {
 };
 
 
+
+/** The browser sends only the authorized CRM activity and an optional explicit copy selection. */
+export function openVerifiedEmailInWeb(activityId: string, candidateId?: string): Promise<EmailResolveResult> {
+  return resolvedEmailWindow(async () => {
+    try {
+      const { data } = await apiClient.post<EmailResolveResult>(`/exchange-sync/emails/${encodeURIComponent(activityId)}/resolve`, { candidateId });
+      return data;
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 403) return { status: 'access_denied', message: 'No tienes permiso para abrir este correo desde el CRM.' };
+      throw error;
+    }
+  });
+}

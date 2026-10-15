@@ -308,7 +308,7 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
   * Diseñado con soporte nativo de alto contraste para **Modo Claro** y **Modo Oscuro** corporativo.
   * Alternativamente, se puede editar mediante el modal completo de actividad (icono de lápiz).
 * **Visualización Optimizada de Correos (Límite de 5 Líneas) y Ordenación Precisa**:
-  * **Ordenación Cronológica por Hora**: La lista de correos se ordena de forma descendente estricta según su momento exacto de llegada o envío (`sortTimestamp`), resolviendo desempates incluso al nivel de segundos.
+  * **Ordenación Cronológica por Hora y Priorización de Exchange**: La lista de correos se ordena de forma descendente estricta según su momento exacto de llegada o envío (`sortTimestamp`). Para correos electrónicos, la hora visible evalúa prioritariamente la marca temporal real de Microsoft 365 (`attendees.sentDate` o `attendees.receivedDateTime`), garantizando máxima fidelidad con el buzón.
   * **Indicador de Fecha y Hora**: Cada correo muestra su fecha en formato corporativo y la hora exacta de recepción o envío (`13 oct. 2026 🕒 14:35`) con el icono de reloj `Clock` en azul dTS (`text-dts-secondary`).
   * Cada correo muestra por defecto exclusivamente sus primeras **5 líneas** para garantizar una navegación ágil y compacta sin saturar la pantalla.
   * Botón interactivo **"Ver más (+N líneas)"** / **"Mostrar menos"** que expande y colapsa el texto íntegro en tiempo real.
@@ -325,14 +325,14 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
     * `sent_pending` (Referencia de envío pendiente): Correo entregado exitosamente por Microsoft 365, en proceso de archivar su copia en "Elementos enviados" y obtener el identificador estable inmutable. Muestra el badge ámbar: `Referencia de envío pendiente`.
     * `synced` (Sincronizado): Identidad inmutable confirmada y resuelta (`resolved`).
   * **Auto-sincronización Inteligente**: Al acceder a la ficha del contacto, si hay correos en estado transitorio (`draft`, `sent_pending`, `send_unconfirmed`), la aplicación sincroniza en segundo plano mediante lotes rotativos de hasta 25 referencias para verificar si ya fueron despachados.
-* **Botón Directo "Abrir en Outlook" y Menú de Acciones Secundarias**:
+* **Botón Directo "Abrir en Outlook" y Resolución Dinámica Web**:
   * En cada tarjeta de email de la pestaña *Emails*, en los eventos de correo del *Timeline* y en la cabecera del contacto, se incluye la acción **"Abrir en Outlook"** acompañada de un menú desplegable contextual (`...`):
   * **Comportamiento Determinista por Preferencia**:
     * **Outlook Classic / Escritorio (`dts-mail://` v2.3)**: Si el usuario tiene seleccionada esta opción, la WebApp invoca el protocolo nativo de Windows. Antes de lanzar la llamada, sanitiza el asunto con `cleanEmailSubjectForOutlook` suprimiendo etiquetas de tipología CRM (`[📥 Recibido · 📋 Petición oferta]`) y emojis para evitar corrupción de caracteres. El manejador local v2.3 extrae el núcleo del asunto (`ExtractCoreSubject`), localiza en milisegundos el mensaje en Entrada o Enviados y lo abre directamente en primer plano (`.Display`), con sus adjuntos, cabeceras y opciones completas de lectura.
-    * **Outlook Web (M365)**: Abre el mensaje exacto en la nube aprovechando el deep link oficial `webLink` o `ItemID`.
+    * **Outlook Web (M365) — Resolución Dinámica Segura**: Abre el mensaje exacto mediante el resolvedor backend del CRM (`POST /api/exchange-sync/emails/:activityId/resolve`), pre-abriendo una ventana sin riesgo de bloqueo por navegador (popup blocker) y con aislamiento de contexto (`window.opener = null`). Si el correo fue movido a otra carpeta, Microsoft Graph lo localiza de forma determinista mediante su `ImmutableId`; y si existen varias copias en el buzón, despliega un selector de carpeta/fecha para abrir la deseada.
   * **Menú Desplegable de Acciones Secundarias (`...`)**:
     1. **Abrir en Outlook Classic**: Fuerza la apertura en la aplicación de escritorio.
-    2. **Abrir en Outlook Web (M365)**: Abre el correo en Microsoft 365 en el navegador.
+    2. **Abrir en Outlook Web (M365)**: Abre el correo en Microsoft 365 en el navegador mediante el resolvedor seguro.
     3. **Responder en Outlook**: Abre la ventana de redacción citando el correo y los destinatarios en copia.
     4. **Buscar conversación completa**: Activa la búsqueda en Outlook para ver todo el hilo y respuestas del contacto.
     5. **Copiar datos de búsqueda**: Copia la sintaxis limpia `de:<email> asunto:"<asunto_limpio>"` para pegarla manualmente en Outlook.

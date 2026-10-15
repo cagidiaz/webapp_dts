@@ -38,6 +38,7 @@ export class ExchangeSyncService {
     const requiresConsent = !!account && (account.access_token === 'CONSENT_REQUIRED' || account.access_token === 'AUTH_REQUIRED');
 
     return {
+      emailIdentityEnabled: await this.identities.enabledFor(userId),
       isConnected,
       requiresConsent,
       account: account ? {
