@@ -11,6 +11,8 @@
 
 ## 1. Propósito y Utilidad de Negocio 🎯
 
+**Preparado para el piloto (13/10/2026):** la fuente de seguimiento por oferta se resuelve igual que en CRM. Los documentos preparados de Antoni usan `crm_offer_followups` independiente de BC; los no participantes leen seguimiento BC durante el piloto. Filtros y KPIs usan la fuente efectiva antes de contar/paginar. La fecha de cierre en el drawer guarda versión y permite vaciar el dato sin recuperar BC. Importe/documento mantienen origen BC. Véase [separación BC/app](../../propuestas/2026-10-13-separacion-bc-app-ofertas.md). No se ha aplicado SQL ni comprobado la sincronización real n8n. La ordenación por seguimiento necesita medir rendimiento con datos reales.
+
 La vista de **Ofertas Comerciales** es el módulo central del pipeline de preventa y seguimiento de propuestas técnico-comerciales de dTS Instruments. Permite al equipo comercial, directores de área y administración:
 
 * **Supervisión del Pipeline Vivo:** Analizar el volumen total de ofertas emitidas, importes cotizados y probabilidades de éxito en tiempo real.

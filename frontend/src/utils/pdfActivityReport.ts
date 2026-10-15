@@ -107,11 +107,11 @@ export const generateActivityReportHtml = (
       const capitalizedDate = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
       const timeFormatted = act.time_scheduled ? `${act.time_scheduled.substring(0, 5)} h` : '';
 
-      const companyName = act.customer?.name || act.customer?.company_name || 'Empresa no especificada';
+      const companyName = (act.customer?.name || act.customer?.company_name || act.prospect?.company_name || 'Empresa no especificada') + (act.source === 'PROSPECT' ? ' · Prospección' : '');
       const companyCode = act.client_id ? `(${act.client_id})` : '';
       const companyCity = act.customer?.city ? ` — ${act.customer.city}` : '';
 
-      const contactName = act.contact?.name || 'Contacto no vinculado';
+      const contactName = act.contact?.name || act.prospect?.contact_name || 'Contacto no vinculado';
       const contactPosition = act.contact?.job_title || act.contact?.position ? ` | ${act.contact.job_title || act.contact.position}` : '';
       const contactEmail = act.contact?.email ? ` (${act.contact.email})` : '';
       const contactPhone = act.contact?.phone_no || act.contact?.mobile_no ? ` · Tel: ${act.contact?.phone_no || act.contact?.mobile_no}` : '';
@@ -665,7 +665,8 @@ export const exportActivityReportToExcel = (
       'Hora': act.time_scheduled || '',
       'Tipo Evento': typeConf.label,
       'Comercial': act.creator ? `${act.creator.first_name} ${act.creator.last_name || ''}`.trim() : '',
-      'Empresa': act.customer?.name || act.customer?.company_name || '',
+      'Empresa': act.customer?.name || act.customer?.company_name || act.prospect?.company_name || '',
+      'Origen': act.source === 'PROSPECT' ? 'Prospección' : 'Cliente BC',
       'Cód. Cliente': act.client_id || '',
       'Ciudad': act.customer?.city || '',
       'Contacto': act.contact?.name || '',

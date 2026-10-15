@@ -1,14 +1,20 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, IsDateString, IsIn, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, IsDateString, IsIn, IsInt, Min } from 'class-validator';
 
 export class UpdateCrmQuoteDto {
+  @IsOptional() @IsString()
+  transition_note?: string;
+  @IsOptional() @IsIn(['Llamada', 'Email', 'Reunión', 'Nota', 'Tarea'])
+  transition_activity_type?: string;
+  @IsOptional() @IsInt() @Min(1)
+  followup_version?: number;
   @IsString()
   @IsOptional()
-  @IsIn(['borrador', 'enviada', 'en negociación', 'ganada', 'perdida'])
+  @IsIn(['borrador', 'enviada', 'en negociación', 'preliminar', 'presentada', 'evaluación', 'negociación', 'aprobación', 'aceptada', 'ganada', 'perdida'])
   estado_oferta?: string;
 
   @IsNumber()
   @IsOptional()
-  @IsIn([10, 25, 50, 75, 100])
+  @IsIn([0, 5, 10, 20, 25, 35, 50, 55, 75, 90, 100])
   probabilidad_exito?: number;
 
   @IsString()
@@ -36,9 +42,13 @@ export class UpdateCrmQuoteDto {
   @IsOptional()
   observaciones?: string;
 
-  @IsUUID()
+  @IsString()
   @IsOptional()
-  contacto_id?: string;
+  contacto_id?: string | null;
+
+  @IsString()
+  @IsOptional()
+  contact_id?: string | null;
 
   @IsString()
   @IsOptional()

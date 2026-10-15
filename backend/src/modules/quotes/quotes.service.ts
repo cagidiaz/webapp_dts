@@ -1,11 +1,13 @@
-import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateCrmQuoteDto, CreateActivityDto, UpdateActivityDto } from './dto/crm-quote.dto';
+import { OfferFollowupService } from './offer-followup.service';
+import { pilotPhase } from './offer-pilot-rules';
 
 
 @Injectable()
 export class QuotesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly followups: OfferFollowupService) {}
 
   /**
    * Obtiene todas las ofertas con soporte para filtros, búsqueda global y paginación.
@@ -24,7 +26,7 @@ export class QuotesService {
     probabilidadExito?: string;
     cierrePrevYear?: number;
     cierrePrevMonths?: string;
-  } = {}) {
+  } = {}, userId?: string) {
     const { 
       skip, 
       take, 
@@ -42,6 +44,8 @@ export class QuotesService {
     } = params;
 
     const where: any = {};
+    const source = await this.followups.context();
+    if (source && userId) Object.assign(where, await this.followups.scope(userId));
     const and: any[] = [];
 
     if (year) {
@@ -129,13 +133,16 @@ export class QuotesService {
             ]
           },
           // No deben estar ganadas ni perdidas
-          {
-            NOT: {
-              OR: [
-                { estado_oferta: { in: ['ganada', 'ganado', 'aceptada', 'aprobada', 'perdida', 'perdido', 'cancelada', 'rechazada'], mode: 'insensitive' } },
-                { sales_quotes_crm: { estado_oferta: { in: ['ganada', 'ganado', 'aceptada', 'aprobada', 'perdida', 'perdido', 'cancelada', 'rechazada'], mode: 'insensitive' } } }
-              ]
-            }
+          source ? {
+            OR: [
+              { document_no: { in: [...source.records.values()].filter(row => !['ganada', 'perdida'].includes(row.estado_oferta)).map(row => row.document_no) } },
+              { AND: [{ document_no: { notIn: [...source.records.keys()] } }, { NOT: { estado_oferta: { in: ['ganada', 'ganado', 'aceptada', 'aprobada', 'perdida', 'perdido', 'cancelada', 'rechazada'], mode: 'insensitive' } } }] },
+            ],
+          } : {
+            NOT: { OR: [
+              { estado_oferta: { in: ['ganada', 'ganado', 'aceptada', 'aprobada', 'perdida', 'perdido', 'cancelada', 'rechazada'], mode: 'insensitive' } },
+              { sales_quotes_crm: { estado_oferta: { in: ['ganada', 'ganado', 'aceptada', 'aprobada', 'perdida', 'perdido', 'cancelada', 'rechazada'], mode: 'insensitive' } } },
+            ] },
           }
         ]
       };
@@ -222,13 +229,15 @@ export class QuotesService {
     if (and.length > 0) {
       where.AND = and;
     }
+    const actualWhere = source ? source.where(where) : where;
+    const sourceSort = source && ['estado_oferta', 'probabilidad_exito', 'oferta_type', 'cierreprev_date', 'confirmacion_date'].includes(sortBy);
 
     try {
-      const [data, total, allRelevantQuotes] = await Promise.all([
+      let [data, total, allRelevantQuotes] = await Promise.all([
         this.prisma.sales_quotes.findMany({
-          where,
-          skip: skip ? Number(skip) : undefined,
-          take: take ? Number(take) : undefined,
+          where: actualWhere,
+          skip: !sourceSort && skip ? Number(skip) : undefined,
+          take: !sourceSort && take ? Number(take) : undefined,
           orderBy: [
             { [sortBy]: sortDir },
             { id: 'asc' }
@@ -261,10 +270,11 @@ export class QuotesService {
             }
           },
         }),
-        this.prisma.sales_quotes.count({ where }),
+        this.prisma.sales_quotes.count({ where: actualWhere }),
         this.prisma.sales_quotes.findMany({
-          where,
+          where: actualWhere,
           select: {
+            document_no: true,
             amount: true,
             estado_oferta: true,
             probabilidad_exito: true,
@@ -292,6 +302,20 @@ export class QuotesService {
           },
         }),
       ]);
+      if (source) {
+        data = data.map(quote => source.overlay(quote));
+        allRelevantQuotes = allRelevantQuotes.map(quote => source.overlay(quote));
+        if (sourceSort) {
+          data.sort((a: any, b: any) => {
+            const value = (row: any) => row[sortBy] instanceof Date ? row[sortBy].getTime() : row[sortBy] === null || row[sortBy] === undefined ? null : sortBy === 'probabilidad_exito' ? Number(row[sortBy]) : String(row[sortBy]);
+            const av = value(a), bv = value(b);
+            if (av === null) return bv === null ? a.id.localeCompare(b.id) : sortDir === 'desc' ? -1 : 1;
+            if (bv === null) return sortDir === 'desc' ? 1 : -1;
+            return (av < bv ? -1 : av > bv ? 1 : 0) * (sortDir === 'desc' ? -1 : 1) || a.id.localeCompare(b.id);
+          });
+          data = data.slice(Number(skip || 0), take ? Number(skip || 0) + Number(take) : undefined);
+        }
+      }
 
       // Calcular KPIs para la selección actual y datos de gráficos
       let totalAmount = 0;
@@ -377,7 +401,7 @@ export class QuotesService {
 
         totalAmount += amt;
 
-        const isWon = state.includes('ganada') || state.includes('ganado') || state.includes('aceptada') || state.includes('aprobada');
+        const isWon = source?.records.has(quote.document_no) ? state === 'ganada' : state.includes('ganada') || state.includes('ganado') || state.includes('aceptada') || state.includes('aprobada');
         const isLost = state.includes('perdida') || state.includes('perdido') || state.includes('cancelada') || state.includes('rechazada');
 
         if (isWon) {
@@ -546,10 +570,13 @@ export class QuotesService {
             }
             return m;
           })(),
-          observaciones: crm?.observaciones || q.observaciones || null,
+          observaciones: (q as any).followup_source === 'APP' ? crm?.observaciones ?? null : crm?.observaciones || q.observaciones || null,
           proxima_accion: crm?.proxima_accion || null,
           fecha_proxima_accion: crm?.fecha_proxima_accion || null,
           crm_id: crm?.id || null,
+          followup_source: (q as any).followup_source || null,
+          followup_version: (q as any).followup_version || null,
+          followup_owner_id: (q as any).followup_owner_id || null,
         };
       });
 
@@ -594,17 +621,19 @@ export class QuotesService {
   /**
    * Obtiene una oferta por su ID (UUID) con sus relaciones completas.
    */
-  async getById(id: string) {
+  async getById(id: string, userId?: string) {
     try {
-      const quote = await this.prisma.sales_quotes.findUnique({
-        where: { id },
+      const source = await this.followups.context();
+      const quote = await this.prisma.sales_quotes.findFirst({
+        where: { id, ...(source && userId ? await this.followups.scope(userId) : {}) },
         include: {
           customer: true,
           sales_rep: true,
+          sales_quotes_crm: { include: { activities: true } },
         },
       });
       if (!quote) throw new NotFoundException('Oferta no encontrada');
-      return quote;
+      return source ? source.overlay(quote) : quote;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException(error.message);
@@ -629,13 +658,13 @@ export class QuotesService {
         where: { id: userId },
         include: { roles: true }
       });
-      if (!profile) throw new ForbiddenException('Usuario sin perfil configurado');
+      if (!profile?.is_active) throw new ForbiddenException('Usuario sin perfil activo configurado');
 
       const userRole = (profile.roles?.name || '').toUpperCase();
       let spCodeFilter = params.salespersonCode;
 
       // Si el rol es VENTAS, OPERACIONES o PRODUCCION, forzar filtro de su propio código
-      if (userRole === 'VENTAS' || userRole === 'OPERACIONES' || userRole === 'PRODUCCION') {
+      if (userRole === 'VENTAS' || userRole === 'OPERACIONES' || userRole === 'PRODUCCION' || userRole === 'TESTER') {
         spCodeFilter = profile.code || 'SIN_CODIGO';
       }
 
@@ -663,11 +692,7 @@ export class QuotesService {
         if (contactObj) {
           and.push({
             sales_quotes_crm: {
-              OR: [
-                { contacto_id: contactObj.contact_no },
-                { contacto_id: params.contactId },
-                { contacto_nombre: contactObj.name }
-              ]
+              contacto_id: contactObj.id
             }
           });
         } else {
@@ -747,8 +772,9 @@ export class QuotesService {
       }
 
       // 3. Ejecutar consulta
-      const quotes = await this.prisma.sales_quotes.findMany({
-        where,
+      const source = await this.followups.context();
+      let quotes = await this.prisma.sales_quotes.findMany({
+        where: source ? source.where({ ...where, ...await this.followups.scope(userId) }) : where,
         include: {
           customer: {
             select: {
@@ -786,6 +812,7 @@ function normalizeQuoteStatus(status?: string | null): string {
 }
 
       // 4. Formatear y unificar
+      if (source) quotes = quotes.map(quote => source.overlay(quote));
       return quotes.map(q => {
         const crm = q.sales_quotes_crm;
         
@@ -793,7 +820,7 @@ function normalizeQuoteStatus(status?: string | null): string {
         const rawEstado = (crm?.estado_oferta && crm.estado_oferta.trim() !== '')
           ? crm.estado_oferta
           : (q.estado_oferta && q.estado_oferta.trim() !== '' ? q.estado_oferta : 'borrador');
-        const estado = normalizeQuoteStatus(rawEstado);
+        const estado = source?.records.has(q.document_no) ? pilotPhase(rawEstado) : normalizeQuoteStatus(rawEstado);
 
         // Determinar probabilidad
         let prob = 10;
@@ -829,6 +856,9 @@ function normalizeQuoteStatus(status?: string | null): string {
           salesperson_name: q.sales_rep?.name || '---',
           
           crm_id: crm?.id || null,
+          followup_source: (q as any).followup_source || null,
+          followup_version: (q as any).followup_version || null,
+          followup_owner_id: (q as any).followup_owner_id || null,
           estado_oferta: estado,
           probabilidad_exito: prob,
           oferta_type: tipo,
@@ -842,7 +872,7 @@ function normalizeQuoteStatus(status?: string | null): string {
             }
             return m;
           })(),
-          observaciones: crm?.observaciones || q.observaciones || null,
+          observaciones: (q as any).followup_source === 'APP' ? crm?.observaciones ?? null : crm?.observaciones || q.observaciones || null,
           contacto_id: crm?.contacto_id || null,
           contacto_nombre: crm?.contacto_nombre || null,
           contacto_email: crm?.contacto_email || null,
@@ -864,7 +894,14 @@ function normalizeQuoteStatus(status?: string | null): string {
   /**
    * Actualiza o crea los metadatos CRM de una oferta.
    */
-  async updateCrm(quoteId: string, payload: UpdateCrmQuoteDto) {
+  async updateCrm(quoteId: string, payload: UpdateCrmQuoteDto, userId?: string) {
+    if (await this.followups.isManagedQuote(quoteId)) {
+      if (!userId) throw new ForbiddenException('Identidad requerida para editar el seguimiento.');
+      return this.followups.save(userId, quoteId, payload);
+    }
+    if (payload.estado_oferta && !['borrador', 'enviada', 'en negociación', 'ganada', 'perdida'].includes(payload.estado_oferta)) throw new BadRequestException('Esta oferta mantiene el seguimiento anterior a través de BC.');
+    if (payload.probabilidad_exito !== undefined && ![0,10,25,50,75,100].includes(payload.probabilidad_exito)) throw new BadRequestException('Esta probabilidad solo está disponible en ofertas del piloto.');
+    if (payload.transition_note !== undefined || payload.transition_activity_type !== undefined) throw new BadRequestException('El cambio con nota conjunta solo está disponible para ofertas del piloto.');
     try {
       const quote = await this.prisma.sales_quotes.findUnique({
         where: { id: quoteId }
@@ -950,7 +987,8 @@ function normalizeQuoteStatus(status?: string | null): string {
   /**
    * Obtiene las actividades de una oferta.
    */
-  async getActivities(quoteId: string) {
+  async getActivities(quoteId: string, userId?: string) {
+    if (this.followups.enabled() && userId) { const rows = await this.followups.activities(userId, quoteId); if (rows !== null) return rows; }
     try {
       const quote = await this.prisma.sales_quotes.findUnique({
         where: { id: quoteId }
@@ -974,7 +1012,13 @@ function normalizeQuoteStatus(status?: string | null): string {
   /**
    * Crea una actividad para una oferta.
    */
-  async addActivity(quoteId: string, payload: CreateActivityDto) {
+  async addActivity(quoteId: string, payload: CreateActivityDto, userId?: string) {
+    if (await this.followups.isManagedQuote(quoteId)) {
+      if (!userId) throw new ForbiddenException('Identidad requerida.');
+      const activity = await this.followups.activities(userId, quoteId, payload);
+      if (!activity) throw new ConflictException('Inicializa el seguimiento de la oferta antes de registrar actividades.');
+      return activity;
+    }
     try {
       const quote = await this.prisma.sales_quotes.findUnique({
         where: { id: quoteId }
@@ -987,7 +1031,9 @@ function normalizeQuoteStatus(status?: string | null): string {
 
       // Si no existe, creamos el metadato CRM
       if (!crm) {
-        crm = await this.updateCrm(quoteId, {});
+        await this.updateCrm(quoteId, {}, userId);
+        crm = await this.prisma.sales_quotes_crm.findUnique({ where: { document_no: quote.document_no } });
+        if (!crm) throw new NotFoundException('No se pudo inicializar el seguimiento de la oferta.');
       }
 
       return await this.prisma.sales_quote_activities.create({
@@ -1007,7 +1053,8 @@ function normalizeQuoteStatus(status?: string | null): string {
   /**
    * Actualiza una actividad de seguimiento.
    */
-  async updateActivity(activityId: string, payload: UpdateActivityDto) {
+  async updateActivity(activityId: string, payload: UpdateActivityDto, userId?: string) {
+    if (userId) { const result = await this.followups.editActivity(userId, activityId, payload); if (result) return result; }
     try {
       const act = await this.prisma.sales_quote_activities.findUnique({
         where: { id: activityId }
@@ -1032,7 +1079,8 @@ function normalizeQuoteStatus(status?: string | null): string {
   /**
    * Elimina una actividad de seguimiento.
    */
-  async deleteActivity(activityId: string) {
+  async deleteActivity(activityId: string, userId?: string) {
+    if (userId) await this.followups.editActivity(userId, activityId, null);
     try {
       const act = await this.prisma.sales_quote_activities.findUnique({
         where: { id: activityId }

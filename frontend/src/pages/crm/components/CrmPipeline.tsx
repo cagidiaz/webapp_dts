@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { 
   getAllCrmQuotes, 
+  getOfferCloseReasons,
   updateCrmQuote, 
   getQuoteActivities, 
   addQuoteActivity, 
@@ -22,7 +23,7 @@ import { Drawer } from '../../../components/shared';
 import { Dialog, Transition, TransitionChild, DialogPanel, DialogTitle } from '@headlessui/react';
 import { useAuthStore } from '../../../store/authStore';
 
-const STAGES = [
+const LEGACY_STAGES = [
   { id: 'borrador', label: 'Borrador', color: 'border-t-slate-400 bg-slate-500/5' },
   { id: 'enviada', label: 'Enviada', color: 'border-t-blue-400 bg-blue-500/5' },
   { id: 'en negociación', label: 'En Negociación', color: 'border-t-amber-400 bg-amber-500/5' },
@@ -30,7 +31,23 @@ const STAGES = [
   { id: 'perdida', label: 'Perdida', color: 'border-t-rose-400 bg-rose-500/5' }
 ];
 
-export const CrmPipeline: React.FC = () => {
+const PILOT_STAGES = [
+  { id: 'preliminar', label: 'Preliminar', color: 'border-t-slate-400 bg-slate-500/5' },
+  { id: 'presentada', label: 'Presentada', color: 'border-t-blue-400 bg-blue-500/5' },
+  { id: 'evaluación', label: 'Evaluación', color: 'border-t-cyan-400 bg-cyan-500/5' },
+  { id: 'negociación', label: 'Negociación', color: 'border-t-amber-400 bg-amber-500/5' },
+  { id: 'aprobación', label: 'Aprobación', color: 'border-t-violet-400 bg-violet-500/5' },
+  { id: 'aceptada', label: 'Aceptada', color: 'border-t-emerald-400 bg-emerald-500/5' },
+];
+const PILOT_PROB: Record<string, number> = { preliminar: 5, presentada: 20, evaluación: 35, negociación: 55, aprobación: 75, aceptada: 90, ganada: 100, perdida: 0 };
+const displayPhase = (phase: string | null | undefined) => ({borrador:'preliminar', enviada:'presentada', 'en negociación':'negociación'}[phase?.toLowerCase().trim() || ''] || phase?.toLowerCase().trim() || 'preliminar');
+export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean; contactId?: string }> = ({ pilotMode = false, canEditPilot = false, contactId }) => {
+  const STAGES = pilotMode ? PILOT_STAGES : LEGACY_STAGES;
+  const [closedFilter, setClosedFilter] = useState('');
+  const [transitionReason, setTransitionReason] = useState('');
+  const [transitionType, setTransitionType] = useState('');
+  const [transitionDate, setTransitionDate] = useState('');
+  const canEdit = (quote: CRMQuote) => !pilotMode || canEditPilot && quote.followup_source === 'APP';
   const { profile } = useAuthStore();
   const queryClient = useQueryClient();
 
@@ -48,6 +65,11 @@ export const CrmPipeline: React.FC = () => {
   const [targetStage, setTargetStage] = useState<string>('');
   const [stateChangeNotes, setStateChangeNotes] = useState<string>('');
   const [stateChangeActivityType, setStateChangeActivityType] = useState<string>('Nota');
+  const { data: closeReasons } = useQuery({
+    queryKey: ['offer-close-reasons', profile?.id, profile?.roleId],
+    queryFn: getOfferCloseReasons,
+    enabled: selectedQuote?.followup_source === 'APP' || pendingDropQuote?.followup_source === 'APP',
+  });
 
   // Activity Form State
   const [newActivityType, setNewActivityType] = useState('Llamada');
@@ -68,7 +90,7 @@ export const CrmPipeline: React.FC = () => {
 
   // Automatically restrict filter to user salesperson code if role is VENTAS/OPERACIONES/PRODUCCION
   const userRole = (profile?.roles?.name || '').toUpperCase();
-  const isCommercial = userRole === 'VENTAS' || userRole === 'OPERACIONES' || userRole === 'PRODUCCION';
+  const isCommercial = userRole === 'VENTAS' || userRole === 'OPERACIONES' || userRole === 'PRODUCCION' || userRole === 'TESTER';
 
   useEffect(() => {
     if (isCommercial && profile?.code) {
@@ -91,14 +113,16 @@ export const CrmPipeline: React.FC = () => {
 
   // Fetch CRM Quotes
   const { data: quotes = [], isLoading, refetch } = useQuery({
-    queryKey: ['crm-quotes', debouncedSearch, salespersonFilter, typeFilter, yearFilter],
+    queryKey: ['crm-quotes', debouncedSearch, isCommercial ? profile?.code : salespersonFilter, typeFilter, yearFilter, contactId],
     queryFn: () => getAllCrmQuotes({
       search: debouncedSearch,
-      salespersonCode: salespersonFilter || undefined,
+      contactId,
+      salespersonCode: (isCommercial ? profile?.code : salespersonFilter) || undefined,
       ofertaType: typeFilter || undefined,
       year: yearFilter ? Number(yearFilter) : undefined
     }),
     placeholderData: keepPreviousData,
+    enabled: !!profile && (!isCommercial || !!profile.code),
   });
 
   // Fetch Activities
@@ -125,12 +149,16 @@ export const CrmPipeline: React.FC = () => {
 
   // Mutación: Actualizar metadatos de oferta
   const updateQuoteMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: any }) => updateCrmQuote(id, data),
-    onSuccess: (_, variables) => {
+    mutationFn: ({ id, data }: { id: string, data: any }) => {
+      // La versión es la de la ficha/arrastre abiertos, no la de una lista refrescada en segundo plano.
+      const loaded = pendingDropQuote?.id === id ? pendingDropQuote : selectedQuote?.id === id ? selectedQuote : quotes.find(quote => quote.id === id);
+      return updateCrmQuote(id, { ...data, ...(loaded?.followup_version ? { followup_version: loaded.followup_version } : {}) });
+    },
+    onSuccess: (saved, variables) => {
       queryClient.invalidateQueries({ queryKey: ['crm-quotes'] });
       refetch();
       if (selectedQuote && selectedQuote.id === variables.id) {
-        setSelectedQuote(prev => prev ? { ...prev, ...variables.data } : null);
+        setSelectedQuote(prev => prev ? { ...prev, ...variables.data, ...(saved.source === 'APP' ? { followup_version: saved.version, valor_oferta_ponderado: prev.amount * Number(saved.probabilidad_exito ?? prev.probabilidad_exito) / 100 } : {}) } : null);
       }
     }
   });
@@ -218,23 +246,14 @@ export const CrmPipeline: React.FC = () => {
 
   // Agrupar ofertas por columna
   const groupedQuotes = useMemo(() => {
-    const groups: { [key: string]: CRMQuote[] } = {
-      'borrador': [],
-      'enviada': [],
-      'en negociación': [],
-      'ganada': [],
-      'perdida': []
-    };
+    const groups: Record<string, CRMQuote[]> = Object.fromEntries(STAGES.map(stage => [stage.id, []]));
     quotes.forEach(q => {
-      const stage = q.estado_oferta ? q.estado_oferta.toLowerCase().trim() : 'borrador';
-      if (groups[stage]) {
-        groups[stage].push(q);
-      } else {
-        groups['borrador'].push(q);
-      }
+      const stage = pilotMode ? displayPhase(q.estado_oferta) : (q.estado_oferta || 'borrador').toLowerCase().trim();
+      if (groups[stage]) groups[stage].push(q);
+      else if (!pilotMode) groups.borrador.push(q);
     });
     return groups;
-  }, [quotes]);
+  }, [quotes, pilotMode]);
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData('text/plain', id);
@@ -254,7 +273,7 @@ export const CrmPipeline: React.FC = () => {
     setDraggingId(null);
 
     const quote = quotes.find(q => q.id === id);
-    if (!quote) return;
+    if (!quote || !canEdit(quote)) return;
 
     const currentStage = (quote.estado_oferta || '').toLowerCase().trim();
     const targetStageLower = targetStage.toLowerCase().trim();
@@ -264,12 +283,28 @@ export const CrmPipeline: React.FC = () => {
     setPendingDropQuote(quote);
     setTargetStage(targetStageLower);
     setStateChangeNotes('');
+    setTransitionReason('');
+    setTransitionType(quote.oferta_type || '');
+    setTransitionDate(quote.cierreprev_date?.split('T')[0] || '');
     setStateChangeActivityType('Nota');
     setIsStateModalOpen(true);
   };
 
   const handleConfirmStateChange = async (onlyChange = false) => {
-    if (!pendingDropQuote) return;
+    if (!pendingDropQuote || !canEdit(pendingDropQuote)) return;
+    if (pilotMode) {
+      if (!stateChangeNotes.trim() || !transitionType || !transitionDate || (['ganada','perdida'].includes(targetStage) && !transitionReason)) return;
+      updateQuoteMutation.mutate({ id: pendingDropQuote.id, data: {
+        estado_oferta: targetStage, probabilidad_exito: PILOT_PROB[targetStage],
+        oferta_type: transitionType, cierreprev_date: transitionDate,
+        transition_note: stateChangeNotes.trim(), transition_activity_type: stateChangeActivityType,
+        ...(targetStage === 'ganada' ? {motivo_ganada: transitionReason} : targetStage === 'perdida' ? {motivo_perdida: transitionReason} : {}),
+      } }, { onSuccess: () => {
+        queryClient.invalidateQueries({queryKey:['crm-quote-activities',pendingDropQuote.id]});
+        setIsStateModalOpen(false); setPendingDropQuote(null);
+      } });
+      return;
+    }
 
     let prob = pendingDropQuote.probabilidad_exito;
     const stage = targetStage.toLowerCase();
@@ -335,7 +370,13 @@ export const CrmPipeline: React.FC = () => {
   };
 
   const handleStageChange = (newStage: string) => {
-    if (!selectedQuote) return;
+    if (!selectedQuote || !canEdit(selectedQuote)) return;
+    if (pilotMode) {
+      setPendingDropQuote(selectedQuote); setTargetStage(newStage); setStateChangeNotes('');
+      setTransitionReason(''); setTransitionType(selectedQuote.oferta_type || '');
+      setTransitionDate(selectedQuote.cierreprev_date?.split('T')[0] || '');
+      setIsStateModalOpen(true); return;
+    }
 
     let prob = selectedQuote.probabilidad_exito;
     const stage = newStage.toLowerCase();
@@ -355,7 +396,7 @@ export const CrmPipeline: React.FC = () => {
   };
 
   const handleFieldsChange = (fields: Record<string, any>) => {
-    if (!selectedQuote) return;
+    if (!selectedQuote || !canEdit(selectedQuote)) return;
     updateQuoteMutation.mutate({
       id: selectedQuote.id,
       data: fields
@@ -368,7 +409,7 @@ export const CrmPipeline: React.FC = () => {
 
   const handleAddActivity = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newActivityNotes.trim() || !selectedQuote) return;
+    if (!newActivityNotes.trim() || !selectedQuote || !canEdit(selectedQuote)) return;
 
     addActivityMutation.mutate({
       tipo: newActivityType,
@@ -419,7 +460,7 @@ export const CrmPipeline: React.FC = () => {
             {formatCurrency(kpis.activePipeline, 0)}
           </div>
           <div className="text-[10px] text-gray-400 mt-1 font-medium">
-            Ofertas en borrador, enviadas y negociación
+            {pilotMode ? 'Ofertas abiertas, desde Preliminar hasta Aceptada' : 'Ofertas en borrador, enviadas y negociación'}
           </div>
         </div>
 
@@ -554,15 +595,22 @@ export const CrmPipeline: React.FC = () => {
         </div>
       </div>
 
+      {pilotMode && <div className="flex gap-2 text-xs">
+        <button onClick={() => {setClosedFilter(''); setViewMode('kanban');}} className="px-3 py-2 rounded-lg border dark:border-white/10">Ofertas abiertas</button>
+        <button onClick={() => {setClosedFilter('ganada'); setViewMode('table');}} className="px-3 py-2 rounded-lg border dark:border-white/10">Ganadas · {formatCurrency(kpis.wonAmount)}</button>
+        <button onClick={() => {setClosedFilter('perdida'); setViewMode('table');}} className="px-3 py-2 rounded-lg border dark:border-white/10">Perdidas · {formatCurrency(kpis.lostAmount)}</button>
+        <button onClick={() => {setClosedFilter(''); setViewMode('table');}} className="px-3 py-2 rounded-lg border dark:border-white/10">Todas en tabla</button>
+      </div>}
       {/* Kanban / Table View Conditional Rendering */}
       {viewMode === 'kanban' ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-[calc(100vh-390px)] min-h-[450px]">
+        <div className={pilotMode ? "flex gap-4 overflow-x-auto h-[calc(100vh-390px)] min-h-[450px] pb-3" : "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-[calc(100vh-390px)] min-h-[450px]"}>
           {STAGES.map(stage => {
             const stageQuotes = groupedQuotes[stage.id] || [];
             
             return (
               <div 
                 key={stage.id}
+                style={pilotMode ? {minWidth: 200, flex: '1 0 200px'} : undefined}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, stage.id)}
                 className="bg-gray-50/50 dark:bg-white/1 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col h-full overflow-hidden"
@@ -588,7 +636,7 @@ export const CrmPipeline: React.FC = () => {
                       return (
                         <div
                            key={quote.id}
-                           draggable
+                           draggable={canEdit(quote)}
                            onDragStart={(e) => handleDragStart(e, quote.id)}
                            onDragEnd={handleDragEnd}
                            onClick={() => openDrawer(quote)}
@@ -598,7 +646,8 @@ export const CrmPipeline: React.FC = () => {
                         >
                           <div className="flex justify-between items-start mb-2">
                             <span className="text-[10px] font-bold font-mono text-dts-primary dark:text-dts-secondary">
-                              {quote.document_no}
+                              <span className="whitespace-nowrap">{quote.document_no}</span>
+                              {quote.followup_source && <span className="block text-[9px] font-normal text-gray-400">Seguimiento {quote.followup_source === 'APP' ? 'app' : 'BC'}</span>}
                             </span>
                             <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 font-bold">
                               {quote.oferta_type}
@@ -677,7 +726,7 @@ export const CrmPipeline: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  quotes.map(quote => {
+                  quotes.filter(q => !pilotMode || !closedFilter || q.estado_oferta === closedFilter).map(quote => {
                     const isTaskOverdue = isOverdue(quote.fecha_proxima_accion);
                     const stateLower = (quote.estado_oferta || '').toLowerCase();
                     let stageBadgeColor = 'bg-slate-50 text-slate-700 dark:bg-slate-950/30 dark:text-slate-400 border border-slate-100 dark:border-slate-900/30';
@@ -699,6 +748,7 @@ export const CrmPipeline: React.FC = () => {
                       >
                         <td className="px-4 py-3 font-bold font-mono text-xs text-dts-primary dark:text-dts-secondary whitespace-nowrap">
                           {quote.document_no}
+                          {quote.followup_source && <span className="ml-2 text-[9px] font-normal text-gray-400">Seguimiento {quote.followup_source === 'APP' ? 'app' : 'BC'}</span>}
                         </td>
                         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
                           {quote.document_date ? new Date(quote.document_date).toLocaleDateString() : '---'}
@@ -764,7 +814,8 @@ export const CrmPipeline: React.FC = () => {
         size="2xl"
       >
         {selectedQuote && (
-          <div className="space-y-6 pb-12">
+          <fieldset disabled={pilotMode && !canEdit(selectedQuote)} className="space-y-6 pb-12 min-w-0">
+            {updateQuoteMutation.isError && <p role="alert" className="text-xs text-rose-500">No se pudo guardar. Revisa los datos y recarga la oferta si su versión ha cambiado.</p>}
             <div className="bg-slate-50 dark:bg-white/2 p-4 rounded-xl border border-slate-100 dark:border-white/5 space-y-4">
               <div>
                 <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Cliente</span>
@@ -796,11 +847,12 @@ export const CrmPipeline: React.FC = () => {
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Estado de la Oferta</label>
                   <select 
-                    value={(selectedQuote.estado_oferta || '').toLowerCase().trim() === 'preliminar' ? 'borrador' : (selectedQuote.estado_oferta || 'borrador').toLowerCase().trim()} 
+                    disabled={!canEdit(selectedQuote)}
+                    value={pilotMode ? displayPhase(selectedQuote.estado_oferta) : (selectedQuote.estado_oferta || 'borrador').toLowerCase().trim()}
                     onChange={(e) => handleStageChange(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
                   >
-                    {STAGES.map(s => (
+                    {(pilotMode ? [...STAGES, ...LEGACY_STAGES.filter(s => ['ganada','perdida'].includes(s.id))] : STAGES).map(s => (
                       <option key={s.id} value={s.id}>{s.label}</option>
                     ))}
                   </select>
@@ -809,10 +861,12 @@ export const CrmPipeline: React.FC = () => {
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Probabilidad de Éxito</label>
                   <select 
+                    disabled={pilotMode}
                     value={selectedQuote.probabilidad_exito} 
                     onChange={(e) => handleFieldChange('probabilidad_exito', Number(e.target.value))}
                     className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
                   >
+                    {pilotMode && <option value={selectedQuote.probabilidad_exito}>{selectedQuote.probabilidad_exito}% · según fase</option>}
                     <option value={10}>10% - Inicial</option>
                     <option value={25}>25% - Revisiones</option>
                     <option value={50}>50% - Entregada Pesimista</option>
@@ -858,26 +912,40 @@ export const CrmPipeline: React.FC = () => {
                 {selectedQuote.estado_oferta?.toLowerCase().trim() === 'ganada' && (
                   <div className="animate-in slide-in-from-top-2 duration-200">
                     <label className="block text-xs font-bold text-emerald-500 uppercase mb-1">Motivo de Ganada</label>
-                    <textarea 
+                    {selectedQuote.followup_source === 'APP' ? <select
+                      value={selectedQuote.motivo_ganada || ''}
+                      onChange={(e) => handleFieldChange('motivo_ganada', e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    >
+                      <option value="" disabled>Selecciona un motivo</option>
+                      {(closeReasons?.ganada || []).map(reason => <option key={reason} value={reason}>{reason}</option>)}
+                    </select> : <textarea
                       placeholder="Indica las razones del éxito..."
                       value={selectedQuote.motivo_ganada || ''}
                       onChange={(e) => handleFieldChange('motivo_ganada', e.target.value)}
                       rows={2}
                       className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-                    />
+                    />}
                   </div>
                 )}
 
                 {selectedQuote.estado_oferta?.toLowerCase().trim() === 'perdida' && (
                   <div className="animate-in slide-in-from-top-2 duration-200">
                     <label className="block text-xs font-bold text-rose-500 uppercase mb-1">Motivo de Perdida</label>
-                    <textarea 
+                    {selectedQuote.followup_source === 'APP' ? <select
+                      value={selectedQuote.motivo_perdida || ''}
+                      onChange={(e) => handleFieldChange('motivo_perdida', e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                    >
+                      <option value="" disabled>Selecciona un motivo</option>
+                      {(closeReasons?.perdida || []).map(reason => <option key={reason} value={reason}>{reason}</option>)}
+                    </select> : <textarea
                       placeholder="¿Por qué se ha descartado la oferta? (Precio, Competencia, Plazo...)"
                       value={selectedQuote.motivo_perdida || ''}
                       onChange={(e) => handleFieldChange('motivo_perdida', e.target.value)}
                       rows={2}
                       className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-                    />
+                    />}
                   </div>
                 )}
               </div>
@@ -1029,6 +1097,7 @@ export const CrmPipeline: React.FC = () => {
                             {new Date(act.fecha).toLocaleDateString()}
                           </span>
                           <button 
+                            hidden={selectedQuote.followup_source === 'APP' || !canEdit(selectedQuote)}
                             onClick={() => deleteActivityMutation.mutate(act.id)}
                             className="text-gray-400 hover:text-rose-500 opacity-0 group-hover/act:opacity-100 transition-opacity"
                             title="Eliminar interacción"
@@ -1061,12 +1130,12 @@ export const CrmPipeline: React.FC = () => {
               </div>
             </div>
 
-          </div>
+          </fieldset>
         )}
       </Drawer>
 
       <Transition show={isStateModalOpen} as={React.Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => { setIsStateModalOpen(false); setPendingDropQuote(null); }}>
+        <Dialog as="div" className="relative z-[120]" onClose={() => { setIsStateModalOpen(false); setPendingDropQuote(null); }}>
           <TransitionChild
             as={React.Fragment}
             enter="ease-out duration-300"
@@ -1079,7 +1148,7 @@ export const CrmPipeline: React.FC = () => {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity" />
           </TransitionChild>
 
-          <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 z-[120] overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
               <TransitionChild
                 as={React.Fragment}
@@ -1145,9 +1214,16 @@ export const CrmPipeline: React.FC = () => {
 
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">
-                        {targetStage === 'ganada' ? 'Motivo de Éxito / Ganada' : targetStage === 'perdida' ? 'Motivo de Pérdida / Descarte' : 'Notas del Cambio / Motivo'}
+                        {pilotMode ? 'Nota del cambio *' : targetStage === 'ganada' ? 'Motivo de Éxito / Ganada' : targetStage === 'perdida' ? 'Motivo de Pérdida / Descarte' : 'Notas del Cambio / Motivo'}
                       </label>
-                      <textarea
+                      {!pilotMode && pendingDropQuote?.followup_source === 'APP' && ['ganada', 'perdida'].includes(targetStage) ? <select
+                        value={stateChangeNotes}
+                        onChange={(e) => setStateChangeNotes(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
+                      >
+                        <option value="" disabled>Selecciona un motivo</option>
+                        {(targetStage === 'ganada' ? closeReasons?.ganada : closeReasons?.perdida)?.map(reason => <option key={reason} value={reason}>{reason}</option>)}
+                      </select> : <textarea
                         rows={3}
                         value={stateChangeNotes}
                         onChange={(e) => setStateChangeNotes(e.target.value)}
@@ -1159,10 +1235,16 @@ export const CrmPipeline: React.FC = () => {
                               : "Detalles del cambio de estado o notas de seguimiento..."
                         }
                         className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-                      />
+                      />}
                     </div>
                   </div>
 
+                  {pilotMode && <div className="space-y-3 text-xs">
+                    <label className="block">Tipo de oferta *<select className="w-full rounded-lg p-2 border dark:bg-dts-primary-dark dark:border-gray-800" value={transitionType} onChange={e => setTransitionType(e.target.value)}><option value="">Selecciona</option><option value="proyecto">Proyecto</option><option value="cliente nuevo">Cliente nuevo</option><option value="cliente existente">Cliente existente</option></select></label>
+                    <label className="block">Cierre previsto *<input className="w-full rounded-lg p-2 border dark:bg-dts-primary-dark dark:border-gray-800" type="date" value={transitionDate} onChange={e => setTransitionDate(e.target.value)} /></label>
+                    {['ganada','perdida'].includes(targetStage) && <label className="block">Motivo de cierre *<select className="w-full rounded-lg p-2 border dark:bg-dts-primary-dark dark:border-gray-800" value={transitionReason} onChange={e => setTransitionReason(e.target.value)}><option value="">Selecciona</option>{(targetStage === 'ganada' ? closeReasons?.ganada : closeReasons?.perdida)?.map(reason => <option key={reason}>{reason}</option>)}</select></label>}
+                    {updateQuoteMutation.isError && <p role="alert" className="text-rose-500">No se pudo guardar. Revisa los datos y recarga la oferta si otra persona la ha modificado.</p>}
+                  </div>}
                   <div className="flex flex-col sm:flex-row gap-2 pt-2">
                     <button
                       onClick={() => { setIsStateModalOpen(false); setPendingDropQuote(null); }}
@@ -1171,6 +1253,7 @@ export const CrmPipeline: React.FC = () => {
                       Cancelar
                     </button>
                     <button
+                      hidden={pilotMode}
                       onClick={() => handleConfirmStateChange(true)}
                       className="flex-1 py-2.5 bg-gray-200/50 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-800 dark:text-white font-bold rounded-xl transition-all text-xs text-center"
                     >
@@ -1178,7 +1261,7 @@ export const CrmPipeline: React.FC = () => {
                     </button>
                     <button
                       onClick={() => handleConfirmStateChange(false)}
-                      disabled={!stateChangeNotes.trim()}
+                      disabled={updateQuoteMutation.isPending || !stateChangeNotes.trim() || (pilotMode && (!transitionType || !transitionDate || (['ganada','perdida'].includes(targetStage) && !transitionReason)))}
                       className="flex-1 py-2.5 bg-linear-to-r from-dts-secondary-dark to-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-[0.98] disabled:opacity-50 text-xs text-center"
                     >
                       Guardar con Motivo

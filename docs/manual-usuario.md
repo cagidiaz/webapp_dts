@@ -16,7 +16,7 @@
    - [2.7 Movimientos de Valor (Auditoría de value_entries)](#27-movimientos-de-valor-auditoría-de-value_entries)
    - [2.8 Ofertas Comerciales (Seguimiento, KPIs y Totales)](#28-ofertas-comerciales-seguimiento-kpis-y-totales)
 3. [Módulo de CRM y Productividad Comercial](#3-módulo-de-crm-y-productividad-comercial)
-   - [3.1 CRM de Ofertas y Pipeline Comercial](#31-crm-de-ofertas-y-pipeline-comercial)
+   - [3.1 Oportunidades: Prospección, Pipeline de Ofertas y Cortes Históricos](#31-oportunidades-prospección-pipeline-de-ofertas-y-cortes-históricos)
    - [3.2 Contactos, Cuentas y Timeline de Actividades](#32-contactos-cuentas-y-timeline-de-actividades)
    - [3.3 Pestaña de Emails y Envío Directo por Exchange](#33-pestaña-de-emails-y-envío-directo-por-exchange)
    - [3.4 Complemento de Outlook (Add-in dTS CRM)](#34-complemento-de-outlook-add-in-dts-crm)
@@ -175,19 +175,87 @@ Ubicado en `/sales/quotes`. Para documentación técnica exhaustiva, consultar [
 
 ## 3. Módulo de CRM y Productividad Comercial
 
-### 3.1 CRM de Ofertas y Pipeline Comercial
-Ubicado en `/crm/pipeline`, gestiona el ciclo de vida de las cotizaciones y oportunidades de venta en formato Kanban interactivo.
+### 3.1 Oportunidades: Prospección, Pipeline de Ofertas y Cortes Históricos
+Ubicado en `/crm/pipeline`. Para especificaciones técnicas y modelos de datos, consultar [Documentación de Vista: CRM Pipeline y Oportunidades](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_pipeline.md).
 
-* **Vista Tablero Kanban Interactivo**:
-  * Columnas por estado: *Borrador*, *Enviada*, *En Negociación*, *Ganada* o *Perdida*.
-  * Arrastrar y soltar (Drag & Drop) para avanzar el estado comercial de las ofertas.
-* **Vista Tabla Compacta**: Listado tabular con filtros por ejercicio, comercial, tipo de oferta (*Proyecto*, *Comercial Nuevo*, *Comercial Existente*) y probabilidad de éxito.
-* **Indicadores Clave del Pipeline**:
-  * **Pipeline Activo**: Sumatorio nominal de cotizaciones abiertas.
-  * **Previsión Ponderada**: Estimación probabilística calculada como `∑(Importe × Probabilidad / 100)`.
-  * **Tasa de Cierre**: Porcentaje de éxito de ofertas ganadas sobre el total de resueltas.
-  * **Seguimiento Vencido**: Oportunidades cuya fecha de próxima acción está vencida.
-* **Drawer Lateral de Oferta**: Edición rápida de próxima acción, fecha límite, notas del comercial y sincronización bidireccional automática con la agenda de tareas.
+Esta pantalla centraliza el ciclo de vida comercial completo mediante una arquitectura modular en **3 pestañas** especializadas:
+
+#### A. Pestaña de Prospección Comercial (`CrmProspects`)
+Diseñada para que el equipo comercial registre, califique y madure cuentas potenciales antes de que existan formalmente como clientes en Microsoft Dynamics 365 Business Central, evitando la creación de registros prematuros o ficticios en el ERP.
+
+* **Fases del Ciclo de Prospección**:
+  * **Fase 0 (Sin aproximación comercial)**: Empresas identificadas o leads iniciales pendientes de contacto exploratorio.
+  * **Fase 1 (Prospectos interesados)**: Interlocución activa con interés comercial o técnico confirmado.
+  * **Convertidos**: Prospectos formalizados y enlazados a una ficha real de cliente de Business Central.
+* **Bandeja de KPIs Superiores**:
+  * Contadores en tiempo real de empresas activas en *Fase 0*, *Fase 1* y acumulado histórico de *Convertidos*.
+* **Vistas Interactivas**:
+  * **Tablero Kanban**: Columnas dedicadas para Fase 0 y Fase 1 con arrastre directo (*Drag & Drop*) para avanzar o retroceder la madurez del prospecto.
+  * **Vista Tabla**: Listado denso con buscador reactivo (`keepPreviousData`), selector de estado (*Activos*, *Archivados*, *Convertidos*, *Todos*) y paginación rápida.
+* **Ficha Lateral del Prospecto (`Drawer`)**:
+  * Formulario de datos básicos: Empresa (obligatoria y con control de duplicados por comercial), Interlocutor, Email y Teléfono.
+  * Historial de auditoría inmutable de cambios (quién modificó, qué valor y fecha exacta).
+  * Función de **Archivar** y **Restaurar** prospectos sin pérdida de fase previa ni borrado físico.
+* **Vinculación Inteligente y Reversible con Business Central**:
+  * Buscador integrado en la cartera del comercial que propone coincidencias por empresa, teléfono o email.
+  * Al confirmar la vinculación, el prospecto pasa a "Convertido" y sus datos de seguimiento quedan disponibles en la ficha del cliente en la WebApp.
+  * **Reversibilidad total**: Si se requiere deshacer la asociación, el comercial puede pulsar *«Deshacer vinculación»*; el prospecto retorna a su fase original y los recuentos se corrigen de forma inmediata.
+* **Seguimiento Comercial Local**:
+  * Registro de actividades locales (*Nota interna*, *Tarea*, *Llamada*, *Visita a cliente*, *Videollamada* y *Visita no programada*) asociadas a la entidad local, visibles en la ficha del cliente tras la conversión.
+
+---
+
+#### B. Pestaña de Ofertas y Pipeline Renovado (`CrmPipeline`)
+Gestiona las propuestas y cotizaciones vigentes garantizando rigor procedimental y consistencia con Business Central:
+
+* **Seis Fases Abiertas en Fila Única Horizontal**:
+  A diferencia del modelo clásico de cinco columnas, el tablero organiza las ofertas vivas en 6 fases secuenciales en una única fila continua con desplazamiento horizontal ergonómico:
+  1. **Preliminar (5%)**: Cotización en preparación preliminar o fase embrionaria.
+  2. **Presentada (20%)**: Propuesta entregada formalmente al cliente para su estudio.
+  3. **Evaluación (35%)**: Análisis técnico y comparativo activo por parte del cliente.
+  4. **Negociación (55%)**: Ajustes de precios, plazos o condiciones comerciales.
+  5. **Aprobación (75%)**: Aprobación presupuestaria interna en el cliente pendiente de firma.
+  6. **Aceptada (90%)**: Conformidad verbal o pre-adjudicación (la oferta permanece viva en el embudo).
+* **Gestión de Ganadas y Perdidas fuera del Kanban**:
+  Las ofertas cerradas (*Ganada 100%* y *Perdida 0%*) se desacoplan de las columnas del Kanban para mantener el foco en la cartera viva, presentándose en tablas dedicadas y métricas analíticas.
+* **Derivación Automática de Probabilidad**:
+  El porcentaje de éxito no se edita a mano; el servidor lo calcula de forma estricta según la fase para evitar desviaciones subjetivas en el valor ponderado.
+* **Transiciones con Nota Comercial Obligatoria**:
+  * No se permite cambiar de fase arrastrando sin justificación comercial.
+  * Cada avance exige registrar la interacción realizada, la nota explicativa y la fecha estimada de cierre.
+* **Catálogo Aprobado de Motivos de Cierre**:
+  Al marcar una oferta como Ganada o Perdida, es mandatorio seleccionar la causa dentro del catálogo oficial:
+  * *Ganadas*: **Precio**, **Servicio**, **Producto**, **Propuesta de valor**, **Afinidad**.
+  * *Perdidas*: **Precio**, **Servicio**, **Financiación / Condiciones de pago**, **Relación cliente**, **Producto**, **Capacidad de producción**, **Compromiso con otros**, **Falta de financiación**, **Documentación / Certificados**.
+* **Separación de Fuentes (`BC` vs `APP`)**:
+  Los importes y clientes se sincronizan de forma continua desde Business Central (solo lectura), mientras que el seguimiento avanzado (fases, motivos, notas y auditoría) se almacena en tablas locales de la WebApp con control de versiones para evitar conflictos de concurrencia.
+
+---
+
+#### C. Pestaña de Cortes del Pipeline y Analítica Histórica (`PipelineCuts` & `CutAnalytics`)
+Permite capturar y analizar fotografías inmutables de la cartera comercial a lo largo del tiempo:
+
+* **Fotografías Temporales (Cortes)**:
+  * **Corte Automático Semanal**: Programado cada **viernes a las 18:00 (hora civil de Madrid)**, capturando todas las ofertas y prospectos con sus importes netos sin IVA.
+  * **Cortes Manuales**: Exclusivos para Administradores y Dirección, requiriendo justificar obligatoriamente el motivo del corte.
+  * **Inmutabilidad y Revisiones**: Un corte publicado jamás se altera ni se recalcula retrospectivamente. Si se detecta una corrección, se genera una *Revisión* enlazada a la captura original.
+* **8 Informes Analíticos Congelados (`CutAnalytics`)**:
+  1. **Resumen General**: Importe nominal y valor ponderado total de la fotografía.
+  2. **Matriz Mensual**: Distribución cruzada de ofertas abiertas entre mes de cierre previsto y fase.
+  3. **Calidad de Datos**: Identificación de oportunidades sin fecha prevista o sin interlocutor.
+  4. **Cierres Vencidos**: Cotizaciones cuya fecha prevista es anterior a la fecha de captura del corte.
+  5. **Próximas Acciones**: Actividades y tareas pendientes de resolución.
+  6. **Motivos de Ganadas y Perdidas**: Desglose cuantitativo de causas de éxito y descarte.
+  7. **Evolución de Prospección**: Estado de madurez de leads y tasa de conversión acumulada.
+  8. **Comparativa Dinámica entre Dos Cortes**: Análisis diferencial que detalla altas nuevas, bajas de cartera, avances/retrocesos de fase y variaciones de importe económico.
+* **Exportación Segura a CSV**: Descarga individual de cada informe y del corte íntegro en formato UTF-8 con protección frente a inyección de fórmulas de hoja de cálculo.
+
+---
+
+#### D. Matriz de Permisos y Control de Acceso por Cartera
+* **Comerciales (`VENTAS`, `OPERACIONES`)**: Visualizan y gestionan exclusivamente las ofertas y prospectos de su propia cartera.
+* **Dirección (`DIRECCION`)**: Dispone de consulta global consolidada de todo el equipo comercial, cortes analíticos e informes, sin capacidad de editar ofertas ajenas.
+* **Administración (`ADMIN`)**: Acceso global, generación de cortes manuales y edición administrativa de prospectos conservando el comercial propietario.
 
 ---
 

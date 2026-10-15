@@ -241,6 +241,7 @@ export const UpdatesModal: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => toggleCompleteActivity(act.id, isCompleted)}
+                            disabled={act.can_edit === false}
                             className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                               isCompleted
                                 ? 'bg-emerald-600 border-emerald-600 text-white'
@@ -281,7 +282,7 @@ export const UpdatesModal: React.FC = () => {
                             <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
                               <span className="flex items-center gap-1 font-semibold text-dts-primary dark:text-cyan-300">
                                 <Building2 size={12} className="shrink-0" />
-                                {act.customer?.name || act.customer?.company_name || 'Sin empresa'}
+                                {act.customer?.name || act.customer?.company_name || act.prospect?.company_name || 'Sin empresa'}{act.source === 'PROSPECT' ? ' · Prospección' : ''}
                               </span>
 
                               {act.contact && (
@@ -349,6 +350,7 @@ export const UpdatesModal: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => toggleCompleteActivity(act.id, false)}
+                            disabled={act.can_edit === false}
                             className="mt-0.5 w-5 h-5 rounded-md border border-gray-300 dark:border-white/20 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center justify-center transition-colors cursor-pointer shrink-0"
                             title="Marcar como completada ahora"
                           >
@@ -374,7 +376,7 @@ export const UpdatesModal: React.FC = () => {
                             <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
                               <span className="flex items-center gap-1 font-semibold text-dts-primary dark:text-cyan-300">
                                 <Building2 size={12} className="shrink-0" />
-                                {act.customer?.name || act.customer?.company_name || 'Sin empresa'}
+                                {act.customer?.name || act.customer?.company_name || act.prospect?.company_name || 'Sin empresa'}{act.source === 'PROSPECT' ? ' · Prospección' : ''}
                               </span>
 
                               {act.contact && (

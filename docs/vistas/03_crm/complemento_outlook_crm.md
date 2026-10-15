@@ -64,3 +64,6 @@ Al pulsar **"Registrar en dTS CRM"**:
 1. Se inserta una actividad de tipo `EMAIL` en `crm_activities` y `sales_quote_activities`.
 2. Se guarda el `exchange_item_id` y el enlace web directo de Microsoft `exchange_web_link`.
 3. Esto permite que posteriormente, desde la vista web del CRM (Ficha del Contacto, Timeline o Pestaña de Mails), cualquier usuario pueda pulsar el icono de Outlook y abrir este correo original directamente en su Outlook (Web o Clásico) usando su identificador único.
+
+### Convivencia del cierre manual del piloto
+Una oferta APP conserva el correo como actividad local y no se gana automáticamente. Una oferta nueva del código real del TESTER configurado tampoco se gana por una categoría de aceptación antes de inicializar el seguimiento: si hace falta metadato CRM para registrar el correo, se copian los valores actuales BC y se conservan nulos/ceros. Los otros comerciales mantienen su flujo anterior. Piloto desactivado: no se consultan sus tablas ni perfiles para esta decisión. Validar con cuenta/cartera aisladas antes de conectar Outlook real.

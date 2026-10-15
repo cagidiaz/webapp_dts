@@ -1,0 +1,19 @@
+name: dts-crm-review-df72
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: dts_crm_review
+      POSTGRES_USER: crm_review
+      POSTGRES_PASSWORD: local_review_only
+    ports:
+      - "127.0.0.1:55436:5432"
+    volumes:
+      - ./bootstrap.sql:/docker-entrypoint-initdb.d/00-bootstrap.sql:ro
+      - ../../prisma/proposals/2026-10-13-cortes-pipeline-piloto.sql:/docker-entrypoint-initdb.d/10-cortes.sql:ro
+      - ./verify-cuts.sql:/review/verify-cuts.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm_review -d dts_crm_review"]
+      interval: 3s
+      timeout: 3s
+      retries: 20

@@ -830,7 +830,7 @@ export const SalesDashboard: React.FC = () => {
                             <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-white dark:bg-white/5 text-gray-400 font-bold border border-gray-100 dark:border-white/5">
                               {typeLabel[act.type]}
                             </span>
-                            <button
+                            {act.can_edit !== false && <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -841,7 +841,7 @@ export const SalesDashboard: React.FC = () => {
                               title="Editar evento"
                             >
                               <Edit2 size={13} />
-                            </button>
+                            </button>}
                           </div>
                         </div>
                         
@@ -860,7 +860,7 @@ export const SalesDashboard: React.FC = () => {
                           </div>
                         )}
 
-                        {needsConclusions && (
+                        {needsConclusions && act.can_edit !== false && (
                           <button
                             type="button"
                             onClick={(e) => {
@@ -875,6 +875,7 @@ export const SalesDashboard: React.FC = () => {
                           </button>
                         )}
 
+                        {act.source === 'PROSPECT' && <p className="text-[10px] text-dts-secondary mt-2">Prospecto: {act.prospect?.company_name} · {act.exchange_sync_status === 'SYNCED' ? 'Outlook sincronizado' : act.exchange_sync_status === 'LOCAL' ? 'Modo local' : 'Outlook pendiente'}</p>}
                         {(act.customer || act.contact) && (
                           <div className="mt-2 pt-2 border-t border-gray-100 dark:border-white/5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-500 dark:text-gray-400 font-semibold">
                             {act.customer && (

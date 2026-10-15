@@ -579,7 +579,7 @@ export const CrmActivityReportModal: React.FC<CrmActivityReportModalProps> = ({
                   <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-600 dark:text-gray-300">
                     <span className="flex items-center gap-1 text-dts-primary dark:text-white font-bold">
                       <Building2 size={13} className="text-dts-primary dark:text-dts-secondary" />
-                      {act.customer?.name || act.customer?.company_name || 'Empresa no asignada'}
+                      {act.customer?.name || act.customer?.company_name || act.prospect?.company_name || 'Empresa no asignada'}{act.source === 'PROSPECT' ? ' · Prospección' : ''}
                     </span>
                     {act.contact && (
                       <span className="flex items-center gap-1 text-gray-600 dark:text-gray-300">

@@ -82,3 +82,14 @@ Cada vez que se añade una nueva vista a la WebApp, debe seguirse el siguiente p
 2. **Permisos Iniciales (`public.role_modules`):** Insertar un registro para **cada uno** de los 6 roles, configurando `can_view` en `true` o `false` según la política corporativa.
 3. **Agrupación en Frontend (`pages/users/index.tsx`):** Asegurar que `groupedModules` clasifique la ruta dentro del módulo padre adecuado para que aparezca en el panel de permisos.
 4. **Guardián de Rutas:** Evitar arrays estáticos en `App.tsx` o `Sidebar.tsx`; utilizar `isPathAllowed(path)`.
+
+
+## Aclaración de permisos del piloto: Antoni es TESTER (13/10/2026)
+
+- Antoni Ciurans mantiene el rol TESTER. Admin gestiona el acceso desde Usuarios → Permisos de Rol → TESTER, activando CRM (`/crm`) y Oportunidades (`/crm/pipeline`). Se reutilizan `modules` y `role_modules`; no se crea otra matriz ni se conceden permisos automáticamente en Supabase.
+- Los permisos actuales son por rol: conceder una vista a TESTER afecta a todos los miembros del rol. La participación en el piloto sigue limitada a Antoni por identidad; otros testers no obtienen funciones nuevas del piloto. No equivale a un permiso individual ni exige cambiarlo a VENTAS.
+- Admin y Dirección también necesitan sus permisos de CRM/Oportunidades para consultar el piloto. Conservan las operaciones acordadas: Admin edita prospectos, Dirección consulta. El propietario sigue siendo el único que confirma/deshace asociaciones y archiva/restaura.
+- La API verifica permisos vigentes en cada operación. Revocar CRM u Oportunidades bloquea el piloto aunque se invoque por ID. Outlook también respeta esa revocación y reconoce el origen sin reimportarlo como actividad BC.
+- Las rutas CRM verifican la matriz también al acceder por URL directa. Guardar desde el panel invalida consultas de permisos y refresca el menú de la sesión actual. Las otras sesiones revalidan al recuperar foco o recargar; las rutas CRM abiertas revalidan cada 30 segundos. No es una revocación instantánea de datos ya descargados, pero las operaciones nuevas del piloto sí se comprueban en servidor.
+- TESTER usa el código comercial propio al consultar ofertas desde la vista, desde la primera petición. Si no tiene código asignado, la consulta no se lanza. Confirmar el código de Antoni antes de activar el piloto. La validación de cartera en el endpoint general de ofertas se revisará al implementar la convivencia BC/app.
+- Los interruptores de despliegue del piloto y Outlook permanecen como salvaguarda técnica, apagados por defecto. No sustituyen los permisos que Admin decide en su panel. No se ha alterado la carpeta local, ni aplicado SQL, ni concedido permisos reales.

@@ -14,6 +14,7 @@ import {
 } from './pages/finance';
 import { CustomersPage, ProductsPage, SalesBudgetPage, SalesOrdersPage, ProductBudgetPage, ValueEntriesPage, SalesInvoicesPage, QuotesPage } from './pages/sales';
 import { CrmPage } from './pages/crm';
+import { CrmPermissionGuard } from './components/CrmPermissionGuard';
 import { VendorsPage, PurchaseOrdersPage } from './pages/purchases';
 import { SettingsPage } from './pages/settings';
 import { BudgetGeneratorPage } from './pages/settings/BudgetGeneratorPage';
@@ -135,7 +136,7 @@ const App: React.FC = () => {
                 <Route path="orders" element={<PurchaseOrdersPage />} />
               </Route>
 
-              <Route path="crm" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION', 'VENTAS', 'OPERACIONES', 'PRODUCCION', 'TESTER']}><Outlet /></RoleGuard>}>
+              <Route path="crm" element={<CrmPermissionGuard />}>
                 <Route index element={<CrmIndexRedirect />} />
                 <Route path="customers" element={<CrmPage mode="customers" />} />
                 <Route path="contacts" element={<CrmPage mode="contacts" />} />

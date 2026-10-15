@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { getCrmDailyBriefing, updateCrmActivity } from '../api/crmActivities';
+import { getCrmDailyBriefing, updateAgendaActivity } from '../api/crmActivities';
 import type { CrmDailyBriefing } from '../api/crmActivities';
 
 export interface GithubCommit {
@@ -94,6 +94,9 @@ export const useUpdatesStore = create<UpdatesState>()(
       },
 
       toggleCompleteActivity: async (activityId: string, currentCompleted: boolean) => {
+        const briefing = get().briefing;
+        const activity = [...(briefing?.todayActivities || []), ...(briefing?.pendingActivities || [])].find(item => item.id === activityId);
+        if (!activity || activity.can_edit === false) return;
         const newCompleted = !currentCompleted;
         // Actualización optimista inmediata en la UI
         set(state => {
@@ -122,7 +125,8 @@ export const useUpdatesStore = create<UpdatesState>()(
         });
 
         try {
-          await updateCrmActivity(activityId, { isCompleted: newCompleted });
+          await updateAgendaActivity(activity, { isCompleted: newCompleted, ...(!newCompleted && activity.source === 'PROSPECT' ? { conclusions: null } : {}) });
+          if (activity.source === 'PROSPECT') await get().fetchBriefing();
         } catch (error) {
           console.error('Error al actualizar estado de la actividad:', error);
           get().fetchBriefing();

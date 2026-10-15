@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CalendarEventPayload {
+  transactionId?: string;
   title: string;
   description?: string;
   startDate: string; // ISO String o YYYY-MM-DD
@@ -340,6 +341,7 @@ export class MicrosoftGraphService {
 
     const payload: any = {
       subject: eventData.title,
+      ...(eventData.transactionId ? { transactionId: eventData.transactionId } : {}),
       categories: eventData.categories && eventData.categories.length > 0 ? eventData.categories : ['dTS CRM'],
       body: {
         contentType: 'HTML',

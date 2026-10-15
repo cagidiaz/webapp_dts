@@ -19,6 +19,7 @@ import { CrmActivitiesModule } from './modules/crm-activities/crm-activities.mod
 import { VendorsModule } from './modules/vendors/vendors.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { ExchangeSyncModule } from './modules/exchange-sync/exchange-sync.module';
+import { ProspectsModule } from './modules/prospects/prospects.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { ExchangeSyncModule } from './modules/exchange-sync/exchange-sync.module
     VendorsModule,
     PurchaseOrdersModule,
     ExchangeSyncModule,
+    ProspectsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

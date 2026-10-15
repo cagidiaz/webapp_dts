@@ -169,7 +169,7 @@ export const QuotesPage: React.FC = () => {
   // Mutación para guardar fecha de cierre previsto directamente desde el Drawer
   const updateCierreMutation = useMutation({
     mutationFn: async ({ id, date }: { id: string; date: string | null }) => {
-      return updateCrmQuote(id, { cierreprev_date: date });
+      return updateCrmQuote(id, { cierreprev_date: date, ...(selectedQuote?.followup_version ? { followup_version: selectedQuote.followup_version } : {}) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-quotes'] });

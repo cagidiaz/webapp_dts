@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   UserPlus, 
   Search, 
@@ -36,6 +37,7 @@ interface UserProfile {
 }
 
 export const UsersPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const { setPageInfo } = useUIStore();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -151,6 +153,9 @@ export const UsersPage: React.FC = () => {
       await apiClient.post(`/users/roles/${selectedPermissionRoleId}/modules`, {
         permissions: permissionsPayload
       });
+      queryClient.invalidateQueries({ queryKey: ['view-permissions'] });
+      queryClient.invalidateQueries({ queryKey: ['prospect-access'] });
+      window.dispatchEvent(new Event('dts-permissions-changed'));
       alert("Permisos guardados correctamente. Los cambios se aplicarán en la próxima recarga.");
     } catch (error: any) {
       alert("Error al guardar permisos: " + (error.response?.data?.message || error.message));

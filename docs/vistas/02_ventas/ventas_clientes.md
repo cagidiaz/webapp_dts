@@ -12,6 +12,8 @@
 
 ## 1. Propósito y Utilidad de Negocio 🎯
 
+**Ampliación preparada de la ficha compartida (13/10/2026):** `CustomerDetailDrawer` incorpora seguimiento de prospectos vinculados mediante `ClientProspectActivities`, solo para usuarios habilitados del piloto. Consulta las actividades locales por la asociación actual, con ámbito de cartera validado en API. Al desvincular, desaparecen del cliente y permanecen en el prospecto; no modifica BC. Con el piloto apagado, no se consulta la nueva tabla. La agenda global está preparada; Outlook está preparado y desactivado y el SQL no se ha aplicado.
+
 La vista **Cartera de Clientes** es la herramienta central para el equipo de ventas, dirección y finanzas de dTS Instruments para la monitorización de cuentas comerciales, su concentración geográfica y el análisis de crédito. Permite:
 
 * **Visión Geoespacial del Negocio en la Península Ibérica**: Mapa interactivo D3 / TopoJSON que representa las ventas acumuladas o la deuda viva por comunidades autónomas de España y regiones de Portugal.

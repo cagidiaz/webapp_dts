@@ -1,5 +1,13 @@
 # Vista: Contactos CRM y Pestaña de Emails (`CrmContactDetail.tsx`)
 
+## Prospectos locales: primera entrega del piloto (13/10/2026)
+
+`CrmPage.tsx` utiliza `CrmContactsView.tsx` como contenedor. Con el piloto desactivado conserva el listado `CrmContacts` actual. Cuando `GET /crm-prospects/access` habilita al usuario, permite alternar Contactos BC y Prospectos. La pestaña Prospectos reutiliza el mismo panel, datos, permisos y ficha lateral de Oportunidades, inicialmente en modo tabla.
+
+Los prospectos se almacenan en una entidad local propuesta, sin insertar contactos ni clientes ficticios en las tablas importadas. Admin también edita sus datos y fase. Dirección consulta. El propietario conserva el control de archivo y restauración.
+
+La ficha muestra el historial de cambios y permite al propietario confirmar o deshacer una asociación con un cliente de su cartera en BC, incluso sin oferta. Los convertidos se conservan en la tabla y en el recuento histórico. El panel `ProspectActivities.tsx` permite crear/editar actividades locales, completarlas con conclusiones y reabrirlas, con filtros por tipo/estado y campos actuales. Propietario y Admin editan, Dirección consulta; los archivados son de consulta. Las actividades permanecen en `crm_prospect_activities` y se muestran en el cliente mediante su asociación actual, sin copiarlas. La agenda/briefing general ya incluye las actividades programadas; La conexión Outlook está preparada y desactivada; los correos siguen pendientes. No se ha aplicado el SQL ni habilitado el piloto.
+
 ## 1. Descripción General
 La vista de detalle de contacto en el CRM (`/crm/contacts/:id`) centraliza la información comercial, perfil del interlocutor, histórico de interacciones, cartera de ofertas vinculadas y el registro cronológico de correos electrónicos sincronizados con Microsoft Outlook y Exchange.
 
@@ -112,6 +120,8 @@ Para evitar discrepancias visuales entre la pestaña de **Emails** y el **Timeli
 ---
 
 ## 5. Tipologías de Eventos y Actividades Comerciales
+
+**Outlook de prospectos, preparado sin activar:** `ProspectOutlookService` reutiliza Microsoft Graph para el calendario del propietario, condicionado a los interruptores `CRM_PROSPECTS_PILOT_ENABLED` y `CRM_PROSPECTS_OUTLOOK_ENABLED` (apagados por defecto). Guarda estado/ID/versionado en `crm_prospect_activities`; las notas son locales. Solo Videollamada envía convocatoria y requiere email válido. Admin puede sincronizar en el calendario del propietario; Dirección consulta. `POST /crm-prospects/:id/activities/:activityId/sync` verifica ámbito y permite reintentos seguros de actualizaciones. Las creaciones inciertas se conservan para revisión y no se repiten automáticamente. El delta recibe fecha/hora/ubicación, preserva cambios locales pendientes y conserva registros retirados en Outlook. SQL sin aplicar; pruebas con Graph simulado. La vista previa identifica expresamente Outlook simulado.
 
 En la pestaña de **Eventos** y en el botón **"Nueva Actividad"** de la ficha de contacto, el CRM clasifica las interacciones comerciales mediante tipologías oficiales:
 
@@ -229,3 +239,6 @@ Para identificar al instante la situación operativa de cada cita o tarea, las t
     - *Abrir en Outlook Web ahora* (solución instantánea).
     - *Descargar Configurador de Windows (1 Clic)*.
     - *Ya lo tengo instalado en este equipo (No volver a mostrar)*: Guarda la confirmación en `localStorage` (`dts_outlook_protocol_installed`) para silenciar alertas futuras mientras Chrome o Edge procesan el diálogo de apertura.
+
+### Seguimiento de ofertas del piloto
+Cuando el contacto tiene ofertas con seguimiento APP, la pestaña Ofertas reutiliza CrmPipeline con contactId: seis fases abiertas, porcentajes automáticos, cierre mediante motivo y nota obligatorios y tablas de ganadas/perdidas. El resto de contactos conserva el tablero anterior. Se mantiene el filtro servidor por contacto y cartera; Dirección consulta sin arrastre. La nota y la fase del piloto se guardan conjuntamente en las tablas locales.

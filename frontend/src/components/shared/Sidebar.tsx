@@ -103,11 +103,16 @@ export const Sidebar: React.FC = () => {
 
   // Fetch permissions on mount/session change
   useEffect(() => {
+    const refreshPermissions = () => {
+      if (session) apiClient.get('/users/permissions/me').then(res => setAllowedPermissions(res.data)).catch(err => console.error('Error fetching permissions:', err));
+    };
+    window.addEventListener('dts-permissions-changed', refreshPermissions);
     if (session) {
       apiClient.get('/users/permissions/me')
         .then(res => setAllowedPermissions(res.data))
         .catch(err => console.error('Error fetching permissions:', err));
     }
+    return () => window.removeEventListener('dts-permissions-changed', refreshPermissions);
   }, [session, profile]);
 
   // Autodetect open submenu on mount and when path changes

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { isAxiosError } from 'axios';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   X, Calendar, Clock, MapPin, FileText, CheckSquare, 
   Users, Video, Phone, Check, Loader2, Mail
 } from 'lucide-react';
-import { type CrmActivityType, updateCrmActivity } from '../../../api/crmActivities';
+import { type CrmActivityType, type CrmActivity, updateAgendaActivity } from '../../../api/crmActivities';
 import {
   parseEmailActivity,
   EMAIL_CATEGORY_LIST,
@@ -12,6 +13,9 @@ import {
 } from '../utils/emailTipologia';
 
 export interface EditableActivityData {
+  source?: 'PROSPECT';
+  prospect_id?: string;
+  version?: number;
   id: string;
   type?: string;
   title: string;
@@ -125,10 +129,15 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
   const updateMutation = useMutation({
     mutationFn: (payload: any) => {
       if (!activity) throw new Error('No activity selected');
-      return updateCrmActivity(activity.id, payload);
+      return updateAgendaActivity(activity as CrmActivity, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmWeeklyAgenda'] });
+      queryClient.invalidateQueries({ queryKey: ['prospect-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['client-prospect-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-prospect'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-activities-report'] });
+      queryClient.invalidateQueries({ queryKey: ['crmDailyBriefing'] });
       queryClient.invalidateQueries({ queryKey: ['crmActivities'] });
       queryClient.invalidateQueries({ queryKey: ['crmActivitiesAgenda'] });
       queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
@@ -202,6 +211,8 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
 
         {/* Contenido del formulario con scroll */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+          {updateMutation.isError && <p role="alert" className="text-xs text-rose-500">{isAxiosError(updateMutation.error) && typeof updateMutation.error.response?.data?.message === 'string' ? updateMutation.error.response.data.message : 'No se pudieron guardar los cambios. Recarga la actividad antes de intentarlo de nuevo.'}</p>}
+          {activity.source === 'PROSPECT' && <p className="text-[11px] text-gray-500 dark:text-gray-400">Actividad de prospección · Modo local</p>}
           {/* Tipo de Actividad (Solo Lectura) */}
           <div className="space-y-1">
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 import { EditActivityModal } from './EditActivityModal';
+import { CrmPipeline } from './CrmPipeline';
 import {
   parseEmailActivity,
   EMAIL_CATEGORY_LIST,
@@ -638,7 +639,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   // CRM Quotes pipeline mutations
   const updateQuoteMutation = useMutation({
     mutationFn: async ({ id, data, fromStage, toStage, documentNo }: { id: string; data: any; fromStage: string; toStage: string; documentNo: string }) => {
-      const result = await updateCrmQuote(id, data);
+      const result = await updateCrmQuote(id, { ...data, ...(crmQuotes.find(quote => quote.id === id)?.followup_version ? { followup_version: crmQuotes.find(quote => quote.id === id)!.followup_version } : {}) });
       try {
         await addQuoteActivity(id, {
           tipo: 'Sistema',
@@ -735,7 +736,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   });
 
   const updateFieldMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => updateCrmQuote(id, data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => updateCrmQuote(id, { ...data, ...(crmQuotes.find(quote => quote.id === id)?.followup_version ? { followup_version: crmQuotes.find(quote => quote.id === id)!.followup_version } : {}) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contactCrmQuotes', contactId] });
     }
@@ -2434,7 +2435,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           {/* Ofertas Tab (Pipeline) */}
           {activeTab === 'ofertas' && (
             <div className="flex flex-col h-full space-y-4">
-              {isLoadingQuotes ? (
+              {crmQuotes.some(quote => quote.followup_source === 'APP') ? (
+                <CrmPipeline pilotMode contactId={contactId} canEditPilot={['ADMIN', 'TESTER'].includes(profile?.roles?.name?.toUpperCase() || '')} />
+              ) : isLoadingQuotes ? (
                 <div className="text-center py-10 text-xs text-gray-400 uppercase font-medium">Cargando ofertas comerciales...</div>
               ) : crmQuotes.length === 0 ? (
                 <div className="text-center py-20 text-gray-400 italic text-xs">Este contacto no tiene ofertas CRM asociadas actualmente.</div>

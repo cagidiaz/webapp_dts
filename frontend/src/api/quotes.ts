@@ -1,6 +1,8 @@
 import apiClient from './apiClient';
 
 export interface SalesQuote {
+  followup_source?: 'APP' | 'BC' | null;
+  followup_version?: number | null;
   id: string;
   document_type: string | null;
   document_no: string;
@@ -127,6 +129,9 @@ export interface CRMQuoteActivity {
 }
 
 export interface CRMQuote {
+  followup_source?: 'APP' | 'BC' | null;
+  followup_version?: number | null;
+  followup_owner_id?: string | null;
   id: string;
   document_no: string;
   document_date: string | null;
@@ -173,6 +178,8 @@ export const updateCrmQuote = async (id: string, updateData: Partial<CRMQuote>):
   const { data } = await apiClient.patch(`/quotes/crm/${id}`, updateData);
   return data;
 };
+
+export const getOfferCloseReasons = async () => (await apiClient.get<{ ganada: string[]; perdida: string[] }>('/quotes/crm/pilot/close-reasons')).data;
 
 export const getQuoteActivities = async (id: string): Promise<CRMQuoteActivity[]> => {
   const { data } = await apiClient.get(`/quotes/crm/${id}/activities`);

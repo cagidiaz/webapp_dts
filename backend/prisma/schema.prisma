@@ -384,6 +384,10 @@ model profiles {
   users      users       @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   roles      roles?      @relation(fields: [role_id], references: [id], onUpdate: NoAction)
   crm_activities crm_activities[]
+  owned_prospects crm_prospects[] @relation("crm_prospect_owner")
+  prospect_events crm_prospect_events[] @relation("crm_prospect_author")
+  prospect_activities crm_prospect_activities[] @relation("crm_prospect_activity_author")
+
   user_exchange_account user_exchange_accounts?
 
   @@index([role_id], map: "idx_profiles_role")
@@ -554,6 +558,7 @@ model customers {
   sales_quotes             sales_quotes[]
   contacts                 contacts[]
   crm_activities           crm_activities[]
+  converted_prospects      crm_prospects[] @relation("crm_prospect_client")
 
   @@schema("public")
 }
@@ -808,6 +813,7 @@ model sales_quotes {
   customer                customers   @relation(fields: [customer_no], references: [client_id], onDelete: Cascade)
   sales_rep               sales_reps? @relation(fields: [salesperson_code], references: [code])
   sales_quotes_crm        sales_quotes_crm?
+  offer_followup crm_offer_followups? @relation("offer_followup_quote")
 
   @@index([customer_no], map: "idx_sales_quotes_customer")
   @@index([salesperson_code], map: "idx_sales_quotes_salesperson")
@@ -881,11 +887,125 @@ model contacts {
   customer          customers? @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
   crm_activities    crm_activities[]
   sales_quotes_crm  sales_quotes_crm[]
+  offer_followups crm_offer_followups[] @relation("offer_followup_contact")
 
   @@index([client_id])
   @@index([city], map: "idx_contacts_city")
   @@index([county], map: "idx_contacts_county")
   @@index([territory_code], map: "idx_contacts_territory_code")
+  @@schema("public")
+}
+
+/// Entidad local del piloto. La importación de BC no escribe en esta tabla.
+model crm_prospects {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  owner_id           String   @db.Uuid
+  company_name       String   @db.VarChar(255)
+  company_normalized String   @db.VarChar(255)
+  contact_name       String?  @db.VarChar(255)
+  email              String?  @db.VarChar(255)
+  phone              String?  @db.VarChar(50)
+  phase              Int      @default(0)
+  archived_at        DateTime? @db.Timestamptz(6)
+  linked_client_id   String? @db.Uuid
+  converted_at       DateTime? @db.Timestamptz(6)
+  version            Int      @default(1)
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime @default(now()) @db.Timestamptz(6)
+  events             crm_prospect_events[]
+  activities         crm_prospect_activities[]
+  owner              profiles @relation("crm_prospect_owner", fields: [owner_id], references: [id], onDelete: Restrict)
+  linked_client      customers? @relation("crm_prospect_client", fields: [linked_client_id], references: [id], onDelete: Restrict)
+
+  @@unique([owner_id, company_normalized], map: "crm_prospects_owner_company_key")
+  @@index([owner_id, archived_at], map: "crm_prospects_owner_archive_idx")
+  @@index([linked_client_id], map: "crm_prospects_linked_client_idx")
+  @@schema("public")
+}
+
+/// Historial local separado de los eventos actuales que exigen cliente BC.
+model crm_prospect_events {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prospect_id String   @db.Uuid
+  created_by  String   @db.Uuid
+  type        String   @db.VarChar(30)
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  prospect    crm_prospects @relation(fields: [prospect_id], references: [id], onDelete: Restrict)
+  author      profiles @relation("crm_prospect_author", fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([prospect_id, created_at], map: "crm_prospect_events_prospect_date_idx")
+  @@schema("public")
+}
+
+/// Actividades comerciales locales: conservan el prospecto como origen al convertirse.
+model crm_prospect_activities {
+  id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prospect_id    String @db.Uuid
+  created_by     String @db.Uuid
+  type           String @db.VarChar(30)
+  title          String @db.VarChar(255)
+  description    String? @db.Text
+  due_date       DateTime? @db.Date
+  time_scheduled String? @db.VarChar(5)
+  location       String? @db.VarChar(500)
+  conclusions    String? @db.Text
+  is_completed   Boolean @default(false)
+  exchange_item_id String? @db.VarChar(500)
+  exchange_sync_status String @default("LOCAL") @db.VarChar(30)
+  exchange_synced_version Int?
+  exchange_last_synced_at DateTime? @db.Timestamptz(6)
+  exchange_lock_token String? @db.Uuid
+  exchange_lock_until DateTime? @db.Timestamptz(6)
+  exchange_create_payload Json?
+  version        Int @default(1)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+  prospect       crm_prospects @relation(fields: [prospect_id], references: [id], onDelete: Restrict)
+  author         profiles @relation("crm_prospect_activity_author", fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([prospect_id, created_at], map: "crm_prospect_activities_prospect_date_idx")
+  @@unique([exchange_item_id], map: "crm_prospect_activities_exchange_key")
+  @@schema("public")
+}
+
+/// Seguimiento del piloto independiente de las filas recreadas por BC.
+model crm_offer_followups {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document_no String @unique @db.VarChar(50)
+  source String @default("APP") @db.VarChar(10)
+  version Int @default(1)
+  estado_oferta String? @db.VarChar(50)
+  probabilidad_exito Decimal? @db.Decimal(5, 2)
+  oferta_type String? @db.VarChar(50)
+  cierreprev_date DateTime? @db.Date
+  confirmacion_date DateTime? @db.Date
+  motivo_ganada String? @db.Text
+  motivo_perdida String? @db.Text
+  observaciones String? @db.Text
+  contacto_id String @db.VarChar
+  proxima_accion String? @db.Text
+  fecha_proxima_accion DateTime? @db.Date
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  contact contacts @relation("offer_followup_contact", fields: [contacto_id], references: [contact_no], onDelete: Restrict, onUpdate: Cascade)
+  sales_quote sales_quotes @relation("offer_followup_quote", fields: [document_no], references: [document_no], onDelete: Restrict, onUpdate: Cascade)
+  @@index([contacto_id], map: "crm_offer_followups_contacto_id_idx")
+  activities crm_offer_activities[]
+  @@schema("public")
+}
+
+model crm_offer_activities {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  followup_id String @db.Uuid
+  author_id String? @db.Uuid
+  tipo String @db.VarChar(50)
+  notas String @db.Text
+  fecha DateTime @db.Timestamptz(6)
+  hecho Boolean @default(false)
+  followup crm_offer_followups @relation(fields: [followup_id], references: [id], onDelete: Restrict)
+  @@index([followup_id, fecha])
   @@schema("public")
 }
 
@@ -985,6 +1105,62 @@ model purchase_orders {
 
   @@index([vendor_no], map: "idx_purchase_orders_vendor")
   @@index([document_date], map: "idx_purchase_orders_date")
+  @@schema("public")
+}
+
+model crm_pipeline_cuts {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  request_key String @unique @db.VarChar(150)
+  kind String @db.VarChar(20)
+  status String @default("PENDING") @db.VarChar(20)
+  reason String @db.Text
+  created_by String? @db.Uuid
+  scheduled_at DateTime? @db.Timestamptz(6)
+  captured_at DateTime? @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  attempts Int @default(0)
+  lease_until DateTime? @db.Timestamptz(6)
+  lease_token String? @db.Uuid
+  retry_at DateTime? @db.Timestamptz(6)
+  error_message String? @db.Text
+  row_count Int @default(0)
+  rules_version String @default("piloto-v1") @db.VarChar(50)
+  supersedes_id String? @db.Uuid
+  original crm_pipeline_cuts? @relation("cut_revision", fields: [supersedes_id], references: [id], onDelete: Restrict)
+  revisions crm_pipeline_cuts[] @relation("cut_revision")
+  rows crm_pipeline_cut_rows[]
+  events crm_pipeline_cut_events[]
+  @@index([status, retry_at])
+  @@schema("public")
+}
+
+model crm_pipeline_cut_rows {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cut_id String @db.Uuid
+  entity_type String @db.VarChar(20)
+  entity_key String @db.VarChar(100)
+  owner_id String? @db.Uuid
+  salesperson_code String? @db.VarChar(50)
+  phase String? @db.VarChar(50)
+  source String @db.VarChar(20)
+  amount Decimal? @db.Decimal(18,4)
+  probability Decimal? @db.Decimal(5,2)
+  payload Json
+  cut crm_pipeline_cuts @relation(fields: [cut_id], references: [id], onDelete: Restrict)
+  @@unique([cut_id, entity_type, entity_key])
+  @@index([cut_id, owner_id, salesperson_code])
+  @@schema("public")
+}
+
+model crm_pipeline_cut_events {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cut_id String @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  event String @db.VarChar(30)
+  author_id String? @db.Uuid
+  detail String @db.Text
+  cut crm_pipeline_cuts @relation(fields: [cut_id], references: [id], onDelete: Restrict)
+  @@index([cut_id, created_at])
   @@schema("public")
 }
 

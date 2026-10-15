@@ -6,11 +6,12 @@ import { ExchangeSyncService } from './exchange-sync.service';
 import { ExchangeSyncController } from './exchange-sync.controller';
 import { OutlookAddinController } from './outlook-addin.controller';
 import { OutlookAddinService } from './outlook-addin.service';
+import { ProspectOutlookService } from './prospect-outlook.service';
 
 @Module({
   imports: [PrismaModule, AuthModule],
   controllers: [ExchangeSyncController, OutlookAddinController],
-  providers: [MicrosoftGraphService, ExchangeSyncService, OutlookAddinService],
-  exports: [MicrosoftGraphService, ExchangeSyncService, OutlookAddinService],
+  providers: [MicrosoftGraphService, ExchangeSyncService, OutlookAddinService, ProspectOutlookService],
+  exports: [MicrosoftGraphService, ExchangeSyncService, OutlookAddinService, ProspectOutlookService],
 })
 export class ExchangeSyncModule {}

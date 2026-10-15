@@ -1,5 +1,9 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ConfigService } from '@nestjs/config';
+import { OfferSourceContext } from '../quotes/offer-source-context';
+import { loadOfferContacts } from '../quotes/offer-contacts';
+import { manualMailQuoteSeed, pilotQuoteUsesManualState } from './pilot-quote-state';
 import { IsString, IsNotEmpty, IsOptional, IsArray, IsBoolean, IsIn } from 'class-validator';
 
 export class EmailLookupDto {
@@ -107,7 +111,7 @@ export class LogEmailDto {
 export class OutlookAddinService {
   private readonly logger = new Logger(OutlookAddinService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
 
   /**
    * Limpia firmas corporativas pesadas, separadores de citas y cláusulas legales / RGPD.
@@ -449,17 +453,25 @@ export class OutlookAddinService {
     let quoteLinked = false;
     if (quoteDocumentNo) {
       try {
+        const pilot = this.config.get('CRM_PROSPECTS_PILOT_ENABLED') === 'true' ? await this.prisma.crm_offer_followups.findUnique({ where: { document_no: quoteDocumentNo } }) : null;
+        const manualState = await pilotQuoteUsesManualState(this.prisma,this.config.get('CRM_PROSPECTS_PILOT_ENABLED') === 'true',this.config.get<string>('CRM_PROSPECTS_PILOT_EMAIL')||'aciurans@dtsinstruments.com',quoteDocumentNo,pilot);
+        if (pilot) {
+          await this.prisma.crm_offer_activities.upsert({ where: { id: createdActivity.id }, update: {}, create: { id: createdActivity.id, followup_id: pilot.id, tipo: 'Email', notas: `${formattedTitle}\n\n${processedBody ? processedBody.substring(0, 500) : ''}`, fecha: activityDate, hecho: true } });
+          quoteLinked = true;
+        } else {
         let quoteCrm = await this.prisma.sales_quotes_crm.findUnique({
           where: { document_no: quoteDocumentNo },
         });
 
         // Si aún no tiene metadatos en sales_quotes_crm, crearlo
         if (!quoteCrm) {
+          const originalQuote = manualState ? await this.prisma.sales_quotes.findFirst({where:{document_no:quoteDocumentNo}}) : null;
           quoteCrm = await this.prisma.sales_quotes_crm.create({
             data: {
               document_no: quoteDocumentNo,
               contacto_id: resolvedContactId || null,
-              estado_oferta: (categoryTag === 'CIERRE_ACEPTACION' || categoryTag === 'ACEPTACION') ? 'ganada' : 'en_negociacion',
+              // Antes de inicializar el piloto, conservar el correo sin decidir su fase.
+              ...(manualState ? manualMailQuoteSeed(originalQuote) : {estado_oferta: (categoryTag === 'CIERRE_ACEPTACION' || categoryTag === 'ACEPTACION') ? 'ganada' : 'en_negociacion'}),
             },
           });
         }
@@ -475,6 +487,7 @@ export class OutlookAddinService {
             },
           });
           quoteLinked = true;
+        }
         }
       } catch (quoteErr) {
         this.logger.warn(`No se pudo vincular la actividad a la oferta ${quoteDocumentNo}:`, quoteErr);
@@ -566,7 +579,9 @@ export class OutlookAddinService {
       take: 10,
     });
 
-    return quotes.map((q) => {
+    const source = this.config.get('CRM_PROSPECTS_PILOT_ENABLED') === 'true' ? new OfferSourceContext(await loadOfferContacts(this.prisma, await this.prisma.crm_offer_followups.findMany())) : null;
+    return quotes.map((original) => {
+      const q = source ? source.overlay(original) : original;
       const crm = q.sales_quotes_crm;
       return {
         document_no: q.document_no,

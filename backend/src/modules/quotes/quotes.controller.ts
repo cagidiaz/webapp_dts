@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { QuotesService } from './quotes.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { UpdateCrmQuoteDto, CreateActivityDto, UpdateActivityDto } from './dto/crm-quote.dto';
+import { OfferFollowupService } from './offer-followup.service';
 
 
 @ApiTags('quotes')
@@ -10,7 +11,7 @@ import { UpdateCrmQuoteDto, CreateActivityDto, UpdateActivityDto } from './dto/c
 @UseGuards(JwtAuthGuard)
 @Controller('quotes')
 export class QuotesController {
-  constructor(private readonly quotesService: QuotesService) {}
+  constructor(private readonly quotesService: QuotesService, private readonly followups: OfferFollowupService) {}
 
   @Get()
   @ApiOperation({ summary: 'Obtener todas las ofertas (quotes)' })
@@ -28,6 +29,7 @@ export class QuotesController {
   @ApiQuery({ name: 'cierrePrevYear', required: false, type: Number })
   @ApiQuery({ name: 'cierrePrevMonths', required: false, type: String })
   async getAll(
+    @Req() req: any,
     @Query('take') take?: number,
     @Query('skip') skip?: number,
     @Query('search') search?: string,
@@ -56,7 +58,7 @@ export class QuotesController {
       probabilidadExito,
       cierrePrevYear: cierrePrevYear ? Number(cierrePrevYear) : undefined,
       cierrePrevMonths
-    });
+    }, req.user.userId);
   }
 
   @Get('crm')
@@ -93,46 +95,52 @@ export class QuotesController {
   @Patch('crm/:id')
   @ApiOperation({ summary: 'Actualizar los datos de CRM de una oferta' })
   async updateCrm(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() updateCrmQuoteDto: UpdateCrmQuoteDto
   ) {
-    return this.quotesService.updateCrm(id, updateCrmQuoteDto);
+    return this.quotesService.updateCrm(id, updateCrmQuoteDto, req.user.userId);
   }
 
   @Get('crm/:id/activities')
   @ApiOperation({ summary: 'Obtener el historial de actividades de una oferta' })
-  async getActivities(@Param('id') id: string) {
-    return this.quotesService.getActivities(id);
+  async getActivities(@Param('id') id: string, @Req() req: any) {
+    return this.quotesService.getActivities(id, req.user.userId);
   }
 
   @Post('crm/:id/activities')
   @ApiOperation({ summary: 'Añadir una actividad de seguimiento a una oferta' })
   async addActivity(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() createActivityDto: CreateActivityDto
   ) {
-    return this.quotesService.addActivity(id, createActivityDto);
+    return this.quotesService.addActivity(id, createActivityDto, req.user.userId);
   }
 
   @Patch('crm/activities/:activityId')
   @ApiOperation({ summary: 'Modificar una actividad de seguimiento' })
   async updateActivity(
+    @Req() req: any,
     @Param('activityId') activityId: string,
     @Body() updateActivityDto: UpdateActivityDto
   ) {
-    return this.quotesService.updateActivity(activityId, updateActivityDto);
+    return this.quotesService.updateActivity(activityId, updateActivityDto, req.user.userId);
   }
 
   @Delete('crm/activities/:activityId')
   @ApiOperation({ summary: 'Eliminar una actividad de seguimiento' })
-  async deleteActivity(@Param('activityId') activityId: string) {
-    return this.quotesService.deleteActivity(activityId);
+  async deleteActivity(@Param('activityId') activityId: string, @Req() req: any) {
+    return this.quotesService.deleteActivity(activityId, req.user.userId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener detalle de una oferta por ID' })
-  async getById(@Param('id') id: string) {
-    return this.quotesService.getById(id);
+  async getById(@Param('id') id: string, @Req() req: any) {
+    return this.quotesService.getById(id, req.user.userId);
   }
+  @Get('crm/pilot/close-reasons')
+  closeReasons(@Req() req: any) { return this.followups.closeReasons(req.user.userId); }
+
 }
 

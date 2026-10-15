@@ -13,6 +13,8 @@
 
 ## 1. Propósito y utilidad de negocio 🎯
 
+**Piloto preparado (13/10/2026):** los usuarios habilitados de Prospección pueden pulsar el nombre de un cliente para abrir el `CustomerDetailDrawer` compartido. Su sección «Seguimiento de prospección» consulta `GET /crm-prospects/client/:clientId/activities` usando el UUID interno del cliente. La API valida cartera y propietario del prospecto (Admin/Dirección tienen ámbito global). Solo muestra actividades locales de prospectos actualmente asociados: la desvinculación las retira de este cliente sin borrar ni copiar filas. La consulta mantiene autor, origen, fecha, conclusiones y estado. La agenda general está preparada; Outlook está preparado y desactivado. Si el piloto está desactivado, la sección se oculta y no se consultan las tablas nuevas. SQL sin aplicar.
+
 La vista **CRM — Clientes** centraliza el directorio de cuentas comerciales de dTS Instruments y su análisis de relación con la empresa. Permite consultar la cartera, segmentarla por responsable y tipología de relación, vigilar el saldo pendiente y revisar cómo evoluciona la facturación de cada grupo de clientes.
 
 Sus dos áreas de trabajo son:

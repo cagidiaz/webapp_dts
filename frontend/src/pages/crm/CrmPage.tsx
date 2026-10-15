@@ -3,8 +3,8 @@ import { Briefcase } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { CrmCustomers } from './components/CrmCustomers';
-import { CrmPipeline } from './components/CrmPipeline';
-import { CrmContacts } from './components/CrmContacts';
+import { CrmOpportunities } from './components/CrmOpportunities';
+import { CrmContactsView } from './components/CrmContactsView';
 import { CrmContactDetail } from './components/CrmContactDetail';
 
 import { ExchangeStatusBanner } from './components/ExchangeStatusBanner';
@@ -108,9 +108,9 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
       {mode === 'customers' ? (
         <CrmCustomers />
       ) : mode === 'pipeline' ? (
-        <CrmPipeline />
+        <CrmOpportunities />
       ) : (
-        <CrmContacts 
+        <CrmContactsView
           onSelectContact={handleSelectContact} 
           onOpenReportModal={() => setIsReportModalOpen(true)}
         />

@@ -9,6 +9,9 @@ import {
 import { useAuthStore } from '../../../store/authStore';
 import { getCustomerSalespersons, CLIENT_TYPES, updateCustomerClientType } from '../../../api/customers';
 import { CustomerRelationshipMatrix } from './CustomerRelationshipMatrix';
+import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
+import { getProspectAccess } from '../../../api/prospects';
+import type { CustomerDataRow } from '../../../api/customers';
 
 interface CrmCustomersProps {}
 
@@ -21,6 +24,8 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
   const [salespersonFilter, setSalespersonFilter] = useState('');
   const [clientTypeFilter, setClientTypeFilter] = useState('');
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerDataRow | null>(null);
+  const prospectAccess = useQuery({ queryKey: ['prospect-access', profile?.id], queryFn: getProspectAccess, enabled: !!profile?.id, retry: false });
 
   const observerTarget = useRef<HTMLTableRowElement>(null);
   const itemsPerPage = 50;
@@ -337,7 +342,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
                             {c.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex flex-col truncate max-w-62.5">
-                            <span className="font-semibold text-gray-900 dark:text-white text-xs">{c.name}</span>
+                            {prospectAccess.data?.enabled ? <button onClick={() => setSelectedCustomer(c)} className="font-semibold text-gray-900 dark:text-white text-xs text-left hover:text-dts-secondary hover:underline">{c.name}</button> : <span className="font-semibold text-gray-900 dark:text-white text-xs">{c.name}</span>}
                             {c.home_page && <span className="text-[10px] text-gray-400">{c.home_page}</span>}
                           </div>
                         </div>
@@ -410,6 +415,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
       )}
 
       {/* Sync/Create Explanation Modal */}
+      {selectedCustomer && <CustomerDetailDrawer isOpen={!!selectedCustomer} onClose={() => setSelectedCustomer(null)} customer={selectedCustomer} />}
       {showSyncModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-white/5 shadow-2xl p-6 max-w-md w-full relative space-y-4">

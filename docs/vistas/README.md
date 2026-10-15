@@ -34,9 +34,9 @@ Los documentos están organizados físicamente en **carpetas temáticas estructu
 ### 3. 🤝 CRM: Gestión de Clientes (`03_crm/`)
 | Vista / Documento | Ruta WebApp | Componentes Clave | Propósito Principal |
 | :--- | :--- | :--- | :--- |
-| [**CRM: Pipeline y Oportunidades**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_pipeline.md) | `/crm/pipeline` | `CrmPipeline.tsx`<br>`CrmDealModal.tsx` | Tablero Kanban con 5 etapas comerciales, valor ponderado, cálculo de días en etapa y registro de actividades. |
-| [**CRM: Clientes y Matriz de Relación**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_clientes.md) | `/crm/customers` | `CrmCustomers.tsx`<br>`CustomerRelationshipMatrix.tsx` | Segmentación de clientes en categorías de fidelidad (A–F), matriz YTD interanual y seguimiento de cuentas activas. |
-| [**CRM: Contactos y Sincronización de Correo**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_contactos_mails.md) | `/crm/contacts` | `CrmContacts.tsx`<br>`CrmContactDetail.tsx`<br>`CrmEmails.tsx` | Directorio de personas de contacto, timeline de actividades, apertura nativa en Outlook Classic (`dts-mail://`), menú secundario de acciones y fallback inteligente. |
+| [**CRM: Pipeline y Oportunidades**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_pipeline.md) | `/crm/pipeline` | `CrmOpportunities.tsx`<br>`CrmProspects.tsx`<br>`CrmPipeline.tsx`<br>`PipelineCuts.tsx`<br>`CutAnalytics.tsx` | Orquestador tripartito: 1) Prospección local (Fases 0/1, seguimiento y vinculación reversible a BC), 2) Ofertas (6 fases abiertas en fila única, probabilidad en servidor, notas obligatorias y catálogo de cierre) y 3) Cortes históricos semanales con 8 informes analíticos congelados. |
+| [**CRM: Clientes y Matriz de Relación**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_clientes.md) | `/crm/customers` | `CrmCustomers.tsx`<br>`CustomerRelationshipMatrix.tsx`<br>`CustomerDetailDrawer.tsx` | Segmentación A–F y matriz YTD. Ficha compartida con seguimiento local de prospectos actualmente vinculados para el piloto, todavía desactivado. |
+| [**CRM: Contactos y Sincronización de Correo**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/crm_contactos_mails.md) | `/crm/contacts` | `CrmContactsView.tsx`<br>`CrmContacts.tsx`<br>`CrmContactDetail.tsx`<br>`CrmEmails.tsx`<br>`ProspectActivities.tsx` | Directorio, timeline y Outlook actuales. Prospectos del piloto con actividades locales, estados/conclusiones y consulta en cliente sin duplicación. Agenda y briefing preparados; Outlook de prospectos preparado y desactivado; piloto desactivado. |
 | [**Complemento de Outlook para CRM**](file:///c:/proyectos/webapp_dts/docs/vistas/03_crm/complemento_outlook_crm.md) | `/outlook-addin` | `OutlookAddinPage.tsx`<br>`outlook-addin.service.ts` | Add-in Office.js para registrar correos en el CRM desde Outlook, detección automática de cliente, limpieza de firmas y tipificación comercial. |
 
 ---
@@ -79,3 +79,15 @@ Los documentos están organizados físicamente en **carpetas temáticas estructu
    * Los datos procedentes de Business Central son de **SOLO LECTURA**. Las modificaciones de usuario se circunscriben a tablas gestionadas en Supabase (`crm_*`, `profiles`, `role_modules`).
 4. **Control de Acceso Granular (RBAC):**
    * Toda nueva vista debe registrarse en `public.modules` y contar con permisos iniciales en `public.role_modules` para todos los roles.
+
+- Pipeline: catálogo fijo aprobado de 5 motivos de Ganada y 9 de Perdida, sin Otros; validación en servidor y selectores en la ficha y diálogo de cierre. Se conserva el histórico.
+
+- Oportunidades del piloto: seis fases abiertas en una fila, porcentajes automáticos, nota y cierre atómicos, listas de ganadas/perdidas y reutilización en Contactos.
+
+- Cortes de Oportunidades: pestaña de consulta/exportación por cartera, captura manual Admin/Dirección y programación semanal preparada. Tres tablas locales propuestas, sin aplicar SQL ni activar automatización.
+
+- Cortes: ocho informes sobre la fotografía autorizada y comparación por identidad estable, con CSV por informe y tratamiento explícito de importes desconocidos.
+
+- Revisión integral del piloto y preparación PostgreSQL aislado: docs/propuestas/2026-10-14-revision-integral-y-pruebas-piloto.md. Conexión compartida y producción sin cambios.
+
+- Validación SQL de cortes: superada en PostgreSQL real aislado el 14/10/2026; servidor detenido. Integración completa con CRM/BC pendiente.

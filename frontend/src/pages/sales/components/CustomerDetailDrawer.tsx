@@ -9,6 +9,7 @@ import {
   CLIENT_TYPES 
 } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
+import { ClientProspectActivities } from '../../crm/components/ProspectActivities';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Phone, Mail, MapPin, Smartphone, 
@@ -346,6 +347,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                <Calendar size={12}/> Cliente desde: {customer.created_at ? new Date(customer.created_at).toLocaleDateString() : 'N/A'}
             </div>
           </section>
+          <ClientProspectActivities clientId={customer.id} enabled={isOpen} />
         </div>
       )}
     </Drawer>

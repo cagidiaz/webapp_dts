@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException, NotFoundException } from '@nes
 import { PrismaService } from '../../prisma/prisma.service';
 import { MicrosoftGraphService } from './microsoft-graph.service';
 import { CrmActivityType } from '@prisma/client';
+import { ProspectOutlookService } from './prospect-outlook.service';
 
 @Injectable()
 export class ExchangeSyncService {
@@ -11,6 +12,7 @@ export class ExchangeSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly graphService: MicrosoftGraphService,
+    private readonly prospectOutlook: ProspectOutlookService,
   ) {}
 
   /**
@@ -525,6 +527,8 @@ export class ExchangeSyncService {
         const deltaResult = await this.graphService.getCalendarEventsDelta(userId, account.calendar_delta_token || undefined);
         if (deltaResult && deltaResult.events) {
           for (const ev of deltaResult.events) {
+            if (await this.prospectOutlook.importRemote(userId, ev)) { syncedEvents++; continue; }
+            if (/^\[(?:✓\s*)?dTS CRM Prospecto/i.test(ev.subject || '')) continue;
             if (ev['@removed']) {
               // Evento eliminado en Outlook: desvincular en lugar de borrar datos del CRM
               await this.prisma.crm_activities.updateMany({

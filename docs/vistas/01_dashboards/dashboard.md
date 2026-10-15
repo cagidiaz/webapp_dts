@@ -72,6 +72,10 @@ return <FinancialDashboard />;
 | **PENDIENTE DE FACTURAR** | `qty_shipped_not_invoiced * (line_amount / quantity)`. | Mercancía entregada pendiente de emisión de factura. Compensa anticipos vivos del cliente. |
 
 ### 3.3 Agenda Comercial Semanal
+
+**Ampliación preparada del piloto (13/10/2026):** `GET /crm-activities` agrega las actividades programadas de `crm_prospect_activities` a las existentes, con filtros por día, tipo y propietario. No copia filas y conserva `source=PROSPECT`, UUID del prospecto, versión, autor original y permiso `can_edit`. El comercial ve solo su cartera; Admin/Dirección consultan globalmente y filtran por propietario. Admin edita; Dirección consulta. Los archivados no aparecen en agenda; los convertidos aparecen una vez, conservando origen. Las notas sin fecha quedan en la ficha del prospecto.
+
+El modal existente y el briefing guardan las actividades locales mediante su endpoint de prospecto, sin enviarlas a `/crm-activities/:id`. El dashboard indica «Prospecto · Modo local» y respeta `can_edit`. El briefing conserva ámbito personal y suma prospectos al contador de equipo de Admin/Dirección; «hoy» se calcula en Madrid. Los informes de actividad reciben el mismo origen, mostrado también en PDF/Excel, sin contabilizar un prospecto sin cliente como cliente BC. La integración Outlook está preparado y desactivado. SQL preparado sin aplicar y piloto desactivado por defecto.
 * **Semana Natural (L-D):** Botones de navegación semana anterior/siguiente y botón *"Hoy"*.
 * **Tipologías Diferenciadas:** 
   - `VISITA` (Azul, ubicación presencial).

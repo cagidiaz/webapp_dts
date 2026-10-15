@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, NotFoundException, Inject, fo
 import { PrismaService } from '../../prisma/prisma.service';
 import { CrmActivityType } from '@prisma/client';
 import { ExchangeSyncService } from '../exchange-sync/exchange-sync.service';
+import { ProspectsService } from '../prospects/prospects.service';
 
 @Injectable()
 export class CrmActivitiesService {
@@ -9,6 +10,7 @@ export class CrmActivitiesService {
     private readonly prisma: PrismaService,
     @Inject(forwardRef(() => ExchangeSyncService))
     private readonly exchangeSyncService: ExchangeSyncService,
+    private readonly prospectsService: ProspectsService,
   ) {}
 
   /**
@@ -168,7 +170,10 @@ export class CrmActivitiesService {
       });
 
 
-      return activities;
+      const prospects = await this.prospectsService.agenda(requestingUserId, { salespersonId, startDate, endDate, types });
+      return [...activities, ...prospects].sort((a, b) =>
+        String(a.due_date?.toISOString() || '').localeCompare(String(b.due_date?.toISOString() || '')) ||
+        String(a.time_scheduled || '').localeCompare(String(b.time_scheduled || '')) || a.id.localeCompare(b.id));
     } catch (error) {
       console.error('Error en CrmActivitiesService.getAgenda:', error);
       throw new InternalServerErrorException('Error al obtener la agenda de actividades');
@@ -184,10 +189,9 @@ export class CrmActivitiesService {
   async getDailyBriefing(userId?: string) {
     try {
       const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      const todayStr = `${yyyy}-${mm}-${dd}`;
+      const parts = new Intl.DateTimeFormat('en', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+      const part = (type: string) => parts.find(value => value.type === type)!.value;
+      const todayStr = `${part('year')}-${part('month')}-${part('day')}`;
 
       if (!userId) {
         return {
@@ -208,7 +212,7 @@ export class CrmActivitiesService {
       const todayEnd = new Date(`${todayStr}T23:59:59.999Z`);
 
       // 1. Actividades del día de hoy para el usuario
-      const todayActivities = await this.prisma.crm_activities.findMany({
+      let todayActivities: any[] = await this.prisma.crm_activities.findMany({
         where: {
           created_by: userId,
           due_date: {
@@ -227,7 +231,7 @@ export class CrmActivitiesService {
       });
 
       // 2. Actividades pasadas pendientes de completar (due_date < hoy e is_completed = false)
-      const pendingActivities = await this.prisma.crm_activities.findMany({
+      let pendingActivities: any[] = await this.prisma.crm_activities.findMany({
         where: {
           created_by: userId,
           is_completed: false,
@@ -265,6 +269,14 @@ export class CrmActivitiesService {
         });
       }
 
+      const ownProspects = await this.prospectsService.agenda(userId, { onlyOwn: true, endDate: todayStr });
+      todayActivities = [...todayActivities, ...ownProspects.filter(activity => activity.due_date?.getTime() === todayStart.getTime())]
+        .sort((a, b) => String(a.time_scheduled || '').localeCompare(String(b.time_scheduled || '')) || a.id.localeCompare(b.id));
+      pendingActivities = [...pendingActivities, ...ownProspects.filter(activity => !activity.is_completed && activity.due_date && activity.due_date < todayStart)]
+        .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime() || a.id.localeCompare(b.id)).slice(0, 20);
+      if (isAdminOrDireccion) {
+        teamTodayTotal += (await this.prospectsService.agenda(userId, { startDate: todayStr, endDate: todayStr })).length;
+      }
       const todayCompleted = todayActivities.filter(a => a.is_completed).length;
 
       return {
