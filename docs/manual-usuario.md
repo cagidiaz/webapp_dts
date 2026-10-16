@@ -492,3 +492,11 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
 
 *Manual de dTS Instruments v6.5 — Actualizado a 9 de octubre de 2026.*
 
+
+## Cambio de cliente Outlook y recuperación de correos antiguos
+
+Para pasar de Classic a Web, entra en **Ajustes → Cliente de Outlook predeterminado** y selecciona **Outlook Web**. La apertura principal de correos usará esa preferencia; las opciones explícitas del menú permiten elegir otro destino. Mantén conectada tu cuenta Microsoft 365 y utiliza el mismo buzón en Web. No tienes que registrar otra vez tus correos ni desinstalar Classic.
+
+La preferencia se guarda en ese navegador: debes elegirla de nuevo si cambias de equipo o navegador. Puedes volver a Classic si su componente permanece instalado, vinculado y autorizado.
+
+Está acordada, todavía pendiente de desarrollo, la recuperación automática del histórico al conectar Microsoft 365. También cubrirá cuentas ya conectadas cuando se active para todos y usuarios que solo usen Web. Los correos no identificables con certeza quedarán para revisión, conservando las actividades y asociaciones existentes.

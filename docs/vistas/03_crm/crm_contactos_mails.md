@@ -180,3 +180,7 @@ La distribución interna sin firma Authenticode está aprobada. El ZIP se genera
 Estado a 15/10/2026: Web aceptado en producción tras mover el mensaje; SQL de Classic aplicado y comprobado. Pendientes de confirmación: despliegue del código nuevo, activación de Classic, instalación, vinculación y recorrido completo con resultado autenticado. La localización real del correo sin mostrarlo ya está verificada. No se amplía todavía cobertura a PST, archivo en línea o buzones compartidos.
 
 Véanse [manual de instalación, sección 7](../../manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic) y [procedimiento técnico de fase 4](../../propuestas/2026-10-15-fase-4-apertura-exacta-classic.md).
+
+### Validación de apertura comunicada el 16/10/2026
+
+El usuario confirma equipo vinculado y apertura correcta de correos enviados y recibidos, también después de mover el mensaje entre carpetas del mismo buzón. Este resultado actualiza el estado pendiente indicado en la entrega inicial del 15/10. No acredita todavía arranque con Classic cerrado, revocación o perfiles con varias cuentas. La siguiente fase revisa referencias antiguas y acciones compartidas; se mantiene el manejador heredado hasta completar su sustitución.

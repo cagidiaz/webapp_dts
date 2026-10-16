@@ -68,3 +68,11 @@ Las dos tablas de Classic ya están creadas y comprobadas en Supabase. El paquet
 La distribución interna carece de certificado de editor. Windows puede mostrar avisos o aplicar sus políticas. No se cambian antivirus, certificados ni políticas de seguridad. Las firmas de solicitudes y el cifrado DPAPI siguen activos.
 
 Véanse [instalación y solución de incidencias](../../manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic) y [activación técnica](../../propuestas/2026-10-15-fase-4-apertura-exacta-classic.md).
+
+## Cambio de Classic a Web y recuperación histórica (16/10/2026)
+
+Seleccionar Outlook Web en Ajustes guarda inmediatamente la preferencia en `dts_outlook_preferred_client`. La apertura principal de correos consulta ese valor y utiliza el resolvedor Web. No es necesario volver a registrar correos, recuperar de nuevo el histórico ni desinstalar Classic. Se mantiene la conexión Microsoft 365 del mismo buzón; el destino Web requiere sesión Microsoft y permiso de apertura en el navegador. Una acción explícita del menú «Abrir en Outlook Classic» conserva ese destino aunque la preferencia sea Web.
+
+La preferencia pertenece al navegador, no al perfil remoto del usuario. En otro navegador o equipo debe seleccionarse de nuevo. La instalación y vinculación Classic se conservan hasta revocarlas o desinstalarlas.
+
+Decisión pendiente de implementación: la recuperación del histórico se activará al conectar Microsoft 365, no al vincular el componente Windows; para cuentas ya conectadas se iniciará al activar el despliegue general. Se preparará para todos los usuarios después de la validación del responsable, sin piloto individual.

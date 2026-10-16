@@ -1,7 +1,7 @@
 # Plan de apertura híbrida de correos de Outlook desde el CRM
 
 **Fecha:** 15 de octubre de 2026  
-**Estado:** Fases 0 y 1 verificadas; registro de identidad y apertura Web probados en producción, incluido el movimiento de carpeta. Fase 4 implementada con instalador interno sin certificado y tablas creadas y comprobadas. Pendientes de confirmar despliegue, activación, vinculación y aceptación completa del componente Classic.
+**Estado:** Apertura Web y Classic aceptada por el usuario en producción para enviados, recibidos y movimiento entre carpetas del mismo buzón (16/10/2026). Componente interno sin certificado instalado y vinculado. Fase 5 iniciada con inventario de referencias antiguas en modo solo lectura; pruebas adicionales y retirada del flujo heredado pendientes.
 
 **Destinatario:** Dirección y responsable de la aplicación  
 **Ámbito:** Tarjetas de correos en Emails y Timeline, complemento de Outlook, integración Microsoft 365 y componente de escritorio.
@@ -201,4 +201,30 @@ La [fase 2](2026-10-15-fase-2-registro-identidad-correos.md) incorpora el regist
 
 La [fase 3 de resolución y apertura web](2026-10-15-fase-3-resolucion-apertura-web.md) documenta la ruta única, permisos, selección de copias y límites del piloto. El usuario ha confirmado la apertura en producción y después de mover el mensaje de carpeta.
 
-La [fase 4 de apertura exacta en Classic](2026-10-15-fase-4-apertura-exacta-classic.md) está implementada y verificada mediante pruebas automáticas y localización real sin mostrar el correo. El SQL ya está ejecutado y las dos tablas comprobadas con RLS y permisos del backend. Quedan pendientes confirmar despliegue, activar y probar el circuito completo instalado. El usuario ha aprobado distribución interna sin firma: el paquete con instalador BAT está generado para el siguiente despliegue, sin instalarlo ni desplegarlo.
+La [fase 4 de apertura exacta en Classic](2026-10-15-fase-4-apertura-exacta-classic.md) está implementada y verificada mediante pruebas automáticas y localización real sin mostrar el correo. El SQL ya está ejecutado y las dos tablas comprobadas con RLS y permisos del backend. El usuario ha confirmado despliegue operativo, vinculación y apertura de enviados y recibidos, incluido movimiento entre carpetas del mismo buzón. Quedan las comprobaciones adicionales de la matriz y la retirada del flujo heredado. El usuario ha aprobado distribución interna sin firma y ha confirmado la instalación, vinculación y apertura en producción.
+
+## Seguimiento 16/10/2026: aceptación de Classic e inicio de fase 5
+
+El usuario confirma enviados, recibidos y cambio de carpeta en Classic. La fase siguiente aborda referencias antiguas y acciones compartidas entre Emails y Timeline; no se retira todavía `dts-mail` ni se sustituye la respuesta por una apertura de correo.
+
+Inventario de solo lectura limitado a actividades EMAIL creadas por la cuenta piloto `gdiaz@dtsinstruments.com`:
+
+| Clasificación | Cantidad |
+| --- | ---: |
+| Actividades de correo | 14 |
+| Referencia completa y estado resolved | 5 |
+| Identificador antiguo sin formato registrado, sin ImmutableId | 8 |
+| Sin identificador de elemento guardado | 1 |
+
+Los nueve registros antiguos carecen de ámbito completo de tenant/buzón; no se ha encontrado un identificador de buzón ajeno entre los registros que lo tienen informado. Estos recuentos describen metadatos del CRM, no una verificación de existencia actual en Graph.
+
+Siguiente implementación: recuperación en lotes limitados del buzón del creador, conservando identificadores originales y verificando cada conversión contra Microsoft 365. No inferir un mensaje por asunto, fecha o destinatario. Los casos no verificables o ambiguos requerirán revinculación explícita. Ningún registro se ha modificado durante este inventario. Después se unificarán las acciones de las tarjetas y se separarán Responder y Responder a todos según el plan.
+
+## Decisiones de alcance y recuperación automática (16/10/2026)
+
+- No se realizará un piloto individual de esta funcionalidad. Preparar la apertura y recuperación para todos los usuarios; la puesta en uso general se hará después de la verificación y confirmación del responsable. Las restricciones actuales no se eliminan por el mero cambio de documentación.
+- La recuperación de referencias históricas se iniciará automáticamente al conectar la cuenta Microsoft 365 al CRM. No depende de instalar ni vincular el equipo Windows; también debe funcionar para usuarios de Outlook Web.
+- Para cuentas que ya estén conectadas, iniciar la recuperación al activar la funcionalidad general. Procesar en segundo plano mediante lotes pequeños reanudables, con progreso y casos pendientes de revisión. Este automatismo está acordado, todavía no implementado.
+- Recuperar únicamente mensajes del buzón autorizado del usuario, conservando referencias originales, asociaciones y actividades, sin duplicarlas. Los casos ambiguos o sin referencia verificable requieren revisión o revinculación explícita.
+- Cambiar la preferencia Classic/Web en Ajustes solo cambia el destino de apertura. No vuelve a importar los correos ni pierde las referencias recuperadas. La cuenta Microsoft 365 debe seguir conectada y corresponder al mismo buzón.
+- La preferencia actual se guarda en el navegador mediante `localStorage`; no se sincroniza entre equipos o navegadores. Cambiar a Web no revoca ni desinstala el componente Classic. Al volver a Classic, el equipo debe seguir instalado, vinculado y autorizado.

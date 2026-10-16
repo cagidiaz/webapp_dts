@@ -100,3 +100,7 @@ Guías de [Contactos y Emails](03_crm/crm_contactos_mails.md), [Ajustes](06_admi
 - [Manual de instalación, vinculación, retirada e incidencias](../manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic).
 - [Guía de integración con Microsoft 365](../guia-integracion-outlook-exchange.md).
 - [Documentación técnica: tablas, endpoints, activación y vuelta atrás](../propuestas/2026-10-15-fase-4-apertura-exacta-classic.md).
+
+### Corrección de arranque del complemento en Outlook Web (16/10/2026)
+
+La [guía del complemento](03_crm/complemento_outlook_crm.md#8-arranque-de-outlook-web-independiente-de-la-sesión-crm-16102026) documenta la inicialización de Office antes de la sesión CRM, la protección de la navegación y las pruebas de descarga bloqueada o espera agotada. Cambio preparado para desplegar; aceptación real Web pendiente.

@@ -76,96 +76,30 @@ const OutlookAddinContent: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Inicializar Office.js exclusivamente para este componente sin afectar al resto de la aplicación
+  // Office starts in the HTML entry point, independently of CRM session state.
   useEffect(() => {
-    let isMounted = true;
-
-    const initOffice = async () => {
-      // 1. Cargar script de Office.js si no existe
-      if (typeof (window as any).Office === 'undefined') {
-        try {
-          await new Promise<void>((resolve) => {
-            const existing = document.querySelector('script[src*="office.js"]') as HTMLScriptElement;
-            if (existing) {
-              if ((window as any).Office) {
-                resolve();
-                return;
-              }
-              existing.addEventListener('load', () => resolve());
-              existing.addEventListener('error', () => resolve());
-              setTimeout(resolve, 1500);
-              return;
-            }
-            const script = document.createElement('script');
-            script.src = 'https://appsforoffice.microsoft.com/lib/1/hosted/office.js';
-            script.async = true;
-            script.onload = () => resolve();
-            script.onerror = () => resolve();
-            document.head.appendChild(script);
-          });
-        } catch (e) {
-          console.warn('No se pudo cargar Office.js:', e);
-        }
-      }
-
-      // 2. Comprobar si estamos en entorno de Outlook (por URL query, postMessage o mailbox)
-      const searchStr = window.location.search.toLowerCase();
-      const isOutlookEnvironment =
-        searchStr.includes('_host_info') ||
-        searchStr.includes('outlook') ||
-        window.name.includes('Office') ||
-        Boolean((window as any).Office?.context?.mailbox);
-
-      const handleHostReady = (info?: any) => {
-        if (!isMounted) return;
-        const hostName = String(info?.host || '').toLowerCase();
-        const hasMailbox = Boolean((window as any).Office?.context?.mailbox);
-        const isOutlook = hostName === 'outlook' || hasMailbox || isOutlookEnvironment;
-
-        if (isOutlook) {
-          setIsInsideOutlook(true);
-          extractOutlookItemData();
-        } else {
-          // Fuera de Outlook (entorno de pruebas en navegador web directo)
-          setIsInsideOutlook(false);
-          setupMockDataForTesting();
-        }
-      };
-
-      const OfficeObj = (window as any).Office;
-      if (OfficeObj && typeof OfficeObj.onReady === 'function') {
-        OfficeObj.onReady((info: any) => {
-          handleHostReady(info);
-        });
-      } else if (isOutlookEnvironment) {
-        // En Outlook pero Office.js aún se está configurando internamente
-        let attempts = 0;
-        const interval = setInterval(() => {
-          attempts++;
-          const OfficeNow = (window as any).Office;
-          if (OfficeNow?.context?.mailbox?.item || OfficeNow?.onReady || attempts > 15) {
-            clearInterval(interval);
-            if (!isMounted) return;
-            if (OfficeNow?.onReady) {
-              OfficeNow.onReady(handleHostReady);
-            } else {
-              handleHostReady();
-            }
-          }
-        }, 200);
+    let active = true;
+    const ready = window.__dtsOfficeReady || Promise.resolve(null);
+    void ready.then(info => {
+      if (!active) return;
+      const hasMailbox = Boolean((window as any).Office?.context?.mailbox);
+      const hosted = window.self !== window.top || /(?:[?&])_host_info=/i.test(window.location.search);
+      if (String(info?.host || '').toLowerCase() === 'outlook' || hasMailbox) {
+        setIsInsideOutlook(true);
+        extractOutlookItemData();
+      } else if (hosted) {
+        setError('No se pudo acceder al correo de Outlook. Cierra el panel y vuelve a abrir el complemento desde un mensaje.');
+        setIsLoading(false);
       } else {
-        if (isMounted) {
-          setIsInsideOutlook(false);
-          setupMockDataForTesting();
-        }
+        setIsInsideOutlook(false);
+        setupMockDataForTesting();
       }
-    };
-
-    initOffice();
-
-    return () => {
-      isMounted = false;
-    };
+    }, () => {
+      if (!active) return;
+      setError('No se pudo inicializar Office.js. Revisa la conexión y vuelve a abrir el complemento.');
+      setIsLoading(false);
+    });
+    return () => { active = false; };
   }, []);
 
   // Extraer datos del correo actual desde Office.js (con reintentos si el item aún está enlazando)

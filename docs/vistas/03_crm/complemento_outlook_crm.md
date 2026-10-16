@@ -30,7 +30,7 @@ Su función principal es permitir que los comerciales y gestores de cuentas regi
 ### 3.1. Detección Dual de Entorno (Office.js vs Modo Standalone)
 Para garantizar máxima robustez y facilidad de prueba:
 * El componente detecta si se está ejecutando dentro del iframe de Microsoft Office (`window.Office?.context?.mailbox` o query string `_host_info`).
-* **Dentro de Outlook:** Carga la librería oficial `https://appsforoffice.microsoft.com/lib/1/hosted/office.js` y extrae los datos del elemento seleccionado en tiempo real (`item.subject`, `item.from`, `item.to`, `item.itemId`, `item.body.getAsync`).
+* **Dentro de Outlook:** El arranque HTML carga la librería oficial `https://appsforoffice.microsoft.com/lib/1/hosted/office.js` antes del acceso CRM; tras autenticarse, el contenido extrae los datos del elemento seleccionado en tiempo real (`item.subject`, `item.from`, `item.to`, `item.itemId`, `item.body.getAsync`).
 * **Fuera de Outlook (Navegador normal):** Activa automáticamente un entorno de prueba simulado (*mock*) con datos de prueba realistas para permitir su depuración y diseño visual. **El modo vista previa bloquea el registro real** de correos para evitar crear registros ficticios en la base de datos de producción.
 
 ### 3.2. Autenticación Integrada y Aislamiento de Sesión (`OutlookAddinSession.tsx`)
@@ -97,3 +97,17 @@ La apertura exacta requiere una referencia verificada del propio buzón Microsof
 Las tablas `crm_outlook_devices` y `crm_outlook_requests` son exclusivas del componente Classic, no del registro del Add-in. Ya se ha comprobado su creación en Supabase; falta aceptar el circuito completo instalado. El modo vista previa del Add-in continúa bloqueando el registro real.
 
 Véase [manual conjunto de instalación y vinculación](../../manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic).
+
+## 8. Arranque de Outlook Web independiente de la sesión CRM (16/10/2026)
+
+Se ha identificado una dependencia incorrecta: la carga dinámica de Office.js estaba dentro del contenido protegido por `OutlookAddinSession`. En un panel sin sesión CRM, el formulario de acceso impedía montar ese contenido y no se iniciaba la comunicación con Office. Es una causa compatible con el error de Outlook Web «no se puede iniciar este complemento»; la prueba real tras el despliegue sigue pendiente.
+
+`frontend/index.html` carga ahora `frontend/public/outlook-bootstrap.js` antes del módulo React. El arranque solo actúa en las rutas `/outlook-crm` y `/outlook-addin`; en host Office solicita inmediatamente `Office.onReady()` y guarda una promesa compartida. `main.tsx` espera esa preparación antes de renderizar la aplicación. No necesita sesión CRM, tokens ni consultas a base de datos. La autenticación continúa siendo obligatoria para registrar correos.
+
+El arranque conserva y restaura `history.replaceState` y `history.pushState`, que Office.js puede alterar, para mantener React Router. Las páginas normales y `/outlook-classic` no cargan Office.js. La vista previa abierta directamente fuera de Office sigue siendo simulada; un fallo de inicialización dentro del host no se convierte en datos simulados. Los errores de descarga o espera muestran una indicación y permiten reintentar, con espera máxima de 15 segundos.
+
+La página estática heredada `/outlook-addin/index.html` solicita también `Office.onReady()` inmediatamente después del script de Office, antes de las demás dependencias. No se cambia el manifiesto ni los identificadores de los complementos; este ajuste no requiere reinstalar el componente Classic ni ejecutar SQL.
+
+Verificación: prueba de arranque con host simulado sin sesión CRM, restauración de History API, aislamiento de vista previa y rutas normales, errores de descarga y timeout. Backend y frontend deben compilar antes de entregar. La comprobación real de apertura del panel Web queda para después de desplegar.
+
+Referencias oficiales: [inicialización de Office](https://learn.microsoft.com/en-us/office/dev/add-ins/develop/initialize-add-in) y [integración con frameworks e History API](https://learn.microsoft.com/en-us/office/dev/add-ins/develop/connect-to-javascript-frameworks).

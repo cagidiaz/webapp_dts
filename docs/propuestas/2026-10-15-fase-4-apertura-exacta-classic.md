@@ -2,7 +2,9 @@
 
 ## Estado
 
-Implementación preparada, con SQL ejecutado por el usuario y tablas comprobadas en modo solo lectura el 15/10/2026; pendiente de confirmar despliegue, activación y aceptación completa. La apertura web en producción, incluido el movimiento de carpeta, ha sido confirmada por el usuario. El usuario ha decidido distribuirlo internamente sin firma Authenticode. El ZIP con instalador BAT está generado y preparado para incluirse en el despliegue del frontend; no se ha instalado ni desplegado.
+El 16/10/2026 el usuario confirma apertura correcta en producción de correos enviados y recibidos desde Classic, también después de moverlos a otra carpeta del mismo buzón. El despliegue y la vinculación han quedado operativos. La distribución interna sin certificado está aprobada y las dos tablas están creadas y comprobadas.
+
+Esta aceptación cubre los casos comunicados por el usuario; quedan por confirmar de forma explícita el arranque con Classic cerrado, revocación, perfiles con varias cuentas y las demás condiciones de la matriz. No se amplía la cobertura a PST, archivo en línea ni buzones compartidos.
 
 ## Funcionamiento
 
@@ -31,13 +33,13 @@ Ambas tienen RLS y carecen de acceso directo desde el cliente. La conexión Post
 4. Extraer todo el ZIP y ejecutar `Instalar_Outlook_dTS.bat` con el usuario habitual de Windows, sin administrador. Abrir `/outlook-classic`, confirmar el código mostrado por el componente y seleccionar el dispositivo. La página permite consultar y revocar dispositivos propios.
 5. Verificar apertura desde Emails y Timeline; comparar con Web, mover el correo dentro del mismo buzón y repetir. Probar Classic cerrado, rechazo de solicitud caducada, revocación y confirmación del resultado. Validar también un perfil con varias cuentas antes de ampliar cobertura.
 
-El usuario ha ejecutado el SQL en Supabase. No se ha confirmado todavía el cambio de variables de producción ni la instalación del componente. Los BAT anteriores siguen disponibles para los flujos heredados de respuesta y búsqueda, pendientes de las fases 6 y 7; la nueva apertura exacta utiliza un protocolo diferente.
+El usuario ha ejecutado el SQL en Supabase y ha confirmado la vinculación y apertura real en producción el 16/10/2026. Los BAT anteriores siguen disponibles para los flujos heredados de respuesta y búsqueda, pendientes de las fases 6 y 7; la nueva apertura exacta utiliza un protocolo diferente.
 
 ## Validación y límites
 
 Han pasado 274 pruebas de backend, 11 de integración SQL aislada y 5 de regresión del piloto: 290 en total. Compilan backend, frontend y componente Windows. Se han verificado consumo único concurrente, permisos, caducidad, revocación, firmas y rechazo de resultados repetidos. Las comprobaciones de escritura se han realizado en PostgreSQL aislado.
 
-El componente C# ha localizado y verificado el correo real de prueba en el almacén correcto de Classic, sin mostrarlo ni modificarlo. También se ha verificado DPAPI y la compatibilidad de firmas entre C# y backend. Quedan pendientes la vinculación real, el recorrido completo del protocolo con apertura y confirmación, y la validación de instalación del paquete interno sin firma. No se acredita todavía cobertura de PST, archivo en línea o buzones compartidos.
+El componente C# ha localizado y verificado el correo real de prueba en el almacén correcto de Classic, sin mostrarlo ni modificarlo. También se ha verificado DPAPI y la compatibilidad de firmas entre C# y backend. El usuario ha confirmado posteriormente vinculación y apertura real con el paquete interno sin firma, en enviados, recibidos y después de mover de carpeta. No se ha revisado de forma independiente la telemetría del resultado autenticado de cada una de esas pruebas. No se acredita todavía cobertura de PST, archivo en línea o buzones compartidos.
 
 ## Referencias
 
