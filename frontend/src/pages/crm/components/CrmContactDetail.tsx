@@ -1,3 +1,4 @@
+import { classicDeviceKey, getClassicDevices, prepareClassicRequest, launchClassicAndWait, type ClassicDevice, type ClassicRequest } from '../../../api/outlookClassic';
 import type { EmailResolveResult } from '../../../utils/resolvedEmailWindow';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -264,7 +265,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     email?: string | null;
     subject?: string | null;
   } | null>(null);
-  const [emailOpenNotice, setEmailOpenNotice] = useState<(EmailResolveResult & { activityId?: string; canOpenWeb?: boolean }) | null>(null);
+  const [emailOpenNotice, setEmailOpenNotice] = useState<(EmailResolveResult & { activityId?: string; canOpenWeb?: boolean; canSetupClassic?: boolean; classic?: boolean; devices?: ClassicDevice[] }) | null>(null);
+  const [classicReady, setClassicReady] = useState<(ClassicRequest & { activityId: string }) | null>(null);
   const [copiedEmailMenuId, setCopiedEmailMenuId] = useState<string | null>(null);
 
   // Escuchar si Windows no pudo abrir el protocolo dts-mail://
@@ -331,12 +333,45 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     else setEmailOpenNotice({ ...result, activityId });
   };
 
+  const launchPreparedClassic = async (request: ClassicRequest & { activityId: string }) => {
+    setClassicReady(null);
+    setEmailOpenNotice({ activityId: request.activityId, status: 'pending', message: 'Esperando confirmación del componente de Outlook Classic…' });
+    try {
+      const result = await launchClassicAndWait(request);
+      if (result.state === 'opened') setEmailOpenNotice({ status: 'resolved', message: 'El componente ha confirmado la apertura del correo en Outlook Classic.' });
+      else setEmailOpenNotice({ activityId: request.activityId, status: 'error', canOpenWeb: true, canSetupClassic: true, message: result.state === 'unconfirmed' ? 'No ha llegado la confirmación. Comprueba Classic antes de repetir; puedes utilizar Outlook Web.' : 'El componente no pudo abrir el correo exacto. Comprueba el buzón y la vinculación del equipo, o utiliza Outlook Web.' });
+    } catch { setEmailOpenNotice({ activityId: request.activityId, status: 'error', canOpenWeb: true, canSetupClassic: true, message: 'No se pudo confirmar la apertura en Classic. Revisa la conexión o utiliza Outlook Web.' }); }
+  };
+
+  const resolveClassicEmail = async (activityId: string, candidateId?: string, selectedDevice?: string) => {
+    setClassicReady(null);
+    setEmailOpenNotice({ activityId, status: 'pending', message: 'Preparando apertura en Outlook Classic…' });
+    try {
+      const configuration = await getClassicDevices();
+      const preferred = selectedDevice || localStorage.getItem(classicDeviceKey);
+      const device = configuration.devices.find(value => value.id === preferred) || (configuration.devices.length === 1 ? configuration.devices[0] : null);
+      if (!configuration.enabled || !device) {
+        setEmailOpenNotice({ activityId, status: 'pending', canOpenWeb: true, canSetupClassic: true, devices: configuration.devices, message: !configuration.enabled ? 'La apertura verificada de Classic todavía no está habilitada para tu cuenta. Puedes utilizar Outlook Web.' : configuration.devices.length ? 'Selecciona el equipo Windows desde el que estás trabajando.' : 'Vincula este equipo con tu cuenta para abrir el correo en Classic.' });
+        return;
+      }
+      localStorage.setItem(classicDeviceKey, device.id);
+      const result = await prepareClassicRequest(activityId, device.id, candidateId);
+      if (result.status === 'ready') {
+        const prepared = { ...result, activityId };
+        setClassicReady(prepared);
+        setEmailOpenNotice({ activityId, status: 'pending', canOpenWeb: true, message: 'Correo listo para abrir en Outlook Classic.' });
+        if (navigator.userActivation?.isActive) void launchPreparedClassic(prepared);
+      } else if (result.status === 'device_required') setEmailOpenNotice({ activityId, status: 'pending', canOpenWeb: true, canSetupClassic: true, message: result.message });
+      else setEmailOpenNotice({ ...result, activityId, classic: true, canOpenWeb: true });
+    } catch { setEmailOpenNotice({ activityId, status: 'error', canOpenWeb: true, canSetupClassic: true, message: 'No se pudo preparar la apertura de Classic. Contacta con el administrador o utiliza Outlook Web.' }); }
+  };
+
   const openExistingEmailInOutlook = (options: Parameters<typeof openLegacyEmailInOutlook>[0] & { activityId?: string }) => {
     if (!exchangeStatus) { setEmailOpenNotice({ status: 'pending', message: 'Espera a que se compruebe la conexión de Microsoft 365.' }); return; }
     if (!exchangeStatus.emailIdentityEnabled) { openLegacyEmailInOutlook(options); return; }
     if (!options.activityId) { setEmailOpenNotice({ status: 'legacy_unverified', message: 'Este registro no dispone de una actividad de correo verificable.' }); return; }
     if ((options.target || getPreferredOutlookClient()) === 'desktop') {
-      setEmailOpenNotice({ activityId: options.activityId, canOpenWeb: true, status: 'pending', message: 'La apertura verificada en Classic todavía no está disponible. Puedes abrir este correo en Outlook Web.' });
+      void resolveClassicEmail(options.activityId);
       return;
     }
     void resolveWebEmail(options.activityId);
@@ -1523,9 +1558,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         <div role="status" className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs text-gray-700 dark:text-gray-200 space-y-2">
           <div className="flex justify-between gap-3"><span>{emailOpenNotice.message}{emailOpenNotice.retryAfterSeconds ? ` Espera ${emailOpenNotice.retryAfterSeconds} segundos.` : ''}</span><button type="button" aria-label="Cerrar aviso de Outlook" onClick={() => setEmailOpenNotice(null)}><X size={14} /></button></div>
           {emailOpenNotice.activityId && emailOpenNotice.canOpenWeb && <button type="button" className="font-semibold text-dts-primary dark:text-sky-400" onClick={() => { void resolveWebEmail(emailOpenNotice.activityId!); }}>Abrir en Outlook Web</button>}
-          {emailOpenNotice.candidates?.map((candidate, index) => <button type="button" key={candidate.id} className="block rounded-lg border border-gray-200 dark:border-white/10 px-3 py-2 hover:bg-white dark:hover:bg-white/5 text-left" onClick={() => { void resolveWebEmail(emailOpenNotice.activityId!, candidate.id); }}>
+          {emailOpenNotice.candidates?.map((candidate, index) => <button type="button" key={candidate.id} className="block rounded-lg border border-gray-200 dark:border-white/10 px-3 py-2 hover:bg-white dark:hover:bg-white/5 text-left" onClick={() => { if (emailOpenNotice.classic) void resolveClassicEmail(emailOpenNotice.activityId!, candidate.id); else void resolveWebEmail(emailOpenNotice.activityId!, candidate.id); }}>
             Copia {index + 1} · {candidate.folder}{candidate.sentDate && Number.isFinite(Date.parse(candidate.sentDate)) ? ` · ${new Date(candidate.sentDate).toLocaleString('es-ES')}` : ''}
           </button>)}
+          {classicReady && classicReady.activityId === emailOpenNotice.activityId && <button type="button" className="block font-semibold text-dts-primary dark:text-sky-400" onClick={() => { void launchPreparedClassic(classicReady); }}>Abrir Outlook Classic</button>}
+          {emailOpenNotice.devices?.map(device => <button key={device.id} type="button" className="block rounded border border-gray-200 dark:border-white/10 px-3 py-2" onClick={() => { void resolveClassicEmail(emailOpenNotice.activityId!, undefined, device.id); }}>{device.label}</button>)}
+          {emailOpenNotice.canSetupClassic && <a className="block text-dts-primary dark:text-sky-400" href="/outlook-classic" target="_blank" rel="noopener noreferrer">Configurar este equipo para Outlook Classic</a>}
           {emailOpenNotice.truncated && <p>Se muestran las primeras cinco copias. Si no identificas la correcta, revisa la vinculación antes de abrirla.</p>}
         </div>
       )}

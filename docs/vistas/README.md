@@ -91,3 +91,12 @@ Los documentos están organizados físicamente en **carpetas temáticas estructu
 - Revisión integral del piloto y preparación PostgreSQL aislado: docs/propuestas/2026-10-14-revision-integral-y-pruebas-piloto.md. Conexión compartida y producción sin cambios.
 
 - Validación SQL de cortes: superada en PostgreSQL real aislado el 14/10/2026; servidor detenido. Integración completa con CRM/BC pendiente.
+
+### Actualización 15/10/2026: apertura exacta en Outlook Classic
+
+Guías de [Contactos y Emails](03_crm/crm_contactos_mails.md), [Ajustes](06_administracion_configuracion/ajustes_generales.md) y [Complemento Outlook](03_crm/complemento_outlook_crm.md) actualizadas con apertura exacta, equipos vinculados y distribución interna sin certificado. Las dos tablas de Classic ya están creadas y comprobadas; la activación y la prueba completa instalada siguen pendientes de confirmación.
+
+- [Manual de usuario: apertura y seguimiento](../manual-usuario.md#35-abrir-correos-con-el-nuevo-componente-de-outlook-classic).
+- [Manual de instalación, vinculación, retirada e incidencias](../manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic).
+- [Guía de integración con Microsoft 365](../guia-integracion-outlook-exchange.md).
+- [Documentación técnica: tablas, endpoints, activación y vuelta atrás](../propuestas/2026-10-15-fase-4-apertura-exacta-classic.md).

@@ -1,3 +1,4 @@
+import { OutlookClassicPage } from './pages/outlook-addin/OutlookClassicPage';
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -101,6 +102,7 @@ const App: React.FC = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/outlook-addin" element={<OutlookAddinPage />} />
           <Route path="/outlook-crm" element={<OutlookAddinPage />} />
+          <Route path="/outlook-classic" element={<OutlookClassicPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Navigate to="/dashboard" replace />} />

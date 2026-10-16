@@ -68,7 +68,7 @@ En cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline):
 - **Apertura de Correos Existentes y Resolución Exacta (`email-open.service.ts`)**:
   - Cada tarjeta de correo (tanto en la pestaña de Emails como en el Timeline) dispone del botón *"Abrir en Outlook"*.
   - **Respeto Estricto de la Preferencia del Usuario (`getPreferredOutlookClient`)**:
-    - **Outlook Classic / Escritorio (`target === 'desktop'`)**: Si el usuario tiene configurado el cliente de escritorio en Ajustes Generales, la WebApp invoca el protocolo nativo `dts-mail://open?id=...&from=...&subject=...`. Antes de invocar a Windows, la función `cleanEmailSubjectForOutlook` despoja automáticamente cualquier prefijo comercial, normaliza guiones tipográficos y emojis para evitar corrupción de caracteres (mojibake). El manejador local v2.3 extrae el núcleo del asunto, localiza en milisegundos el mensaje exacto en la **Bandeja de Entrada** o en **Elementos Enviados** mediante MAPI COM y ejecuta `item.Display`. Si el mensaje se encuentra en archivadores o subcarpetas, ejecuta automáticamente una búsqueda limpia en todas las carpetas (`olSearchScopeAllFolders`).
+    - **Outlook Classic / Escritorio (`target === 'desktop'`)**: Para las cuentas del piloto de identidad, `outlookClassic.ts` solicita una apertura a `POST /api/exchange-sync/classic/requests`, vinculada a la actividad y al equipo del usuario. El protocolo `dts-outlook://v1/open` transporta una capacidad temporal, sin asunto ni credenciales Microsoft. El componente obtiene del backend la referencia MAPI actual, selecciona el almacén del buzón y verifica el InternetMessageId antes de mostrar el mensaje. La interfaz confirma el resultado autenticado; si no llega, informa de apertura sin confirmar y ofrece Web explícitamente. Las cuentas fuera del piloto conservan el flujo heredado `dts-mail`; la respuesta y la búsqueda también siguen pendientes de sustitución.
     - **Outlook Online / Web (`target === 'web'`) — Resolución Dinámica Segura (`POST /api/exchange-sync/emails/:activityId/resolve`)**:
       * Al pulsar abrir, la WebApp pre-abre síncronamente una pestaña en blanco para evitar el bloqueo de ventanas emergentes (Popup Blocker) y aísla el contexto mediante `window.opener = null` ([`resolvedEmailWindow.ts`](file:///c:/proyectos/webapp_dts/frontend/src/utils/resolvedEmailWindow.ts)).
       * El backend NestJS ([`EmailOpenService`](file:///c:/proyectos/webapp_dts/backend/src/modules/exchange-sync/email-open.service.ts)) verifica la autenticación JWT, rol y cartera comercial (`customerScope`), comprobando que el buzón de Microsoft 365 pertenezca al usuario autenticado (se bloquea la apertura de buzones ajenos incluso para roles Admin o Dirección).
@@ -162,3 +162,21 @@ En la pestaña de **Eventos** y en el botón **"Nueva Actividad"** de la ficha d
 - Protocolo `dts-mail://` v2.3 para apertura directa en ventana nativa en modo lectura en primer plano.
 - Menú de 5 acciones secundarias (`Abrir Classic`, `Abrir Web`, `Responder`, `Buscar conversación`, `Copiar datos de búsqueda`).
 - Detección asistida con modal de fallback para descargar el configurador `.bat` o abrir en versión web de forma instantánea.
+
+## Apertura exacta de Classic: configuración y diagnóstico (15/10/2026)
+
+| Componente | Responsabilidad |
+| --- | --- |
+| `frontend/src/pages/outlook-addin/OutlookClassicPage.tsx` | Sesión CRM, descarga, confirmación de código y revocación de equipos propios en `/outlook-classic`. |
+| `frontend/src/api/outlookClassic.ts` | Selección de dispositivo, un lanzamiento por clic y consulta del resultado. |
+| `backend/src/modules/exchange-sync/outlook-classic.controller.ts` | Rutas `/api/exchange-sync/classic`; JWT en operaciones del navegador, secretos o prueba firmada en las del componente. |
+| `backend/src/modules/exchange-sync/outlook-classic.service.ts` | Permisos actuales, pertenencia del buzón, vinculación, caducidad y consumo único. |
+| `outlook-classic/OutlookClassic.cs` | Clave privada cifrada por usuario Windows y apertura COM del mensaje exacto. |
+
+Las tablas independientes `crm_outlook_devices` y `crm_outlook_requests` ya están creadas en Supabase y se han comprobado en modo solo lectura con RLS y permisos de la conexión backend. No se modifica ninguna tabla importada de BC. Una vinculación dura como máximo cinco minutos; cada apertura caduca a los 90 segundos. El backend conserva solicitudes recientes y limpia las caducadas con más de siete días al emitir otras nuevas.
+
+La distribución interna sin firma Authenticode está aprobada. El ZIP se genera con `outlook-classic/Build.ps1` y contiene `Instalar_Outlook_dTS.bat`, `Vincular_Outlook_dTS.bat`, `Desinstalar_Outlook_dTS.bat` y el ejecutable. Descargarlo no acredita instalación. La falta de certificado no elimina la firma criptográfica de las solicitudes del equipo ni DPAPI.
+
+Estado a 15/10/2026: Web aceptado en producción tras mover el mensaje; SQL de Classic aplicado y comprobado. Pendientes de confirmación: despliegue del código nuevo, activación de Classic, instalación, vinculación y recorrido completo con resultado autenticado. La localización real del correo sin mostrarlo ya está verificada. No se amplía todavía cobertura a PST, archivo en línea o buzones compartidos.
+
+Véanse [manual de instalación, sección 7](../../manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic) y [procedimiento técnico de fase 4](../../propuestas/2026-10-15-fase-4-apertura-exacta-classic.md).

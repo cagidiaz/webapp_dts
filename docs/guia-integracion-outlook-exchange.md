@@ -140,7 +140,7 @@ El sistema sincroniza automáticamente todas las actividades con fecha y hora en
   * El CRM detecta que la conversación pertenece a un contacto registrado.
   * Indexa el mensaje en la pestaña **Emails** y en el **Timeline** del contacto, limpiando pies legales repetitivos para mantener notas legibles.
   * **Ordenación Cronológica por Fecha y Hora**: Todos los mensajes se ordenan de forma descendente estricta según su momento exacto de llegada o envío. En correos electrónicos, la hora se extrae prioritariamente de `attendees.sentDate` o `attendees.receivedDateTime`, permitiendo que múltiples correos cruzados en un mismo día se lean en perfecto orden temporal.
-  * **Resolución Dinámica Segura para Apertura Web**: La acción "Abrir en Outlook Web" invoca el resolvedor backend (`POST /api/exchange-sync/emails/:activityId/resolve`) que localiza el mensaje exacto mediante su `ImmutableId` incluso si se ha movido entre carpetas, abriéndolo de forma segura sin riesgo de bloqueo por ventanas emergentes (`window.opener = null`).
+  * **Resolución Dinámica Segura para Apertura Web**: La acción "Abrir en Outlook Web" invoca el resolvedor backend (`POST /api/exchange-sync/emails/:activityId/resolve`) que localiza el mensaje exacto mediante su `ImmutableId` incluso si se ha movido entre carpetas, utilizando una ventana preabierta y aislando su contexto con `window.opener = null`; si falla, se informa al usuario.
   * **Diseño Homogéneo de Tarjetas**: Las tarjetas de correo en la pestaña Emails y en el Timeline comparten la misma presentación estética (fondos blanco/zinc translúcido, tonos verdes esmeralda para tramitados, ámbar para pendientes de conclusiones y botones interactivos oficiales de Outlook).
 
 ---
@@ -156,18 +156,27 @@ Además de la sincronización de fondo, dispones del **Complemento oficial de Ou
 
 ---
 
+### D. Apertura exacta en Classic y equipos vinculados
+
+La nueva apertura de Classic se activa por cuenta y requiere instalar el componente Windows y vincularlo al usuario del CRM. No cambia la instalación del Add-in para registrar correos. El usuario ha aprobado distribuirlo internamente sin certificado de editor; cada solicitud del equipo sigue protegida mediante su propia clave.
+
+Abre `/outlook-classic`, descarga el ZIP, extráelo completo y ejecuta `Instalar_Outlook_dTS.bat`. Confirma en el CRM el código mostrado y vuelve al componente para terminar. En Emails y Timeline se conserva la preferencia de cliente; si falla Classic, puedes elegir Web. Las respuestas y búsquedas mantienen por ahora el flujo existente.
+
+El movimiento de carpeta dentro del mismo buzón está validado en Web. Para Classic se ha verificado la localización real del correo sin mostrarlo; falta aceptar la instalación, vinculación y apertura completa. Las tablas ya están creadas. No se da por validado el acceso a PST, archivo en línea, buzones compartidos ni buzones de otros comerciales.
+
+Guía paso a paso: [instalación, revocación e incidencias](manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic).
+
+---
+
 ## 5. 🛠️ Herramientas de Control, Ajustes y Preguntas Frecuentes
 
 ### Pantalla de Configuración y Preferencias (`/settings`)
 En la nueva sección de **Ajustes** de la WebApp puedes:
 * **Elegir tu Cliente de Outlook Predeterminado**: Selecciona entre **Outlook de Escritorio (Windows/Mac)** o **Outlook Web (Microsoft 365)**. El sistema recordará tu preferencia de forma permanente en tu navegador para abrir los correos y borradores siempre en tu cliente favorito.
-* **Asistente de Enlace Nativo de Outlook Classic (Windows - Protocolo `dts-mail://` v2.3)**:
-  * Al seleccionar *Outlook de Escritorio*, dispones del botón **"Descargar Configurador (1 Clic)"** que genera el archivo `Instalar_Outlook_dTS.bat`.
-  * **Sin Permisos de Administrador:** Se instala a nivel de usuario en `HKEY_CURRENT_USER\Software\Classes\dts-mail` y en `%LOCALAPPDATA%\dTS\`.
-  * **Apertura Directa y Sanitización de Tipologías (v2.3):** Al pulsar "Abrir en Outlook", la WebApp purga previamente con `cleanEmailSubjectForOutlook` cualquier metadato entre corchetes (`[📥 Recibido · 📋 Petición oferta]`) y emojis para evitar corrupción de caracteres en Windows (mojibake). El manejador local extrae el núcleo del asunto (`ExtractCoreSubject`) y busca instantáneamente en tu **Bandeja de Entrada** y en **Elementos Enviados** por asunto e interlocutor, abriendo directamente la ventana del mensaje en primer plano (`.Display`) con retardo de persistencia.
-  * **Blindaje Total contra Elementos del Calendario:** Ignora de forma segura convocatorias de reunión (`MeetingItem`) o avisos del sistema (`ReportItem`), evitando ventanas de error de VBScript.
-  * **Libre de Falsos Positivos de Antivirus:** El instalador genera el script en texto plano limpio y transparente, sin técnicas de PowerShell Base64 ni bypass de directivas.
-  * **Persistencia y Supresión de Avisos Innecesarios:** La WebApp recuerda que ya instalaste el configurador en ese navegador, evitando alertas emergentes mientras confirmas el cuadro de diálogo de Chrome/Edge.
+* **Instalador de apertura exacta de Classic**: Para las cuentas habilitadas, utiliza el ZIP y la vinculación de `/outlook-classic`. El configurador de Ajustes pertenece al flujo heredado y no reemplaza el nuevo componente. Sigue el [manual de instalación](manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic).
+  * El instalador nuevo registra `dts-outlook` por usuario Windows y exige completar la vinculación con el CRM.
+  * El antiguo configurador de Ajustes registra `dts-mail` y conserva la búsqueda por asunto para los flujos heredados. No acredita apertura exacta ni instalación del componente nuevo.
+  * El navegador puede recordar preferencias, pero descargar un BAT no demuestra que se haya ejecutado. Windows puede mostrar avisos o bloquear ejecutables conforme a sus políticas.
 * **Probar la Apertura**: Dispone de un botón interactivo de validación para asegurar que tu cliente de Outlook abre correctamente.
 
 ### Detección Proactiva de Sesión Expirada y Reconexión
@@ -195,8 +204,8 @@ Si cambias de equipo o deseas revocar el acceso a tu cuenta:
 | **¿Qué ocurre si borro una reunión en Outlook?** | El sistema detectará la cancelación y actualizará o eliminará el evento del CRM para mantener la agenda al día. |
 | **¿Los clientes reciben invitaciones al crear un evento en CRM?** | **Sí.** Si el contacto tiene su dirección de correo configurada, Outlook enviará la invitación estándar de calendario con opción de aceptar/rechazar. |
 | **¿Puedo cambiar entre abrir los correos en Outlook Web o Outlook Escritorio?** | **Sí.** Puedes cambiarlo en cualquier momento desde **Ajustes** (`/settings`) y tu elección se guardará automáticamente. |
-| **¿Cómo funciona la apertura en Outlook Classic sin abrir ventanas de redacción?** | Utiliza el protocolo seguro `dts-mail://` v2.1. El script local busca el correo guardado en tu Bandeja de Entrada o Elementos Enviados y lo abre directamente en modo lectura (`.Display`), con sus cabeceras, adjuntos y botones nativos. |
-| **¿Requiere permisos de administrador el instalador de Outlook Classic?** | **No.** Se instala de forma desatendida exclusivamente en tu perfil de usuario de Windows (`HKEY_CURRENT_USER`). |
+| **¿Cómo funciona la apertura en Outlook Classic?** | En el piloto habilitado, el componente vinculado recibe una solicitud temporal y verifica el mensaje en el buzón correcto antes de mostrarlo. Usa `dts-outlook`; fuera del piloto permanece el flujo heredado `dts-mail`. |
+| **¿Requiere permisos de administrador el instalador de Outlook Classic?** | No. Extrae todo el ZIP y ejecuta el BAT con tu usuario habitual. Después confirma el código en el CRM y completa la vinculación en el componente. |
 
 ---
 

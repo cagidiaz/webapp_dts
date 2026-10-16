@@ -1,7 +1,7 @@
 # Plan de apertura híbrida de correos de Outlook desde el CRM
 
 **Fecha:** 15 de octubre de 2026  
-**Estado:** Fases 0 y 1 verificadas; fases 2 y 3 implementadas localmente. Consulta Graph real verificada. Registro y apertura completos con Local Dev pendientes de aceptación; la importación confirmada por el usuario se realizó en producción.
+**Estado:** Fases 0 y 1 verificadas; registro de identidad y apertura Web probados en producción, incluido el movimiento de carpeta. Fase 4 implementada con instalador interno sin certificado y tablas creadas y comprobadas. Pendientes de confirmar despliegue, activación, vinculación y aceptación completa del componente Classic.
 
 **Destinatario:** Dirección y responsable de la aplicación  
 **Ámbito:** Tarjetas de correos en Emails y Timeline, complemento de Outlook, integración Microsoft 365 y componente de escritorio.
@@ -83,7 +83,7 @@ Los índices se diseñarán para la consulta por buzón e identificador. Si un c
 | 6 | Piloto de uso real | Registro de incidencias y validación del responsable | 5 días laborables |
 | 7 | Retirada del flujo antiguo | Código obsoleto retirado y documentación vigente | 1 a 2 jornadas |
 
-Son estimaciones de trabajo, no fechas comprometidas. En secuencia equivalen aproximadamente a 5 a 8 semanas de dedicación completa, incluyendo el piloto. La disponibilidad de equipos de prueba, firma del instalador y revisiones puede alargar el calendario.
+Son estimaciones de trabajo, no fechas comprometidas. En secuencia equivalen aproximadamente a 5 a 8 semanas de dedicación completa, incluyendo el piloto. La disponibilidad de equipos de prueba y las revisiones puede alargar el calendario. La distribución interna sin certificado fue aprobada el 15/10/2026.
 
 ### Fase 0 Comprobar la apertura exacta en Classic
 
@@ -119,13 +119,13 @@ Limitar las consultas a los correos solicitados, con caché breve, concurrencia 
 
 ### Fase 4 Sustituir el VBS por un componente local
 
-Propuesta técnica: aplicación ligera de Windows en .NET, ejecutada en la sesión del usuario y distribuida mediante instalador firmado y versionado. La elección definitiva dependerá de la prueba inicial y del método de distribución disponible.
+Decisión aplicada: aplicación ligera de Windows en .NET, ejecutada en la sesión del usuario y distribuida mediante ZIP versionado con instalador BAT, sin firma Authenticode para uso interno. Se mantienen las firmas de solicitudes y resultados del dispositivo, independientes del certificado del ejecutable.
 
 El componente recibirá una solicitud temporal, seleccionará el buzón y almacén correctos y verificará la identidad del mensaje antes de abrirlo. Si se mueve entre resolución y apertura, podrá resolver una vez más con límite de intentos. No elegirá por defecto la primera cuenta ni hará una búsqueda aproximada que abra un resultado automáticamente.
 
 Mantener instalación, actualización y desinstalación por usuario cuando la política de Windows lo permita. Comprobar versión y funcionamiento mediante una comunicación real; descargar el instalador no equivaldrá a instalarlo. Un solo lanzamiento del protocolo por clic y confirmación del resultado evitarán aperturas duplicadas.
 
-Validar la firma, distribución y actualización del paquete. No se considerará completada esta fase con un prototipo sin el mecanismo de actualización acordado.
+Validar instalación, vinculación, distribución interna sin certificado y actualización del paquete. No se considerará completada esta fase con un prototipo sin el mecanismo de actualización acordado.
 
 ### Fase 5 Migrar el histórico y compartir las acciones
 
@@ -193,10 +193,12 @@ La aceptación exige cero aperturas de mensajes incorrectos en la matriz de prue
 1. Confirmar qué versiones de Outlook Classic y Windows deben soportarse y si hay usuarios del nuevo Outlook.
 2. Identificar si los buzones compartidos y el archivo en línea son obligatorios en el primer despliegue. Distinguirlos de una carpeta llamada «Archivo» dentro del buzón principal.
 3. Confirmar la alternativa visible cuando falle Classic: propuesta de botón «Abrir en web», sin cambiar silenciosamente la preferencia.
-4. Acordar distribución del componente local, certificado de firma y responsable de mantener sus actualizaciones.
+4. Distribución decidida: ZIP interno con BAT y ejecutable sin certificado. Queda pendiente validar su instalación y actualización antes de ampliar usuarios.
 5. Designar usuarios del piloto y quién valida la ampliación.
 6. Confirmar que los correos antiguos no recuperables quedarán visibles en el CRM con opción de revinculación manual.
 
 La [fase 2](2026-10-15-fase-2-registro-identidad-correos.md) incorpora el registro de referencias verificadas y elimina la conciliación aproximada de borradores. La fase 3 ya implementa la resolución por identidad y el enlace web actual desde las tarjetas. Tras aceptar esta apertura local, el siguiente paso funcional es la fase 4 para Classic. El componente local y sus instaladores se mantienen hasta validar su sustitución en las fases 4 y 7.
 
-La [fase 3 de resolución y apertura web](2026-10-15-fase-3-resolucion-apertura-web.md) documenta la ruta única, permisos, selección de copias, límites del piloto y prueba de aceptación local. La apertura exacta de Classic sigue en fase 4.
+La [fase 3 de resolución y apertura web](2026-10-15-fase-3-resolucion-apertura-web.md) documenta la ruta única, permisos, selección de copias y límites del piloto. El usuario ha confirmado la apertura en producción y después de mover el mensaje de carpeta.
+
+La [fase 4 de apertura exacta en Classic](2026-10-15-fase-4-apertura-exacta-classic.md) está implementada y verificada mediante pruebas automáticas y localización real sin mostrar el correo. El SQL ya está ejecutado y las dos tablas comprobadas con RLS y permisos del backend. Quedan pendientes confirmar despliegue, activar y probar el circuito completo instalado. El usuario ha aprobado distribución interna sin firma: el paquete con instalador BAT está generado para el siguiente despliegue, sin instalarlo ni desplegarlo.

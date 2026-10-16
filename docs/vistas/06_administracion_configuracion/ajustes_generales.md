@@ -20,21 +20,17 @@ Esta configuración determina cómo la aplicación interactúa con el correo ele
 
 ### 3.1. Selección de Cliente de Outlook Predeterminado
 El usuario puede escoger entre dos modalidades de trabajo mediante selectores visuales:
-1. **Outlook Classic / Escritorio (Recomendado para Windows):**
-   * Abre directamente la aplicación local instalada de Microsoft Outlook en Windows.
-   * **Protocolo Nativo Inteligente `dts-mail://` (v2.3):** Para correos existentes, invoca el protocolo de Windows conectando con el modelo COM MAPI de Outlook (`Outlook.Application`). Antes de la llamada, la WebApp limpia cualquier corchete de tipología CRM (`[📥 Recibido · 📋 Petición oferta]`) mediante `cleanEmailSubjectForOutlook`. El script local extrae el núcleo del asunto (`ExtractCoreSubject`) y realiza una búsqueda bidireccional segura en la **Bandeja de Entrada** (`olFolderInbox`) y en **Elementos Enviados** (`olFolderSentMail`) con blindaje ante elementos que no son correos (`MeetingItem`, `ReportItem`), abriendo directamente el mensaje en su propia ventana maximizada (`item.Display` / `insp.Activate`) con retardo de persistencia (`WScript.Sleep 400`).
-   * **Respaldo de Búsqueda Global Limpia:** Si el correo fue archivado en subcarpetas o PSTs históricos, abre el explorador de Outlook con búsqueda global instantánea de términos limpios en todos los buzones (`olSearchScopeAllFolders = 1`), eliminando caracteres rotos o mojibake.
-   * **Asistente de Configuración en 1 Clic (Libre de Alertas Antivirus):** Al seleccionar este modo, la interfaz ofrece el botón *"Descargar Configurador (1 Clic)"* que genera el archivo autocontenido `Instalar_Outlook_dTS.bat`. Este script está normalizado con saltos CRLF (`\r\n`), codificación UTF-8 y escribe el manejador VBS en texto plano transparente (sin PowerShell Base64 ni políticas Bypass), evitando falsos positivos de Windows Defender o SmartScreen. Configura el manejador en `HKCU\Software\Classes\dts-mail` y en `%LOCALAPPDATA%\dTS\` sin requerir permisos de administrador.
-   * **Persistencia de Instalación y Supresión de Falsas Alarmas:** La WebApp recuerda en `localStorage` (`dts_outlook_protocol_installed`) que el configurador ya fue ejecutado en el equipo, evitando mostrar modales de error si el usuario tarda en confirmar el diálogo del navegador ("¿Abrir dTS Instruments Mail Protocol?").
-   * También incluye enlace directo para descargar el desinstalador limpio (`Desinstalar_Outlook_dTS.bat`).
-   * **Blindaje en Git:** El repositorio cuenta con directivas en `.gitattributes` para preservar siempre terminaciones de línea CRLF en los archivos `.bat` y `.cmd`.
-   * Para redacción de correos nuevos, utiliza el protocolo estándar `mailto:` mediante enlace invisible en el DOM (`triggerMailtoUri`).
+1. **Outlook Classic / Escritorio:**
+   * La preferencia se conserva, pero la apertura exacta del piloto se instala y vincula desde `/outlook-classic` con el ZIP `OutlookClassic.zip`. El paquete contiene BAT y componente Windows sin firma Authenticode; se ejecuta con el usuario habitual, sin administrador.
+   * El nuevo protocolo `dts-outlook` recibe una solicitud temporal y verifica el mensaje en el almacén del buzón antes de mostrarlo. La interfaz espera una confirmación autenticada del componente; descargar el ZIP o perder el foco no prueba instalación ni apertura.
+   * El configurador de un clic de `/settings` y el protocolo `dts-mail` siguen siendo el flujo heredado para usuarios fuera del piloto y acciones todavía no sustituidas. No equivalen al nuevo instalador y no garantizan localizar correos después de moverlos.
+   * Para la redacción de correos nuevos se conserva el flujo existente. El nuevo componente de fase 4 ejecuta únicamente apertura de mensajes.
 2. **Outlook Online / Web (Navegador):**
    * Si la cuenta de Microsoft 365 está vinculada por OAuth, genera un borrador en segundo plano en la nube mediante **Microsoft Graph API** (`/me/messages`) y abre la ventana web directamente en el mensaje creado (`webLink`).
    * Si la cuenta no está vinculada o el borrador remoto falla, utiliza un enlace profundo canónico optimizado:  
      `https://outlook.office.com/mail/deeplink/compose?to=...&cc=...&subject=...&body=...`
    * Para evitar que el bloqueador de ventanas emergentes de Chrome/Edge impida abrir la pestaña tras una llamada asíncrona, el sistema pre-abre una pestaña en blanco en el evento de clic del usuario (`window.open('about:blank')`) y redirige su ubicación al finalizar la API.
-   * Para correos existentes, abre la vista de lectura directa en la nube mediante `webLink` o `ItemID`.
+   * Para los correos del piloto, la apertura resuelve la identidad en backend y obtiene el `webLink` actual; las copias ambiguas requieren selección del usuario.
 
 > **Persistencia Local:** La elección se guarda de inmediato en `localStorage` bajo la clave `dts_outlook_preferred_client` y muestra una notificación visual de guardado instantáneo sin recargar la página. Todas las vistas del CRM consultan en tiempo real este ajuste.
 
@@ -60,3 +56,15 @@ El usuario puede escoger entre dos modalidades de trabajo mediante selectores vi
 * **Estado en Tiempo Real:** Muestra si el buzón está conectado, el correo corporativo vinculado y la fecha/hora de la última sincronización automática.
 * **Sincronización Inmediata:** Botón **"Sincronizar ahora"** que activa el job de sincronización de correos entrantes/salientes y reuniones en segundo plano.
 * **Desconexión Segura:** Botón para revocar los tokens y desvincular la cuenta corporativa de forma instantánea.
+
+## Equipos vinculados y activación del piloto (15/10/2026)
+
+La página `/outlook-classic` conserva sesión CRM mediante `OutlookAddinSession`. Permite descargar el paquete cuando existe, introducir el código mostrado por el componente Windows y revocar equipos propios. Los permisos se verifican en backend y no dan acceso a buzones ajenos para Admin o Dirección. La selección del dispositivo se recuerda en el navegador; la clave privada permanece cifrada en el equipo.
+
+La activación requiere `CRM_OUTLOOK_CLASSIC_ENABLED=true`, además del piloto de identidad habilitado para la cuenta y los permisos actuales de acceso CRM. El piloto de pruebas se mantiene limitado a `gdiaz@dtsinstruments.com`; habilitar Classic no amplía por sí solo esa lista.
+
+Las dos tablas de Classic ya están creadas y comprobadas en Supabase. El paquete está generado en la carpeta local; su despliegue y la prueba completa instalada siguen pendientes de confirmación. El botón de prueba de borrador en Ajustes verifica el flujo de composición y no acredita apertura exacta ni vinculación del nuevo componente.
+
+La distribución interna carece de certificado de editor. Windows puede mostrar avisos o aplicar sus políticas. No se cambian antivirus, certificados ni políticas de seguridad. Las firmas de solicitudes y el cifrado DPAPI siguen activos.
+
+Véanse [instalación y solución de incidencias](../../manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic) y [activación técnica](../../propuestas/2026-10-15-fase-4-apertura-exacta-classic.md).

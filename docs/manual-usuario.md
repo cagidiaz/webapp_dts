@@ -328,7 +328,7 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
 * **Botón Directo "Abrir en Outlook" y Resolución Dinámica Web**:
   * En cada tarjeta de email de la pestaña *Emails*, en los eventos de correo del *Timeline* y en la cabecera del contacto, se incluye la acción **"Abrir en Outlook"** acompañada de un menú desplegable contextual (`...`):
   * **Comportamiento Determinista por Preferencia**:
-    * **Outlook Classic / Escritorio (`dts-mail://` v2.3)**: Si el usuario tiene seleccionada esta opción, la WebApp invoca el protocolo nativo de Windows. Antes de lanzar la llamada, sanitiza el asunto con `cleanEmailSubjectForOutlook` suprimiendo etiquetas de tipología CRM (`[📥 Recibido · 📋 Petición oferta]`) y emojis para evitar corrupción de caracteres. El manejador local v2.3 extrae el núcleo del asunto (`ExtractCoreSubject`), localiza en milisegundos el mensaje en Entrada o Enviados y lo abre directamente en primer plano (`.Display`), con sus adjuntos, cabeceras y opciones completas de lectura.
+    * **Outlook Classic / Escritorio**: Para las cuentas habilitadas en el piloto, utiliza el componente Windows vinculado al usuario para localizar y verificar el mensaje exacto, incluso después de moverlo dentro del mismo buzón. Requiere instalar el ZIP y completar la vinculación. El resto de usuarios conserva temporalmente el flujo anterior; responder y buscar conversación siguen usando sus acciones existentes.
     * **Outlook Web (M365) — Resolución Dinámica Segura**: Abre el mensaje exacto mediante el resolvedor backend del CRM (`POST /api/exchange-sync/emails/:activityId/resolve`), pre-abriendo una ventana sin riesgo de bloqueo por navegador (popup blocker) y con aislamiento de contexto (`window.opener = null`). Si el correo fue movido a otra carpeta, Microsoft Graph lo localiza de forma determinista mediante su `ImmutableId`; y si existen varias copias en el buzón, despliega un selector de carpeta/fecha para abrir la deseada.
   * **Menú Desplegable de Acciones Secundarias (`...`)**:
     1. **Abrir en Outlook Classic**: Fuerza la apertura en la aplicación de escritorio.
@@ -336,7 +336,7 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
     3. **Responder en Outlook**: Abre la ventana de redacción citando el correo y los destinatarios en copia.
     4. **Buscar conversación completa**: Activa la búsqueda en Outlook para ver todo el hilo y respuestas del contacto.
     5. **Copiar datos de búsqueda**: Copia la sintaxis limpia `de:<email> asunto:"<asunto_limpio>"` para pegarla manualmente en Outlook.
-  * **Detección y Fallback Inteligente**: Si un comercial pulsa el botón en un equipo donde aún no ha configurado el protocolo `dts-mail://`, la WebApp ofrece un modal asistido para abrir el correo en Web o descargar el instalador en 1 clic, con opción de silenciar avisos si ya lo tiene instalado.
+  * **Si Classic no puede abrirlo**: El CRM informa del estado y ofrece elegir Outlook Web. Una apertura sin confirmar no significa que el correo se haya borrado; comprueba Outlook antes de repetir. La aplicación no sustituye automáticamente la apertura exacta por una búsqueda por asunto.
 
 ---
 
@@ -365,6 +365,22 @@ Extensión oficial integrada en la cinta de opciones de Microsoft Outlook (Web, 
   * Filtro automático robusto de cláusulas legales de privacidad (RGPD / LOPD), cadenas repetitivas de reenvíos, firmas pesadas y saltos de línea acumulados.
 * **Prevención Activa de Duplicados en Cartera**: Detección determinista por `ImmutableId` cruzado con el comercial, empresa y contacto (`✓ Ya registrado en dTS CRM`).
 * **Resumen de Destino Previo al Guardado**: Tarjeta de confirmación visual que muestra la empresa cliente y el contacto vinculado antes de pulsar guardar.
+
+---
+
+### 3.5 Abrir correos con el nuevo componente de Outlook Classic
+
+**Disponible solo para cuentas habilitadas por el administrador.** La vía web ya está validada en producción. El componente de Classic está preparado y sus tablas creadas; falta confirmar el despliegue, la instalación y la prueba completa antes de darlo por operativo para el equipo.
+
+1. Conecta tu cuenta corporativa en **Ajustes** y comprueba que es el mismo buzón configurado en Outlook Classic para Windows.
+2. Sigue la [instalación de Classic](manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic): extrae el ZIP, ejecuta el BAT y confirma el código mostrado en la página del CRM que se abrirá.
+3. Vuelve a la ventana del componente y pulsa **«Ya he confirmado en el CRM»** para completar la vinculación.
+4. En la ficha del contacto, pestaña **Emails** o **Timeline**, pulsa **Abrir en Outlook Classic**. Si el CRM presenta varias copias, elige la que corresponda. Si muestra un botón adicional para abrir Classic, púlsalo; el navegador puede pedir autorización para abrir la aplicación.
+5. Comprueba que se muestra el correo correcto. Si no puede abrirse o no llega la confirmación, puedes elegir **Abrir en Outlook Web**.
+
+En `/outlook-classic` puedes consultar y revocar tus equipos. Para volver a vincular un equipo, ejecuta `Vincular_Outlook_dTS.bat`. Para retirarlo, utiliza `Desinstalar_Outlook_dTS.bat` y revoca su acceso en el CRM. Cada usuario Windows debe instalar y vincular su propia cuenta.
+
+Esta entrega abre mensajes; no modifica el envío, la respuesta ni la búsqueda de conversaciones. Nuevo Outlook, Mac, PST, archivo en línea y buzones compartidos no quedan cubiertos por la aceptación del componente Classic. Consultar una actividad del CRM no otorga acceso al buzón privado de otro usuario.
 
 ---
 
@@ -427,7 +443,7 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * Botones para forzar sincronización manual de borradores y eventos o desconectar la cuenta.
 * **Cliente de Outlook Predeterminado**:
   * Selector dual entre **Outlook de Escritorio (App Windows/Mac)** y **Outlook Web (Microsoft 365)**.
-  * **Protocolo Nativo y Asistente en 1 Clic (`dts-mail://` v2.3)**: Al seleccionar Outlook de Escritorio, la pantalla ofrece el botón directo *"Descargar Configurador (1 Clic)"* para instalar el protocolo seguro mediante un archivo `.bat` normalizado en texto plano limpio UTF-8, garantizando una instalación desatendida, libre de alertas de antivirus y sin requerir permisos de administrador (`HKCU`). Dispone de sanitización automática de prefijos comerciales, búsqueda inteligente por asunto y contacto en Entrada y Enviados, apertura directa de correos y enlace para el desinstalador limpio.
+  * **Instalación de Classic para el piloto**: En `/outlook-classic`, descarga el ZIP, extráelo completo y ejecuta `Instalar_Outlook_dTS.bat` sin administrador. El configurador antiguo de Ajustes sigue disponible para flujos heredados y no sustituye este paquete. La distribución interna no exige certificado; Windows puede mostrar un aviso de editor desconocido.
   * **Memorización persistente en el navegador local (`localStorage`)**: El ajuste se recuerda de forma global para toda la WebApp y aplica tanto a la redacción como a la apertura de correos existentes en la ficha de contactos y el timeline del CRM.
   * Botón de prueba inmediata para validar la apertura de Outlook.
 

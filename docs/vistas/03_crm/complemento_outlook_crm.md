@@ -87,3 +87,13 @@ Al pulsar **"Registrar en dTS CRM"**:
    * `exchange_resolved_at`: Timestamp de verificación de identidad.
 4. **Control de Duplicados en Cartera:** La comprobación de duplicados evalúa `exchange_immutable_id` junto con el creador, cliente y contacto, evitando falsos duplicados cruzados entre diferentes comerciales o asociaciones comerciales independientes del mismo correo.
 5. **Convivencia con Piloto de Ofertas:** Si la oferta pertenece al seguimiento local de ofertas, el correo se vincula como actividad local en `crm_offer_activities` sin alterar automáticamente la fase de la cotización ni su estado de cierre.
+
+## 7. Relación con el componente Windows de apertura (15/10/2026)
+
+El Add-in de Office registra el correo en el CRM; el componente Windows abre desde el CRM un mensaje ya registrado en Outlook Classic. Son instalaciones y permisos distintos: el ZIP de Classic no instala el Add-in, no cambia su manifiesto de Microsoft 365 y no necesita un certificado de firma de código.
+
+La apertura exacta requiere una referencia verificada del propio buzón Microsoft 365, permisos CRM actuales y un equipo vinculado. Admin y Dirección pueden consultar actividades autorizadas, pero no abrir con su cuenta un mensaje del buzón privado de otro comercial. Los registros antiguos sin referencia verificable pueden necesitar recuperación o revinculación; no se resuelven automáticamente por asunto.
+
+Las tablas `crm_outlook_devices` y `crm_outlook_requests` son exclusivas del componente Classic, no del registro del Add-in. Ya se ha comprobado su creación en Supabase; falta aceptar el circuito completo instalado. El modo vista previa del Add-in continúa bloqueando el registro real.
+
+Véase [manual conjunto de instalación y vinculación](../../manual-instalacion-addin-outlook.md#7-instalador-interno-para-abrir-correos-en-outlook-classic).

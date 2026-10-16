@@ -1,6 +1,6 @@
 # 📖 Guía de Instalación y Despliegue: Complemento de Outlook (Add-in dTS CRM)
 
-> Este manual describe cómo instalar, desplegar y utilizar el complemento oficial de **dTS Instruments CRM** en Microsoft Outlook (Web, Windows y Mac).
+> Este manual describe la instalación del Add-in de Office para registrar correos y, en la sección 7, el componente Windows para abrirlos desde el CRM en Outlook Classic. Son instalaciones independientes.
 
 ---
 
@@ -12,6 +12,8 @@
 5. [Resolución de Dudas Frecuentes (FAQ)](#5-resolución-de-dudas-frecuentes-faq)
 
 ---
+
+[Ir a instalación de Outlook Classic, sección 7](#7-instalador-interno-para-abrir-correos-en-outlook-classic).
 
 ## 1. Descripción General y Arquitectura
 
@@ -99,7 +101,7 @@ En el panel lateral derecho verás:
 
 ### Paso 4: Guardar
 Haz clic en **[ 💾 Guardar Correo en dTS CRM ]**.  
-Aparecerá una confirmación verde inmediata. El correo ya está registrado en el Timeline del contacto y visible para todo el equipo en la WebApp dTS Instruments.
+Aparecerá una confirmación verde inmediata. El correo queda registrado en el Timeline del contacto, consultable por los usuarios con permisos y cartera autorizados.
 
 ---
 
@@ -109,7 +111,7 @@ Aparecerá una confirmación verde inmediata. El correo ya está registrado en e
 El sistema comprueba el identificador único del correo de Microsoft Graph. Si ya fue registrado, el panel muestra el mensaje `✓ Ya registrado en dTS CRM` y no duplica la entrada en la base de datos.
 
 #### ¿Los demás compañeros pueden ver los correos registrados?
-Sí. Al registrar un correo con el Add-in, pasa a formar parte del historial comercial del cliente en el CRM. Cualquier usuario con permisos comerciales en la WebApp podrá consultar el extracto del correo y, si tiene permisos en Microsoft 365, abrirlo directamente en Outlook con el botón *"Abrir en Outlook"*.
+La consulta del extracto depende de los permisos y la cartera autorizada del CRM. En el piloto de apertura exacta solo se abre el mensaje del buzón Microsoft 365 del usuario autenticado; Admin y Dirección no obtienen acceso a buzones privados ajenos.
 
 #### ¿Funciona en la aplicación de escritorio de Outlook para Windows?
 Sí. El complemento es un Add-in web universal compatible con el nuevo Outlook para Windows, Outlook clásico, Outlook para Mac y Outlook en la web (navegador).
@@ -119,3 +121,57 @@ Este mensaje indica que Microsoft requiere una confirmación interactiva de perm
 1. **Solución rápida para el comercial:** Entra a la WebApp en **CRM** o **Ajustes** (`/settings`), pulsa en **"Reconectar con Microsoft 365"**, inicia sesión y pulsa **Aceptar** en la pantalla de permisos.
 2. **Solución definitiva para la empresa (Administrador de TI):** Accede al [Portal de Microsoft Entra / Azure](https://entra.microsoft.com/) ➔ *Aplicaciones* ➔ *Registros de aplicaciones* ➔ `dTS CRM - Exchange Sync` ➔ *Permisos de API* y haz clic en **"Conceder consentimiento de administrador para dTS Instruments"**. De este modo, ningún empleado volverá a requerir confirmación individual.
 
+
+## 7. Instalador interno para abrir correos en Outlook Classic
+
+### 7.1 Requisitos y estado
+
+- Windows con Outlook **Classic** instalado y el buzón corporativo configurado. El nuevo Outlook no utiliza este componente COM.
+- Cuenta Microsoft 365 conectada al CRM, permisos de acceso y habilitación del piloto.
+- Backend y frontend actualizados; la opción Classic debe estar habilitada por el responsable de la aplicación.
+- Las tablas de Classic ya están creadas en Supabase y comprobadas a 15/10/2026. La instalación y la prueba completa en producción siguen pendientes de confirmación.
+
+No es necesario cambiar el manifiesto del Add-in ni adquirir un certificado para este instalador interno. La conexión Microsoft 365 de la app y la vinculación del equipo son dos pasos distintos.
+
+### 7.2 Instalación por usuario
+
+1. En el CRM, abre `/outlook-classic`. Si tu cuenta está habilitada y el paquete está desplegado, pulsa **Descargar instalador de Outlook Classic**. El administrador también puede facilitar el mismo ZIP generado en el proyecto.
+2. Extrae **todo** `OutlookClassic.zip` en una carpeta. Conserva el ejecutable junto a los BAT; copiar solo el BAT no basta.
+3. Ejecuta `Instalar_Outlook_dTS.bat` con tu usuario habitual de Windows, **sin ejecutar como administrador**.
+4. El componente se copia al perfil local y registra el protocolo de apertura. A continuación muestra un código y abre el CRM para vincular el equipo.
+5. Inicia sesión con tu cuenta del CRM e introduce el código que ves en la ventana del componente. Pulsa **Vincular este equipo a mi cuenta**.
+6. Vuelve a la ventana Windows y pulsa **Ya he confirmado en el CRM**. La vinculación caduca en cinco minutos; si ha vencido, inicia una nueva.
+7. Desde Emails o Timeline, prueba **Abrir en Outlook Classic** y comprueba el mensaje. Si el navegador solicita abrir la aplicación, acepta para completar esa apertura.
+
+El componente se instala en `%LOCALAPPDATA%\dTS\OutlookClassic\1.0.0` y el protocolo se registra en HKCU. No modifica el manejador antiguo `dts-mail`; la nueva apertura usa `dts-outlook`. La clave del equipo queda cifrada para el usuario Windows.
+
+### 7.3 Distribución interna sin certificado
+
+El paquete se distribuye sin firma Authenticode por decisión de la empresa. Windows puede mostrar un aviso de editor desconocido o aplicar una política que impida ejecutarlo. El instalador no modifica políticas, antivirus ni certificados. Si el equipo lo bloquea, contacta con el responsable informático.
+
+Las comprobaciones de identidad y las firmas criptográficas de las solicitudes del equipo se mantienen. La falta de certificado del ejecutable no elimina la vinculación ni el control de acceso.
+
+### 7.4 Actualización, nueva vinculación y retirada
+
+| Acción | Procedimiento |
+| --- | --- |
+| Actualizar la versión | Cierra el componente, extrae el ZIP facilitado y ejecuta el BAT de instalación. La vinculación existente se conserva si su clave local sigue disponible. |
+| Volver a vincular | Ejecuta `Vincular_Outlook_dTS.bat` y repite la confirmación del código con tu cuenta. Si sustituyes una vinculación, revoca después la entrada anterior que ya no utilices. |
+| Retirar del equipo | Ejecuta `Desinstalar_Outlook_dTS.bat` con el mismo usuario Windows y revoca el equipo en **Mis equipos** del CRM. Los ejecutables bloqueados pueden requerir limpieza posterior. |
+| Retirar acceso sin disponer del equipo | En `/outlook-classic`, revoca su vinculación. La revocación impide nuevas solicitudes para ese dispositivo. |
+
+### 7.5 Incidencias de apertura
+
+| Mensaje o situación | Qué revisar |
+| --- | --- |
+| Classic no habilitado | El administrador debe revisar el piloto, permisos y despliegue. Instalar el BAT por sí solo no habilita la cuenta. |
+| El instalador no está publicado | Falta desplegar el frontend que contiene el ZIP y sus metadatos. |
+| Código incorrecto o caducado | Inicia una nueva vinculación y utiliza únicamente el código de la ventana de tu equipo. |
+| El navegador no abre la aplicación | Comprueba instalación con tu usuario Windows y autorización del navegador. Descargar el ZIP no instala el protocolo. |
+| Apertura sin confirmar | Revisa si Outlook ya mostró el mensaje antes de repetir; puedes elegir la alternativa Web. |
+| Buzón no disponible o identidad distinta | Verifica que Classic tenga configurada la misma cuenta conectada al CRM. No se abre otro correo como sustituto. |
+| Mensaje movido a PST, archivo en línea u otro buzón | Fuera de la cobertura aceptada de esta entrega; solicita revisión. Un movimiento entre carpetas del mismo buzón sí forma parte de las pruebas. |
+
+La prueba de aceptación consiste en abrir el mismo mensaje desde Emails y Timeline, moverlo a otra carpeta del mismo buzón y repetir, además de probar Classic cerrado. Registrar los resultados antes de extender el piloto al equipo.
+
+Administración: [activación, tablas y controles técnicos](propuestas/2026-10-15-fase-4-apertura-exacta-classic.md).
