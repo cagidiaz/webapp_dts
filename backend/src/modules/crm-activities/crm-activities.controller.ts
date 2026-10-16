@@ -75,6 +75,7 @@ export class CrmActivitiesController {
     @Body('createdAt') createdAt?: string,
     @Body('conclusions') conclusions?: string,
     @Body('location') location?: string,
+    @Body('emailAttachments') emailAttachments?: unknown,
   ) {
     const userId = req.user?.userId;
     return this.crmActivitiesService.create({
@@ -90,6 +91,7 @@ export class CrmActivitiesController {
       createdAt,
       conclusions,
       location,
+      emailAttachments,
     });
   }
 

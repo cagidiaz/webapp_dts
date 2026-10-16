@@ -210,3 +210,47 @@ Si cambias de equipo o deseas revocar el acceso a tu cuenta:
 ---
 
 *Documentación elaborada para el equipo comercial de dTS Instruments.*
+
+## 7. Nombres de adjuntos en el CRM
+
+**Estado a 16/10/2026:** implementación comprobada automáticamente y en PostgreSQL aislado. Pendientes despliegue, inspección visual y aceptación con correos reales en Classic y Web. La apertura y las respuestas de la entrega anterior ya fueron confirmadas por el usuario en producción.
+
+### Flujo y almacenamiento
+
+1. Al registrar un correo, el helper compartido `frontend/public/email-attachment-metadata.js` consulta los metadatos del elemento seleccionado con Office.js. En redacción detecta la disponibilidad de la API asíncrona; espera como máximo tres segundos.
+2. El panel React y el panel estático, cuando el mensaje está guardado e identificado, envían `emailAttachments` a `POST /outlook-addin/log-email`, que conserva autorización y control de duplicados. Los elementos estáticos sin ID mantienen `POST /crm-activities`: no ofrecen deduplicación por identidad ni conciliación de ese borrador.
+3. El servidor valida y guarda únicamente una fotografía de metadatos en `crm_activities.attendees.emailAttachments`. No cambia el esquema ni las tablas sincronizadas desde Business Central.
+4. `EmailAttachments.tsx` muestra la misma fotografía en Emails y Timeline, debajo del cuerpo. Visualizar tarjetas no consulta Microsoft Graph.
+5. Los borradores nuevos preparados desde el CRM llevan estado pending. La conciliación existente del enviado obtiene una vez sus nombres finales mediante la identidad exacta y Graph. No crea un planificador ni recupera el histórico.
+
+| Campo | Uso |
+| --- | --- |
+| `version` | Versión 1 del contrato. Su ausencia distingue registros anteriores. |
+| `status` | complete: lista confirmada; partial: incompleta; pending: esperando confirmación del envío; unavailable: captura no disponible. |
+| `source` | office, graph o crm; el servidor fija el origen según la ruta. |
+| `capturedAt` | Fecha de captura registrada por el servidor. |
+| `files` | Hasta 100 elementos con `name` de hasta 512 caracteres y `size` opcional en bytes. |
+| `totalKnown` | Número conocido de adjuntos visibles; null cuando se desconoce. |
+
+Se excluyen solo los elementos marcados `isInline === true`, no extensiones o nombres de archivo. Se conservan nombres repetidos. Un límite o dato incompleto produce estado partial. Una lista completa vacía oculta el bloque; un registro antiguo sin datos también lo oculta, sin afirmar que no tenía adjuntos. Los nombres son texto informativo y no enlaces de descarga.
+
+### Datos protegidos y rendimiento
+
+No se almacenan archivos, bytes, URLs privadas, tokens ni IDs de adjuntos. La consulta Graph selecciona únicamente `name,size,isInline`, limita la paginación a cuatro páginas y valida host, mensaje y parámetros de cada página. Las ediciones de categoría/oferta y la conciliación combinan claves JSON dentro de transacciones para conservar los demás metadatos, incluso con lecturas anteriores de la actividad.
+
+Un fallo de metadatos no bloquea el registro ni provoca repetir un envío. La lista guardada es una fotografía del momento; no promete reflejar cambios posteriores en el buzón. La vuelta atrás consiste en detener la captura y ocultar el bloque, conservando los datos guardados.
+
+### Despliegue y soporte
+
+Desplegar backend compatible antes que frontend y volver a abrir el complemento. No requiere SQL, cambios de manifiesto, permisos Microsoft adicionales ni reinstalación del componente Classic. La vinculación del equipo permanece independiente.
+
+| Síntoma | Interpretación y actuación |
+| --- | --- |
+| Un correo antiguo no muestra adjuntos | No se capturaron estos metadatos. Conservar el registro y consultar el mensaje en Outlook. |
+| Información no disponible | La captura falló o la API no estaba disponible. No equivale a una lista vacía confirmada. |
+| Lista parcial | Se alcanzó un límite o faltan datos; abrir Outlook para consultar la lista completa. |
+| Pendientes de confirmar tras el envío | El borrador nuevo del CRM espera su conciliación; comprobar envío, cuenta conectada y sincronización de correo. No reenviarlo para obtener los nombres. |
+| Ha cambiado el correo seleccionado | Volver a abrir el complemento sobre el mensaje correcto. El registro se cancela para no mezclar datos. |
+| No aparecen los cambios tras desplegar | Cerrar y abrir el panel, comprobar la publicación de backend y frontend y registrar un correo nuevo. |
+
+Pruebas y límites detallados en el [plan ejecutado](propuestas/2026-10-16-plan-nombres-adjuntos-correos-crm.md). [Aceptación paso a paso](manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro) y [manual de usuario](manual-usuario.md#nombres-de-adjuntos-en-las-tarjetas-de-correo).

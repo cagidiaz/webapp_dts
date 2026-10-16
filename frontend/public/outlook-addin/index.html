@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>dTS CRM Outlook Add-in</title>
+  <script src="/email-attachment-metadata.js"></script>
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <script>if (window.Office) Office.onReady();</script>
 
@@ -222,6 +223,8 @@
     let emailSenderAddress = "";
     let emailSubject = "";
     let emailDateTime = null;
+    let loadedMailItem = null;
+    let loadedMailItemId = null;
     let areHandlersRegistered = false;
     
     // Initialize OfficeJS
@@ -293,6 +296,8 @@
     function loadOutlookContext() {
       if (typeof Office !== 'undefined' && Office.context && Office.context.mailbox && Office.context.mailbox.item) {
         const item = Office.context.mailbox.item;
+        loadedMailItem = item;
+        loadedMailItemId = item.itemId;
         
         const fromObj = item.from || item.sender;
 
@@ -568,7 +573,7 @@
         
         const proceedWithPost = (subject, body) => {
           emailSubject = subject || "(Sin Asunto)";
-          postEmailToCRM(body);
+          postEmailToCRM(body, item, loadedMailItemId);
         };
 
         if (item.subject && typeof item.subject.getAsync === 'function') {
@@ -627,27 +632,41 @@
       return cleaned;
     }
 
-    async function postEmailToCRM(bodyContent) {
+    async function postEmailToCRM(bodyContent, capturedItem, expectedId) {
       const cleanedBody = cleanEmailBody(bodyContent);
+      const selectedFields = { clientId: activeContact && activeContact.client_id, contactId: activeContact && activeContact.id,
+        subject: emailSubject, sentDate: emailDateTime, email: emailSenderAddress };
       const token = localStorage.getItem('access_token');
       const statusDiv = document.getElementById('statusMessage');
 
       try {
-        const res = await fetch(`${API_BASE_URL}/crm-activities`, {
+        if (!capturedItem || !window.DtsEmailAttachments.sameItem(loadedMailItem, capturedItem, expectedId)
+          || !window.DtsEmailAttachments.sameItem(capturedItem, Office.context.mailbox.item, expectedId)) throw new Error('Ha cambiado el correo. Vuelve a abrir el complemento.');
+        const emailAttachments = await window.DtsEmailAttachments.capture(capturedItem);
+        if (!window.DtsEmailAttachments.sameItem(capturedItem, Office.context.mailbox.item, expectedId)) throw new Error('Ha cambiado el correo. Vuelve a abrir el complemento.');
+        const mailboxEmail = Office.context.mailbox.userProfile && Office.context.mailbox.userProfile.emailAddress;
+        const identified = !!expectedId && !!mailboxEmail;
+        // Saved messages use the same authorized, duplicate-aware route as React.
+        // Unsaved compose items retain the compatible generic activity route.
+        const payload = identified ? {
+          userEmail: mailboxEmail, exchangeItemId: expectedId, itemIdType: 'ewsId',
+          clientId: selectedFields.clientId, contactId: selectedFields.contactId,
+          subject: selectedFields.subject, body: cleanedBody, sentDate: selectedFields.sentDate,
+          interlocutorEmail: selectedFields.email, cleanBody: false,
+          direction: typeof capturedItem.subject !== 'string' || String(capturedItem.from && capturedItem.from.emailAddress || '').toLowerCase() === mailboxEmail.toLowerCase() ? 'OUTGOING' : 'INCOMING',
+          emailAttachments
+        } : {
+          clientId: selectedFields.clientId, contactId: selectedFields.contactId,
+          type: 'EMAIL', title: selectedFields.subject, description: cleanedBody,
+          email: selectedFields.email, createdAt: selectedFields.sentDate, emailAttachments
+        };
+        const res = await fetch(`${API_BASE_URL}/${identified ? 'outlook-addin/log-email' : 'crm-activities'}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            clientId: activeContact.client_id,
-            contactId: activeContact.id, // ← NUEVO
-            type: 'EMAIL',
-            title: emailSubject,
-            description: cleanedBody,
-            email: emailSenderAddress,
-            createdAt: emailDateTime
-          })
+          body: JSON.stringify(payload)
         });
 
         if (res.status === 401) {
@@ -664,7 +683,7 @@
           throw new Error("Error en servidor");
         }
       } catch (err) {
-        statusDiv.innerText = "✗ Error al registrar el correo en el CRM";
+        statusDiv.innerText = "✗ " + (err.message || "Error al registrar el correo en el CRM");
         statusDiv.className = "text-rose-700 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 p-2.5 rounded-xl font-bold text-[10px] text-center";
         statusDiv.classList.remove('hidden');
         document.getElementById('actionLinkBtn').disabled = false;

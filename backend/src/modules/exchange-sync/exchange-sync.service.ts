@@ -4,6 +4,7 @@ import { MicrosoftGraphService } from './microsoft-graph.service';
 import { CrmActivityType } from '@prisma/client';
 import { EmailIdentityService } from './email-identity.service';
 import { ProspectOutlookService } from './prospect-outlook.service';
+import { attachmentState } from './email-attachments';
 
 @Injectable()
 export class ExchangeSyncService {
@@ -347,7 +348,9 @@ export class ExchangeSyncService {
       const identity = await this.identities.prepare(userId, prepared.draft.id, prepared.draft.idType);
       const activity = await this.prisma.crm_activities.update({ where: { id: prepared.activity.id }, data: {
         ...identity.patch, exchange_web_link: identity.webLink || prepared.draft.webLink,
-        exchange_sync_status: identity.patch.exchange_resolution_status === 'resolved' ? 'synced' : 'sent_pending',
+        // New drafts finish their metadata once in the existing reconciliation pass.
+        exchange_sync_status: identity.patch.exchange_resolution_status === 'resolved'
+          && (prepared.activity.attendees as any)?.emailAttachments?.status !== 'pending' ? 'synced' : 'sent_pending',
         exchange_last_synced_at: new Date(),
       } });
       return { success: true, activity };
@@ -461,6 +464,7 @@ export class ExchangeSyncService {
         exchange_last_synced_at: draftNow,
         attendees: {
           sentDate: draftNow.toISOString(),
+          emailAttachments: attachmentState('pending', 'crm'),
         },
       },
     });
@@ -690,7 +694,11 @@ export class ExchangeSyncService {
         for (const draftAct of pendingDrafts) {
           // Historic drafts lack a verified immutable reference: never guess by recipient or date.
           if (!draftAct.exchange_immutable_id || !draftAct.exchange_mailbox_id || !draftAct.exchange_tenant_id) continue;
-          const identity = await this.identities.prepare(userId, draftAct.exchange_immutable_id, 'restImmutableEntryId');
+          const snapshot = (draftAct.attendees as any)?.emailAttachments;
+          const captureAttachments = snapshot?.version === 1 && snapshot?.status === 'pending';
+          const identity = captureAttachments
+            ? await this.identities.prepare(userId, draftAct.exchange_immutable_id, 'restImmutableEntryId', true)
+            : await this.identities.prepare(userId, draftAct.exchange_immutable_id, 'restImmutableEntryId');
           if (!identity.enabled) continue;
           const sameMailbox = identity.patch.exchange_mailbox_id === draftAct.exchange_mailbox_id
             && identity.patch.exchange_tenant_id === draftAct.exchange_tenant_id;
@@ -702,11 +710,27 @@ export class ExchangeSyncService {
             });
             continue;
           }
-          const result = await this.prisma.crm_activities.updateMany({
-            where: { id: draftAct.id, created_by: userId, type: 'EMAIL', exchange_sync_status: draftAct.exchange_sync_status, exchange_immutable_id: draftAct.exchange_immutable_id },
-            data: { ...identity.patch, exchange_original_id_type: draftAct.exchange_original_id_type || identity.patch.exchange_original_id_type, exchange_web_link: identity.webLink, exchange_sync_status: 'synced', exchange_last_synced_at: new Date() },
-          });
-          syncedEmails += result.count;
+          const finalize = async (db: Pick<PrismaService, 'crm_activities' | '$executeRaw'>) => {
+            const result = await db.crm_activities.updateMany({
+              where: { id: draftAct.id, created_by: userId, type: 'EMAIL', exchange_sync_status: draftAct.exchange_sync_status, exchange_immutable_id: draftAct.exchange_immutable_id },
+              data: { ...identity.patch, exchange_original_id_type: draftAct.exchange_original_id_type || identity.patch.exchange_original_id_type, exchange_web_link: identity.webLink, exchange_sync_status: 'synced', exchange_last_synced_at: new Date() },
+            });
+            if (result.count && captureAttachments) {
+              // Atomic JSON-path update preserves category, quote and concurrent edits.
+              const metadata = identity.attachmentMetadata || attachmentState('unavailable', 'graph');
+              await db.$executeRaw`
+                UPDATE public.crm_activities
+                SET attendees = jsonb_set(COALESCE(attendees, '{}'::jsonb), '{emailAttachments}', ${JSON.stringify(metadata)}::jsonb, true)
+                WHERE id = ${draftAct.id}::uuid AND created_by = ${userId}::uuid
+                  AND type = 'EMAIL' AND exchange_immutable_id = ${draftAct.exchange_immutable_id}
+                  AND exchange_sync_status = 'synced'
+                  AND attendees->'emailAttachments'->>'status' = 'pending'
+                  AND attendees->'emailAttachments'->>'version' = '1'
+              `;
+            }
+            return result.count;
+          };
+          syncedEmails += captureAttachments ? await this.prisma.$transaction(finalize) : await finalize(this.prisma);
         }
       } catch (mailError) {
         this.logger.error(`Error al reconciliar borradores enviados para ${userId}:`, mailError);

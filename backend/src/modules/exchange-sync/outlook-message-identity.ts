@@ -1,3 +1,4 @@
+import { normalizeAttachments, type EmailAttachments } from './email-attachments';
 /** Exact Graph identity client. No subject search, mailbox writes or application routes. */
 export type ExchangeIdFormat = 'ewsId' | 'restId' | 'restImmutableEntryId' | 'entryId';
 
@@ -86,6 +87,34 @@ export class OutlookMessageIdentityClient {
       parentFolderId: id(message.parentFolderId), webLink: message.webLink ? checkedOutlookWebLink(message.webLink) : null,
       observedAt: new Date().toISOString(),
     };
+  }
+
+  async attachmentMetadata(immutableId: string): Promise<EmailAttachments> {
+    const resource = `/me/messages/${encodeURIComponent(id(immutableId))}/attachments`;
+    let path = `${resource}?$select=name,size,isInline&$top=100`;
+    const files: { name: string; size?: number }[] = [];
+    let complete = false;
+    for (let page = 0; page < 4; page++) {
+      const result = await this.graph(path);
+      if (!Array.isArray(result.value)) throw new OutlookIdentityError('INVALID_GRAPH_RESPONSE');
+      for (const attachment of result.value) {
+        if (attachment?.isInline === true) continue;
+        files.push({ name: attachment?.name, size: attachment?.size });
+      }
+      const next = result['@odata.nextLink'];
+      if (!next) { complete = true; break; }
+      if (files.length >= 100) break;
+      const url = new URL(next);
+      if (url.origin !== 'https://graph.microsoft.com' || url.username || url.password
+        || url.pathname !== `/v1.0${resource}` || url.hash || url.searchParams.get('$select') !== 'name,size,isInline'
+        || [...url.searchParams.keys()].some(key => !['$select', '$top', '$skip', '$skiptoken'].includes(key) || url.searchParams.getAll(key).length !== 1)
+        || (url.searchParams.has('$top') && (!/^\d+$/.test(url.searchParams.get('$top')!) || Number(url.searchParams.get('$top')) < 1 || Number(url.searchParams.get('$top')) > 100))) {
+        throw new OutlookIdentityError('INVALID_GRAPH_RESPONSE');
+      }
+      path = resource + url.search;
+    }
+    return normalizeAttachments({ version: 1, status: complete ? 'complete' : 'partial', files,
+      totalKnown: complete ? files.length : null }, 'graph');
   }
 
   async findByInternetMessageId(internetMessageId: string) {

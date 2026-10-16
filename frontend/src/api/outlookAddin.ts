@@ -53,6 +53,7 @@ export type OutlookEmailCategory =
   | 'CIERRE_ACEPTACION';
 
 export interface LogEmailPayload {
+  emailAttachments?: import('../utils/emailAttachments').AttachmentSnapshot;
   userEmail: string;
   itemIdType?: 'ewsId' | 'restId' | 'restImmutableEntryId';
   exchangeItemId: string;

@@ -1,3 +1,4 @@
+import { normalizeAttachments } from './email-attachments';
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -5,7 +6,7 @@ import { OfferSourceContext } from '../quotes/offer-source-context';
 import { loadOfferContacts } from '../quotes/offer-contacts';
 import { EmailIdentityService } from './email-identity.service';
 import { OutlookAddinAccessService } from './outlook-addin-access.service';
-import { IsString, IsNotEmpty, IsOptional, IsArray, IsBoolean, IsIn } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsArray, IsBoolean, IsIn, IsObject } from 'class-validator';
 
 export class EmailLookupDto {
   @IsString()
@@ -37,6 +38,9 @@ export class EmailLookupDto {
 }
 
 export class LogEmailDto {
+  @IsOptional() @IsObject()
+  emailAttachments?: object;
+
   @IsString()
   @IsNotEmpty()
   userEmail: string;
@@ -458,6 +462,7 @@ export class OutlookAddinService {
         exchange_sync_status: 'synced',
         exchange_last_synced_at: new Date(),
         attendees: {
+          ...(params.emailAttachments !== undefined ? { emailAttachments: normalizeAttachments(params.emailAttachments, 'office') } : {}),
           ...(quoteDocumentNo ? { quoteDocumentNo } : {}),
           categoryTag: categoryTag || 'PETICION_OFERTA',
           sentDate: activityDate.toISOString(),

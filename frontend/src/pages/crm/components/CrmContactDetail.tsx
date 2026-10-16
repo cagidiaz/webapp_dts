@@ -1,3 +1,4 @@
+import { EmailAttachments } from './EmailAttachments';
 import { EmailActions, type EmailAction, type EmailActionData } from './EmailActions';
 import { prepareVerifiedReplyInWeb, type ReplyMode } from '../../../api/emailReply';
 import { classicDeviceKey, getClassicDevices, prepareClassicRequest, launchClassicAndWait, type ClassicDevice, type ClassicRequest, type ClassicAction } from '../../../api/outlookClassic';
@@ -2318,6 +2319,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                           );
                         })()}
 
+                        {act.type === 'email' && <EmailAttachments value={act.rawActivity?.attendees?.emailAttachments} />}
                         {/* Bloque Conclusiones */}
                         {act.hasConclusions && (
                           <div className="text-[11px] border-l-2 border-teal-500 pl-2.5 py-1 bg-teal-50/40 dark:bg-teal-950/20 rounded-r-md text-gray-700 dark:text-gray-300">
@@ -3170,6 +3172,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                             )}
                           </div>
 
+                          <EmailAttachments value={mail.rawActivity?.attendees?.emailAttachments} />
                           {/* Bloque Conclusiones */}
                           {mail.hasConclusions && (
                             <div className="text-[11px] border-l-2 border-teal-500 pl-2.5 py-1 bg-teal-50/40 dark:bg-teal-950/20 rounded-r-md text-gray-700 dark:text-gray-300">

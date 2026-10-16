@@ -1,3 +1,4 @@
+import { normalizeAttachments } from '../exchange-sync/email-attachments';
 import { Injectable, InternalServerErrorException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CrmActivityType } from '@prisma/client';
@@ -302,6 +303,7 @@ export class CrmActivitiesService {
    * Crea una nueva actividad comercial en la base de datos y la sincroniza con Outlook si corresponde.
    */
   async create(data: {
+    emailAttachments?: unknown;
     clientId?: string;
     contactId?: string;
     userId: string;
@@ -346,6 +348,7 @@ export class CrmActivitiesService {
     try {
       const activity = await this.prisma.crm_activities.create({
         data: {
+          ...(type === 'EMAIL' && data.emailAttachments !== undefined ? { attendees: { emailAttachments: normalizeAttachments(data.emailAttachments, 'office') } } : {}),
           client_id: resolvedClientId,
           contact_id: contactId || null,
           created_by: userId,
@@ -412,9 +415,7 @@ export class CrmActivitiesService {
 
       // Actualizar attendees (categoryTag y/o quoteDocumentNo) si se proporcionan
       if (data.categoryTag !== undefined || data.quoteDocumentNo !== undefined) {
-        const currentAttendees = (existing.attendees as any) || {};
         prismaData.attendees = {
-          ...currentAttendees,
           ...(data.categoryTag !== undefined ? { categoryTag: data.categoryTag } : {}),
           ...(data.quoteDocumentNo !== undefined ? { quoteDocumentNo: data.quoteDocumentNo } : {}),
         };
@@ -443,13 +444,20 @@ export class CrmActivitiesService {
         }
       }
 
-      const updated = await this.prisma.crm_activities.update({
-        where: { id },
-        data: {
-          ...prismaData,
-          updated_at: new Date()
-        }
+      const metadataPatch = prismaData.attendees;
+      delete prismaData.attendees;
+      const update = (db: Pick<PrismaService, 'crm_activities'>) => db.crm_activities.update({
+        where: { id }, data: { ...prismaData, updated_at: new Date() },
       });
+      const updated = metadataPatch ? await this.prisma.$transaction(async db => {
+        // Lock/update the row before merging the latest JSON, so a simultaneous
+        // sent-draft reconciliation cannot lose its attachment snapshot.
+        await update(db);
+        await db.$executeRaw`UPDATE public.crm_activities
+          SET attendees = COALESCE(attendees, '{}'::jsonb) || ${JSON.stringify(metadataPatch)}::jsonb
+          WHERE id = ${id}::uuid`;
+        return db.crm_activities.findUniqueOrThrow({ where: { id } });
+      }) : await update(this.prisma);
 
       // Sincronizar actualización hacia Outlook
       this.exchangeSyncService.syncActivityToOutlook(updated.id).catch((err) =>

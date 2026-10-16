@@ -90,7 +90,7 @@ try {
   $env:DTS_REVIEW_API_INTEGRATION = '1'
   Push-Location $backendRoot
   try {
-    & npm.cmd test -- --runInBand modules/quotes/pipeline-cuts.http.integration.spec.ts
+    & npm.cmd test -- --runInBand modules/quotes/pipeline-cuts.http.integration.spec.ts modules/exchange-sync/email-attachments.db.integration.spec.ts
     Assert-NativeSuccess
   } finally { Pop-Location }
   Write-Output 'PASS: endpoints HTTP, JWT, matriz de permisos, cortes, informes y ámbitos con esquema Prisma aislado.'

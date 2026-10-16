@@ -34,6 +34,27 @@ describe('exact draft reconciliation', () => {
     expect(identities.prepare).not.toHaveBeenCalled();
     expect(prisma.crm_activities.updateMany).not.toHaveBeenCalled();
   });
+  it('captures only new pending metadata and atomically merges it without replacing other JSON', async () => {
+    const emailAttachments = { version: 1, status: 'complete', source: 'graph', files: [{ name: 'Final.pdf' }], totalKnown: 1 };
+    prisma.crm_activities.findMany.mockResolvedValue([{ ...draft('one'), attendees: { categoryTag: 'NEGOCIACION', emailAttachments: { version: 1, status: 'pending' } } }]);
+    identities.prepare.mockResolvedValue({ ...resolved('one'), attachmentMetadata: emailAttachments });
+    prisma.$executeRaw = jest.fn().mockResolvedValue(1);
+    prisma.$transaction = jest.fn(callback => callback(prisma));
+    expect((await service.syncOutlookToCrm('user')).syncedEmails).toBe(1);
+    expect(identities.prepare).toHaveBeenCalledWith('user', 'one', 'restImmutableEntryId', true);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.$executeRaw.mock.calls[0][0].join('')).toContain('jsonb_set');
+    expect(JSON.parse(prisma.$executeRaw.mock.calls[0][1])).toEqual(emailAttachments);
+    expect(prisma.crm_activities.updateMany.mock.calls[0][0].data.attendees).toBeUndefined();
+  });
+  it('does not attach metadata when another reconciliation already consumed the draft', async () => {
+    prisma.crm_activities.findMany.mockResolvedValue([{ ...draft('one'), attendees: { emailAttachments: { version: 1, status: 'pending' } } }]);
+    prisma.crm_activities.updateMany.mockResolvedValue({ count: 0 });
+    prisma.$executeRaw = jest.fn();
+    prisma.$transaction = jest.fn(callback => callback(prisma));
+    expect((await service.syncOutlookToCrm('user')).syncedEmails).toBe(0);
+    expect(prisma.$executeRaw).not.toHaveBeenCalled();
+  });
   it('cannot reassign a draft after reconnecting to another mailbox', async () => {
     prisma.crm_activities.findMany.mockResolvedValue([draft('one')]);
     identities.prepare.mockResolvedValue({ ...resolved('one'), patch: { ...resolved('one').patch, exchange_mailbox_id: 'different' } });

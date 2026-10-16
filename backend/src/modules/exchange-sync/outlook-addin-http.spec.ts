@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -24,7 +24,9 @@ describe('authenticated Outlook addin HTTP boundary', () => {
     const module = await Test.createTestingModule({ imports: [PassportModule], controllers: [OutlookAddinController], providers: [JwtStrategy, OutlookAddinService, OutlookAddinAccessService,
       { provide: ConfigService, useValue: { get: (key: string) => key === 'JWT_SECRET' ? secret : undefined } },
       { provide: PrismaService, useValue: prisma }, { provide: EmailIdentityService, useValue: {} }] }).compile();
-    app = module.createNestApplication(); await app.init();
+    app = module.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    await app.init();
   });
   afterAll(async () => { await app?.close(); });
   it.each(['/outlook-addin/search-companies?q=abc', '/outlook-addin/company-contacts?clientId=outside', '/outlook-addin/company-quotes?clientId=outside'])('rejects anonymous GET %s', async path => {
@@ -46,5 +48,16 @@ describe('authenticated Outlook addin HTTP boundary', () => {
   it('enforces permission revocation on the next request', async () => {
     prisma.role_modules.findMany.mockResolvedValueOnce([]);
     await request(app.getHttpServer()).get('/outlook-addin/search-companies?q=abc').set('Authorization', `Bearer ${token()}`).expect(403);
+  });
+  it('accepts optional metadata for new clients, remains compatible without it, rejects arrays', async () => {
+    const spy = jest.spyOn(app.get(OutlookAddinService), 'logEmail').mockResolvedValue({ success: true } as any);
+    const payload = { userEmail: 'tester@test.invalid', exchangeItemId: 'exact', clientId: 'client', subject: 'Test' };
+    try {
+      await request(app.getHttpServer()).post('/outlook-addin/log-email').set('Authorization', `Bearer ${token()}`).send(payload).expect(201);
+      const emailAttachments = { version: 1, status: 'complete', files: [{ name: 'Oferta.pdf' }] };
+      await request(app.getHttpServer()).post('/outlook-addin/log-email').set('Authorization', `Bearer ${token()}`).send({ ...payload, emailAttachments }).expect(201);
+      expect(spy.mock.calls.at(-1)?.[0].emailAttachments).toEqual(emailAttachments);
+      await request(app.getHttpServer()).post('/outlook-addin/log-email').set('Authorization', `Bearer ${token()}`).send({ ...payload, emailAttachments: [] }).expect(400);
+    } finally { spy.mockRestore(); }
   });
 });

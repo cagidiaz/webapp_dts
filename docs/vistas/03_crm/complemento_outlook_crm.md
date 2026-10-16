@@ -111,3 +111,21 @@ La página estática heredada `/outlook-addin/index.html` solicita también `Off
 Verificación: prueba de arranque con host simulado sin sesión CRM, restauración de History API, aislamiento de vista previa y rutas normales, errores de descarga y timeout. Backend y frontend deben compilar antes de entregar. El usuario ha confirmado la apertura real del panel Web después del despliegue.
 
 Referencias oficiales: [inicialización de Office](https://learn.microsoft.com/en-us/office/dev/add-ins/develop/initialize-add-in) y [integración con frameworks e History API](https://learn.microsoft.com/en-us/office/dev/add-ins/develop/connect-to-javascript-frameworks).
+
+## 10. Captura de nombres de adjuntos (16/10/2026)
+
+**Estado:** implementado y comprobado automáticamente; pendiente de prueba real tras desplegar. Ambos paneles cargan `/email-attachment-metadata.js`. El helper obtiene metadatos de `item.attachments` en lectura o `getAttachmentsAsync` en redacción cuando está disponible (espera máxima de 3 segundos). Un fallo no impide registrar el correo: se guarda estado unavailable. Si cambia el mensaje seleccionado se cancela el registro y se pide volver a abrir el panel, para no mezclar cuerpo, asociación y adjuntos de dos correos.
+
+El panel React envía `emailAttachments` opcional a `POST /outlook-addin/log-email`. El panel estático usa también esa ruta autorizada y con control de duplicados cuando el correo tiene ID y usuario de buzón; los elementos sin guardar mantienen `POST /crm-activities`, compatible con redacción. Esta ruta sin ID conserva su comportamiento anterior y no ofrece deduplicación por identidad ni conciliación del envío. Los correos guardados repetidos no sustituyen la fotografía ya registrada. No se enriquece el histórico automáticamente.
+
+El backend normaliza mediante `email-attachments.ts`: versión 1, estados complete/partial/pending/unavailable, origen office/graph/crm, fecha de captura servidor, lista acotada y total conocido o null. Solo persiste nombre y tamaño válido; descarta cualquier campo adicional (tokens, URLs, bytes, IDs). Admite clientes anteriores que omitan el bloque. La validación de DTO rechaza un bloque de tipo array.
+
+Los borradores nuevos de `createDraftFromCrm` incorporan un marcador pending. Una vez enviados, el proceso de conciliación que ya existe resuelve la identidad exacta y pide a Graph únicamente `name,size,isInline`, con hasta cuatro páginas y 100 nombres persistidos. Las páginas siguientes deben mantener host, mensaje y proyección; nunca se solicita `/value` ni contenido binario. Si falla esta consulta, la identidad puede confirmarse igualmente y la captura queda unavailable. La transición y el cambio de la clave JSON se confirman en una transacción. Las ediciones de categoría/oferta combinan solo las claves afectadas y no sobrescriben el bloque.
+
+No hay nuevo planificador, recuperación de históricos, SQL, tablas ni cambios en manifiestos o permisos Microsoft. No hay llamadas Graph al pintar tarjetas. La distribución Classic 1.1.0 ya instalada sigue siendo válida.
+
+**Despliegue:** publicar backend compatible antes que frontend; volver a abrir el panel del complemento para cargar el script nuevo. Comprobar correo nuevo con PDF/Excel en Classic y Web, enviado/recibido, firma incrustada, nombres repetidos, expansión y conservación al editar. Ver el [plan y registro de ejecución](../../propuestas/2026-10-16-plan-nombres-adjuntos-correos-crm.md).
+
+### Referencias operativas de esta entrega
+
+La comprobación visual y la aceptación con correos reales siguen pendientes; las pruebas automáticas no las sustituyen. [Guía técnica de adjuntos y diagnóstico](../../guia-integracion-outlook-exchange.md#7-nombres-de-adjuntos-en-el-crm) y [procedimiento de despliegue y aceptación](../../manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro). La corrección de arranque Web y las respuestas de la entrega anterior ya fueron confirmadas por el usuario en producción.

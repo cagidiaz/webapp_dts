@@ -103,8 +103,20 @@ Guías de [Contactos y Emails](03_crm/crm_contactos_mails.md), [Ajustes](06_admi
 
 ### Corrección de arranque del complemento en Outlook Web (16/10/2026)
 
-La [guía del complemento](03_crm/complemento_outlook_crm.md#8-arranque-de-outlook-web-independiente-de-la-sesión-crm-16102026) documenta la inicialización de Office antes de la sesión CRM, la protección de la navegación y las pruebas de descarga bloqueada o espera agotada. Cambio preparado para desplegar; aceptación real Web pendiente.
+La [guía del complemento](03_crm/complemento_outlook_crm.md#8-arranque-de-outlook-web-independiente-de-la-sesión-crm-16102026) documenta la inicialización de Office antes de la sesión CRM, la protección de la navegación y las pruebas de descarga bloqueada o espera agotada. El usuario confirmó en producción que el complemento Web vuelve a iniciar correctamente.
 
 ### Respuestas verificadas y menú compartido (16/10/2026)
 
-La [vista de correos](03_crm/crm_contactos_mails.md) incorpora un menú común para Emails y Timeline, con Responder y Responder a todos separados. [Entrega técnica y activación](../propuestas/2026-10-16-respuestas-verificadas-outlook.md): borradores Web, Classic 1.1.0 y columna de acción en solicitudes. Pendiente de validación real; sin recuperación automática del histórico.
+La [vista de correos](03_crm/crm_contactos_mails.md) incorpora un menú común para Emails y Timeline, con Responder y Responder a todos separados. [Entrega técnica y activación](../propuestas/2026-10-16-respuestas-verificadas-outlook.md): borradores Web, Classic 1.1.0 y columna de acción en solicitudes. El usuario confirmó Responder y Responder a todos en Classic y Web desde producción. Sin recuperación automática del histórico.
+
+### Nombres de adjuntos en tarjetas de correo (16/10/2026)
+
+[Plan de implementación](../propuestas/2026-10-16-plan-nombres-adjuntos-correos-crm.md), 16/10/2026. Implementado: captura de metadatos en ambos complementos, componente compartido en Emails/Timeline y conciliación de borradores nuevos. Sin SQL, descargas ni recuperación del histórico. Pruebas automáticas y PostgreSQL aislado superadas; despliegue y aceptación real de adjuntos pendientes. Guías y manuales actualizados.
+
+### Documentación de adjuntos consolidada (16/10/2026)
+
+- [Manual de uso: nombres y estados](../manual-usuario.md#nombres-de-adjuntos-en-las-tarjetas-de-correo).
+- [Instalación y comprobaciones de aceptación](../manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro).
+- [Arquitectura, datos y soporte](../guia-integracion-outlook-exchange.md#7-nombres-de-adjuntos-en-el-crm).
+
+La apertura y las respuestas ya están confirmadas por el usuario en producción. La captura de nombres es una entrega posterior: implementada y comprobada automáticamente, pendiente de despliegue, inspección visual y validación con correos reales.

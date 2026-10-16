@@ -10,6 +10,10 @@
 3. [Método 2: Despliegue Centralizado en Microsoft 365 (Recomendado para la Empresa)](#3-método-2-despliegue-centralizado-en-microsoft-365-recomendado-para-la-empresa)
 4. [Guía de Uso para el Comercial](#4-guía-de-uso-para-el-comercial)
 5. [Resolución de Dudas Frecuentes (FAQ)](#5-resolución-de-dudas-frecuentes-faq)
+7. [Componente Classic y equipos vinculados](#7-instalador-interno-para-abrir-correos-en-outlook-classic)
+8. [Incidencias del complemento en Web](#8-si-outlook-web-no-puede-iniciar-el-complemento)
+9. [Responder y responder a todos](#9-actualización-para-responder-y-responder-a-todos)
+10. [Nombres de adjuntos](#10-nombres-de-adjuntos-actualización-del-registro)
 
 ---
 
@@ -190,7 +194,7 @@ Si persiste el error, distinguir si aparece antes del formulario o dentro del pa
 
 ## 9. Actualización para responder y responder a todos
 
-Entrega preparada el 16/10/2026, pendiente de comprobación real. El responsable debe aplicar el SQL de la columna `action`, desplegar y habilitar las respuestas antes de probar. [Procedimiento técnico](propuestas/2026-10-16-respuestas-verificadas-outlook.md).
+Entrega validada por el usuario en producción el 16/10/2026: Responder y Responder a todos funcionan en Classic y Web. El componente Classic está actualizado y conserva la vinculación. Los requisitos de SQL y activación siguientes describen la instalación de esa entrega; no deben repetirse para incorporar los nombres de adjuntos. [Procedimiento técnico](propuestas/2026-10-16-respuestas-verificadas-outlook.md).
 
 1. Descarga el ZIP actualizado de Classic 1.1.0 y extráelo completo.
 2. Cierra el componente si está ejecutándose e inicia `Instalar_Outlook_dTS.bat` con tu usuario Windows habitual, sin administrador. Conserva la vinculación del equipo.
@@ -199,3 +203,20 @@ Entrega preparada el 16/10/2026, pendiente de comprobación real. El responsable
 5. Repite desde Timeline y con Outlook Web seleccionado en Ajustes. En Web deben abrirse borradores de respuesta del mismo hilo, sin enviar automáticamente.
 
 No necesitas desinstalar el manejador antiguo para esta actualización: todavía se conserva la búsqueda heredada. No cambia el manifiesto del Add-in de Office ni requiere certificado de firma. Si falta la confirmación de una respuesta, revisa las ventanas o Borradores antes de repetir.
+
+## 10. Nombres de adjuntos: actualización del registro
+
+Funcionalidad preparada para desplegar y validar. No requiere ejecutar SQL, cambiar el manifiesto en Microsoft 365, añadir permisos ni reinstalar el BAT/componente Classic. Desplegar backend antes que frontend; cerrar y abrir el panel del complemento para que cargue el código nuevo. Si Outlook conserva la página anterior, recargar el panel antes de registrar el correo de prueba.
+
+Registrar un correo nuevo con varios documentos y una firma con imágenes. Revisar los mismos nombres en Emails y Timeline, desplegar «+N más» y comprobar claro/oscuro. Repetir en Classic y Outlook Web y verificar que editar la tipología o la oferta mantiene los adjuntos. La apertura y las respuestas verificadas se mantienen independientes. Los correos históricos no se actualizan automáticamente y no se borra ningún registro. Los nombres son metadatos informativos; los archivos permanecen en Microsoft 365.
+
+### Comprobación de los adjuntos antes de dar la entrega por aceptada
+
+1. Desplegar backend y después frontend, y volver a abrir el complemento.
+2. Registrar un correo nuevo con PDF, Excel y una firma incrustada; comprobar la lista en Emails y Timeline.
+3. Repetir con enviado y recibido desde Classic y desde Web.
+4. Comprobar más de tres archivos, expansión, nombres largos y los modos claro y oscuro.
+5. Editar tipología u oferta y verificar que los nombres permanecen.
+6. Preparar un borrador nuevo desde el CRM, añadir un archivo en Outlook, enviarlo y comprobar la lista tras la conciliación existente.
+
+Los correos antiguos permanecen sin cambios. No ejecutar una importación histórica para completar esta prueba. Si aparece «Información no disponible», abrir el correo en Outlook para consultar los archivos; no significa que no tenga adjuntos. [Detalle técnico y límites](guia-integracion-outlook-exchange.md#7-nombres-de-adjuntos-en-el-crm).

@@ -194,3 +194,17 @@ En Web, `EmailReplyService` prepara un borrador nativo mediante `createReply` o 
 La activación requiere `CRM_EMAIL_REPLY_ENABLED=true`; Classic necesita además una columna `action` en su tabla de solicitudes y comunicar la versión 1.1.0 tras actualizar el componente. Los equipos 1.0.0 siguen abriendo mensajes. La entrega está preparada, sin activar ni aplicar SQL en producción. La recuperación automática histórica continúa cancelada y no se borran registros.
 
 Véase [contrato, SQL, pruebas y despliegue](../../propuestas/2026-10-16-respuestas-verificadas-outlook.md).
+
+## Nombres de adjuntos en Emails y Timeline (16/10/2026)
+
+Implementado para correos nuevos; pendiente de despliegue y aceptación real en Classic/Web. `EmailAttachments.tsx` se usa en las dos tarjetas, debajo del cuerpo y antes de las conclusiones. Muestra tres nombres y «+N más», con expansión local, nombres completos accesibles, ajuste estrecho y colores claros/oscuros. Los nombres son informativos: no descargan ni abren archivos.
+
+La fuente es `rawActivity.attendees.emailAttachments`, sin consultas Graph al visualizar tarjetas. Contrato v1: `status` (complete, partial, pending, unavailable), `source` (office, graph, crm), `capturedAt`, `files` (name, size opcional) y `totalKnown` (null si se desconoce). Se guardan hasta 100 nombres de 512 caracteres, con estado parcial si falta información. No se guardan bytes, enlaces privados ni identificadores de archivos. Se conservan nombres repetidos; solo se excluyen adjuntos marcados `isInline === true`.
+
+El histórico sin bloque no muestra sección. Una lista completa vacía tampoco la muestra. Capturas fallidas muestran «Información no disponible»; los borradores nuevos preparados desde el CRM muestran «Pendientes de confirmar tras el envío» hasta la conciliación existente del enviado. Una lista parcial se identifica expresamente. No se recupera el histórico ni se borran actividades.
+
+`CrmActivitiesService.update` combina únicamente las claves editadas del JSON en una transacción, preservando los adjuntos incluso si coincide con la conciliación. Las tablas de BC no se modifican. No requiere SQL ni actualización del componente Windows.
+
+### Documentación y estado de aceptación
+
+La apertura y las respuestas en Classic/Web fueron confirmadas por el usuario en producción el 16/10/2026. Esa aceptación no incluye los nombres de adjuntos, que aún requieren despliegue y prueba real, incluida inspección visual. Consultar [uso y estados](../../manual-usuario.md#nombres-de-adjuntos-en-las-tarjetas-de-correo), [pruebas de aceptación](../../manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro) y [contrato técnico y soporte](../../guia-integracion-outlook-exchange.md#7-nombres-de-adjuntos-en-el-crm).

@@ -6,6 +6,7 @@ import { MicrosoftGraphService } from './microsoft-graph.service';
 import { OutlookMessageIdentityClient, OutlookIdentityError, type ExchangeIdFormat } from './outlook-message-identity';
 import { resolvedEmailIdentityPatch } from './email-identity-contract';
 import { emailIdentityEnabled } from './email-identity-settings';
+import { attachmentState, type EmailAttachments } from './email-attachments';
 
 /** Call only after the SAME access token has been accepted by Graph /me. Never trusts browser claims. */
 export function tenantFromGraphAcceptedToken(token: string, configuredTenant?: string): string {
@@ -23,6 +24,7 @@ export interface PreparedEmailIdentity {
   patch: EmailIdentityPatch;
   webLink?: string | null;
   isDraft?: boolean;
+  attachmentMetadata?: EmailAttachments;
 }
 
 @Injectable()
@@ -34,7 +36,7 @@ export class EmailIdentityService {
     return !!profile?.is_active && emailIdentityEnabled(this.config, profile.email);
   }
 
-  async prepare(userId: string, originalId: string, source: ExchangeIdFormat): Promise<PreparedEmailIdentity> {
+  async prepare(userId: string, originalId: string, source: ExchangeIdFormat, includeAttachments = false): Promise<PreparedEmailIdentity> {
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, select: { email: true, is_active: true } });
     if (!profile?.is_active || !emailIdentityEnabled(this.config, profile.email)) return { enabled: false, patch: {} };
     const base: EmailIdentityPatch = { exchange_original_id_type: source, exchange_resolution_status: 'pending' };
@@ -48,8 +50,14 @@ export class EmailIdentityService {
       const message = await client.readMessage(originalId, source);
       const references = { exchange_tenant_id: tenantId, exchange_mailbox_id: account.microsoft_user_id, exchange_immutable_id: message.immutableId };
       if (!message.internetMessageId || message.isDraft) return { enabled: true, patch: { ...base, ...references }, isDraft: message.isDraft, webLink: message.webLink };
+      let attachmentMetadata: EmailAttachments | undefined;
+      if (includeAttachments) {
+        try { attachmentMetadata = await client.attachmentMetadata(message.immutableId); }
+        catch { attachmentMetadata = attachmentState('unavailable', 'graph'); }
+      }
       return {
         enabled: true, isDraft: false, webLink: message.webLink,
+        ...(attachmentMetadata ? { attachmentMetadata } : {}),
         patch: resolvedEmailIdentityPatch('EMAIL', { tenantId, mailboxId: account.microsoft_user_id, immutableId: message.immutableId,
           internetMessageId: message.internetMessageId, originalIdType: source, resolvedAt: new Date(message.observedAt) }),
       };

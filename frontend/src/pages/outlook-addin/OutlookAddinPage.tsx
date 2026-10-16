@@ -376,7 +376,13 @@ const OutlookAddinContent: React.FC = () => {
 
     try {
       if (!isInsideOutlook) { setError('La vista previa no registra correos. Abre el complemento dentro de Outlook.'); return; }
+      const capturedItem = (window as any).Office?.context?.mailbox?.item;
+      const selectedItem = () => (window as any).Office?.context?.mailbox?.item;
+      if (!window.DtsEmailAttachments.sameItem(capturedItem, selectedItem(), itemId)) throw new Error('Ha cambiado el correo seleccionado. Vuelve a abrir el complemento.');
+      const emailAttachments = await window.DtsEmailAttachments.capture(capturedItem);
+      if (!window.DtsEmailAttachments.sameItem(capturedItem, selectedItem(), itemId)) throw new Error('Ha cambiado el correo seleccionado. Vuelve a abrir el complemento.');
       const result = await logEmailToAddin({
+        emailAttachments,
         userEmail,
         exchangeItemId: itemId,
         itemIdType: 'ewsId',
@@ -398,7 +404,7 @@ const OutlookAddinContent: React.FC = () => {
       // Actualizar estado para mostrar ya registrado
       setLookupData(prev => prev ? { ...prev, isAlreadyLogged: true } : null);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al registrar el correo en el CRM.');
+      setError(err.response?.data?.message || err.message || 'Error al registrar el correo en el CRM.');
     } finally {
       setIsSaving(false);
     }
