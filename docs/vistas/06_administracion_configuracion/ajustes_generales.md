@@ -75,4 +75,4 @@ Seleccionar Outlook Web en Ajustes guarda inmediatamente la preferencia en `dts_
 
 La preferencia pertenece al navegador, no al perfil remoto del usuario. En otro navegador o equipo debe seleccionarse de nuevo. La instalación y vinculación Classic se conservan hasta revocarlas o desinstalarlas.
 
-Decisión pendiente de implementación: la recuperación del histórico se activará al conectar Microsoft 365, no al vincular el componente Windows; para cuentas ya conectadas se iniciará al activar el despliegue general. Se preparará para todos los usuarios después de la validación del responsable, sin piloto individual.
+Decisión actualizada el 16/10/2026: se cancela la recuperación automática del histórico y se retira su implementación en curso. No se añaden trabajos de migración al conectar Microsoft 365 ni al vincular equipos. Antoni registrará correos nuevos desde hoy; todos los registros existentes se conservan. La apertura se prepara para uso general tras la validación del responsable.

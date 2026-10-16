@@ -16,6 +16,7 @@ class PairApproveDto {
 }
 class PairPollDto { @Matches(/^[A-Za-z0-9_-]{43}$/) secret: string; }
 class ClassicCreateDto {
+  @IsOptional() @IsIn(['open','reply','reply_all']) action?: 'open' | 'reply' | 'reply_all';
   @IsUUID() activityId: string;
   @IsUUID() deviceId: string;
   @IsOptional() @IsString() @MaxLength(32768) candidateId?: string;
@@ -42,7 +43,7 @@ export class OutlookClassicController {
   @Post('pair/approve') @UseGuards(JwtAuthGuard) approve(@Req() req: any, @Body() body: PairApproveDto) { return this.classic.approvePair(req.user.userId, body.pairingId, body.code); }
   @Get('devices') @UseGuards(JwtAuthGuard) devices(@Req() req: any) { return this.classic.devices(req.user.userId); }
   @Post('devices/:id/revoke') @UseGuards(JwtAuthGuard) revoke(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) { return this.classic.revoke(req.user.userId, id); }
-  @Post('requests') @UseGuards(JwtAuthGuard) create(@Req() req: any, @Body() body: ClassicCreateDto) { return this.classic.create(req.user.userId, body.activityId, body.deviceId, body.candidateId); }
+  @Post('requests') @UseGuards(JwtAuthGuard) create(@Req() req: any, @Body() body: ClassicCreateDto) { return this.classic.create(req.user.userId, body.activityId, body.deviceId, body.candidateId, body.action); }
   @Get('requests/:id') @UseGuards(JwtAuthGuard) status(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) { return this.classic.status(req.user.userId, id); }
   @Post('requests/:id/claim') claim(@Param('id', ParseUUIDPipe) id: string, @Body() body: ProofDto) { return this.classic.claim(id, body); }
   @Post('requests/:id/result') result(@Param('id', ParseUUIDPipe) id: string, @Body() body: ResultDto) { return this.classic.result(id, body, body.outcome, body.claimNonce); }

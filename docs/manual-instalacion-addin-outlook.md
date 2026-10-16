@@ -186,4 +186,16 @@ Cuando Outlook Web muestra «algo ha salido mal y no se puede iniciar este compl
 
 La corrección del 16/10/2026 inicia Office antes de pedir acceso al CRM, para admitir la sesión aislada del panel Web. Requiere desplegar el frontend actualizado; no cambia el manifiesto y no exige actualizarlo en Microsoft 365 por este ajuste. Después del despliegue, cerrar el panel, recargar Outlook Web y volver a abrir el complemento desde un correo. Si aparece el formulario de acceso CRM, iniciar sesión allí aunque la aplicación principal ya tenga sesión.
 
-Si persiste el error, distinguir si aparece antes del formulario o dentro del panel, anotar el nombre del complemento y revisar conectividad a Office.js y errores del navegador. La prueba de arranque automatizada no sustituye esta validación real en Outlook Web.
+Si persiste el error, distinguir si aparece antes del formulario o dentro del panel, anotar el nombre del complemento y revisar conectividad a Office.js y errores del navegador. La prueba de arranque automatizada no sustituye la validación real: el usuario confirma después del despliegue que el complemento abre correctamente en Outlook Web el 16/10/2026.
+
+## 9. Actualización para responder y responder a todos
+
+Entrega preparada el 16/10/2026, pendiente de comprobación real. El responsable debe aplicar el SQL de la columna `action`, desplegar y habilitar las respuestas antes de probar. [Procedimiento técnico](propuestas/2026-10-16-respuestas-verificadas-outlook.md).
+
+1. Descarga el ZIP actualizado de Classic 1.1.0 y extráelo completo.
+2. Cierra el componente si está ejecutándose e inicia `Instalar_Outlook_dTS.bat` con tu usuario Windows habitual, sin administrador. Conserva la vinculación del equipo.
+3. Abre un correo desde el CRM en Classic para registrar la nueva versión. La versión 1.0.0 sigue sirviendo para abrir, pero no para las respuestas nuevas.
+4. En Emails, prueba **Responder** y **Responder a todos**, verificando original, destinatarios, contenido citado y cuenta de envío. Cierra las ventanas sin enviar si solo estás comprobando la preparación.
+5. Repite desde Timeline y con Outlook Web seleccionado en Ajustes. En Web deben abrirse borradores de respuesta del mismo hilo, sin enviar automáticamente.
+
+No necesitas desinstalar el manejador antiguo para esta actualización: todavía se conserva la búsqueda heredada. No cambia el manifiesto del Add-in de Office ni requiere certificado de firma. Si falta la confirmación de una respuesta, revisa las ventanas o Borradores antes de repetir.

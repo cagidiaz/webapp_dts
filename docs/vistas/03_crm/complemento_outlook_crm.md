@@ -100,7 +100,7 @@ Véase [manual conjunto de instalación y vinculación](../../manual-instalacion
 
 ## 8. Arranque de Outlook Web independiente de la sesión CRM (16/10/2026)
 
-Se ha identificado una dependencia incorrecta: la carga dinámica de Office.js estaba dentro del contenido protegido por `OutlookAddinSession`. En un panel sin sesión CRM, el formulario de acceso impedía montar ese contenido y no se iniciaba la comunicación con Office. Es una causa compatible con el error de Outlook Web «no se puede iniciar este complemento»; la prueba real tras el despliegue sigue pendiente.
+Se ha identificado una dependencia incorrecta: la carga dinámica de Office.js estaba dentro del contenido protegido por `OutlookAddinSession`. En un panel sin sesión CRM, el formulario de acceso impedía montar ese contenido y no se iniciaba la comunicación con Office. La corrección se ha desplegado y el usuario confirma que el complemento ya abre correctamente en Outlook Web el 16/10/2026.
 
 `frontend/index.html` carga ahora `frontend/public/outlook-bootstrap.js` antes del módulo React. El arranque solo actúa en las rutas `/outlook-crm` y `/outlook-addin`; en host Office solicita inmediatamente `Office.onReady()` y guarda una promesa compartida. `main.tsx` espera esa preparación antes de renderizar la aplicación. No necesita sesión CRM, tokens ni consultas a base de datos. La autenticación continúa siendo obligatoria para registrar correos.
 
@@ -108,6 +108,6 @@ El arranque conserva y restaura `history.replaceState` y `history.pushState`, qu
 
 La página estática heredada `/outlook-addin/index.html` solicita también `Office.onReady()` inmediatamente después del script de Office, antes de las demás dependencias. No se cambia el manifiesto ni los identificadores de los complementos; este ajuste no requiere reinstalar el componente Classic ni ejecutar SQL.
 
-Verificación: prueba de arranque con host simulado sin sesión CRM, restauración de History API, aislamiento de vista previa y rutas normales, errores de descarga y timeout. Backend y frontend deben compilar antes de entregar. La comprobación real de apertura del panel Web queda para después de desplegar.
+Verificación: prueba de arranque con host simulado sin sesión CRM, restauración de History API, aislamiento de vista previa y rutas normales, errores de descarga y timeout. Backend y frontend deben compilar antes de entregar. El usuario ha confirmado la apertura real del panel Web después del despliegue.
 
 Referencias oficiales: [inicialización de Office](https://learn.microsoft.com/en-us/office/dev/add-ins/develop/initialize-add-in) y [integración con frameworks e History API](https://learn.microsoft.com/en-us/office/dev/add-ins/develop/connect-to-javascript-frameworks).

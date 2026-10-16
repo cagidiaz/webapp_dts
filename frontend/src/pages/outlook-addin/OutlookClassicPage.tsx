@@ -17,7 +17,7 @@ function ClassicSetup() {
   useEffect(() => {
     void refresh();
     void fetch('/downloads/outlook-classic/package.json').then(async response => {
-      if (!response.ok) return; const value = await response.json(); setPackageAvailable(value.version === '1.0.0' && value.file === 'dTS.OutlookClassic.exe');
+      if (!response.ok) return; const value = await response.json(); setPackageAvailable(['1.0.0','1.1.0'].includes(value.version) && value.file === 'dTS.OutlookClassic.exe');
     }).catch(() => {});
   }, []);
   async function approve(event: FormEvent) {

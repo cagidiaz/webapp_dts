@@ -76,18 +76,23 @@ export class OutlookClassicService {
     await this.rows(Prisma.sql`UPDATE public.crm_outlook_devices SET revoked_at=now() WHERE id=${id}::uuid AND user_id=${userId}::uuid AND revoked_at IS NULL RETURNING id`);
     return { success: true };
   }
-  async create(userId: string, activityId: string, deviceId: string, candidateId?: string) {
+  async create(userId: string, activityId: string, deviceId: string, candidateId?: string, action: 'open' | 'reply' | 'reply_all' = 'open') {
     await this.actor(userId);
-    const [device] = await this.rows(Prisma.sql`SELECT id FROM public.crm_outlook_devices WHERE id=${deviceId}::uuid AND user_id=${userId}::uuid AND paired_at IS NOT NULL AND revoked_at IS NULL`);
+    if (!['open','reply','reply_all'].includes(action)) throw new BadRequestException('Acción no permitida.');
+    if (action !== 'open' && this.config.get('CRM_EMAIL_REPLY_ENABLED') !== 'true') return { status: 'disabled', message: 'Las respuestas verificadas todavía no están habilitadas. Abre el correo y responde desde Outlook.' };
+    const [device] = await this.rows(Prisma.sql`SELECT id,helper_version FROM public.crm_outlook_devices WHERE id=${deviceId}::uuid AND user_id=${userId}::uuid AND paired_at IS NOT NULL AND revoked_at IS NULL`);
     if (!device) return { status: 'device_required', message: 'Vincula este equipo con tu cuenta del CRM para abrir correos en Classic.' };
+    if (action !== 'open' && device.helper_version !== CLASSIC_VERSION) return { status: 'device_required', message: 'Actualiza el componente de Classic a 1.1.0 y abre primero un correo para registrar su versión. Después podrás responder desde el CRM.' };
     const resolution = await this.emails.resolve(userId, activityId, candidateId);
     if (resolution.status !== 'resolved') return resolution;
     const activity = await this.prisma.crm_activities.findUnique({ where: { id: activityId } });
     if (!activity?.exchange_immutable_id || !activity.exchange_internet_message_id || !activity.exchange_tenant_id || !activity.exchange_mailbox_id) return { status: 'pending', message: 'La referencia del correo aún no está completa. Puedes abrirlo en Outlook Web.' };
     const id = randomUUID(), token = randomBytes(32).toString('base64url');
     await this.rows(Prisma.sql`DELETE FROM public.crm_outlook_requests WHERE expires_at<now()-interval '7 days' RETURNING id`);
-    const issued = await this.rows(Prisma.sql`INSERT INTO public.crm_outlook_requests(id,user_id,device_id,activity_id,token_hash,tenant_id,mailbox_id,immutable_id,internet_message_id,expires_at)
-      SELECT ${id}::uuid,${userId}::uuid,${deviceId}::uuid,${activityId}::uuid,${hashClassicSecret(token)},${activity.exchange_tenant_id},${activity.exchange_mailbox_id},${activity.exchange_immutable_id},${activity.exchange_internet_message_id},now()+interval '90 seconds'
+    const actionColumn = action === 'open' ? Prisma.empty : Prisma.sql`,action`;
+    const actionValue = action === 'open' ? Prisma.empty : Prisma.sql`,${action}`;
+    const issued = await this.rows(Prisma.sql`INSERT INTO public.crm_outlook_requests(id,user_id,device_id,activity_id,token_hash,tenant_id,mailbox_id,immutable_id,internet_message_id,expires_at${actionColumn})
+      SELECT ${id}::uuid,${userId}::uuid,${deviceId}::uuid,${activityId}::uuid,${hashClassicSecret(token)},${activity.exchange_tenant_id},${activity.exchange_mailbox_id},${activity.exchange_immutable_id},${activity.exchange_internet_message_id},now()+interval '90 seconds'${actionValue}
       WHERE (SELECT count(*) FROM public.crm_outlook_requests WHERE user_id=${userId}::uuid AND created_at>now()-interval '1 minute')<12 RETURNING id`);
     if (!issued.length) return { status: 'busy', message: 'Hay varias aperturas recientes. Espera un minuto antes de repetir.' };
     return { status: 'ready', requestId: id, protocolUri: `dts-outlook://v1/open?request=${id}&token=${token}`, expiresInSeconds: 90 };
@@ -103,6 +108,8 @@ export class OutlookClassicService {
   }
   async claim(id: string, proof: ClassicProof) {
     const row = await this.signedRequest(id, proof, 'claim');
+    if (!['open','reply','reply_all'].includes(row.action || 'open')) throw new ConflictException('Acción no válida.');
+    if (row.action && row.action !== 'open' && (proof.version !== CLASSIC_VERSION || this.config.get('CRM_EMAIL_REPLY_ENABLED') !== 'true')) throw new ConflictException('Actualiza el componente o revisa la habilitación de respuestas.');
     const claimed = await this.rows(Prisma.sql`UPDATE public.crm_outlook_requests SET state='claiming',claimed_at=now(),helper_version=${proof.version}
       WHERE id=${id}::uuid AND state='pending' AND expires_at>now() AND EXISTS (SELECT 1 FROM public.crm_outlook_devices d WHERE d.id=device_id AND d.revoked_at IS NULL) RETURNING id`);
     if (!claimed.length) throw new ConflictException('La solicitud ya fue utilizada o ha caducado.');
@@ -122,7 +129,7 @@ export class OutlookClassicService {
       const ready = await this.rows(Prisma.sql`UPDATE public.crm_outlook_requests SET state='claimed',claim_nonce_hash=${hashClassicSecret(claimNonce)} WHERE id=${id}::uuid AND state='claiming' AND expires_at>now() AND EXISTS (SELECT 1 FROM public.crm_outlook_devices d WHERE d.id=device_id AND d.revoked_at IS NULL) RETURNING id`);
       if (!ready.length) throw new Error('EXPIRED');
       await this.rows(Prisma.sql`UPDATE public.crm_outlook_devices SET last_seen_at=now(),helper_version=${proof.version} WHERE id=${proof.deviceId}::uuid AND revoked_at IS NULL RETURNING id`);
-      return { action: 'open', entryId, mailboxEmail: account.email, internetMessageId: row.internet_message_id, claimNonce, expiresAt: new Date(row.expires_at).toISOString() };
+      return { action: row.action || 'open', entryId, mailboxEmail: account.email, internetMessageId: row.internet_message_id, claimNonce, expiresAt: new Date(row.expires_at).toISOString() };
     } catch {
       await this.rows(Prisma.sql`UPDATE public.crm_outlook_requests SET state='failed',completed_at=now(),outcome='resolution_failed' WHERE id=${id}::uuid AND state IN ('claiming','claimed') RETURNING id`);
       throw new ConflictException('No se pudo verificar el correo para Classic. La solicitud se ha cerrado; puedes utilizar Outlook Web.');

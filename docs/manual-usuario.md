@@ -333,7 +333,7 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
   * **Menú Desplegable de Acciones Secundarias (`...`)**:
     1. **Abrir en Outlook Classic**: Fuerza la apertura en la aplicación de escritorio.
     2. **Abrir en Outlook Web (M365)**: Abre el correo en Microsoft 365 en el navegador mediante el resolvedor seguro.
-    3. **Responder en Outlook**: Abre la ventana de redacción citando el correo y los destinatarios en copia.
+    3. **Responder** y **Responder a todos**: Preparan una respuesta nativa al mensaje exacto, según el cliente predeterminado. Revisa los destinatarios y el contenido antes de enviarla. Requiere activar la nueva entrega; no envía automáticamente.
     4. **Buscar conversación completa**: Activa la búsqueda en Outlook para ver todo el hilo y respuestas del contacto.
     5. **Copiar datos de búsqueda**: Copia la sintaxis limpia `de:<email> asunto:"<asunto_limpio>"` para pegarla manualmente en Outlook.
   * **Si Classic no puede abrirlo**: El CRM informa del estado y ofrece elegir Outlook Web. Una apertura sin confirmar no significa que el correo se haya borrado; comprueba Outlook antes de repetir. La aplicación no sustituye automáticamente la apertura exacta por una búsqueda por asunto.
@@ -499,4 +499,12 @@ Para pasar de Classic a Web, entra en **Ajustes → Cliente de Outlook predeterm
 
 La preferencia se guarda en ese navegador: debes elegirla de nuevo si cambias de equipo o navegador. Puedes volver a Classic si su componente permanece instalado, vinculado y autorizado.
 
-Está acordada, todavía pendiente de desarrollo, la recuperación automática del histórico al conectar Microsoft 365. También cubrirá cuentas ya conectadas cuando se active para todos y usuarios que solo usen Web. Los correos no identificables con certeza quedarán para revisión, conservando las actividades y asociaciones existentes.
+Decisión del 16/10/2026: no habrá recuperación automática de correos antiguos. Antoni continuará registrando los nuevos desde esta fecha. Los registros anteriores y sus asociaciones se conservan; no se borran ni se ocultan. Conectar Microsoft 365 o vincular un equipo no inicia una migración histórica.
+
+## Responder y responder a todos: nueva entrega preparada
+
+Después de activar esta entrega, el menú de cada correo en Emails y Timeline ofrecerá dos acciones distintas: **Responder** y **Responder a todos**. Ambas usan tu preferencia de Ajustes. Outlook determina los destinatarios a partir del mensaje original y abre la respuesta para que la revises; no debes asumir que Responder a todos envía a las mismas personas que Responder.
+
+En Web se crea y abre un borrador dentro del hilo. Si el navegador bloquea la ventana, permite ventanas emergentes y repite. Si se informa de un borrador sin confirmar, revisa primero **Borradores** en Outlook: no se reintenta automáticamente. En Classic se requiere actualizar el componente a 1.1.0 y abrir un correo para que el CRM reconozca la versión.
+
+La funcionalidad está preparada para desplegar y comprobar, todavía sin aceptación real. No exige volver a importar correos ni recuperar el histórico. [Instalación y comprobaciones](manual-instalacion-addin-outlook.md#9-actualización-para-responder-y-responder-a-todos).

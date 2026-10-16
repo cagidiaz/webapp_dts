@@ -104,3 +104,7 @@ Guías de [Contactos y Emails](03_crm/crm_contactos_mails.md), [Ajustes](06_admi
 ### Corrección de arranque del complemento en Outlook Web (16/10/2026)
 
 La [guía del complemento](03_crm/complemento_outlook_crm.md#8-arranque-de-outlook-web-independiente-de-la-sesión-crm-16102026) documenta la inicialización de Office antes de la sesión CRM, la protección de la navegación y las pruebas de descarga bloqueada o espera agotada. Cambio preparado para desplegar; aceptación real Web pendiente.
+
+### Respuestas verificadas y menú compartido (16/10/2026)
+
+La [vista de correos](03_crm/crm_contactos_mails.md) incorpora un menú común para Emails y Timeline, con Responder y Responder a todos separados. [Entrega técnica y activación](../propuestas/2026-10-16-respuestas-verificadas-outlook.md): borradores Web, Classic 1.1.0 y columna de acción en solicitudes. Pendiente de validación real; sin recuperación automática del histórico.

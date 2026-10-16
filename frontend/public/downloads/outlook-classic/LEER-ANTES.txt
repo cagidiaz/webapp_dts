@@ -1,4 +1,4 @@
-dTS Outlook Classic 1.0.0 - Uso interno, sin firma Authenticode.
+dTS Outlook Classic 1.1.0 - Uso interno, sin firma Authenticode.
 Extraer TODO el ZIP y ejecutar Instalar_Outlook_dTS.bat con el usuario habitual de Windows, sin administrador.
 El BAT necesita dTS.OutlookClassic.exe en la misma carpeta.
 Requiere Outlook Classic, SQL de fase 4 aplicado y backend desplegado con Classic habilitado para la cuenta.

@@ -1,4 +1,6 @@
-import { classicDeviceKey, getClassicDevices, prepareClassicRequest, launchClassicAndWait, type ClassicDevice, type ClassicRequest } from '../../../api/outlookClassic';
+import { EmailActions, type EmailAction, type EmailActionData } from './EmailActions';
+import { prepareVerifiedReplyInWeb, type ReplyMode } from '../../../api/emailReply';
+import { classicDeviceKey, getClassicDevices, prepareClassicRequest, launchClassicAndWait, type ClassicDevice, type ClassicRequest, type ClassicAction } from '../../../api/outlookClassic';
 import type { EmailResolveResult } from '../../../utils/resolvedEmailWindow';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -11,7 +13,7 @@ import {
   getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
   createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
   getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook as openLegacyEmailInOutlook, openVerifiedEmailInWeb,
-  replyInOutlook, searchConversationInOutlook, copyEmailSearchToClipboard,
+  searchConversationInOutlook, copyEmailSearchToClipboard,
   markOutlookProtocolInstalled
 } from '../../../api';
 import { downloadOutlookClassicInstaller } from '../../../utils/outlookInstaller';
@@ -21,7 +23,7 @@ import {
   Linkedin, Edit2, Check, X, Plus, Calendar, Clock, Percent,
   Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users, ExternalLink,
   Copy, CheckCheck, Laptop, Globe, RefreshCw, Building2, PhoneCall,
-  ChevronDown, ChevronUp, Info, MoreVertical, Reply, Search, Download, Terminal
+  ChevronDown, ChevronUp, Info, Download, Terminal
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 import { EditActivityModal } from './EditActivityModal';
@@ -30,23 +32,6 @@ import {
   parseEmailActivity,
   EMAIL_CATEGORY_LIST,
 } from '../utils/emailTipologia';
-
-const OutlookIcon: React.FC<{ size?: number; className?: string }> = ({ size = 14, className = '' }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    className={className}
-    style={{ minWidth: size, minHeight: size }}
-  >
-    <path d="M22 6.5v11a2.5 2.5 0 0 1-2.5 2.5H9.5a2.5 2.5 0 0 1-2.5-2.5V17h7.5A2.5 2.5 0 0 0 17 14.5V7h2.5A2.5 2.5 0 0 1 22 6.5z" opacity="0.4" fill="#0078D4"/>
-    <path d="M14.5 5H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5.5V5z" fill="#0078D4"/>
-    <path d="M2 7.5A2.5 2.5 0 0 1 4.5 5h8A2.5 2.5 0 0 1 15 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-8A2.5 2.5 0 0 1 2 16.5v-9z" fill="#106EBE"/>
-    <circle cx="8.5" cy="12" r="2.5" fill="#FFFFFF"/>
-    <circle cx="8.5" cy="12" r="1.3" fill="#106EBE"/>
-  </svg>
-);
 
 // For local endpoint fetching since contact lookup is on contacts API
 import apiClient from '../../../api/apiClient';
@@ -265,8 +250,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     email?: string | null;
     subject?: string | null;
   } | null>(null);
-  const [emailOpenNotice, setEmailOpenNotice] = useState<(EmailResolveResult & { activityId?: string; canOpenWeb?: boolean; canSetupClassic?: boolean; classic?: boolean; devices?: ClassicDevice[] }) | null>(null);
-  const [classicReady, setClassicReady] = useState<(ClassicRequest & { activityId: string }) | null>(null);
+  const [emailOpenNotice, setEmailOpenNotice] = useState<(EmailResolveResult & { activityId?: string; canOpenWeb?: boolean; canSetupClassic?: boolean; classic?: boolean; devices?: ClassicDevice[]; replyMode?: ReplyMode }) | null>(null);
+  const [classicReady, setClassicReady] = useState<(ClassicRequest & { activityId: string; action?: ClassicAction }) | null>(null);
   const [copiedEmailMenuId, setCopiedEmailMenuId] = useState<string | null>(null);
 
   // Escuchar si Windows no pudo abrir el protocolo dts-mail://
@@ -333,17 +318,25 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     else setEmailOpenNotice({ ...result, activityId });
   };
 
-  const launchPreparedClassic = async (request: ClassicRequest & { activityId: string }) => {
+  const resolveWebReply = async (activityId: string, mode: ReplyMode, candidateId?: string) => {
+    const request = prepareVerifiedReplyInWeb(activityId, mode, candidateId);
+    setEmailOpenNotice({ activityId, status: 'pending', message: 'Preparando respuesta en Outlook Web…' });
+    const result = await request;
+    setEmailOpenNotice({ ...result, activityId, replyMode: mode, canOpenWeb: result.status !== 'resolved' });
+  };
+
+  const launchPreparedClassic = async (request: ClassicRequest & { activityId: string; action?: ClassicAction }) => {
     setClassicReady(null);
     setEmailOpenNotice({ activityId: request.activityId, status: 'pending', message: 'Esperando confirmación del componente de Outlook Classic…' });
     try {
       const result = await launchClassicAndWait(request);
-      if (result.state === 'opened') setEmailOpenNotice({ status: 'resolved', message: 'El componente ha confirmado la apertura del correo en Outlook Classic.' });
+      if (result.state === 'opened') setEmailOpenNotice({ status: 'resolved', message: request.action && request.action !== 'open' ? 'Classic ha preparado la respuesta. Revisa los destinatarios y el contenido antes de enviar.' : 'El componente ha confirmado la apertura del correo en Outlook Classic.' });
       else setEmailOpenNotice({ activityId: request.activityId, status: 'error', canOpenWeb: true, canSetupClassic: true, message: result.state === 'unconfirmed' ? 'No ha llegado la confirmación. Comprueba Classic antes de repetir; puedes utilizar Outlook Web.' : 'El componente no pudo abrir el correo exacto. Comprueba el buzón y la vinculación del equipo, o utiliza Outlook Web.' });
     } catch { setEmailOpenNotice({ activityId: request.activityId, status: 'error', canOpenWeb: true, canSetupClassic: true, message: 'No se pudo confirmar la apertura en Classic. Revisa la conexión o utiliza Outlook Web.' }); }
   };
 
-  const resolveClassicEmail = async (activityId: string, candidateId?: string, selectedDevice?: string) => {
+  const resolveClassicEmail = async (activityId: string, candidateId?: string, selectedDevice?: string, action: ClassicAction = 'open') => {
+    const replyMode = action === 'open' ? undefined : action;
     setClassicReady(null);
     setEmailOpenNotice({ activityId, status: 'pending', message: 'Preparando apertura en Outlook Classic…' });
     try {
@@ -351,18 +344,18 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       const preferred = selectedDevice || localStorage.getItem(classicDeviceKey);
       const device = configuration.devices.find(value => value.id === preferred) || (configuration.devices.length === 1 ? configuration.devices[0] : null);
       if (!configuration.enabled || !device) {
-        setEmailOpenNotice({ activityId, status: 'pending', canOpenWeb: true, canSetupClassic: true, devices: configuration.devices, message: !configuration.enabled ? 'La apertura verificada de Classic todavía no está habilitada para tu cuenta. Puedes utilizar Outlook Web.' : configuration.devices.length ? 'Selecciona el equipo Windows desde el que estás trabajando.' : 'Vincula este equipo con tu cuenta para abrir el correo en Classic.' });
+        setEmailOpenNotice({ activityId, status: 'pending', canOpenWeb: true, canSetupClassic: true, replyMode, devices: configuration.devices, message: !configuration.enabled ? 'La apertura verificada de Classic todavía no está habilitada para tu cuenta. Puedes utilizar Outlook Web.' : configuration.devices.length ? 'Selecciona el equipo Windows desde el que estás trabajando.' : 'Vincula este equipo con tu cuenta para abrir el correo en Classic.' });
         return;
       }
       localStorage.setItem(classicDeviceKey, device.id);
-      const result = await prepareClassicRequest(activityId, device.id, candidateId);
+      const result = await prepareClassicRequest(activityId, device.id, candidateId, action);
       if (result.status === 'ready') {
-        const prepared = { ...result, activityId };
+        const prepared = { ...result, activityId, action };
         setClassicReady(prepared);
-        setEmailOpenNotice({ activityId, status: 'pending', canOpenWeb: true, message: 'Correo listo para abrir en Outlook Classic.' });
+        setEmailOpenNotice({ activityId, status: 'pending', canOpenWeb: true, message: action === 'open' ? 'Correo listo para abrir en Outlook Classic.' : 'Respuesta lista para preparar en Outlook Classic.' });
         if (navigator.userActivation?.isActive) void launchPreparedClassic(prepared);
-      } else if (result.status === 'device_required') setEmailOpenNotice({ activityId, status: 'pending', canOpenWeb: true, canSetupClassic: true, message: result.message });
-      else setEmailOpenNotice({ ...result, activityId, classic: true, canOpenWeb: true });
+      } else if (result.status === 'device_required') setEmailOpenNotice({ activityId, status: 'pending', canOpenWeb: true, canSetupClassic: true, replyMode, message: result.message });
+      else setEmailOpenNotice({ ...result, activityId, classic: true, replyMode, canOpenWeb: true });
     } catch { setEmailOpenNotice({ activityId, status: 'error', canOpenWeb: true, canSetupClassic: true, message: 'No se pudo preparar la apertura de Classic. Contacta con el administrador o utiliza Outlook Web.' }); }
   };
 
@@ -377,6 +370,28 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     void resolveWebEmail(options.activityId);
   };
 
+
+  const handleEmailAction = (action: EmailAction, data: EmailActionData) => {
+    if (action !== 'copy') setActiveEmailMenuId(null);
+    if (action === 'copy') {
+      void copyEmailSearchToClipboard({ email: data.email, subject: data.subject }).then(copied => {
+        if (!copied) { setEmailOpenNotice({ status: 'error', message: 'No se pudo copiar la búsqueda. Revisa el permiso del portapapeles.' }); return; }
+        setCopiedEmailMenuId(data.activityId);
+        setTimeout(() => { setCopiedEmailMenuId(null); setActiveEmailMenuId(null); }, 1500);
+      });
+    } else if (action === 'search') {
+      searchConversationInOutlook({ email: data.email, subject: data.subject, target: getPreferredOutlookClient(), onProtocolFailed: () => setShowProtocolFallbackModal(true) });
+    } else if (action === 'reply' || action === 'reply_all') {
+      if (!exchangeStatus?.emailIdentityEnabled) {
+        setEmailOpenNotice({ activityId: data.activityId, status: 'disabled', message: 'La respuesta verificada no está habilitada para tu cuenta. Abre el correo y responde desde Outlook.', canOpenWeb: true }); return;
+      }
+      if (getPreferredOutlookClient() === 'desktop') void resolveClassicEmail(data.activityId, undefined, undefined, action);
+      else void resolveWebReply(data.activityId, action);
+    } else {
+      setFallbackEmailData(data);
+      openExistingEmailInOutlook({ ...data, target: action === 'open' ? getPreferredOutlookClient() : action, onProtocolFailed: () => setShowProtocolFallbackModal(true) });
+    }
+  };
 
   const { data: contact, isLoading: isLoadingContact } = useQuery({
     queryKey: ['crmContactDetail', contactId],
@@ -1558,11 +1573,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         <div role="status" className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs text-gray-700 dark:text-gray-200 space-y-2">
           <div className="flex justify-between gap-3"><span>{emailOpenNotice.message}{emailOpenNotice.retryAfterSeconds ? ` Espera ${emailOpenNotice.retryAfterSeconds} segundos.` : ''}</span><button type="button" aria-label="Cerrar aviso de Outlook" onClick={() => setEmailOpenNotice(null)}><X size={14} /></button></div>
           {emailOpenNotice.activityId && emailOpenNotice.canOpenWeb && <button type="button" className="font-semibold text-dts-primary dark:text-sky-400" onClick={() => { void resolveWebEmail(emailOpenNotice.activityId!); }}>Abrir en Outlook Web</button>}
-          {emailOpenNotice.candidates?.map((candidate, index) => <button type="button" key={candidate.id} className="block rounded-lg border border-gray-200 dark:border-white/10 px-3 py-2 hover:bg-white dark:hover:bg-white/5 text-left" onClick={() => { if (emailOpenNotice.classic) void resolveClassicEmail(emailOpenNotice.activityId!, candidate.id); else void resolveWebEmail(emailOpenNotice.activityId!, candidate.id); }}>
+          {emailOpenNotice.candidates?.map((candidate, index) => <button type="button" key={candidate.id} className="block rounded-lg border border-gray-200 dark:border-white/10 px-3 py-2 hover:bg-white dark:hover:bg-white/5 text-left" onClick={() => { if (emailOpenNotice.classic) void resolveClassicEmail(emailOpenNotice.activityId!, candidate.id, undefined, emailOpenNotice.replyMode); else if (emailOpenNotice.replyMode) void resolveWebReply(emailOpenNotice.activityId!, emailOpenNotice.replyMode, candidate.id); else void resolveWebEmail(emailOpenNotice.activityId!, candidate.id); }}>
             Copia {index + 1} · {candidate.folder}{candidate.sentDate && Number.isFinite(Date.parse(candidate.sentDate)) ? ` · ${new Date(candidate.sentDate).toLocaleString('es-ES')}` : ''}
           </button>)}
           {classicReady && classicReady.activityId === emailOpenNotice.activityId && <button type="button" className="block font-semibold text-dts-primary dark:text-sky-400" onClick={() => { void launchPreparedClassic(classicReady); }}>Abrir Outlook Classic</button>}
-          {emailOpenNotice.devices?.map(device => <button key={device.id} type="button" className="block rounded border border-gray-200 dark:border-white/10 px-3 py-2" onClick={() => { void resolveClassicEmail(emailOpenNotice.activityId!, undefined, device.id); }}>{device.label}</button>)}
+          {emailOpenNotice.devices?.map(device => <button key={device.id} type="button" className="block rounded border border-gray-200 dark:border-white/10 px-3 py-2" onClick={() => { void resolveClassicEmail(emailOpenNotice.activityId!, undefined, device.id, emailOpenNotice.replyMode); }}>{device.label}</button>)}
           {emailOpenNotice.canSetupClassic && <a className="block text-dts-primary dark:text-sky-400" href="/outlook-classic" target="_blank" rel="noopener noreferrer">Configurar este equipo para Outlook Classic</a>}
           {emailOpenNotice.truncated && <p>Se muestran las primeras cinco copias. Si no identificas la correcta, revisa la vinculación antes de abrirla.</p>}
         </div>
@@ -2221,156 +2236,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               {act.typeLabel}
                             </span>
 
-                            {/* Abrir en Outlook con Menú de Acciones Secundarias (solo correos) */}
-                            {act.type === 'email' && (
-                              <div className="relative inline-flex items-center">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const emailData = {
-                                      activityId: act.id,
-                                      webLink: act.exchangeWebLink,
-                                      itemId: act.exchangeItemId,
-                                      email: act.email || contact?.email,
-                                      subject: act.title,
-                                      exchangeSyncStatus: act.exchangeSyncStatus,
-                                    };
-                                    setFallbackEmailData(emailData);
-                                    openExistingEmailInOutlook({
-                                      ...emailData,
-                                      target: getPreferredOutlookClient(),
-                                      onProtocolFailed: () => setShowProtocolFallbackModal(true),
-                                    });
-                                  }}
-                                  className="p-1 rounded-l-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
-                                  title={`Abrir en Outlook (${getPreferredOutlookClient() === 'web' ? 'Web' : 'Escritorio'})`}
-                                >
-                                  <OutlookIcon size={13} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveEmailMenuId(activeEmailMenuId === act.id ? null : act.id);
-                                  }}
-                                  className="p-1 rounded-r-md text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                                  title="Más opciones de Outlook"
-                                >
-                                  <MoreVertical size={12} />
-                                </button>
-
-                                {/* Desplegable de opciones secundarias */}
-                                {activeEmailMenuId === act.id && (
-                                  <div 
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="absolute right-0 top-full mt-1 z-30 w-56 bg-white dark:bg-surface-card-dark rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 py-1.5 text-xs animate-in fade-in zoom-in-95 duration-150"
-                                  >
-                                    <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-white/5">
-                                      Opciones de Outlook
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveEmailMenuId(null);
-                                        const emailData = {
-                                          activityId: act.id,
-                                          webLink: act.exchangeWebLink,
-                                          itemId: act.exchangeItemId,
-                                          email: act.email || contact?.email,
-                                          subject: act.title,
-                                        };
-                                        setFallbackEmailData(emailData);
-                                        openExistingEmailInOutlook({
-                                          ...emailData,
-                                          target: 'desktop',
-                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
-                                        });
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
-                                    >
-                                      <Laptop size={13} className="text-blue-500" />
-                                      <span>Abrir en Outlook Classic</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveEmailMenuId(null);
-                                        openExistingEmailInOutlook({
-                                          activityId: act.id,
-                                          webLink: act.exchangeWebLink,
-                                          itemId: act.exchangeItemId,
-                                          email: act.email || contact?.email,
-                                          subject: act.title,
-                                          target: 'web',
-                                        });
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
-                                    >
-                                      <Globe size={13} className="text-dts-secondary" />
-                                      <span>Abrir en Outlook Web (M365)</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveEmailMenuId(null);
-                                        replyInOutlook({
-                                          itemId: act.exchangeItemId,
-                                          email: act.email || contact?.email,
-                                          subject: act.title,
-                                          target: getPreferredOutlookClient(),
-                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
-                                        });
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
-                                    >
-                                      <Reply size={13} className="text-amber-500" />
-                                      <span>Responder en Outlook</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveEmailMenuId(null);
-                                        searchConversationInOutlook({
-                                          email: act.email || contact?.email,
-                                          subject: act.title,
-                                          target: getPreferredOutlookClient(),
-                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
-                                        });
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
-                                    >
-                                      <Search size={13} className="text-purple-500" />
-                                      <span>Buscar conversación completa</span>
-                                    </button>
-                                    <div className="my-1 border-t border-gray-100 dark:border-white/5" />
-                                    <button
-                                      type="button"
-                                      onClick={async () => {
-                                        await copyEmailSearchToClipboard({
-                                          email: act.email || contact?.email,
-                                          subject: act.title,
-                                        });
-                                        setCopiedEmailMenuId(act.id);
-                                        setTimeout(() => {
-                                          setCopiedEmailMenuId(null);
-                                          setActiveEmailMenuId(null);
-                                        }, 1500);
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-between text-gray-600 dark:text-gray-300 cursor-pointer"
-                                    >
-                                      <span className="flex items-center gap-2">
-                                        <Copy size={13} />
-                                        <span>Copiar datos de búsqueda</span>
-                                      </span>
-                                      {copiedEmailMenuId === act.id && (
-                                        <span className="text-[10px] text-emerald-500 font-bold">¡Copiado!</span>
-                                      )}
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                            {act.type === 'email' && <EmailActions
+                              data={{ activityId: act.id, webLink: act.exchangeWebLink, itemId: act.exchangeItemId, email: act.email || contact?.email, subject: act.title, exchangeSyncStatus: act.exchangeSyncStatus }}
+                              isOpen={activeEmailMenuId === act.id} copied={copiedEmailMenuId === act.id} preferred={getPreferredOutlookClient()}
+                              onToggle={() => setActiveEmailMenuId(activeEmailMenuId === act.id ? null : act.id)} onAction={handleEmailAction}
+                            />}
 
                             {/* Editar actividad */}
                             <button
@@ -3234,154 +3104,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                 Correo
                               </span>
 
-                              {/* Abrir en Outlook con Menú de Acciones Secundarias */}
-                              <div className="relative inline-flex items-center">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const emailData = {
-                                      activityId: mail.id,
-                                      webLink: mail.exchangeWebLink,
-                                      itemId: mail.exchangeItemId,
-                                      email: mail.email || contact?.email,
-                                      subject: mail.title,
-                                      exchangeSyncStatus: mail.exchangeSyncStatus,
-                                    };
-                                    setFallbackEmailData(emailData);
-                                    openExistingEmailInOutlook({
-                                      ...emailData,
-                                      target: getPreferredOutlookClient(),
-                                      onProtocolFailed: () => setShowProtocolFallbackModal(true),
-                                    });
-                                  }}
-                                  className="p-1 rounded-l-md text-gray-400 hover:text-[#0078D4] hover:bg-[#0078D4]/10 dark:hover:bg-[#0078D4]/20 transition-colors cursor-pointer"
-                                  title={`Abrir en Outlook (${getPreferredOutlookClient() === 'web' ? 'Web' : 'Escritorio'})`}
-                                >
-                                  <OutlookIcon size={13} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveEmailMenuId(activeEmailMenuId === mail.id ? null : mail.id);
-                                  }}
-                                  className="p-1 rounded-r-md text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                                  title="Más opciones de Outlook"
-                                >
-                                  <MoreVertical size={12} />
-                                </button>
-
-                                {/* Desplegable de opciones secundarias */}
-                                {activeEmailMenuId === mail.id && (
-                                  <div 
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="absolute right-0 top-full mt-1 z-30 w-56 bg-white dark:bg-surface-card-dark rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 py-1.5 text-xs animate-in fade-in zoom-in-95 duration-150"
-                                  >
-                                    <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-white/5">
-                                      Opciones de Outlook
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveEmailMenuId(null);
-                                        const emailData = {
-                                          activityId: mail.id,
-                                          webLink: mail.exchangeWebLink,
-                                          itemId: mail.exchangeItemId,
-                                          email: mail.email || contact?.email,
-                                          subject: mail.title,
-                                        };
-                                        setFallbackEmailData(emailData);
-                                        openExistingEmailInOutlook({
-                                          ...emailData,
-                                          target: 'desktop',
-                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
-                                        });
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
-                                    >
-                                      <Laptop size={13} className="text-blue-500" />
-                                      <span>Abrir en Outlook Classic</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveEmailMenuId(null);
-                                        openExistingEmailInOutlook({
-                                          activityId: mail.id,
-                                          webLink: mail.exchangeWebLink,
-                                          itemId: mail.exchangeItemId,
-                                          email: mail.email || contact?.email,
-                                          subject: mail.title,
-                                          target: 'web',
-                                        });
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
-                                    >
-                                      <Globe size={13} className="text-dts-secondary" />
-                                      <span>Abrir en Outlook Web (M365)</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveEmailMenuId(null);
-                                        replyInOutlook({
-                                          itemId: mail.exchangeItemId,
-                                          email: mail.email || contact?.email,
-                                          subject: mail.title,
-                                          target: getPreferredOutlookClient(),
-                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
-                                        });
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
-                                    >
-                                      <Reply size={13} className="text-amber-500" />
-                                      <span>Responder en Outlook</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveEmailMenuId(null);
-                                        searchConversationInOutlook({
-                                          email: mail.email || contact?.email,
-                                          subject: mail.title,
-                                          target: getPreferredOutlookClient(),
-                                          onProtocolFailed: () => setShowProtocolFallbackModal(true),
-                                        });
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 text-gray-700 dark:text-gray-200 cursor-pointer"
-                                    >
-                                      <Search size={13} className="text-purple-500" />
-                                      <span>Buscar conversación completa</span>
-                                    </button>
-                                    <div className="my-1 border-t border-gray-100 dark:border-white/5" />
-                                    <button
-                                      type="button"
-                                      onClick={async () => {
-                                        await copyEmailSearchToClipboard({
-                                          email: mail.email || contact?.email,
-                                          subject: mail.title,
-                                        });
-                                        setCopiedEmailMenuId(mail.id);
-                                        setTimeout(() => {
-                                          setCopiedEmailMenuId(null);
-                                          setActiveEmailMenuId(null);
-                                        }, 1500);
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-between text-gray-600 dark:text-gray-300 cursor-pointer"
-                                    >
-                                      <span className="flex items-center gap-2">
-                                        <Copy size={13} />
-                                        <span>Copiar datos de búsqueda</span>
-                                      </span>
-                                      {copiedEmailMenuId === mail.id && (
-                                        <span className="text-[10px] text-emerald-500 font-bold">¡Copiado!</span>
-                                      )}
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                              <EmailActions
+                                data={{ activityId: mail.id, webLink: mail.exchangeWebLink, itemId: mail.exchangeItemId, email: mail.email || contact?.email, subject: mail.title, exchangeSyncStatus: mail.exchangeSyncStatus }}
+                                isOpen={activeEmailMenuId === mail.id} copied={copiedEmailMenuId === mail.id} preferred={getPreferredOutlookClient()}
+                                onToggle={() => setActiveEmailMenuId(activeEmailMenuId === mail.id ? null : mail.id)} onAction={handleEmailAction}
+                              />
 
                               {/* Botón de editar correo */}
                               <button

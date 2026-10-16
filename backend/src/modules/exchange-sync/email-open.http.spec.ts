@@ -7,6 +7,7 @@ import request from 'supertest';
 import { JwtStrategy } from '../../auth/jwt.strategy';
 import { EmailOpenController } from './email-open.controller';
 import { EmailOpenService } from './email-open.service';
+import { EmailReplyService } from './email-reply.service';
 
 describe('email resolver HTTP authentication and input boundary', () => {
   let app: INestApplication;
@@ -16,7 +17,7 @@ describe('email resolver HTTP authentication and input boundary', () => {
   const path = '/exchange-sync/emails/00000000-0000-4000-8000-000000000001/resolve';
   const token = () => jwt.sign({ sub: 'authenticated-user' }, { expiresIn: '5m' });
   beforeAll(async () => {
-    const module = await Test.createTestingModule({ imports: [PassportModule], controllers: [EmailOpenController], providers: [JwtStrategy,
+    const module = await Test.createTestingModule({ imports: [PassportModule], controllers: [EmailOpenController], providers: [JwtStrategy, { provide: EmailReplyService, useValue: { prepare: jest.fn().mockResolvedValue({status:"resolved",message:"Draft ready"}) } },
       { provide: ConfigService, useValue: { get: (key: string) => key === 'JWT_SECRET' ? secret : undefined } }, { provide: EmailOpenService, useValue: emails }] }).compile();
     app = module.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
@@ -41,4 +42,12 @@ describe('email resolver HTTP authentication and input boundary', () => {
     await request(app.getHttpServer()).post(path).set('Authorization', `Bearer ${token()}`).send({ candidateId: 'CaseSensitive' }).expect(201);
     expect(emails.resolve).toHaveBeenCalledWith('authenticated-user', '00000000-0000-4000-8000-000000000001', 'CaseSensitive');
   });
+  it('requires JWT and rejects sending or injected recipients for a reply', async () => {
+    const replyPath=path.replace('/resolve','/reply');
+    await request(app.getHttpServer()).post(replyPath).send({mode:'reply'}).expect(401);
+    await request(app.getHttpServer()).post(replyPath).set('Authorization', `Bearer ${token()}`).send({mode:'send'}).expect(400);
+    await request(app.getHttpServer()).post(replyPath).set('Authorization', `Bearer ${token()}`).send({mode:'reply',to:'other@test.invalid'}).expect(400);
+    await request(app.getHttpServer()).post(replyPath).set('Authorization', `Bearer ${token()}`).send({mode:'reply_all'}).expect(201);
+  });
+
 });

@@ -18,8 +18,8 @@ sqlSuite('Classic lifecycle with real isolated PostgreSQL', () => {
   let activity: any, db: any, access: any, emails: any;
   let pairing: any;
   const nonce = () => randomBytes(32).toString('base64url');
-  function proof(id: string, token: string, action: 'claim' | 'result' = 'claim', outcome = '', claimNonce = ''): ClassicProof {
-    const value: ClassicProof = { deviceId: pairing.pairingId, token, timestamp: String(Date.now()), nonce: nonce(), version: '1.0.0', signature: '' };
+  function proof(id: string, token: string, action: 'claim' | 'result' = 'claim', outcome = '', claimNonce = '', version = '1.0.0'): ClassicProof {
+    const value: ClassicProof = { deviceId: pairing.pairingId, token, timestamp: String(Date.now()), nonce: nonce(), version, signature: '' };
     value.signature = sign('RSA-SHA256', Buffer.from(classicProofText(action, id, value, outcome, claimNonce)), keys.privateKey).toString('base64url');
     return value;
   }
@@ -32,6 +32,8 @@ sqlSuite('Classic lifecycle with real isolated PostgreSQL', () => {
     await pool.query('CREATE TABLE public.profiles(id uuid PRIMARY KEY); CREATE TABLE public.crm_activities(id uuid PRIMARY KEY);');
     const sql = readFileSync(resolve(__dirname, '../../../prisma/proposals/2026-10-15-outlook-classic-dispositivos-solicitudes.sql'), 'utf8');
     await pool.query(sql); await pool.query(sql);
+    const replySql=readFileSync(resolve(__dirname, '../../../prisma/proposals/2026-10-16-outlook-respuestas-verificadas.sql'),'utf8');
+    await pool.query(replySql);await pool.query(replySql);
     await pool.query('INSERT INTO profiles(id) VALUES($1),($2)', [owner, other]);
     await pool.query('INSERT INTO crm_activities(id) VALUES($1)', [activityId]);
     await pool.query('CREATE ROLE classic_untrusted NOLOGIN');
@@ -124,4 +126,17 @@ sqlSuite('Classic lifecycle with real isolated PostgreSQL', () => {
     await expect(service.claim(request.requestId, proof(request.requestId, ticketToken(request)))).rejects.toThrow();
     expect((await service.status(owner, request.requestId)).state).toBe('failed');
   });
+  it('stores each reply action and only releases it to a compatible signed component',async()=>{
+    service=new OutlookClassicService(db,new ConfigService({CRM_OUTLOOK_CLASSIC_ENABLED:'true',CRM_EMAIL_REPLY_ENABLED:'true',AZURE_TENANT_ID:tenant}),{enabledFor:async()=>true} as any,access,emails,{getValidAccessToken:async()=>`h.${Buffer.from(JSON.stringify({tid:tenant})).toString('base64url')}.s`} as any);
+    const before=await service.create(owner,activityId,pairing.pairingId,undefined,'reply_all');expect(before.status).toBe('device_required');
+    await pool.query("UPDATE crm_outlook_devices SET helper_version='1.1.0'");
+    for(const action of ['reply','reply_all'] as const){
+      const ticket:any=await service.create(owner,activityId,pairing.pairingId,undefined,action);expect(ticket.status).toBe('ready');
+      const capability=ticketToken(ticket);
+      await expect(service.claim(ticket.requestId,proof(ticket.requestId,capability))).rejects.toThrow();
+      const command=await service.claim(ticket.requestId,proof(ticket.requestId,capability,'claim','','','1.1.0'));
+      expect(command.action).toBe(action);
+    }
+  });
+
 });

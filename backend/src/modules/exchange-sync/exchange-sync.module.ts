@@ -1,4 +1,5 @@
 import { OutlookClassicController } from './outlook-classic.controller';
+import { EmailReplyService } from './email-reply.service';
 import { OutlookClassicService } from './outlook-classic.service';
 import { EmailOpenController } from './email-open.controller';
 import { EmailOpenService } from './email-open.service';
@@ -17,7 +18,7 @@ import { ProspectOutlookService } from './prospect-outlook.service';
 @Module({
   imports: [PrismaModule, AuthModule],
   controllers: [ExchangeSyncController, OutlookAddinController, EmailOpenController, OutlookClassicController],
-  providers: [OutlookClassicService, EmailOpenService, MicrosoftGraphService, ExchangeSyncService, OutlookAddinService, ProspectOutlookService, EmailIdentityService, OutlookAddinAccessService],
+  providers: [EmailReplyService, OutlookClassicService, EmailOpenService, MicrosoftGraphService, ExchangeSyncService, OutlookAddinService, ProspectOutlookService, EmailIdentityService, OutlookAddinAccessService],
   exports: [MicrosoftGraphService, ExchangeSyncService, OutlookAddinService, ProspectOutlookService, EmailIdentityService, OutlookAddinAccessService],
 })
 export class ExchangeSyncModule {}

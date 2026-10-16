@@ -129,7 +129,7 @@ Validar instalación, vinculación, distribución interna sin certificado y actu
 
 ### Fase 5 Migrar el histórico y compartir las acciones
 
-Clasificar referencias existentes por buzón y formato. Migrar en lotes pequeños reanudables, conservando los originales. Los casos ambiguos o cuyo identificador ya no sea recuperable quedarán pendientes de revinculación; no se enlazarán por proximidad del asunto o la fecha.
+Decisión actualizada el 16/10/2026: no se implementará migración ni recuperación automática del histórico. Antoni registrará los nuevos correos a partir de esta fecha. Se conservan los registros anteriores y sus asociaciones; no se vacía ninguna tabla ni se oculta el histórico. La apertura de una referencia existente sigue utilizando sus comprobaciones actuales, sin un proceso de recuperación en segundo plano.
 
 Crear un único componente de acciones para las tarjetas de Emails y Timeline. Mantener el diseño, tamaños y modos claro y oscuro existentes. Conservar «Abrir», «Responder», «Responder a todos», «Buscar conversación» y «Copiar búsqueda» cuando proceda, distinguiendo claramente el mensaje exacto de una búsqueda.
 
@@ -218,13 +218,27 @@ Inventario de solo lectura limitado a actividades EMAIL creadas por la cuenta pi
 
 Los nueve registros antiguos carecen de ámbito completo de tenant/buzón; no se ha encontrado un identificador de buzón ajeno entre los registros que lo tienen informado. Estos recuentos describen metadatos del CRM, no una verificación de existencia actual en Graph.
 
-Siguiente implementación: recuperación en lotes limitados del buzón del creador, conservando identificadores originales y verificando cada conversión contra Microsoft 365. No inferir un mensaje por asunto, fecha o destinatario. Los casos no verificables o ambiguos requerirán revinculación explícita. Ningún registro se ha modificado durante este inventario. Después se unificarán las acciones de las tarjetas y se separarán Responder y Responder a todos según el plan.
+El inventario fue de solo lectura. Posteriormente el usuario canceló la recuperación automática del histórico: no se migrarán esos registros ni se borrarán. El siguiente trabajo de desarrollo es unificar las acciones de las tarjetas y separar Responder y Responder a todos según el plan.
 
-## Decisiones de alcance y recuperación automática (16/10/2026)
+## Decisiones vigentes de alcance e histórico (16/10/2026)
 
 - No se realizará un piloto individual de esta funcionalidad. Preparar la apertura y recuperación para todos los usuarios; la puesta en uso general se hará después de la verificación y confirmación del responsable. Las restricciones actuales no se eliminan por el mero cambio de documentación.
-- La recuperación de referencias históricas se iniciará automáticamente al conectar la cuenta Microsoft 365 al CRM. No depende de instalar ni vincular el equipo Windows; también debe funcionar para usuarios de Outlook Web.
-- Para cuentas que ya estén conectadas, iniciar la recuperación al activar la funcionalidad general. Procesar en segundo plano mediante lotes pequeños reanudables, con progreso y casos pendientes de revisión. Este automatismo está acordado, todavía no implementado.
-- Recuperar únicamente mensajes del buzón autorizado del usuario, conservando referencias originales, asociaciones y actividades, sin duplicarlas. Los casos ambiguos o sin referencia verificable requieren revisión o revinculación explícita.
+
+
+
 - Cambiar la preferencia Classic/Web en Ajustes solo cambia el destino de apertura. No vuelve a importar los correos ni pierde las referencias recuperadas. La cuenta Microsoft 365 debe seguir conectada y corresponder al mismo buzón.
 - La preferencia actual se guarda en el navegador mediante `localStorage`; no se sincroniza entre equipos o navegadores. Cambiar a Web no revoca ni desinstala el componente Classic. Al volver a Classic, el equipo debe seguir instalado, vinculado y autorizado.
+
+## Recuperación automática cancelada por el usuario (16/10/2026)
+
+Se retira la implementación en curso de recuperación histórica, incluidos servicio, planificador, endpoint, indicador de progreso y pruebas específicas. No llegó a desplegarse ni a ejecutarse contra la base compartida; las pruebas de escritura se realizaron en una base aislada que ya está detenida.
+
+El usuario aclara expresamente: «No borrar nada; empezar a registrar desde hoy». Antoni es el usuario que actualmente registra correos y continuará con los nuevos desde el 16 de octubre de 2026. No se eliminan actividades EMAIL, otras actividades, asociaciones, clientes ni ofertas. No se aplica un filtro que oculte registros anteriores.
+
+La preparación del uso general de la apertura se mantiene, después de validación del responsable y sin piloto individual. Cambiar de Classic a Web sigue siendo una preferencia independiente. La recuperación automática ya no forma parte de la entrega.
+
+## Entrega de acciones compartidas y respuesta nativa (16/10/2026)
+
+Se ha preparado el menú único de Emails y Timeline y la separación Responder/Responder a todos. Web usa borradores nativos y Classic incorpora ambas acciones en su componente 1.1.0, siempre con verificación del mensaje y revisión antes del envío. Pendiente de aplicar el SQL aditivo, desplegar, actualizar el componente y aceptar las respuestas reales. [Detalle y vuelta atrás](2026-10-16-respuestas-verificadas-outlook.md).
+
+El alcance general sigue aprobado tras la validación del responsable; se ha preparado `CRM_EMAIL_IDENTITY_EMAILS=*` sin alterar los permisos CRM ni la configuración actual de producción. La recuperación automática permanece cancelada y no se borran actividades.

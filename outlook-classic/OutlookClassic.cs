@@ -18,12 +18,12 @@ using System.Reflection;
 [assembly: AssemblyTitle("dTS Outlook Classic")]
 [assembly: AssemblyCompany("dTS Instruments")]
 [assembly: AssemblyProduct("dTS CRM Outlook Classic")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 namespace Dts.OutlookClassic {
   internal static class Program {
-    const string Version = "1.0.0";
+    const string Version = "1.1.0";
     const string Origin = "https://app.dtsinstruments.com";
     static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = 131072 };
     static readonly string Root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "dTS", "OutlookClassic");
@@ -142,16 +142,18 @@ namespace Dts.OutlookClassic {
         string deviceId=S(device,"deviceId");Guid deviceGuid;if(!Guid.TryParseExact(deviceId,"D",out deviceGuid))throw new SafeError("Vinculación local no válida.");
         var command=Post("/api/exchange-sync/classic/requests/"+id+"/claim",Proof("claim",id,token,deviceId,rsa,"",""));
         DateTimeOffset expiry;
-        if(S(command,"action")!="open" || !DateTimeOffset.TryParse(S(command,"expiresAt"),CultureInfo.InvariantCulture,DateTimeStyles.None,out expiry) || expiry<DateTimeOffset.UtcNow || expiry>DateTimeOffset.UtcNow.AddMinutes(2)) throw new SafeError("La solicitud ha caducado.");
-        string outcome=OpenExact(S(command,"entryId"),S(command,"mailboxEmail"),S(command,"internetMessageId"),true,expiry);
+        if(!AllowedAction(S(command,"action")) || !DateTimeOffset.TryParse(S(command,"expiresAt"),CultureInfo.InvariantCulture,DateTimeStyles.None,out expiry) || expiry<DateTimeOffset.UtcNow || expiry>DateTimeOffset.UtcNow.AddMinutes(2)) throw new SafeError("La solicitud ha caducado.");
+        string outcome=OpenExact(S(command,"entryId"),S(command,"mailboxEmail"),S(command,"internetMessageId"),true,expiry,S(command,"action"));
         try { Post("/api/exchange-sync/classic/requests/"+id+"/result",Proof("result",id,token,deviceId,rsa,outcome,S(command,"claimNonce"))); }
-        catch { if(outcome=="opened") throw new SafeError("Classic ha abierto el mensaje, pero no se pudo confirmar al CRM. Comprueba la ventana antes de volver a abrirlo."); throw; }
+        catch { if(outcome=="opened") throw new SafeError("Classic ha mostrado la ventana solicitada, pero no se pudo confirmar al CRM. Comprueba la ventana antes de volver a abrirlo."); throw; }
         if(outcome!="opened") throw new SafeError("No se ha abierto el correo: "+outcome+". No se ha buscado otro mensaje por asunto. Puedes utilizar Outlook Web.");
       }
     }
-    static string OpenExact(string entryId,string email,string internetId,bool display,DateTimeOffset expiry) {
+    static bool AllowedAction(string action) { return action=="open" || action=="reply" || action=="reply_all"; }
+    static string OpenExact(string entryId,string email,string internetId,bool display,DateTimeOffset expiry,string action="open") {
+      if(!AllowedAction(action))return "identity_mismatch";
       if(!System.Text.RegularExpressions.Regex.IsMatch(entryId,"^(?:[0-9A-Fa-f]{2})+$") || entryId.Length>32768 || email.Length==0 || internetId.Length==0) return "identity_mismatch";
-      dynamic outlook=null,session=null,accounts=null,mail=null,property=null;
+      dynamic outlook=null,session=null,accounts=null,mail=null,property=null,response=null;
       try {
         try { outlook=Marshal.GetActiveObject("Outlook.Application"); } catch { var type=Type.GetTypeFromProgID("Outlook.Application");if(type==null)return "classic_not_available";outlook=Activator.CreateInstance(type); }
         session=outlook.GetNamespace("MAPI");accounts=session.Accounts;
@@ -164,10 +166,13 @@ namespace Dts.OutlookClassic {
         try { actual=(string)property.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x1035001F"); } catch { actual=(string)property.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x1035001E"); }
         if(!string.Equals(actual,internetId,StringComparison.Ordinal))return "identity_mismatch";
         if(DateTimeOffset.UtcNow>=expiry)return "error";
-        if(display)mail.Display(false);
+        if(display) {
+          if(action=="open")mail.Display(false);
+          else { response=action=="reply_all"?mail.ReplyAll():mail.Reply();response.Display(false); }
+        }
         return "opened";
       } catch { return outlook==null?"classic_not_available":"error"; }
-      finally { Release(property);Release(mail);Release(accounts);Release(session);Release(outlook); }
+      finally { Release(response);Release(property);Release(mail);Release(accounts);Release(session);Release(outlook); }
     }
     static void Release(object value) { if(value!=null && Marshal.IsComObject(value))Marshal.ReleaseComObject(value); }
     static void Install() {
@@ -189,6 +194,7 @@ namespace Dts.OutlookClassic {
     }
 #if DEBUG
     static void SelfTest() {
+      if(!AllowedAction("open")||!AllowedAction("reply")||!AllowedAction("reply_all")||AllowedAction("send"))throw new Exception("action");
       string id,token;string request="00000000-0000-4000-8000-000000000001",secret=RandomToken();
       ParseProtocol("dts-outlook://v1/open?request="+request+"&token="+secret,out id,out token);
       if(id!=request||token!=secret)throw new Exception("parser");

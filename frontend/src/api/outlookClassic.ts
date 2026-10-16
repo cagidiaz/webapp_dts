@@ -11,8 +11,9 @@ export async function approveClassicPair(pairingId: string, code: string): Promi
 }
 export async function revokeClassicDevice(id: string) { await apiClient.post(`/exchange-sync/classic/devices/${encodeURIComponent(id)}/revoke`); }
 export interface ClassicRequest { status: 'ready'; requestId: string; protocolUri: string; expiresInSeconds: number }
-export async function prepareClassicRequest(activityId: string, deviceId: string, candidateId?: string): Promise<ClassicRequest | EmailResolveResult | { status: 'device_required'; message: string }> {
-  const { data } = await apiClient.post('/exchange-sync/classic/requests', { activityId, deviceId, candidateId }); return data;
+export type ClassicAction = 'open' | 'reply' | 'reply_all';
+export async function prepareClassicRequest(activityId: string, deviceId: string, candidateId?: string, action: ClassicAction = 'open'): Promise<ClassicRequest | EmailResolveResult | { status: 'device_required'; message: string }> {
+  const { data } = await apiClient.post('/exchange-sync/classic/requests', { activityId, deviceId, candidateId, action }); return data;
 }
 export async function launchClassicAndWait(request: ClassicRequest): Promise<{ state: string; outcome?: string }> {
   // Exactly one protocol invocation; never infer installation or success from browser blur.
