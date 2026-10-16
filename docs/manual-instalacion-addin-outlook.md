@@ -206,7 +206,7 @@ No necesitas desinstalar el manejador antiguo para esta actualización: todavía
 
 ## 10. Nombres de adjuntos: actualización del registro
 
-Funcionalidad preparada para desplegar y validar. No requiere ejecutar SQL, cambiar el manifiesto en Microsoft 365, añadir permisos ni reinstalar el BAT/componente Classic. Desplegar backend antes que frontend; cerrar y abrir el panel del complemento para que cargue el código nuevo. Si Outlook conserva la página anterior, recargar el panel antes de registrar el correo de prueba.
+Captura y visualización de nombres verificadas por el usuario con un correo real el 16/10/2026. El procedimiento siguiente se conserva para nuevas instalaciones y comprobaciones adicionales. No requiere ejecutar SQL, cambiar el manifiesto en Microsoft 365, añadir permisos ni reinstalar el BAT/componente Classic. Desplegar backend antes que frontend; cerrar y abrir el panel del complemento para que cargue el código nuevo. Si Outlook conserva la página anterior, recargar el panel antes de registrar el correo de prueba.
 
 Registrar un correo nuevo con varios documentos y una firma con imágenes. Revisar los mismos nombres en Emails y Timeline, desplegar «+N más» y comprobar claro/oscuro. Repetir en Classic y Outlook Web y verificar que editar la tipología o la oferta mantiene los adjuntos. La apertura y las respuestas verificadas se mantienen independientes. Los correos históricos no se actualizan automáticamente y no se borra ningún registro. Los nombres son metadatos informativos; los archivos permanecen en Microsoft 365.
 
@@ -220,3 +220,9 @@ Registrar un correo nuevo con varios documentos y una firma con imágenes. Revis
 6. Preparar un borrador nuevo desde el CRM, añadir un archivo en Outlook, enviarlo y comprobar la lista tras la conciliación existente.
 
 Los correos antiguos permanecen sin cambios. No ejecutar una importación histórica para completar esta prueba. Si aparece «Información no disponible», abrir el correo en Outlook para consultar los archivos; no significa que no tenga adjuntos. [Detalle técnico y límites](guia-integracion-outlook-exchange.md#7-nombres-de-adjuntos-en-el-crm).
+
+### Verificación real comunicada el 16/10/2026
+
+El usuario indicó: «he probado sincronizar un correo con adjuntos y los muestra perfectamente, esa funcionalidad ya esta verificada». Queda registrada la captura y visualización correcta de los nombres para el correo probado. No se especificó si se utilizó Classic o Web, si era enviado o recibido, ni se confirmó individualmente la matriz completa (ambas pestañas, expansión, modos claro/oscuro, incrustados o conciliación de borradores).
+
+La corrección del borrado exclusivo del CRM y los contadores de tipología por oferta son cambios posteriores independientes: su verificación real sigue pendiente de confirmación. No se inicia ninguna recuperación histórica ni se modifica ningún registro por esta actualización documental.

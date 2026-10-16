@@ -473,7 +473,7 @@ export class CrmActivitiesService {
   }
 
   /**
-   * Elimina una actividad de la base de datos y la cancela en el calendario de Outlook.
+   * Elimina el registro del CRM. Los correos no se eliminan de Microsoft 365.
    */
   async delete(id: string) {
     try {
@@ -484,7 +484,7 @@ export class CrmActivitiesService {
 
       await this.prisma.crm_activities.delete({ where: { id } });
 
-      if (existing.exchange_item_id) {
+      if (existing.type !== 'EMAIL' && existing.exchange_item_id) {
         this.exchangeSyncService.deleteActivityFromOutlook(id, existing.exchange_item_id, existing.created_by).catch((err) =>
           console.error(`[CRM Service] Error al eliminar actividad de Outlook:`, err)
         );

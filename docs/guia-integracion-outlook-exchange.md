@@ -213,7 +213,7 @@ Si cambias de equipo o deseas revocar el acceso a tu cuenta:
 
 ## 7. Nombres de adjuntos en el CRM
 
-**Estado a 16/10/2026:** implementación comprobada automáticamente y en PostgreSQL aislado. Pendientes despliegue, inspección visual y aceptación con correos reales en Classic y Web. La apertura y las respuestas de la entrega anterior ya fueron confirmadas por el usuario en producción.
+**Estado a 16/10/2026:** implementación comprobada automáticamente y en PostgreSQL aislado. Captura y visualización de nombres verificadas por el usuario con un correo real; cliente Outlook y casos adicionales no detallados. La apertura y las respuestas de la entrega anterior ya fueron confirmadas por el usuario en producción.
 
 ### Flujo y almacenamiento
 
@@ -254,3 +254,9 @@ Desplegar backend compatible antes que frontend y volver a abrir el complemento.
 | No aparecen los cambios tras desplegar | Cerrar y abrir el panel, comprobar la publicación de backend y frontend y registrar un correo nuevo. |
 
 Pruebas y límites detallados en el [plan ejecutado](propuestas/2026-10-16-plan-nombres-adjuntos-correos-crm.md). [Aceptación paso a paso](manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro) y [manual de usuario](manual-usuario.md#nombres-de-adjuntos-en-las-tarjetas-de-correo).
+
+### Verificación real comunicada el 16/10/2026
+
+El usuario indicó: «he probado sincronizar un correo con adjuntos y los muestra perfectamente, esa funcionalidad ya esta verificada». Queda registrada la captura y visualización correcta de los nombres para el correo probado. No se especificó si se utilizó Classic o Web, si era enviado o recibido, ni se confirmó individualmente la matriz completa (ambas pestañas, expansión, modos claro/oscuro, incrustados o conciliación de borradores).
+
+La corrección del borrado exclusivo del CRM y los contadores de tipología por oferta son cambios posteriores independientes: su verificación real sigue pendiente de confirmación. No se inicia ninguna recuperación histórica ni se modifica ningún registro por esta actualización documental.

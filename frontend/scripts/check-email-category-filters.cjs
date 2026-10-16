@@ -1,0 +1,27 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const ts = require('typescript');
+const source = fs.readFileSync(path.join(__dirname, '../src/utils/emailCategoryFilters.ts'), 'utf8');
+const loaded = {};
+new Function('exports', ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(loaded);
+const mail = (id, quoteDocumentNo, categoryKey) => ({ id, quoteDocumentNo, parsedEmail: { categoryKey } });
+const emails = [mail('a', 'OF1', 'PETICION_OFERTA'), mail('b', 'OF1', 'NEGOCIACION'), mail('c', 'OF1', 'NEGOCIACION'),
+  mail('d', 'OF2', 'NEGOCIACION'), mail('e', undefined, 'OFERTA_PROVEEDOR')];
+const filter = (quote, category = 'ALL') => loaded.filterEmailCategories(emails, quote, category);
+assert.equal(filter('ALL').categoryCounts.ALL, 5);
+assert.equal(filter('OF1').categoryCounts.ALL, 3);
+assert.equal(filter('OF1').categoryCounts.NEGOCIACION, 2);
+assert.equal(filter('OF1').categoryCounts.OFERTA_PROVEEDOR, 0);
+assert.deepEqual(filter('OF1', 'NEGOCIACION').filteredEmailsList.map(x => x.id), ['b', 'c']);
+assert.deepEqual(filter('OF1', 'NEGOCIACION').categoryCounts, filter('OF1').categoryCounts);
+assert.equal(filter('OF2').categoryCounts.ALL, 1);
+assert.equal(filter('WITH_QUOTE').categoryCounts.ALL, 4);
+assert.equal(filter('WITHOUT_QUOTE').categoryCounts.OFERTA_PROVEEDOR, 1);
+assert.equal(filter('WITHOUT_QUOTE').categoryCounts.NEGOCIACION, 0);
+assert.deepEqual(filter('OF-MISSING').filteredEmailsList, []);
+assert.equal(filter('OF-MISSING').categoryCounts.ALL, 0);
+assert.equal(filter('ALL').categoryCounts.NEGOCIACION, 3);
+assert.equal(emails.length, 5);
+assert.equal(loaded.filterEmailCategories([mail('legacy', null, 'PETICION_OFERTA')], 'WITHOUT_QUOTE', 'ALL').categoryCounts.ALL, 1);
+console.log('PASS: category counts follow quote scope, category selection preserves counts, generic/no-quote/empty/reset scopes work.');

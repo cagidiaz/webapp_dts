@@ -508,12 +508,26 @@ El menú de cada correo en Emails y Timeline ofrece dos acciones distintas: **Re
 
 En Web se crea y abre un borrador dentro del hilo. Si el navegador bloquea la ventana, permite ventanas emergentes y repite. Si se informa de un borrador sin confirmar, revisa primero **Borradores** en Outlook: no se reintenta automáticamente. En Classic se requiere actualizar el componente a 1.1.0 y abrir un correo para que el CRM reconozca la versión.
 
-El usuario confirmó el 16/10/2026 el funcionamiento de ambas acciones en Classic y Web desde producción. Esta confirmación corresponde a apertura y respuestas; los nombres de adjuntos siguen pendientes de su propia prueba real. No exige volver a importar correos ni recuperar el histórico. [Instalación y comprobaciones](manual-instalacion-addin-outlook.md#9-actualización-para-responder-y-responder-a-todos).
+El usuario confirmó el 16/10/2026 el funcionamiento de ambas acciones en Classic y Web desde producción. Esta confirmación corresponde a apertura y respuestas; la captura y visualización de nombres de adjuntos también fue confirmada posteriormente con un correo real el 16/10/2026. No exige volver a importar correos ni recuperar el histórico. [Instalación y comprobaciones](manual-instalacion-addin-outlook.md#9-actualización-para-responder-y-responder-a-todos).
 
 ## Nombres de adjuntos en las tarjetas de correo
 
-Preparado para el próximo despliegue; pendiente de comprobación con correos reales. Al registrar un correo nuevo desde el complemento, el CRM conserva los nombres de los adjuntos y los muestra debajo del texto tanto en Emails como en Timeline. Verás los tres primeros; «+N más» despliega los restantes. Los nombres no son enlaces: para abrir un archivo, abre el correo en Outlook.
+Captura y visualización de nombres verificadas por el usuario con un correo real el 16/10/2026. Al registrar un correo nuevo desde el complemento, el CRM conserva los nombres de los adjuntos y los muestra debajo del texto tanto en Emails como en Timeline. Verás los tres primeros; «+N más» despliega los restantes. Los nombres no son enlaces: para abrir un archivo, abre el correo en Outlook.
 
 Las imágenes que Outlook marque como incrustadas, por ejemplo las de la firma, no aparecen en la lista. Un archivo de imagen adjunto normal sí puede aparecer. «Información no disponible» indica que no se pudieron obtener los nombres; «Lista parcial» indica que la información está incompleta o ha alcanzado el límite. Un borrador nuevo preparado desde el CRM confirma sus adjuntos después de enviarse y conciliarse.
 
 Los correos antiguos no cambian. No se borran ni se vuelven a importar automáticamente. Si cambias de correo con el panel abierto y aparece el aviso correspondiente, vuelve a abrir el complemento sobre el mensaje que quieras registrar. No necesitas reinstalar el componente Classic ni volver a vincular tu equipo.
+
+## Correos: eliminar del CRM y contadores por oferta (16/10/2026)
+
+El icono de papelera de Emails y de los correos del Timeline muestra «Eliminar del CRM». Tras confirmar, elimina el registro y sus detalles guardados en la app; el mensaje original y sus archivos permanecen en Outlook. La acción no solicita borrar mensajes ni cancelar eventos en Microsoft 365. El borrado de otras actividades vinculadas al calendario conserva su comportamiento anterior.
+
+En Emails, al elegir una oferta, los números de las tipologías y «Todos» cuentan únicamente los correos de esa oferta. También se recalculan con «Solo con oferta vinculada» y «Sin oferta vinculada». Al seleccionar una tipología se reduce la lista, pero se mantienen visibles los totales de las demás tipologías dentro del filtro de oferta actual. Al volver a «Todas las ofertas», se recuperan los totales del contacto.
+
+Correcciones comprobadas automáticamente; pendiente de comprobación real después de desplegar.
+
+### Verificación real comunicada el 16/10/2026
+
+El usuario indicó: «he probado sincronizar un correo con adjuntos y los muestra perfectamente, esa funcionalidad ya esta verificada». Queda registrada la captura y visualización correcta de los nombres para el correo probado. No se especificó si se utilizó Classic o Web, si era enviado o recibido, ni se confirmó individualmente la matriz completa (ambas pestañas, expansión, modos claro/oscuro, incrustados o conciliación de borradores).
+
+La corrección del borrado exclusivo del CRM y los contadores de tipología por oferta son cambios posteriores independientes: su verificación real sigue pendiente de confirmación. No se inicia ninguna recuperación histórica ni se modifica ningún registro por esta actualización documental.

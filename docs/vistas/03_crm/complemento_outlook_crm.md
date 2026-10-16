@@ -114,7 +114,7 @@ Referencias oficiales: [inicialización de Office](https://learn.microsoft.com/e
 
 ## 10. Captura de nombres de adjuntos (16/10/2026)
 
-**Estado:** implementado y comprobado automáticamente; pendiente de prueba real tras desplegar. Ambos paneles cargan `/email-attachment-metadata.js`. El helper obtiene metadatos de `item.attachments` en lectura o `getAttachmentsAsync` en redacción cuando está disponible (espera máxima de 3 segundos). Un fallo no impide registrar el correo: se guarda estado unavailable. Si cambia el mensaje seleccionado se cancela el registro y se pide volver a abrir el panel, para no mezclar cuerpo, asociación y adjuntos de dos correos.
+**Estado:** implementado y comprobado automáticamente; captura y visualización de nombres confirmadas por el usuario con un correo real el 16/10/2026. Ambos paneles cargan `/email-attachment-metadata.js`. El helper obtiene metadatos de `item.attachments` en lectura o `getAttachmentsAsync` en redacción cuando está disponible (espera máxima de 3 segundos). Un fallo no impide registrar el correo: se guarda estado unavailable. Si cambia el mensaje seleccionado se cancela el registro y se pide volver a abrir el panel, para no mezclar cuerpo, asociación y adjuntos de dos correos.
 
 El panel React envía `emailAttachments` opcional a `POST /outlook-addin/log-email`. El panel estático usa también esa ruta autorizada y con control de duplicados cuando el correo tiene ID y usuario de buzón; los elementos sin guardar mantienen `POST /crm-activities`, compatible con redacción. Esta ruta sin ID conserva su comportamiento anterior y no ofrece deduplicación por identidad ni conciliación del envío. Los correos guardados repetidos no sustituyen la fotografía ya registrada. No se enriquece el histórico automáticamente.
 
@@ -128,4 +128,10 @@ No hay nuevo planificador, recuperación de históricos, SQL, tablas ni cambios 
 
 ### Referencias operativas de esta entrega
 
-La comprobación visual y la aceptación con correos reales siguen pendientes; las pruebas automáticas no las sustituyen. [Guía técnica de adjuntos y diagnóstico](../../guia-integracion-outlook-exchange.md#7-nombres-de-adjuntos-en-el-crm) y [procedimiento de despliegue y aceptación](../../manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro). La corrección de arranque Web y las respuestas de la entrega anterior ya fueron confirmadas por el usuario en producción.
+El usuario confirmó que, al sincronizar un correo real con adjuntos, los nombres se muestran correctamente. Esta verificación no detalla el cliente Outlook ni todos los casos de la matriz. [Guía técnica de adjuntos y diagnóstico](../../guia-integracion-outlook-exchange.md#7-nombres-de-adjuntos-en-el-crm) y [procedimiento de despliegue y aceptación](../../manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro). La corrección de arranque Web y las respuestas de la entrega anterior ya fueron confirmadas por el usuario en producción.
+
+### Verificación real comunicada el 16/10/2026
+
+El usuario indicó: «he probado sincronizar un correo con adjuntos y los muestra perfectamente, esa funcionalidad ya esta verificada». Queda registrada la captura y visualización correcta de los nombres para el correo probado. No se especificó si se utilizó Classic o Web, si era enviado o recibido, ni se confirmó individualmente la matriz completa (ambas pestañas, expansión, modos claro/oscuro, incrustados o conciliación de borradores).
+
+La corrección del borrado exclusivo del CRM y los contadores de tipología por oferta son cambios posteriores independientes: su verificación real sigue pendiente de confirmación. No se inicia ninguna recuperación histórica ni se modifica ningún registro por esta actualización documental.

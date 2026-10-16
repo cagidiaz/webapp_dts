@@ -111,7 +111,7 @@ La [vista de correos](03_crm/crm_contactos_mails.md) incorpora un menú común p
 
 ### Nombres de adjuntos en tarjetas de correo (16/10/2026)
 
-[Plan de implementación](../propuestas/2026-10-16-plan-nombres-adjuntos-correos-crm.md), 16/10/2026. Implementado: captura de metadatos en ambos complementos, componente compartido en Emails/Timeline y conciliación de borradores nuevos. Sin SQL, descargas ni recuperación del histórico. Pruebas automáticas y PostgreSQL aislado superadas; despliegue y aceptación real de adjuntos pendientes. Guías y manuales actualizados.
+[Plan de implementación](../propuestas/2026-10-16-plan-nombres-adjuntos-correos-crm.md), 16/10/2026. Implementado: captura de metadatos en ambos complementos, componente compartido en Emails/Timeline y conciliación de borradores nuevos. Sin SQL, descargas ni recuperación del histórico. Pruebas automáticas y PostgreSQL aislado superadas; el usuario confirmó la captura y visualización de nombres con un correo real el 16/10/2026. Guías y manuales actualizados.
 
 ### Documentación de adjuntos consolidada (16/10/2026)
 
@@ -119,4 +119,14 @@ La [vista de correos](03_crm/crm_contactos_mails.md) incorpora un menú común p
 - [Instalación y comprobaciones de aceptación](../manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro).
 - [Arquitectura, datos y soporte](../guia-integracion-outlook-exchange.md#7-nombres-de-adjuntos-en-el-crm).
 
-La apertura y las respuestas ya están confirmadas por el usuario en producción. La captura de nombres es una entrega posterior: implementada y comprobada automáticamente, pendiente de despliegue, inspección visual y validación con correos reales.
+La apertura y las respuestas ya están confirmadas por el usuario en producción. La captura de nombres es una entrega posterior: implementada, comprobada automáticamente y verificada por el usuario al sincronizar un correo real con adjuntos.
+
+### Correos: borrado y contadores de filtros (16/10/2026)
+
+La [vista de Contactos y Emails](03_crm/crm_contactos_mails.md) documenta el borrado exclusivo del registro CRM para correos, el texto explícito de confirmación y los contadores de tipología calculados dentro de la oferta seleccionada. [Uso](../manual-usuario.md#correos-eliminar-del-crm-y-contadores-por-oferta-16102026). Correcciones comprobadas automáticamente, pendientes de aceptación real tras desplegar.
+
+### Verificación real comunicada el 16/10/2026
+
+El usuario indicó: «he probado sincronizar un correo con adjuntos y los muestra perfectamente, esa funcionalidad ya esta verificada». Queda registrada la captura y visualización correcta de los nombres para el correo probado. No se especificó si se utilizó Classic o Web, si era enviado o recibido, ni se confirmó individualmente la matriz completa (ambas pestañas, expansión, modos claro/oscuro, incrustados o conciliación de borradores).
+
+La corrección del borrado exclusivo del CRM y los contadores de tipología por oferta son cambios posteriores independientes: su verificación real sigue pendiente de confirmación. No se inicia ninguna recuperación histórica ni se modifica ningún registro por esta actualización documental.

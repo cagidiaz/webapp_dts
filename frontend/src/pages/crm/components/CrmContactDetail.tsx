@@ -1,3 +1,4 @@
+import { filterEmailCategories } from '../../../utils/emailCategoryFilters';
 import { EmailAttachments } from './EmailAttachments';
 import { EmailActions, type EmailAction, type EmailActionData } from './EmailActions';
 import { prepareVerifiedReplyInWeb, type ReplyMode } from '../../../api/emailReply';
@@ -1284,23 +1285,6 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       })
       .sort((a, b) => b.sortTimestamp - a.sortTimestamp);
 
-    // Contadores por tipología
-    const counts: Record<string, number> = {
-      ALL: allEmails.length,
-      PETICION_OFERTA: 0,
-      OFERTA_PROVEEDOR: 0,
-      REVISION_OFERTA: 0,
-      NEGOCIACION: 0,
-      CIERRE_ACEPTACION: 0,
-    };
-
-    allEmails.forEach((mail) => {
-      const key = mail.parsedEmail.categoryKey;
-      if (counts[key] !== undefined) {
-        counts[key]++;
-      }
-    });
-
     // Ofertas detectadas con al menos un correo
     const quoteMap = new Map<string, number>();
     allEmails.forEach((mail: any) => {
@@ -1319,26 +1303,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       };
     });
 
-    // Filtrar según el selector activo de oferta y tipología
-    const filtered = allEmails.filter((mail: any) => {
-      // 1. Filtro por Oferta
-      if (selectedEmailQuoteFilter === 'WITH_QUOTE' && !mail.quoteDocumentNo) return false;
-      if (selectedEmailQuoteFilter === 'WITHOUT_QUOTE' && mail.quoteDocumentNo) return false;
-      if (
-        selectedEmailQuoteFilter !== 'ALL' &&
-        selectedEmailQuoteFilter !== 'WITH_QUOTE' &&
-        selectedEmailQuoteFilter !== 'WITHOUT_QUOTE'
-      ) {
-        if (mail.quoteDocumentNo !== selectedEmailQuoteFilter) return false;
-      }
-
-      // 2. Filtro por Tipología
-      if (selectedEmailCategoryFilter !== 'ALL') {
-        if (mail.parsedEmail.categoryKey !== selectedEmailCategoryFilter) return false;
-      }
-
-      return true;
-    });
+    const { categoryCounts: counts, filteredEmailsList: filtered } = filterEmailCategories(
+      allEmails, selectedEmailQuoteFilter, selectedEmailCategoryFilter,
+    );
 
     return {
       allEmailsList: allEmails,
@@ -2262,12 +2229,15 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
+                                if (confirm(act.type === 'email'
+                                  ? '¿Eliminar este correo del CRM? Se borrará su registro y detalles guardados en la app. El mensaje original permanecerá en Outlook.'
+                                  : '¿Estás seguro de que deseas eliminar esta actividad?')) {
                                   deleteActivityMutation.mutate(act.id);
                                 }
                               }}
                               className="p-1 rounded-md text-gray-400 hover:text-rose-500 hover:bg-rose-500/10 dark:hover:bg-rose-500/20 transition-colors cursor-pointer"
-                              title="Eliminar actividad"
+                              title={act.type === 'email' ? 'Eliminar del CRM' : 'Eliminar actividad'}
+                              aria-label={act.type === 'email' ? 'Eliminar del CRM' : 'Eliminar actividad'}
                             >
                               <Trash2 size={13} />
                             </button>
@@ -3131,12 +3101,13 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if (confirm('¿Estás seguro de que deseas eliminar este correo?')) {
+                                  if (confirm('¿Eliminar este correo del CRM? Se borrará su registro y detalles guardados en la app. El mensaje original permanecerá en Outlook.')) {
                                     deleteActivityMutation.mutate(mail.id);
                                   }
                                 }}
                                 className="p-1 rounded-md text-gray-400 hover:text-rose-500 hover:bg-rose-500/10 dark:hover:bg-rose-500/20 transition-colors cursor-pointer"
-                                title="Eliminar correo"
+                                title="Eliminar del CRM"
+                                aria-label="Eliminar del CRM"
                               >
                                 <Trash2 size={13} />
                               </button>

@@ -1,7 +1,7 @@
 # Plan para mostrar nombres de adjuntos en las tarjetas de correo
 
 **Fecha:** 16 de octubre de 2026  
-**Estado:** Implementación preparada y validada automáticamente. Pendiente de despliegue y aceptación real de adjuntos en Classic/Web. Sin cambios de esquema ni escrituras en la base compartida.  
+**Estado:** Implementación validada automáticamente y captura/visualización de nombres confirmada por el usuario con un correo real el 16/10/2026. No se ha detallado el cliente Outlook utilizado ni se ha confirmado toda la matriz de casos. Sin cambios de esquema ni modificaciones de tablas sincronizadas desde Business Central.
 **Ámbito:** Correos nuevos registrados en el CRM y sus tarjetas de Emails y Timeline.
 
 Mostrar los nombres de los archivos adjuntos permitirá identificar ofertas, fichas técnicas y documentación comercial sin abrir cada correo. La primera entrega guardará únicamente metadatos; los archivos seguirán en Microsoft 365.
@@ -143,8 +143,14 @@ Las ediciones de categoría/oferta y la conciliación actualizan las claves JSON
 
 Validación: suite backend, pruebas del helper Office y del componente (captura, errores, espera agotada, cambio de mensaje, límites, escape HTML, expansión y estilo oscuro), pruebas PostgreSQL aisladas de las escrituras JSON y compilaciones frontend/backend. Los comandos reproducibles son `npm test -- --runInBand` en backend, `node scripts/check-email-attachments.cjs` y `node scripts/check-email-actions.cjs` en frontend, y `backend/test/pilot-db/run-portable.ps1` desde la raíz. El script de PostgreSQL crea un entorno local desechable, exige puerto/base de pruebas y lo detiene al terminar; no usa Supabase compartido.
 
-**Fase 5 pendiente del responsable:** desplegar backend y frontend, volver a abrir el complemento y realizar la matriz de aceptación con correos nuevos reales. Sin SQL, reinstalación de Classic, cambios de manifiesto ni permisos adicionales. No se realiza push ni despliegue automático.
+**Fase 5: verificación real registrada.** El usuario sincronizó un correo con adjuntos y confirmó que los nombres se muestran correctamente el 16/10/2026. No se ha especificado el cliente Outlook utilizado ni se ha confirmado la matriz completa. El procedimiento de despliegue y los restantes casos de aceptación se conservan como referencia. Sin SQL, reinstalación de Classic, cambios de manifiesto ni permisos adicionales. No se realiza push ni despliegue automático.
 
 ### Estado de la documentación
 
-Manuales, guías de vistas, índice y guía general de integración actualizados. La revisión visual de adjuntos sigue pendiente porque el visor de la sesión bloqueó los archivos locales. La aceptación previa de apertura y respuestas en producción no se aplica a esta nueva entrega. Procedimiento de comprobación: [manual de instalación, sección 10](../manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro).
+Manuales, guías de vistas, índice y guía general de integración actualizados. La inspección automatizada del visor local no pudo completarse por una restricción de la sesión; posteriormente el usuario verificó la captura y visualización con un correo real. Esa prueba confirma el flujo realizado, sin acreditar todos los clientes o casos adicionales. Procedimiento de comprobación: [manual de instalación, sección 10](../manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro).
+
+### Verificación real comunicada el 16/10/2026
+
+El usuario indicó: «he probado sincronizar un correo con adjuntos y los muestra perfectamente, esa funcionalidad ya esta verificada». Queda registrada la captura y visualización correcta de los nombres para el correo probado. No se especificó si se utilizó Classic o Web, si era enviado o recibido, ni se confirmó individualmente la matriz completa (ambas pestañas, expansión, modos claro/oscuro, incrustados o conciliación de borradores).
+
+La corrección del borrado exclusivo del CRM y los contadores de tipología por oferta son cambios posteriores independientes: su verificación real sigue pendiente de confirmación. No se inicia ninguna recuperación histórica ni se modifica ningún registro por esta actualización documental.

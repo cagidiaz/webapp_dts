@@ -197,7 +197,7 @@ Véase [contrato, SQL, pruebas y despliegue](../../propuestas/2026-10-16-respues
 
 ## Nombres de adjuntos en Emails y Timeline (16/10/2026)
 
-Implementado para correos nuevos; pendiente de despliegue y aceptación real en Classic/Web. `EmailAttachments.tsx` se usa en las dos tarjetas, debajo del cuerpo y antes de las conclusiones. Muestra tres nombres y «+N más», con expansión local, nombres completos accesibles, ajuste estrecho y colores claros/oscuros. Los nombres son informativos: no descargan ni abren archivos.
+Implementado para correos nuevos; el usuario confirmó la captura y visualización de nombres con un correo real el 16/10/2026. `EmailAttachments.tsx` se usa en las dos tarjetas, debajo del cuerpo y antes de las conclusiones. Muestra tres nombres y «+N más», con expansión local, nombres completos accesibles, ajuste estrecho y colores claros/oscuros. Los nombres son informativos: no descargan ni abren archivos.
 
 La fuente es `rawActivity.attendees.emailAttachments`, sin consultas Graph al visualizar tarjetas. Contrato v1: `status` (complete, partial, pending, unavailable), `source` (office, graph, crm), `capturedAt`, `files` (name, size opcional) y `totalKnown` (null si se desconoce). Se guardan hasta 100 nombres de 512 caracteres, con estado parcial si falta información. No se guardan bytes, enlaces privados ni identificadores de archivos. Se conservan nombres repetidos; solo se excluyen adjuntos marcados `isInline === true`.
 
@@ -207,4 +207,18 @@ El histórico sin bloque no muestra sección. Una lista completa vacía tampoco 
 
 ### Documentación y estado de aceptación
 
-La apertura y las respuestas en Classic/Web fueron confirmadas por el usuario en producción el 16/10/2026. Esa aceptación no incluye los nombres de adjuntos, que aún requieren despliegue y prueba real, incluida inspección visual. Consultar [uso y estados](../../manual-usuario.md#nombres-de-adjuntos-en-las-tarjetas-de-correo), [pruebas de aceptación](../../manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro) y [contrato técnico y soporte](../../guia-integracion-outlook-exchange.md#7-nombres-de-adjuntos-en-el-crm).
+La apertura y las respuestas en Classic/Web fueron confirmadas por el usuario en producción el 16/10/2026. El usuario confirmó después la captura y visualización de los nombres de adjuntos con un correo real. No se ha detallado si la prueba fue en Classic o Web, ni se han confirmado todos los casos adicionales. Consultar [uso y estados](../../manual-usuario.md#nombres-de-adjuntos-en-las-tarjetas-de-correo), [pruebas de aceptación](../../manual-instalacion-addin-outlook.md#10-nombres-de-adjuntos-actualización-del-registro) y [contrato técnico y soporte](../../guia-integracion-outlook-exchange.md#7-nombres-de-adjuntos-en-el-crm).
+
+## Correcciones: borrado local y contadores por oferta (16/10/2026)
+
+`CrmActivitiesService.delete` borra el registro de `crm_activities`. Para `type = EMAIL` no llama a `deleteActivityFromOutlook`; no solicita borrar mensajes ni cancelar eventos. Las demás actividades mantienen la cancelación de calendario existente cuando tienen referencia Exchange. En Emails y Timeline, el botón indica «Eliminar del CRM» y confirma expresamente que el original permanece en Outlook.
+
+`frontend/src/utils/emailCategoryFilters.ts` filtra primero por oferta y calcula los contadores de las cinco tipologías y ALL sobre ese conjunto. Después aplica la tipología seleccionada a la lista visible. `availableEmailQuotes` sigue calculándose sobre todos los correos del contacto, de modo que el selector conserva las demás ofertas. Se mantienen el orden, los filtros y el diseño actuales.
+
+Verificación: `crm-activities.delete.spec.ts` comprueba EMAIL con/sin referencia, cancelación de otras actividades y registro inexistente. `node scripts/check-email-category-filters.cjs` cubre ofertas distintas, con/sin oferta, resultados vacíos, tipología seleccionada y restablecimiento. Correcciones preparadas para desplegar y comprobar por el usuario; sin SQL ni modificaciones de tablas BC.
+
+### Verificación real comunicada el 16/10/2026
+
+El usuario indicó: «he probado sincronizar un correo con adjuntos y los muestra perfectamente, esa funcionalidad ya esta verificada». Queda registrada la captura y visualización correcta de los nombres para el correo probado. No se especificó si se utilizó Classic o Web, si era enviado o recibido, ni se confirmó individualmente la matriz completa (ambas pestañas, expansión, modos claro/oscuro, incrustados o conciliación de borradores).
+
+La corrección del borrado exclusivo del CRM y los contadores de tipología por oferta son cambios posteriores independientes: su verificación real sigue pendiente de confirmación. No se inicia ninguna recuperación histórica ni se modifica ningún registro por esta actualización documental.
