@@ -2,7 +2,7 @@
 
 > **Entrega del 19/10/2026, pendiente de despliegue:** Outlook verificado para todos los perfiles activos con permiso CRM por rol. Sin listas por correo ni flags de piloto. Ajustes utiliza el ZIP Classic 1.1.0 y la vinculación de equipos. Véase «Uso general de Outlook verificado» al final; las secciones anteriores fechadas describen entregas históricas.
 
-Versión 1.1.0 para uso interno sin firma Authenticode, conforme a la decisión del usuario. Requiere Windows y Outlook Classic con el buzón configurado. Se compila con .NET Framework de Windows, sin descargar dependencias.
+Versión 1.1.1 para uso interno sin firma Authenticode, conforme a la decisión del usuario. Requiere Windows y Outlook Classic con el buzón configurado. Se compila con .NET Framework de Windows, sin descargar dependencias.
 
 Consultar el [SQL y procedimiento de activación](../docs/propuestas/2026-10-15-fase-4-apertura-exacta-classic.md) antes de instalar.
 
@@ -30,7 +30,7 @@ La compilación normal genera `frontend/public/downloads/outlook-classic/Outlook
 4. Si se necesita volver a vincular, ejecutar `Vincular_Outlook_dTS.bat`.
 5. Para retirar, ejecutar `Desinstalar_Outlook_dTS.bat` y revocar el dispositivo desde el CRM.
 
-La instalación copia el componente a `%LOCALAPPDATA%\dTS\OutlookClassic\1.1.0` y registra `dts-outlook` en HKCU. La clave privada se cifra con DPAPI CurrentUser y el directorio permite acceso al usuario y SYSTEM. Las firmas criptográficas de solicitudes y resultados se mantienen: son independientes de la firma del ejecutable.
+La instalación copia el componente a `%LOCALAPPDATA%\dTS\OutlookClassic\1.1.1` y registra `dts-outlook` en HKCU. La clave privada se cifra con DPAPI CurrentUser y el directorio permite acceso al usuario y SYSTEM. Las firmas criptográficas de solicitudes y resultados se mantienen: son independientes de la firma del ejecutable.
 
 Windows puede mostrar un aviso de editor desconocido o aplicar sus políticas de bloqueo. El instalador no modifica antivirus, políticas ni certificados. Cerrar el componente antes de reinstalar la misma versión. El desinstalador elimina el protocolo propio y la clave local; los ejecutables bloqueados pueden requerir limpieza posterior.
 
@@ -55,3 +55,11 @@ Ajustes descarga **`/downloads/outlook-classic/OutlookClassic.zip`**, versión *
 El acceso se administra mediante los permisos de rol ya existentes para CRM/Contactos y los perfiles activos. No hay excepciones por correo electrónico. Las antiguas variables `CRM_EMAIL_IDENTITY_ENABLED`, `CRM_EMAIL_IDENTITY_EMAILS`, `CRM_OUTLOOK_CLASSIC_ENABLED` y `CRM_EMAIL_REPLY_ENABLED` dejan de controlar el flujo; pueden retirarse de Dokploy al desplegar. No alteran ya la disponibilidad aunque conserven valores antiguos. Se mantienen OAuth por usuario, pertenencia al buzón y cartera, firma de solicitudes, versión compatible del componente y vinculación/revocación de cada equipo. Los permisos se revisan en backend en cada operación.
 
 **Despliegue:** publicar backend y frontend de esta entrega, recargar la app y comprobar perfil activo/rol, apertura Web/Classic, respuestas, descarga del ZIP y búsqueda Web. No requiere SQL adicional si ya están recuperados el esquema de identidad, las tablas Classic y `action`. No se modifica ninguna tabla sincronizada desde BC ni se inicia recuperación histórica. Tras desplegar, comprobar también que denegar el permiso de CRM por rol impide las operaciones aunque el equipo permanezca vinculado.
+
+
+### Prueba de arranque de Classic sin borrador (19/10/2026)
+
+En Ajustes Generales, «Probar Apertura en Outlook» muestra la ventana principal de Classic sin crear correos ni actividades. Actualizar el ZIP e instalar con `Instalar_Outlook_dTS.bat` (1.1.1); conserva la vinculación. La acción local `dts-outlook://v1/launch` no accede a mensajes ni acredita una apertura verificada. Las versiones 1.1.0 siguen siendo compatibles con abrir y responder. La prueba Web abre directamente la bandeja de entrada sin crear borradores. Sin SQL. Pendiente de prueba del usuario con Classic abierto y cerrado.
+
+
+**Prueba Web actualizada (19/10/2026):** En Ajustes, «Probar Apertura en Outlook» abre la bandeja de entrada de Outlook Web en otra pestaña, sin generar borradores ni actividades. Puede solicitar inicio de sesión Microsoft. No necesita actualizar el componente Windows ni ejecutar SQL. Pendiente de confirmación del usuario.

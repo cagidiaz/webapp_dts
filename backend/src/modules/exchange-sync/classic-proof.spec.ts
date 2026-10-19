@@ -15,6 +15,11 @@ describe('Classic device proof contract', () => {
     expect(() => verifyClassicSignature(parsed.pem, text.replace('|claim|', '|result|'), signature)).toThrow();
     expect(parsed.fingerprint).toHaveLength(64);
   });
+  it.each(['1.1.0', '1.1.1'])('accepts signed operations from compatible helper %s', version => {
+    const text = classicProofText('claim', 'request', { ...proof(), version });
+    const signature = sign('RSA-SHA256', Buffer.from(text), key.privateKey).toString('base64url');
+    expect(() => verifyClassicSignature(classicPublicKey(publicJwk.n!, publicJwk.e!).pem, text, signature)).not.toThrow();
+  });
   it.each(['timestamp', 'token', 'nonce', 'version'])('rejects an invalid %s', field => {
     expect(() => classicProofText('claim', 'request', { ...proof(), [field]: 'invalid' })).toThrow();
   });

@@ -1,5 +1,6 @@
 import { filterEmailCategories } from '../../../utils/emailCategoryFilters';
 import { EmailAttachments } from './EmailAttachments';
+import { FloatingOutlookNotice } from './FloatingOutlookNotice';
 import { EmailActions, type EmailAction, type EmailActionData } from './EmailActions';
 import { prepareVerifiedReplyInWeb, type ReplyMode } from '../../../api/emailReply';
 import { classicDeviceKey, getClassicDevices, prepareClassicRequest, launchClassicAndWait, type ClassicDevice, type ClassicRequest, type ClassicAction } from '../../../api/outlookClassic';
@@ -244,6 +245,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [activeEmailMenuId, setActiveEmailMenuId] = useState<string | null>(null);
   const [emailOpenNotice, setEmailOpenNotice] = useState<(EmailResolveResult & { activityId?: string; canOpenWeb?: boolean; canSetupClassic?: boolean; classic?: boolean; devices?: ClassicDevice[]; replyMode?: ReplyMode }) | null>(null);
   const [classicReady, setClassicReady] = useState<(ClassicRequest & { activityId: string; action?: ClassicAction }) | null>(null);
+  const closeOutlookNotice = useCallback(() => setEmailOpenNotice(null), []);
   const [copiedEmailMenuId, setCopiedEmailMenuId] = useState<string | null>(null);
 
   // Cerrar menú desplegable al hacer clic fuera
@@ -1512,8 +1514,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {emailOpenNotice && (
-        <div role="status" className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs text-gray-700 dark:text-gray-200 space-y-2">
-          <div className="flex justify-between gap-3"><span>{emailOpenNotice.message}{emailOpenNotice.retryAfterSeconds ? ` Espera ${emailOpenNotice.retryAfterSeconds} segundos.` : ''}</span><button type="button" aria-label="Cerrar aviso de Outlook" onClick={() => setEmailOpenNotice(null)}><X size={14} /></button></div>
+        <FloatingOutlookNotice resetKey={emailOpenNotice} onClose={closeOutlookNotice}>
+          <div className="flex justify-between gap-3"><span>{emailOpenNotice.message}{emailOpenNotice.retryAfterSeconds ? ` Espera ${emailOpenNotice.retryAfterSeconds} segundos.` : ''}</span><button type="button" aria-label="Cerrar aviso de Outlook" className="shrink-0 rounded p-1 hover:bg-blue-100 dark:hover:bg-white/10" onClick={closeOutlookNotice}><X size={14} /></button></div>
           {emailOpenNotice.activityId && emailOpenNotice.canOpenWeb && <button type="button" className="font-semibold text-dts-primary dark:text-sky-400" onClick={() => { void resolveWebEmail(emailOpenNotice.activityId!); }}>Abrir en Outlook Web</button>}
           {emailOpenNotice.candidates?.map((candidate, index) => <button type="button" key={candidate.id} className="block rounded-lg border border-gray-200 dark:border-white/10 px-3 py-2 hover:bg-white dark:hover:bg-white/5 text-left" onClick={() => { if (emailOpenNotice.classic) void resolveClassicEmail(emailOpenNotice.activityId!, candidate.id, undefined, emailOpenNotice.replyMode); else if (emailOpenNotice.replyMode) void resolveWebReply(emailOpenNotice.activityId!, emailOpenNotice.replyMode, candidate.id); else void resolveWebEmail(emailOpenNotice.activityId!, candidate.id); }}>
             Copia {index + 1} · {candidate.folder}{candidate.sentDate && Number.isFinite(Date.parse(candidate.sentDate)) ? ` · ${new Date(candidate.sentDate).toLocaleString('es-ES')}` : ''}
@@ -1522,7 +1524,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           {emailOpenNotice.devices?.map(device => <button key={device.id} type="button" className="block rounded border border-gray-200 dark:border-white/10 px-3 py-2" onClick={() => { void resolveClassicEmail(emailOpenNotice.activityId!, undefined, device.id, emailOpenNotice.replyMode); }}>{device.label}</button>)}
           {emailOpenNotice.canSetupClassic && <a className="block text-dts-primary dark:text-sky-400" href="/outlook-classic" target="_blank" rel="noopener noreferrer">Configurar este equipo para Outlook Classic</a>}
           {emailOpenNotice.truncated && <p>Se muestran las primeras cinco copias. Si no identificas la correcta, revisa la vinculación antes de abrirla.</p>}
-        </div>
+        </FloatingOutlookNotice>
       )}
 
       

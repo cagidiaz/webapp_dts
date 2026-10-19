@@ -32,6 +32,22 @@ assert.ok(settings.includes('href="/downloads/outlook-classic/OutlookClassic.zip
 assert.ok(settings.includes('to="/outlook-classic"'));
 assert.ok(!settings.includes('downloadOutlookClassicInstaller'));
 const packageInfo = JSON.parse(fs.readFileSync(path.join(root, 'public/downloads/outlook-classic/package.json'), 'utf8'));
-assert.equal(packageInfo.version, '1.1.0');
+assert.equal(packageInfo.version, '1.1.1');
 assert.equal(packageInfo.file, 'dTS.OutlookClassic.exe');
 console.log('PASS: conversation search remains in Web; legacy API and protocol absent; Settings links to current installer and pairing.');
+
+// Exercise the Settings click handler: Classic must never invoke the composition API.
+const handler = settings.match(/const handleTestOutlookOpening = \(\) => \{([\s\S]*?)\n  \};/)[1];
+let launchClicks = 0, removed = 0, composed = 0;
+const webLaunches = [];
+global.window = { open: (...args) => webLaunches.push(args) };
+global.document = { body: { appendChild() {} }, createElement: () => ({ style: {}, href: '', click() { assert.equal(this.href, 'dts-outlook://v1/launch'); launchClicks++; }, remove() { removed++; } }) };
+function testClick(preferredOutlook) {
+  new Function('preferredOutlook', 'document', 'openInOutlook', 'profile', handler)(preferredOutlook, document, () => { composed++; }, { email: 'test@test.invalid' });
+}
+testClick('desktop');
+assert.equal(launchClicks, 1); assert.equal(removed, 1); assert.equal(composed, 0);
+testClick('web');
+assert.equal(launchClicks, 1); assert.equal(composed, 0);
+assert.deepEqual(webLaunches, [['https://outlook.office.com/mail/inbox', '_blank', 'noopener,noreferrer']]);
+console.log('PASS: Settings Classic launch does not compose; Web opens inbox directly without composing.');

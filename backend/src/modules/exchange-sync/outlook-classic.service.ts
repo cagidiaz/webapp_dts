@@ -8,7 +8,7 @@ import { EmailOpenService } from './email-open.service';
 import { OutlookAddinAccessService } from './outlook-addin-access.service';
 import { MicrosoftGraphService } from './microsoft-graph.service';
 import { OutlookMessageIdentityClient, exchangeIdToMapiHex } from './outlook-message-identity';
-import { CLASSIC_VERSION, classicProofText, classicPublicKey, equalClassicSecret, hashClassicSecret, verifyClassicSignature, type ClassicProof } from './classic-proof';
+import { CLASSIC_REPLY_VERSIONS, CLASSIC_VERSION, classicProofText, classicPublicKey, equalClassicSecret, hashClassicSecret, verifyClassicSignature, type ClassicProof } from './classic-proof';
 
 @Injectable()
 export class OutlookClassicService {
@@ -81,7 +81,7 @@ export class OutlookClassicService {
     if (!['open','reply','reply_all'].includes(action)) throw new BadRequestException('Acción no permitida.');
     const [device] = await this.rows(Prisma.sql`SELECT id,helper_version FROM public.crm_outlook_devices WHERE id=${deviceId}::uuid AND user_id=${userId}::uuid AND paired_at IS NOT NULL AND revoked_at IS NULL`);
     if (!device) return { status: 'device_required', message: 'Vincula este equipo con tu cuenta del CRM para abrir correos en Classic.' };
-    if (action !== 'open' && device.helper_version !== CLASSIC_VERSION) return { status: 'device_required', message: 'Actualiza el componente de Classic a 1.1.0 y abre primero un correo para registrar su versión. Después podrás responder desde el CRM.' };
+    if (action !== 'open' && !CLASSIC_REPLY_VERSIONS.includes(device.helper_version || '')) return { status: 'device_required', message: 'Actualiza el componente de Classic a 1.1.0 y abre primero un correo para registrar su versión. Después podrás responder desde el CRM.' };
     const resolution = await this.emails.resolve(userId, activityId, candidateId);
     if (resolution.status !== 'resolved') return resolution;
     const activity = await this.prisma.crm_activities.findUnique({ where: { id: activityId } });
@@ -108,7 +108,7 @@ export class OutlookClassicService {
   async claim(id: string, proof: ClassicProof) {
     const row = await this.signedRequest(id, proof, 'claim');
     if (!['open','reply','reply_all'].includes(row.action || 'open')) throw new ConflictException('Acción no válida.');
-    if (row.action && row.action !== 'open' && (proof.version !== CLASSIC_VERSION)) throw new ConflictException('Actualiza el componente de Outlook Classic para responder.');
+    if (row.action && row.action !== 'open' && (!CLASSIC_REPLY_VERSIONS.includes(proof.version))) throw new ConflictException('Actualiza el componente de Outlook Classic para responder.');
     const claimed = await this.rows(Prisma.sql`UPDATE public.crm_outlook_requests SET state='claiming',claimed_at=now(),helper_version=${proof.version}
       WHERE id=${id}::uuid AND state='pending' AND expires_at>now() AND EXISTS (SELECT 1 FROM public.crm_outlook_devices d WHERE d.id=device_id AND d.revoked_at IS NULL) RETURNING id`);
     if (!claimed.length) throw new ConflictException('La solicitud ya fue utilizada o ha caducado.');

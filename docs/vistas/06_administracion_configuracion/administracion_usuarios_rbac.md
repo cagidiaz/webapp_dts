@@ -6,6 +6,8 @@ La vista de **Administración de Usuarios y Permisos RBAC** es el centro de segu
 2. **Asignación de Roles:** Vincular a cada usuario a un rol corporativo específico.
 3. **Matriz Granular de Permisos por Rol (RBAC):** Configurar dinámicamente qué módulos y submódulos puede ver cada rol (`ADMIN`, `DIRECCION`, `VENTAS`, `OPERACIONES`, `PRODUCCION`, `TESTER`), eliminando la necesidad de hardcodear permisos en el código.
 
+4. **Vinculaciones Outlook:** supervisar conexiones registradas y equipos de todos los usuarios, consultar sus estados y revocar vínculos Classic.
+
 ---
 
 ## 2. Ficheros y Rutas del Código
@@ -93,3 +95,37 @@ Cada vez que se añade una nueva vista a la WebApp, debe seguirse el siguiente p
 - Las rutas CRM verifican la matriz también al acceder por URL directa. Guardar desde el panel invalida consultas de permisos y refresca el menú de la sesión actual. Las otras sesiones revalidan al recuperar foco o recargar; las rutas CRM abiertas revalidan cada 30 segundos. No es una revocación instantánea de datos ya descargados, pero las operaciones nuevas del piloto sí se comprueban en servidor.
 - TESTER usa el código comercial propio al consultar ofertas desde la vista, desde la primera petición. Si no tiene código asignado, la consulta no se lanza. Confirmar el código de Antoni antes de activar el piloto. La validación de cartera en el endpoint general de ofertas se revisará al implementar la convivencia BC/app.
 - Los interruptores de despliegue del piloto y Outlook permanecen como salvaguarda técnica, apagados por defecto. No sustituyen los permisos que Admin decide en su panel. No se ha alterado la carpeta local, ni aplicado SQL, ni concedido permisos reales.
+
+## Pestaña 3: Vinculaciones Outlook (19/10/2026)
+
+Entrega preparada para desplegar y comprobar en la app. Dentro de `/users`, junto a Usuarios y Permisos de Rol, se añade «Vinculaciones Outlook». Reutiliza la ruta y el acceso administrativo existentes; no crea un módulo RBAC ni requiere SQL adicional.
+
+Solo un perfil **ADMIN activo** puede consultar o revocar mediante los nuevos endpoints. La autorización se comprueba desde la base en cada petición, no desde el rol declarado por el navegador ni de una consulta anterior.
+
+| Dato mostrado | Origen y significado |
+| --- | --- |
+| Usuario, email, rol y activo/inactivo | Metadatos de `profiles` y `roles`. |
+| Microsoft 365 | Conexión registrada, sin conexión, requiere consentimiento o reconexión, según el registro de `user_exchange_accounts`. No hace una comprobación Graph del buzón en ese momento. |
+| Buzón y última sincronización | Metadatos guardados de la cuenta; no se entregan access_token ni refresh_token. |
+| Equipos vinculados | `crm_outlook_devices`: nombre, vínculo vigente/revocado, versión, fecha de vinculación, último contacto registrado y fecha de revocación. |
+
+Vigente no significa equipo encendido o Outlook abierto. Un usuario inactivo o sin permiso CRM no puede utilizar su vínculo aunque todavía figure vigente. Los equipos revocados se conservan en el listado. Las solicitudes de vinculación pendientes y sin usuario asignado no se presentan como equipos de un usuario.
+
+La pestaña permite buscar por usuario, correo, rol o equipo, filtrar estado Microsoft 365 y equipos vigentes/revocados o usuarios sin equipos. Actualizar recarga la información. La interfaz mantiene modos claro/oscuro y tabla desplazable en pantallas estrechas. La caché se separa por administrador y no reutiliza datos del actor anterior al cambiar de cuenta.
+
+**Revocar** pide confirmación con usuario y equipo, conserva el primer `revoked_at` y no borra el dispositivo ni los correos. No desconecta la cuenta Microsoft 365. La apertura Classic comprueba esta revocación en las solicitudes firmadas, incluidas las pendientes; no cierra ventanas que ya estén abiertas. El usuario deberá vincular de nuevo el equipo para recuperar su uso. El servidor registra actor y dispositivo en el log, sin secretos.
+
+### Archivos y API
+
+- Frontend: `frontend/src/pages/users/OutlookLinksTab.tsx`, `frontend/src/api/usersOutlook.ts`, integración en `pages/users/index.tsx`.
+- Backend: `UsersOutlookController` y `UsersOutlookService`, registrados en `UsersModule` con `PrismaModule`.
+- `GET /users/outlook`: metadatos globales, solo ADMIN activo.
+- `POST /users/outlook/devices/:id/revoke`: UUID validado y revocación administrativa parametrizada, solo ADMIN activo.
+
+Se utiliza la conexión SQL del backend para las tablas Classic; no acceso del navegador ni ampliación de permisos de Supabase. Solo se modifica `crm_outlook_devices.revoked_at` al confirmar la acción. No se leen cuerpos de correo ni se devuelven tokens, claves públicas, hashes o secretos de vinculación. No cambia ninguna tabla sincronizada desde Business Central.
+
+### Validación y despliegue
+
+Pruebas HTTP con JWT: anonimato, roles no administrativos, administrador inactivo, revocación del rol entre peticiones, metadatos permitidos, usuarios sin conexión, ID inválido, equipo ausente y error de esquema. Pruebas PostgreSQL aisladas: estados de cuenta, no exposición de secretos, revocación idempotente y bloqueo de una solicitud firmada pendiente. Componente frontend: filtros, estados, confirmación/cancelación, error, caché por actor y estilo oscuro.
+
+Publicar backend y frontend, abrir Gestión de usuarios → Vinculaciones Outlook, comprobar con una cuenta ADMIN y revocar solo un equipo elegido para la prueba. Confirmar que el propietario ya no puede abrir con ese vínculo. No se ha revocado ningún equipo real durante el desarrollo. La aceptación real de esta pestaña queda pendiente.

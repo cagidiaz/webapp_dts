@@ -21,9 +21,9 @@ foreach($taskAction in @(@('Instalar_Outlook_dTS.bat','--install'),@('Vincular_O
  $taskBatches+=$taskBatch
 }
 $taskReadme=Join-Path $taskOutput 'LEER-ANTES.txt'
-[IO.File]::WriteAllText($taskReadme,"dTS Outlook Classic 1.1.0 - Uso interno, sin firma Authenticode.`r`nExtraer TODO el ZIP y ejecutar Instalar_Outlook_dTS.bat con el usuario habitual de Windows, sin administrador.`r`nEl BAT necesita dTS.OutlookClassic.exe en la misma carpeta.`r`nRequiere Outlook Classic, SQL de fase 4 aplicado y backend desplegado con Classic habilitado para la cuenta.`r`nConfirmar en el CRM el codigo mostrado por el componente. Para volver a vincular: Vincular_Outlook_dTS.bat.`r`nPara retirar: Desinstalar_Outlook_dTS.bat y revocar el equipo en el CRM.`r`nWindows puede mostrar un aviso de editor desconocido. No se modifican politicas de seguridad.`r`n")
+[IO.File]::WriteAllText($taskReadme,"dTS Outlook Classic 1.1.1 - Uso interno, sin firma Authenticode.`r`nExtraer TODO el ZIP y ejecutar Instalar_Outlook_dTS.bat con el usuario habitual de Windows, sin administrador.`r`nEl BAT necesita dTS.OutlookClassic.exe en la misma carpeta.`r`nRequiere Outlook Classic, SQL de fase 4 aplicado y backend desplegado con Classic habilitado para la cuenta.`r`nConfirmar en el CRM el codigo mostrado por el componente. Para volver a vincular: Vincular_Outlook_dTS.bat.`r`nPara retirar: Desinstalar_Outlook_dTS.bat y revocar el equipo en el CRM.`r`nWindows puede mostrar un aviso de editor desconocido. No se modifican politicas de seguridad.`r`n")
 $taskHash=(Get-FileHash -LiteralPath $taskExe -Algorithm SHA256).Hash.ToLowerInvariant()
 $taskManifest=Join-Path $taskOutput 'package.json'
-[ordered]@{version='1.1.0';sha256=$taskHash;file='dTS.OutlookClassic.exe';signed=$false;distribution='internal'} | ConvertTo-Json | Set-Content -LiteralPath $taskManifest -Encoding utf8
+[ordered]@{version='1.1.1';sha256=$taskHash;file='dTS.OutlookClassic.exe';signed=$false;distribution='internal'} | ConvertTo-Json | Set-Content -LiteralPath $taskManifest -Encoding utf8
 Compress-Archive -LiteralPath (@($taskExe,$taskReadme,$taskManifest)+$taskBatches) -DestinationPath (Join-Path $taskOutput 'OutlookClassic.zip') -Force
 Write-Output 'Paquete interno sin firma generado. No se ha instalado, desplegado ni registrado el protocolo.'

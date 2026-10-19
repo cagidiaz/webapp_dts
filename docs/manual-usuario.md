@@ -481,6 +481,8 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * **Excepción Permanente de Negocio:** Para **SEIKO FLOWCONTROL GMBH (`CL100427`)**, las líneas facturadas bajo la cuenta contable `7050004` (*Comisiones Seiko*) son autorizadas de forma permanente y se unifican bajo el producto `SEICOMIS`. De esta manera, el comercial dispone en una única fila de la facturación histórica completa (ej. 2025) y del ejercicio en curso (ej. 2026) sin dispersión.
 
 ### 6.3 Gestión de Usuarios y Roles (`/users`)
+
+* **Vinculaciones Outlook:** pestaña para consultar conexiones y equipos de todos los usuarios y revocar vínculos. [Procedimiento](#administración-de-vinculaciones-outlook-19102026).
 *(Acceso exclusivo para rol `ADMIN`)*
 
 * Control de acceso basado en roles: `ADMIN`, `DIRECCION`, `VENTAS`, `OPERACIONES`, `PRODUCCION`, `TESTER`.
@@ -545,3 +547,29 @@ Ajustes descarga **`/downloads/outlook-classic/OutlookClassic.zip`**, versión *
 El acceso se administra mediante los permisos de rol ya existentes para CRM/Contactos y los perfiles activos. No hay excepciones por correo electrónico. Las antiguas variables `CRM_EMAIL_IDENTITY_ENABLED`, `CRM_EMAIL_IDENTITY_EMAILS`, `CRM_OUTLOOK_CLASSIC_ENABLED` y `CRM_EMAIL_REPLY_ENABLED` dejan de controlar el flujo; pueden retirarse de Dokploy al desplegar. No alteran ya la disponibilidad aunque conserven valores antiguos. Se mantienen OAuth por usuario, pertenencia al buzón y cartera, firma de solicitudes, versión compatible del componente y vinculación/revocación de cada equipo. Los permisos se revisan en backend en cada operación.
 
 **Despliegue:** publicar backend y frontend de esta entrega, recargar la app y comprobar perfil activo/rol, apertura Web/Classic, respuestas, descarga del ZIP y búsqueda Web. No requiere SQL adicional si ya están recuperados el esquema de identidad, las tablas Classic y `action`. No se modifica ninguna tabla sincronizada desde BC ni se inicia recuperación histórica. Tras desplegar, comprobar también que denegar el permiso de CRM por rol impide las operaciones aunque el equipo permanezca vinculado.
+
+## Administración de vinculaciones Outlook (19/10/2026)
+
+En **Gestión de usuarios → Vinculaciones Outlook**, un administrador puede consultar todos los usuarios y sus equipos. Esta pestaña es distinta de Ajustes → Vincular y gestionar mis equipos, donde cada usuario solo gestiona los propios.
+
+Se muestran conexión Microsoft 365 registrada, buzón y última sincronización; por equipo, nombre, versión, estado vigente/revocado, fecha de vinculación y último uso registrado. «Vigente» no significa que el equipo esté conectado ahora. «Conexión registrada» tampoco es una verificación en tiempo real del buzón. Los estados «Requiere reconexión» o «Requiere consentimiento» indican que el usuario debe revisar su conexión en Ajustes.
+
+Usar el buscador y los filtros para localizar usuarios, equipos o vinculaciones revocadas. «Actualizar» vuelve a consultar el estado. «Revocar» exige confirmar usuario y equipo: bloquea nuevas aperturas Classic con ese vínculo, sin borrar correos ni desconectar Microsoft 365. El equipo seguirá visible como revocado; para volver a utilizarlo habrá que vincularlo de nuevo. No afecta a Outlook Web ni cierra correos que ya estaban abiertos.
+
+La pestaña requiere una cuenta ADMIN activa. No hay SQL ni permisos individuales nuevos. Entrega preparada y comprobada automáticamente; pendiente de desplegar y verificar por el administrador.
+
+## Avisos de apertura de correos sin desplazar la vista (19/10/2026)
+
+Los mensajes de Outlook aparecen en un panel flotante en la parte inferior derecha. No agrandan la ficha ni desplazan las tarjetas de Emails o Timeline. Se cierran solos a los **10 segundos** y también pueden cerrarse con la **X**.
+
+Si cambia el estado, el nuevo mensaje dispone de otros 10 segundos. Los botones para abrir, escoger equipo o copia y configurar Classic se mantienen dentro del panel. Si el aviso desaparece antes de utilizarlos, vuelve a solicitar la apertura desde la tarjeta. Cerrar el mensaje no cancela una apertura que ya está en curso; su resultado puede mostrar un aviso nuevo.
+
+Entrega preparada y comprobada automáticamente; pendiente de comprobar la presentación en la app después de publicar el frontend.
+
+
+### Prueba de arranque de Classic sin borrador (19/10/2026)
+
+En Ajustes Generales, «Probar Apertura en Outlook» muestra la ventana principal de Classic sin crear correos ni actividades. Actualizar el ZIP e instalar con `Instalar_Outlook_dTS.bat` (1.1.1); conserva la vinculación. La acción local `dts-outlook://v1/launch` no accede a mensajes ni acredita una apertura verificada. Las versiones 1.1.0 siguen siendo compatibles con abrir y responder. La prueba Web abre directamente la bandeja de entrada sin crear borradores. Sin SQL. Pendiente de prueba del usuario con Classic abierto y cerrado.
+
+
+**Prueba Web actualizada (19/10/2026):** En Ajustes, «Probar Apertura en Outlook» abre la bandeja de entrada de Outlook Web en otra pestaña, sin generar borradores ni actividades. Puede solicitar inicio de sesión Microsoft. No necesita actualizar el componente Windows ni ejecutar SQL. Pendiente de confirmación del usuario.

@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { generateKeyPairSync, randomBytes, randomUUID, sign } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { OutlookClassicService } from './outlook-classic.service';
+import { UsersOutlookService } from '../users/users-outlook.service';
 import { classicProofText, type ClassicProof } from './classic-proof';
 
 const sqlSuite = process.env.DTS_CLASSIC_SQL_TEST === '1' ? describe : describe.skip;
@@ -30,6 +31,7 @@ sqlSuite('Classic lifecycle with real isolated PostgreSQL', () => {
     if (!/^postgresql:\/\/classic_review@127\.0\.0\.1:55439\/classic_review$/.test(url)) throw new Error('Only the isolated Classic database may be used');
     pool = new Pool({ connectionString: url }); pool.on('error', () => {});
     await pool.query('CREATE TABLE public.profiles(id uuid PRIMARY KEY); CREATE TABLE public.crm_activities(id uuid PRIMARY KEY);');
+    await pool.query('CREATE TABLE public.user_exchange_accounts(user_id uuid PRIMARY KEY,email text,access_token text,mail_sync_enabled boolean,calendar_sync_enabled boolean,last_synced_at timestamptz)');
     const sql = readFileSync(resolve(__dirname, '../../../prisma/proposals/2026-10-15-outlook-classic-dispositivos-solicitudes.sql'), 'utf8');
     await pool.query(sql); await pool.query(sql);
     const replySql=readFileSync(resolve(__dirname, '../../../prisma/proposals/2026-10-16-outlook-respuestas-verificadas.sql'),'utf8');
@@ -83,6 +85,33 @@ sqlSuite('Classic lifecycle with real isolated PostgreSQL', () => {
     const results = await Promise.allSettled([service.claim(request.requestId, proof(request.requestId, token)), service.claim(request.requestId, proof(request.requestId, token))]);
     expect(results.filter(value => value.status === 'fulfilled')).toHaveLength(1);
     expect((await service.status(owner, request.requestId)).state).toBe('claimed');
+  });
+  it('blocks outstanding signed requests immediately after an administrator revokes the device', async () => {
+    const request = await createRequest();
+    const adminDb = { ...db, profiles: { findUnique: async () => ({ is_active: true, roles: { name: 'ADMIN' } }) } };
+    const administration = new UsersOutlookService(adminDb as any);
+    const first = await administration.revoke(other, pairing.pairingId);
+    const second = await administration.revoke(other, pairing.pairingId);
+    expect(first.revokedAt).toEqual(second.revokedAt);
+    await expect(service.claim(request.requestId, proof(request.requestId, ticketToken(request)))).rejects.toThrow();
+    const rows = await pool.query('SELECT revoked_at FROM crm_outlook_devices WHERE id=$1', [pairing.pairingId]);
+    expect(rows.rows[0].revoked_at).not.toBeNull();
+  });
+  it('lists stored Microsoft 365 connection states without returning tokens or device secrets', async () => {
+    await pool.query('TRUNCATE user_exchange_accounts');
+    await pool.query('INSERT INTO user_exchange_accounts(user_id,email,access_token) VALUES($1,$2,$3),($4,$5,$6)', [owner, 'owner@test.invalid', 'CONSENT_REQUIRED', other, 'other@test.invalid', 'AUTH_REQUIRED']);
+    const adminDb = { ...db, profiles: {
+      findUnique: async () => ({ is_active: true, roles: { name: 'ADMIN' } }),
+      findMany: async () => [owner, other, 'none'].map(id => ({ id, email: id + '@test.invalid', first_name: null, last_name: null, is_active: true, roles: { name: 'VENTAS' } })),
+    } };
+    const administration = new UsersOutlookService(adminDb as any);
+    const result = await administration.list(owner);
+    expect(result.map(user => user.microsoft365.status)).toEqual(['CONSENT_REQUIRED', 'RECONNECT_REQUIRED', 'NOT_CONNECTED']);
+    expect(result[0].devices[0].id).toBe(pairing.pairingId);
+    expect(JSON.stringify(result)).not.toMatch(/access_token|public_key|pairing_secret|pairing_code/);
+    await pool.query('UPDATE user_exchange_accounts SET access_token=$1 WHERE user_id=$2', ['private-test-token', owner]);
+    expect((await administration.list(owner))[0].microsoft365.status).toBe('REGISTERED');
+    expect(JSON.stringify(await administration.list(owner))).not.toContain('private-test-token');
   });
   it('requires a signed result with the claim nonce and only accepts it once', async () => {
     const request = await createRequest(), token = ticketToken(request);

@@ -134,3 +134,19 @@ La corrección del borrado exclusivo del CRM y los contadores de tipología por 
 ### Outlook verificado para todos los usuarios autorizados (19/10/2026)
 
 Se retira la apertura heredada y su configurador; Ajustes descarga Classic 1.1.0 y enlaza a la vinculación. La búsqueda de conversaciones se conserva en Web. Disponibilidad por perfil activo y permisos CRM del rol, sin listas de correos ni flags de piloto. Véanse [Ajustes](06_administracion_configuracion/ajustes_generales.md), [Contactos y Emails](03_crm/crm_contactos_mails.md), [complemento](03_crm/complemento_outlook_crm.md), [manual](../manual-usuario.md) e [instalación](../manual-instalacion-addin-outlook.md). Entrega preparada; pendiente de despliegue y aceptación real del nuevo comportamiento general.
+
+### Gestión de usuarios: pestaña Vinculaciones Outlook (19/10/2026)
+
+Nueva pestaña dentro de `/users` para ADMIN activo: conexión Microsoft 365 registrada, equipos de todos los usuarios, vínculos vigentes/revocados, versión y fechas, búsqueda y filtros, y revocación con confirmación. No informa de presencia online ni expone tokens o claves. [Guía técnica](06_administracion_configuracion/administracion_usuarios_rbac.md#pestaña-3-vinculaciones-outlook-19102026), [manual](../manual-usuario.md#administración-de-vinculaciones-outlook-19102026). Sin SQL adicional ni nuevas rutas de vista; pendiente de despliegue y aceptación real.
+
+### Avisos flotantes de Outlook con cierre automático (19/10/2026)
+
+La [vista de correos](03_crm/crm_contactos_mails.md) muestra los estados de apertura/respuesta en un panel inferior flotante, fuera del flujo de la ficha. Conserva las acciones y los modos claro/oscuro, se cierra a los 10 segundos o con la X y no desplaza el contenido. [Manual](../manual-usuario.md#avisos-de-apertura-de-correos-sin-desplazar-la-vista-19102026). Pruebas automáticas preparadas; sin SQL ni cambios de backend. Pendiente de comprobación visual en la app.
+
+
+### Prueba de arranque de Classic sin borrador (19/10/2026)
+
+En Ajustes Generales, «Probar Apertura en Outlook» muestra la ventana principal de Classic sin crear correos ni actividades. Actualizar el ZIP e instalar con `Instalar_Outlook_dTS.bat` (1.1.1); conserva la vinculación. La acción local `dts-outlook://v1/launch` no accede a mensajes ni acredita una apertura verificada. Las versiones 1.1.0 siguen siendo compatibles con abrir y responder. La prueba Web abre directamente la bandeja de entrada sin crear borradores. Sin SQL. Pendiente de prueba del usuario con Classic abierto y cerrado.
+
+
+**Prueba Web actualizada (19/10/2026):** En Ajustes, «Probar Apertura en Outlook» abre la bandeja de entrada de Outlook Web en otra pestaña, sin generar borradores ni actividades. Puede solicitar inicio de sesión Microsoft. No necesita actualizar el componente Windows ni ejecutar SQL. Pendiente de confirmación del usuario.

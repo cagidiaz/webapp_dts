@@ -38,7 +38,7 @@ El usuario puede escoger entre dos modalidades de trabajo mediante selectores vi
 
 ### 3.2. Botón de Verificación y Prueba de Conexión
 * Permite verificar la configuración en tiempo real haciendo clic en **"Probar apertura de correo en Outlook"**.
-* Abre un correo borrador de prueba con el cliente seleccionado para validar que el sistema operativo o el navegador responden adecuadamente.
+* Classic solicita mostrar la ventana principal sin crear borradores mediante el componente 1.1.1. Es una prueba de arranque, no confirma vinculación ni identidad de un correo. Web abre directamente la bandeja de entrada, sin crear borradores.
 
 ### 3.3. Vinculación OAuth con Microsoft 365 (Microsoft Graph)
 * **Flujo de Conexión:**
@@ -65,7 +65,7 @@ La página `/outlook-classic` conserva sesión CRM mediante `OutlookAddinSession
 
 Desde la entrega del 19/10/2026, Classic y las respuestas verificadas están disponibles para todos los perfiles activos con acceso al CRM según su rol. No hay lista por correo ni variables de activación de piloto. La conexión del buzón, la vinculación del equipo, la identidad exacta del mensaje y la pertenencia a la cartera siguen verificándose en backend.
 
-Las dos tablas de Classic ya están creadas y comprobadas en Supabase. El paquete está generado en la carpeta local; su despliegue y la prueba completa instalada siguen pendientes de confirmación. El botón de prueba de borrador en Ajustes verifica el flujo de composición y no acredita apertura exacta ni vinculación del nuevo componente.
+Las dos tablas de Classic ya están creadas y comprobadas en Supabase. El paquete está generado en la carpeta local; su despliegue y la prueba completa instalada siguen pendientes de confirmación. El botón de prueba en Ajustes solicita el arranque de Classic sin borrador y no acredita apertura exacta ni vinculación del componente.
 
 La distribución interna carece de certificado de editor. Windows puede mostrar avisos o aplicar sus políticas. No se cambian antivirus, certificados ni políticas de seguridad. Las firmas de solicitudes y el cifrado DPAPI siguen activos.
 
@@ -90,3 +90,15 @@ Ajustes descarga **`/downloads/outlook-classic/OutlookClassic.zip`**, versión *
 El acceso se administra mediante los permisos de rol ya existentes para CRM/Contactos y los perfiles activos. No hay excepciones por correo electrónico. Las antiguas variables `CRM_EMAIL_IDENTITY_ENABLED`, `CRM_EMAIL_IDENTITY_EMAILS`, `CRM_OUTLOOK_CLASSIC_ENABLED` y `CRM_EMAIL_REPLY_ENABLED` dejan de controlar el flujo; pueden retirarse de Dokploy al desplegar. No alteran ya la disponibilidad aunque conserven valores antiguos. Se mantienen OAuth por usuario, pertenencia al buzón y cartera, firma de solicitudes, versión compatible del componente y vinculación/revocación de cada equipo. Los permisos se revisan en backend en cada operación.
 
 **Despliegue:** publicar backend y frontend de esta entrega, recargar la app y comprobar perfil activo/rol, apertura Web/Classic, respuestas, descarga del ZIP y búsqueda Web. No requiere SQL adicional si ya están recuperados el esquema de identidad, las tablas Classic y `action`. No se modifica ninguna tabla sincronizada desde BC ni se inicia recuperación histórica. Tras desplegar, comprobar también que denegar el permiso de CRM por rol impide las operaciones aunque el equipo permanezca vinculado.
+
+## Equipos propios y supervisión administrativa (19/10/2026)
+
+El botón de Ajustes «Vincular y gestionar mis equipos» mantiene el alcance personal. La supervisión de todos los usuarios se realiza en la nueva pestaña **Gestión de usuarios → Vinculaciones Outlook**, exclusiva de ADMIN activo. Allí se pueden consultar conexiones registradas, equipos, fechas y versiones, y revocar un vínculo ajeno con confirmación. No se muestran claves o tokens ni se promete estado online. [Guía de administración](administracion_usuarios_rbac.md#pestaña-3-vinculaciones-outlook-19102026). No requiere SQL adicional; pendiente de despliegue y aceptación real de esta pestaña.
+
+
+### Prueba de arranque de Classic sin borrador (19/10/2026)
+
+En Ajustes Generales, «Probar Apertura en Outlook» muestra la ventana principal de Classic sin crear correos ni actividades. Actualizar el ZIP e instalar con `Instalar_Outlook_dTS.bat` (1.1.1); conserva la vinculación. La acción local `dts-outlook://v1/launch` no accede a mensajes ni acredita una apertura verificada. Las versiones 1.1.0 siguen siendo compatibles con abrir y responder. La prueba Web abre directamente la bandeja de entrada sin crear borradores. Sin SQL. Pendiente de prueba del usuario con Classic abierto y cerrado.
+
+
+**Prueba Web actualizada (19/10/2026):** En Ajustes, «Probar Apertura en Outlook» abre la bandeja de entrada de Outlook Web en otra pestaña, sin generar borradores ni actividades. Puede solicitar inicio de sesión Microsoft. No necesita actualizar el componente Windows ni ejecutar SQL. Pendiente de confirmación del usuario.

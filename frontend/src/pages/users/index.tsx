@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { OutlookLinksTab } from './OutlookLinksTab';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
   UserPlus, 
@@ -44,7 +45,7 @@ export const UsersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   // Tab State
-  const [activeTab, setActiveTab] = useState<'users' | 'permissions'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'permissions' | 'outlook'>('users');
   
   // Permissions State
   const [selectedPermissionRoleId, setSelectedPermissionRoleId] = useState<string>('');
@@ -317,7 +318,7 @@ export const UsersPage: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-gray-100 dark:border-white/5 gap-2">
+        <div className="flex overflow-x-auto border-b border-gray-100 dark:border-white/5 gap-2">
           <button
             onClick={() => setActiveTab('users')}
             className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${
@@ -338,9 +339,13 @@ export const UsersPage: React.FC = () => {
           >
             Permisos de Rol
           </button>
+          <button type="button" onClick={() => setActiveTab('outlook')}
+            className={`whitespace-nowrap px-6 py-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${activeTab === 'outlook' ? 'border-dts-secondary text-dts-secondary' : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-white'}`}>
+            Vinculaciones Outlook
+          </button>
         </div>
         
-        {activeTab === 'permissions' ? (
+        {activeTab === 'outlook' ? <OutlookLinksTab /> : activeTab === 'permissions' ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Roles List */}
             <div className="lg:col-span-1">

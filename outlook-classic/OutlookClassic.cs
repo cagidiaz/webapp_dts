@@ -18,12 +18,12 @@ using System.Reflection;
 [assembly: AssemblyTitle("dTS Outlook Classic")]
 [assembly: AssemblyCompany("dTS Instruments")]
 [assembly: AssemblyProduct("dTS CRM Outlook Classic")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.1.1.0")]
+[assembly: AssemblyFileVersion("1.1.1.0")]
 
 namespace Dts.OutlookClassic {
   internal static class Program {
-    const string Version = "1.1.0";
+    const string Version = "1.1.1";
     const string Origin = "https://app.dtsinstruments.com";
     static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = 131072 };
     static readonly string Root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "dTS", "OutlookClassic");
@@ -49,6 +49,7 @@ namespace Dts.OutlookClassic {
         if (args.Length == 1 && args[0] == "--pair") { Pair(); return 0; }
         if (args.Length == 1 && args[0] == "--uninstall") { Uninstall(); return 0; }
         if (args.Length != 1) throw new SafeError("Solicitud de apertura no válida.");
+        if (IsLaunchProtocol(args[0])) { LaunchOutlook(); return 0; }
         string id, token; ParseProtocol(args[0], out id, out token);
         OpenRequest(id, token); return 0;
       } catch (SafeError error) { MessageBox.Show(error.Message,"dTS Outlook Classic",MessageBoxButtons.OK,MessageBoxIcon.Information); return 1; }
@@ -68,6 +69,18 @@ namespace Dts.OutlookClassic {
         string text=response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         return Json.Deserialize<Dictionary<string,object>>(text);
       }
+    }
+    // Launch-only operation: no arguments, mailbox access, message creation or network request.
+    static bool IsLaunchProtocol(string raw) { return string.Equals(raw,"dts-outlook://v1/launch",StringComparison.Ordinal); }
+    static void LaunchOutlook() {
+      dynamic outlook=null,session=null,explorers=null,explorer=null,folder=null;
+      try {
+        try { outlook=Marshal.GetActiveObject("Outlook.Application"); }
+        catch { var type=Type.GetTypeFromProgID("Outlook.Application");if(type==null)throw new SafeError("Outlook Classic no está instalado.");outlook=Activator.CreateInstance(type); }
+        explorers=outlook.Explorers;
+        if(explorers.Count>0) { explorer=explorers.Item(1);explorer.Activate(); }
+        else { session=outlook.GetNamespace("MAPI");folder=session.GetDefaultFolder(6);explorer=folder.GetExplorer();explorer.Display(); }
+      } finally { Release(explorer);Release(folder);Release(explorers);Release(session);Release(outlook); }
     }
     static void ParseProtocol(string raw,out string id,out string token) {
       Uri uri;
@@ -194,6 +207,7 @@ namespace Dts.OutlookClassic {
     }
 #if DEBUG
     static void SelfTest() {
+      if(!IsLaunchProtocol("dts-outlook://v1/launch") || IsLaunchProtocol("dts-outlook://v1/launch?subject=x") || IsLaunchProtocol("dts-outlook://v1/launch#x"))throw new Exception("launch parser");
       if(!AllowedAction("open")||!AllowedAction("reply")||!AllowedAction("reply_all")||AllowedAction("send"))throw new Exception("action");
       string id,token;string request="00000000-0000-4000-8000-000000000001",secret=RandomToken();
       ParseProtocol("dts-outlook://v1/open?request="+request+"&token="+secret,out id,out token);

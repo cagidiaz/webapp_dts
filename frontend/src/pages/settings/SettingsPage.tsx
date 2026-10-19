@@ -10,8 +10,7 @@ import {
   disconnectExchange, 
   syncExchangeNow,
   getPreferredOutlookClient,
-  setPreferredOutlookClient,
-  openInOutlook
+  setPreferredOutlookClient
 } from '../../api/exchangeSync';
 import { 
   Settings, 
@@ -64,7 +63,7 @@ export const SettingsPage: React.FC = () => {
     void fetch('/downloads/outlook-classic/package.json').then(async response => {
       if (!response.ok) return;
       const value = await response.json();
-      if (active) setClassicPackageAvailable(value.version === '1.1.0' && value.file === 'dTS.OutlookClassic.exe');
+      if (active) setClassicPackageAvailable(value.version === '1.1.1' && value.file === 'dTS.OutlookClassic.exe');
     }).catch(() => {});
     return () => { active = false; };
   }, []);
@@ -127,12 +126,15 @@ export const SettingsPage: React.FC = () => {
   };
 
   const handleTestOutlookOpening = () => {
-    openInOutlook({
-      to: profile?.email || 'contacto@ejemplo.com',
-      subject: 'Prueba de Conexión Outlook — dTS CRM',
-      body: 'Este es un correo de prueba para verificar la configuración de tu cliente de Outlook en dTS Instruments.',
-      target: preferredOutlook,
-    });
+    if (preferredOutlook === 'desktop') {
+      const link = document.createElement('a');
+      link.href = 'dts-outlook://v1/launch';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      try { link.click(); } finally { link.remove(); }
+      return;
+    }
+    window.open('https://outlook.office.com/mail/inbox', '_blank', 'noopener,noreferrer');
   };
 
   const isConnected = exchangeStatus?.isConnected;
@@ -267,6 +269,9 @@ export const SettingsPage: React.FC = () => {
             </div>
           </section>
 
+          {(
+            <p className="text-xs text-gray-500 dark:text-gray-400">La prueba abre Classic o la bandeja de entrada de Outlook Web sin crear borradores. Classic requiere el componente 1.1.1. No comprueba la vinculación ni la apertura de un correo concreto.</p>
+          )}
           {/* TARJETA 2: Conexión con Microsoft 365 (Graph API) */}
           <section className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
