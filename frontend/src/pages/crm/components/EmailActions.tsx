@@ -47,7 +47,7 @@ export function EmailActions({ data, isOpen, copied, preferred, onToggle, onActi
       <button type="button" className={itemClass} onClick={() => action('web')}><Globe size={13} className="text-dts-secondary" />Abrir en Outlook Web (M365)</button>
       <button type="button" className={itemClass} onClick={() => action('reply')}><Reply size={13} className="text-amber-500" />Responder</button>
       <button type="button" className={itemClass} onClick={() => action('reply_all')}><ReplyAll size={13} className="text-amber-500" />Responder a todos</button>
-      <button type="button" className={itemClass} onClick={() => action('search')}><Search size={13} className="text-purple-500" />Buscar conversación completa</button>
+      <button type="button" className={itemClass} onClick={() => action('search')}><Search size={13} className="text-purple-500" />Buscar conversación en Outlook Web</button>
       <div className="my-1 border-t border-gray-100 dark:border-white/5" />
       <button type="button" className={`${itemClass} justify-between text-gray-600 dark:text-gray-300`} onClick={() => action('copy')}><span className="flex items-center gap-2"><Copy size={13} />Copiar datos de búsqueda</span>{copied && <span className="text-[10px] text-emerald-500 font-bold">¡Copiado!</span>}</button>
     </div>}

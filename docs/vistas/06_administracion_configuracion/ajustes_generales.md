@@ -1,5 +1,7 @@
 # ⚙️ Vista: Ajustes Generales y Conexión Outlook (SettingsPage)
 
+> **Entrega del 19/10/2026, pendiente de despliegue:** Outlook verificado para todos los perfiles activos con permiso CRM por rol. Sin listas por correo ni flags de piloto. Ajustes utiliza el ZIP Classic 1.1.0 y la vinculación de equipos. Véase «Uso general de Outlook verificado» al final; las secciones anteriores fechadas describen entregas históricas.
+
 ## 1. Propósito y Descripción General
 La vista de **Ajustes Generales** es el panel de configuración personal y del sistema donde los usuarios configuran su integración con **Microsoft 365 / Exchange** y eligen su preferencia de apertura para correos electrónicos en **Outlook** (Cliente de Escritorio Clásico vs. Outlook Web).
 
@@ -23,14 +25,14 @@ El usuario puede escoger entre dos modalidades de trabajo mediante selectores vi
 1. **Outlook Classic / Escritorio:**
    * La preferencia se conserva, pero la apertura exacta del piloto se instala y vincula desde `/outlook-classic` con el ZIP `OutlookClassic.zip`. El paquete contiene BAT y componente Windows sin firma Authenticode; se ejecuta con el usuario habitual, sin administrador.
    * El nuevo protocolo `dts-outlook` recibe una solicitud temporal y verifica el mensaje en el almacén del buzón antes de mostrarlo. La interfaz espera una confirmación autenticada del componente; descargar el ZIP o perder el foco no prueba instalación ni apertura.
-   * El configurador de un clic de `/settings` y el protocolo `dts-mail` siguen siendo el flujo heredado para usuarios fuera del piloto y acciones todavía no sustituidas. No equivalen al nuevo instalador y no garantizan localizar correos después de moverlos.
-   * Para la redacción de correos nuevos se conserva el flujo existente. El nuevo componente de fase 4 ejecuta únicamente apertura de mensajes.
+   * Ajustes descarga el paquete actual `/downloads/outlook-classic/OutlookClassic.zip` (1.1.0) y enlaza a `/outlook-classic` para vincular y gestionar los equipos del usuario. El configurador antiguo y el protocolo `dts-mail` se han retirado de la app.
+   * Para la redacción de correos nuevos se conserva el flujo existente. El componente 1.1.0 abre mensajes y prepara Responder/Responder a todos sobre el original verificado.
 2. **Outlook Online / Web (Navegador):**
    * Si la cuenta de Microsoft 365 está vinculada por OAuth, genera un borrador en segundo plano en la nube mediante **Microsoft Graph API** (`/me/messages`) y abre la ventana web directamente en el mensaje creado (`webLink`).
    * Si la cuenta no está vinculada o el borrador remoto falla, utiliza un enlace profundo canónico optimizado:  
      `https://outlook.office.com/mail/deeplink/compose?to=...&cc=...&subject=...&body=...`
    * Para evitar que el bloqueador de ventanas emergentes de Chrome/Edge impida abrir la pestaña tras una llamada asíncrona, el sistema pre-abre una pestaña en blanco en el evento de clic del usuario (`window.open('about:blank')`) y redirige su ubicación al finalizar la API.
-   * Para los correos del piloto, la apertura resuelve la identidad en backend y obtiene el `webLink` actual; las copias ambiguas requieren selección del usuario.
+   * Para todos los usuarios con permiso CRM, la apertura resuelve la identidad en backend y obtiene el `webLink` actual; las copias ambiguas requieren selección del usuario.
 
 > **Persistencia Local:** La elección se guarda de inmediato en `localStorage` bajo la clave `dts_outlook_preferred_client` y muestra una notificación visual de guardado instantáneo sin recargar la página. Todas las vistas del CRM consultan en tiempo real este ajuste.
 
@@ -61,7 +63,7 @@ El usuario puede escoger entre dos modalidades de trabajo mediante selectores vi
 
 La página `/outlook-classic` conserva sesión CRM mediante `OutlookAddinSession`. Permite descargar el paquete cuando existe, introducir el código mostrado por el componente Windows y revocar equipos propios. Los permisos se verifican en backend y no dan acceso a buzones ajenos para Admin o Dirección. La selección del dispositivo se recuerda en el navegador; la clave privada permanece cifrada en el equipo.
 
-La activación requiere `CRM_OUTLOOK_CLASSIC_ENABLED=true`, además del piloto de identidad habilitado para la cuenta y los permisos actuales de acceso CRM. El piloto de pruebas se mantiene limitado a `gdiaz@dtsinstruments.com`; habilitar Classic no amplía por sí solo esa lista.
+Desde la entrega del 19/10/2026, Classic y las respuestas verificadas están disponibles para todos los perfiles activos con acceso al CRM según su rol. No hay lista por correo ni variables de activación de piloto. La conexión del buzón, la vinculación del equipo, la identidad exacta del mensaje y la pertenencia a la cartera siguen verificándose en backend.
 
 Las dos tablas de Classic ya están creadas y comprobadas en Supabase. El paquete está generado en la carpeta local; su despliegue y la prueba completa instalada siguen pendientes de confirmación. El botón de prueba de borrador en Ajustes verifica el flujo de composición y no acredita apertura exacta ni vinculación del nuevo componente.
 
@@ -76,3 +78,15 @@ Seleccionar Outlook Web en Ajustes guarda inmediatamente la preferencia en `dts_
 La preferencia pertenece al navegador, no al perfil remoto del usuario. En otro navegador o equipo debe seleccionarse de nuevo. La instalación y vinculación Classic se conservan hasta revocarlas o desinstalarlas.
 
 Decisión actualizada el 16/10/2026: se cancela la recuperación automática del histórico y se retira su implementación en curso. No se añaden trabajos de migración al conectar Microsoft 365 ni al vincular equipos. Antoni registrará correos nuevos desde hoy; todos los registros existentes se conservan. La apertura se prepara para uso general tras la validación del responsable.
+
+## Uso general de Outlook verificado (19/10/2026)
+
+**Entrega preparada para desplegar y validar.** Se retira el fallback antiguo de apertura y el configurador `dts-mail` de Ajustes y de las descargas públicas. Abrir un mensaje concreto, Responder y Responder a todos utilizan siempre la identidad verificada: Microsoft Graph en Web y componente `dts-outlook` en Classic. Si falta una identidad o un equipo vinculado, se explica el problema y se ofrece la configuración o Web; no se busca otro mensaje por asunto.
+
+La búsqueda de conversaciones se conserva como **«Buscar conversación en Outlook Web»**, independiente de la preferencia Classic/Web. Copiar datos de búsqueda continúa disponible. La redacción de correos nuevos y los eventos de calendario conservan sus flujos existentes; no son el fallback antiguo de apertura de mensajes.
+
+Ajustes descarga **`/downloads/outlook-classic/OutlookClassic.zip`**, versión **1.1.0**, cuando su metadata está publicada, y enlaza a **`/outlook-classic`** para vincular, revisar o revocar equipos propios. Extraer el ZIP completo y ejecutar `Instalar_Outlook_dTS.bat` con el usuario Windows habitual, sin administrador. Si el componente ya estaba instalado y la base restaurada perdió el vínculo, usar `Vincular_Outlook_dTS.bat`. El ejecutable no cambia en esta entrega; no es necesario reinstalar un componente 1.1.0 que funciona y conserva su vínculo.
+
+El acceso se administra mediante los permisos de rol ya existentes para CRM/Contactos y los perfiles activos. No hay excepciones por correo electrónico. Las antiguas variables `CRM_EMAIL_IDENTITY_ENABLED`, `CRM_EMAIL_IDENTITY_EMAILS`, `CRM_OUTLOOK_CLASSIC_ENABLED` y `CRM_EMAIL_REPLY_ENABLED` dejan de controlar el flujo; pueden retirarse de Dokploy al desplegar. No alteran ya la disponibilidad aunque conserven valores antiguos. Se mantienen OAuth por usuario, pertenencia al buzón y cartera, firma de solicitudes, versión compatible del componente y vinculación/revocación de cada equipo. Los permisos se revisan en backend en cada operación.
+
+**Despliegue:** publicar backend y frontend de esta entrega, recargar la app y comprobar perfil activo/rol, apertura Web/Classic, respuestas, descarga del ZIP y búsqueda Web. No requiere SQL adicional si ya están recuperados el esquema de identidad, las tablas Classic y `action`. No se modifica ninguna tabla sincronizada desde BC ni se inicia recuperación histórica. Tras desplegar, comprobar también que denegar el permiso de CRM por rol impide las operaciones aunque el equipo permanezca vinculado.

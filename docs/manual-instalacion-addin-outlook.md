@@ -1,5 +1,7 @@
 # 📖 Guía de Instalación y Despliegue: Complemento de Outlook (Add-in dTS CRM)
 
+> **Entrega del 19/10/2026, pendiente de despliegue:** Outlook verificado para todos los perfiles activos con permiso CRM por rol. Sin listas por correo ni flags de piloto. Ajustes utiliza el ZIP Classic 1.1.0 y la vinculación de equipos. Véase «Uso general de Outlook verificado» al final; las secciones anteriores fechadas describen entregas históricas.
+
 > Este manual describe la instalación del Add-in de Office para registrar correos y, en la sección 7, el componente Windows para abrirlos desde el CRM en Outlook Classic. Son instalaciones independientes.
 
 ---
@@ -131,8 +133,8 @@ Este mensaje indica que Microsoft requiere una confirmación interactiva de perm
 ### 7.1 Requisitos y estado
 
 - Windows con Outlook **Classic** instalado y el buzón corporativo configurado. El nuevo Outlook no utiliza este componente COM.
-- Cuenta Microsoft 365 conectada al CRM, permisos de acceso y habilitación del piloto.
-- Backend y frontend actualizados; la opción Classic debe estar habilitada por el responsable de la aplicación.
+- Cuenta Microsoft 365 conectada al CRM, perfil activo y permisos de acceso al CRM por rol.
+- Backend y frontend actualizados con la entrega de uso general del 19/10/2026; no hay habilitación individual ni lista de correos del piloto.
 - Las tablas de Classic ya están creadas en Supabase y comprobadas a 15/10/2026. La instalación y la prueba completa en producción siguen pendientes de confirmación.
 
 No es necesario cambiar el manifiesto del Add-in ni adquirir un certificado para este instalador interno. La conexión Microsoft 365 de la app y la vinculación del equipo son dos pasos distintos.
@@ -147,7 +149,7 @@ No es necesario cambiar el manifiesto del Add-in ni adquirir un certificado para
 6. Vuelve a la ventana Windows y pulsa **Ya he confirmado en el CRM**. La vinculación caduca en cinco minutos; si ha vencido, inicia una nueva.
 7. Desde Emails o Timeline, prueba **Abrir en Outlook Classic** y comprueba el mensaje. Si el navegador solicita abrir la aplicación, acepta para completar esa apertura.
 
-El componente se instala en `%LOCALAPPDATA%\dTS\OutlookClassic\1.0.0` y el protocolo se registra en HKCU. No modifica el manejador antiguo `dts-mail`; la nueva apertura usa `dts-outlook`. La clave del equipo queda cifrada para el usuario Windows.
+El componente se instala en `%LOCALAPPDATA%\dTS\OutlookClassic\1.1.0` y el protocolo se registra en HKCU. No modifica el manejador antiguo `dts-mail`; la nueva apertura usa `dts-outlook`. La clave del equipo queda cifrada para el usuario Windows.
 
 ### 7.3 Distribución interna sin certificado
 
@@ -168,7 +170,7 @@ Las comprobaciones de identidad y las firmas criptográficas de las solicitudes 
 
 | Mensaje o situación | Qué revisar |
 | --- | --- |
-| Classic no habilitado | El administrador debe revisar el piloto, permisos y despliegue. Instalar el BAT por sí solo no habilita la cuenta. |
+| Classic no habilitado | El administrador debe revisar el perfil activo, los permisos del rol para CRM y el despliegue. Instalar el BAT no concede acceso al CRM. |
 | El instalador no está publicado | Falta desplegar el frontend que contiene el ZIP y sus metadatos. |
 | Código incorrecto o caducado | Inicia una nueva vinculación y utiliza únicamente el código de la ventana de tu equipo. |
 | El navegador no abre la aplicación | Comprueba instalación con tu usuario Windows y autorización del navegador. Descargar el ZIP no instala el protocolo. |
@@ -202,7 +204,7 @@ Entrega validada por el usuario en producción el 16/10/2026: Responder y Respon
 4. En Emails, prueba **Responder** y **Responder a todos**, verificando original, destinatarios, contenido citado y cuenta de envío. Cierra las ventanas sin enviar si solo estás comprobando la preparación.
 5. Repite desde Timeline y con Outlook Web seleccionado en Ajustes. En Web deben abrirse borradores de respuesta del mismo hilo, sin enviar automáticamente.
 
-No necesitas desinstalar el manejador antiguo para esta actualización: todavía se conserva la búsqueda heredada. No cambia el manifiesto del Add-in de Office ni requiere certificado de firma. Si falta la confirmación de una respuesta, revisa las ventanas o Borradores antes de repetir.
+No necesitas desinstalar el manejador antiguo de Windows para esta actualización: la app ya no lo invoca ni lo distribuye. Se conserva la búsqueda de conversaciones en Outlook Web. No cambia el manifiesto del Add-in de Office ni requiere certificado de firma. Si falta la confirmación de una respuesta, revisa las ventanas o Borradores antes de repetir.
 
 ## 10. Nombres de adjuntos: actualización del registro
 
@@ -226,3 +228,15 @@ Los correos antiguos permanecen sin cambios. No ejecutar una importación histó
 El usuario indicó: «he probado sincronizar un correo con adjuntos y los muestra perfectamente, esa funcionalidad ya esta verificada». Queda registrada la captura y visualización correcta de los nombres para el correo probado. No se especificó si se utilizó Classic o Web, si era enviado o recibido, ni se confirmó individualmente la matriz completa (ambas pestañas, expansión, modos claro/oscuro, incrustados o conciliación de borradores).
 
 La corrección del borrado exclusivo del CRM y los contadores de tipología por oferta son cambios posteriores independientes: su verificación real sigue pendiente de confirmación. No se inicia ninguna recuperación histórica ni se modifica ningún registro por esta actualización documental.
+
+## Uso general de Outlook verificado (19/10/2026)
+
+**Entrega preparada para desplegar y validar.** Se retira el fallback antiguo de apertura y el configurador `dts-mail` de Ajustes y de las descargas públicas. Abrir un mensaje concreto, Responder y Responder a todos utilizan siempre la identidad verificada: Microsoft Graph en Web y componente `dts-outlook` en Classic. Si falta una identidad o un equipo vinculado, se explica el problema y se ofrece la configuración o Web; no se busca otro mensaje por asunto.
+
+La búsqueda de conversaciones se conserva como **«Buscar conversación en Outlook Web»**, independiente de la preferencia Classic/Web. Copiar datos de búsqueda continúa disponible. La redacción de correos nuevos y los eventos de calendario conservan sus flujos existentes; no son el fallback antiguo de apertura de mensajes.
+
+Ajustes descarga **`/downloads/outlook-classic/OutlookClassic.zip`**, versión **1.1.0**, cuando su metadata está publicada, y enlaza a **`/outlook-classic`** para vincular, revisar o revocar equipos propios. Extraer el ZIP completo y ejecutar `Instalar_Outlook_dTS.bat` con el usuario Windows habitual, sin administrador. Si el componente ya estaba instalado y la base restaurada perdió el vínculo, usar `Vincular_Outlook_dTS.bat`. El ejecutable no cambia en esta entrega; no es necesario reinstalar un componente 1.1.0 que funciona y conserva su vínculo.
+
+El acceso se administra mediante los permisos de rol ya existentes para CRM/Contactos y los perfiles activos. No hay excepciones por correo electrónico. Las antiguas variables `CRM_EMAIL_IDENTITY_ENABLED`, `CRM_EMAIL_IDENTITY_EMAILS`, `CRM_OUTLOOK_CLASSIC_ENABLED` y `CRM_EMAIL_REPLY_ENABLED` dejan de controlar el flujo; pueden retirarse de Dokploy al desplegar. No alteran ya la disponibilidad aunque conserven valores antiguos. Se mantienen OAuth por usuario, pertenencia al buzón y cartera, firma de solicitudes, versión compatible del componente y vinculación/revocación de cada equipo. Los permisos se revisan en backend en cada operación.
+
+**Despliegue:** publicar backend y frontend de esta entrega, recargar la app y comprobar perfil activo/rol, apertura Web/Classic, respuestas, descarga del ZIP y búsqueda Web. No requiere SQL adicional si ya están recuperados el esquema de identidad, las tablas Classic y `action`. No se modifica ninguna tabla sincronizada desde BC ni se inicia recuperación histórica. Tras desplegar, comprobar también que denegar el permiso de CRM por rol impide las operaciones aunque el equipo permanezca vinculado.

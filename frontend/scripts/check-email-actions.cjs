@@ -31,7 +31,7 @@ for (const [label, expected] of [['Responder', 'reply'], ['Responder a todos', '
 const markup = renderToStaticMarkup(tree);
 assert.ok(markup.includes('dark:bg-surface-card-dark'));
 assert.ok(markup.includes('text-xs'));
-assert.ok(markup.includes('Buscar conversación completa'));
+assert.ok(markup.includes('Buscar conversación en Outlook Web'));
 assert.ok(markup.includes('Copiar datos de búsqueda'));
 assert.equal(elements(loaded.EmailActions({ ...props, isOpen: false })).filter(node => node.type === 'button').length, 2);
 console.log('PASS: shared menu keeps styles, separates reply/reply-all and dispatches the selected exact activity and destination.');

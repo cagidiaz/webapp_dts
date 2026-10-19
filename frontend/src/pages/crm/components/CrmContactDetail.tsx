@@ -14,18 +14,16 @@ import {
   getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
   getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
   createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
-  getPreferredOutlookClient, setPreferredOutlookClient, openExistingEmailInOutlook as openLegacyEmailInOutlook, openVerifiedEmailInWeb,
-  searchConversationInOutlook, copyEmailSearchToClipboard,
-  markOutlookProtocolInstalled
+  getPreferredOutlookClient, setPreferredOutlookClient, openVerifiedEmailInWeb,
+  searchConversationInOutlook, copyEmailSearchToClipboard
 } from '../../../api';
-import { downloadOutlookClassicInstaller } from '../../../utils/outlookInstaller';
 import { formatCurrency } from '../../../api/formatters';
 import { 
   ArrowLeft, Phone, Mail, MapPin, Smartphone,
   Linkedin, Edit2, Check, X, Plus, Calendar, Clock, Percent,
   Briefcase, FileText, CheckSquare, Send, User, Activity, Trash2, Video, Users, ExternalLink,
   Copy, CheckCheck, Laptop, Globe, RefreshCw, Building2, PhoneCall,
-  ChevronDown, ChevronUp, Info, Download, Terminal
+  ChevronDown, ChevronUp, Info
 } from 'lucide-react';
 import { Drawer } from '../../../components/shared';
 import { EditActivityModal } from './EditActivityModal';
@@ -244,28 +242,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
 
   // Estados para acciones secundarias de correo y fallback inteligente (Mejoras B y C)
   const [activeEmailMenuId, setActiveEmailMenuId] = useState<string | null>(null);
-  const [showProtocolFallbackModal, setShowProtocolFallbackModal] = useState(false);
-  const [fallbackEmailData, setFallbackEmailData] = useState<{
-    activityId?: string;
-    webLink?: string | null;
-    itemId?: string | null;
-    email?: string | null;
-    subject?: string | null;
-  } | null>(null);
   const [emailOpenNotice, setEmailOpenNotice] = useState<(EmailResolveResult & { activityId?: string; canOpenWeb?: boolean; canSetupClassic?: boolean; classic?: boolean; devices?: ClassicDevice[]; replyMode?: ReplyMode }) | null>(null);
   const [classicReady, setClassicReady] = useState<(ClassicRequest & { activityId: string; action?: ClassicAction }) | null>(null);
   const [copiedEmailMenuId, setCopiedEmailMenuId] = useState<string | null>(null);
-
-  // Escuchar si Windows no pudo abrir el protocolo dts-mail://
-  useEffect(() => {
-    const handleProtocolFailure = () => {
-      setShowProtocolFallbackModal(true);
-    };
-    window.addEventListener('dts:outlook-protocol-not-installed', handleProtocolFailure);
-    return () => {
-      window.removeEventListener('dts:outlook-protocol-not-installed', handleProtocolFailure);
-    };
-  }, []);
 
   // Cerrar menú desplegable al hacer clic fuera
   useEffect(() => {
@@ -361,9 +340,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     } catch { setEmailOpenNotice({ activityId, status: 'error', canOpenWeb: true, canSetupClassic: true, message: 'No se pudo preparar la apertura de Classic. Contacta con el administrador o utiliza Outlook Web.' }); }
   };
 
-  const openExistingEmailInOutlook = (options: Parameters<typeof openLegacyEmailInOutlook>[0] & { activityId?: string }) => {
+  const openExistingEmailInOutlook = (options: EmailActionData & { target?: 'desktop' | 'web' }) => {
     if (!exchangeStatus) { setEmailOpenNotice({ status: 'pending', message: 'Espera a que se compruebe la conexión de Microsoft 365.' }); return; }
-    if (!exchangeStatus.emailIdentityEnabled) { openLegacyEmailInOutlook(options); return; }
     if (!options.activityId) { setEmailOpenNotice({ status: 'legacy_unverified', message: 'Este registro no dispone de una actividad de correo verificable.' }); return; }
     if ((options.target || getPreferredOutlookClient()) === 'desktop') {
       void resolveClassicEmail(options.activityId);
@@ -382,16 +360,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         setTimeout(() => { setCopiedEmailMenuId(null); setActiveEmailMenuId(null); }, 1500);
       });
     } else if (action === 'search') {
-      searchConversationInOutlook({ email: data.email, subject: data.subject, target: getPreferredOutlookClient(), onProtocolFailed: () => setShowProtocolFallbackModal(true) });
+      searchConversationInOutlook({ email: data.email, subject: data.subject });
     } else if (action === 'reply' || action === 'reply_all') {
-      if (!exchangeStatus?.emailIdentityEnabled) {
-        setEmailOpenNotice({ activityId: data.activityId, status: 'disabled', message: 'La respuesta verificada no está habilitada para tu cuenta. Abre el correo y responde desde Outlook.', canOpenWeb: true }); return;
-      }
       if (getPreferredOutlookClient() === 'desktop') void resolveClassicEmail(data.activityId, undefined, undefined, action);
       else void resolveWebReply(data.activityId, action);
     } else {
-      setFallbackEmailData(data);
-      openExistingEmailInOutlook({ ...data, target: action === 'open' ? getPreferredOutlookClient() : action, onProtocolFailed: () => setShowProtocolFallbackModal(true) });
+      openExistingEmailInOutlook({ ...data, target: action === 'open' ? getPreferredOutlookClient() : action });
     }
   };
 
@@ -4118,86 +4092,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
         </div>
       )}
 
-      {/* Modal de Fallback Inteligente si Outlook Classic no está configurado (Mejora B) */}
-      {showProtocolFallbackModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-surface-card-dark rounded-2xl max-w-md w-full p-6 border border-gray-100 dark:border-gray-800 shadow-xl space-y-5 animate-in zoom-in-95 duration-200">
-            <div className="flex items-start gap-3">
-              <div className="p-3 rounded-xl bg-cyan-500/10 text-dts-secondary shrink-0">
-                <Terminal className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                  ¿No se abrió tu Outlook de escritorio?
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  Parece que este ordenador aún no tiene configurado el enlace directo seguro con Outlook Classic (<code className="px-1 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-[10px] font-mono text-dts-secondary">dts-mail://</code>).
-                </p>
-              </div>
-            </div>
 
-            <div className="p-3 rounded-xl bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/15 space-y-2 text-xs text-gray-600 dark:text-gray-300">
-              <div className="flex items-center gap-2 font-bold text-blue-600 dark:text-blue-400">
-                <Info size={14} />
-                <span>¿Qué deseas hacer?</span>
-              </div>
-              <p className="text-[11px] leading-relaxed">
-                Puedes abrir este correo de inmediato en Outlook Web (M365) o descargar el configurador rápido de 1 clic para activar Outlook Classic en este equipo.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowProtocolFallbackModal(false);
-                  if (fallbackEmailData) {
-                    openExistingEmailInOutlook({
-                      ...fallbackEmailData,
-                      target: 'web',
-                    });
-                  }
-                }}
-                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-dts-secondary text-white hover:opacity-95 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-              >
-                <Globe size={14} />
-                <span>Abrir en Outlook Web (M365) ahora</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  downloadOutlookClassicInstaller();
-                  setShowProtocolFallbackModal(false);
-                }}
-                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-800 dark:text-gray-200 transition-all flex items-center justify-center gap-2 cursor-pointer border border-gray-200 dark:border-gray-700"
-              >
-                <Download size={14} />
-                <span>Descargar Configurador de Windows (1 Clic)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  markOutlookProtocolInstalled(true);
-                  setShowProtocolFallbackModal(false);
-                }}
-                className="w-full py-2 text-center text-xs text-dts-secondary hover:underline font-semibold cursor-pointer"
-              >
-                Ya lo tengo instalado en este equipo (No volver a mostrar)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowProtocolFallbackModal(false)}
-                className="w-full py-1.5 text-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

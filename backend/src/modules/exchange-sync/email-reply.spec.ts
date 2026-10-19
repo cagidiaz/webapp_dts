@@ -58,8 +58,10 @@ describe('Verified reply drafts', () => {
   it('rejects a draft link outside official Outlook origins',async()=>{
     mode='evil';expect((await service.prepare('user','activity','reply')).status).toBe('temporary_error');
   });
-  it('does not access Graph while disabled',async()=>{
-    config.set('CRM_EMAIL_REPLY_ENABLED','false');expect((await service.prepare('user','activity','reply')).status).toBe('disabled');expect(global.fetch).not.toHaveBeenCalled();
+  it('uses verified replies even with an obsolete false deployment flag',async()=>{
+    config.set('CRM_EMAIL_REPLY_ENABLED','false');
+    expect((await service.prepare('user','activity','reply')).status).toBe('resolved');
+    expect(posts).toEqual(['/v1.0/me/messages/exact/createReply']);
   });
   it('rechecks an account disconnect before the mutating POST',async()=>{
     db.user_exchange_accounts.findUnique.mockResolvedValueOnce({microsoft_user_id:'mailbox',email:'owner@test.invalid'}).mockResolvedValueOnce(null);

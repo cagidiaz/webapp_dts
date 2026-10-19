@@ -96,26 +96,6 @@ export const createExchangeDraft = async (payload: {
 };
 
 const OUTLOOK_PREF_KEY = 'dts_outlook_preferred_client';
-export const OUTLOOK_PROTOCOL_INSTALLED_KEY = 'dts_outlook_protocol_installed';
-
-/**
- * Comprueba si el usuario ya tiene registrado y validado el protocolo dts-mail:// en este equipo
- */
-export const isOutlookProtocolInstalled = (): boolean => {
-  return localStorage.getItem(OUTLOOK_PROTOCOL_INSTALLED_KEY) === 'true';
-};
-
-/**
- * Marca en localStorage que el protocolo dts-mail:// ya está instalado en este navegador
- */
-export const markOutlookProtocolInstalled = (installed: boolean = true) => {
-  if (installed) {
-    localStorage.setItem(OUTLOOK_PROTOCOL_INSTALLED_KEY, 'true');
-  } else {
-    localStorage.removeItem(OUTLOOK_PROTOCOL_INSTALLED_KEY);
-  }
-};
-
 /**
  * Obtiene la preferencia guardada del cliente de Outlook del usuario ('desktop' o 'web')
  */
@@ -213,59 +193,6 @@ export const openInOutlook = (options: {
 };
 
 /**
- * Lanza una URI de protocolo personalizado (ej. dts-mail://) y detecta si el sistema operativo
- * atendió la llamada o si el protocolo no está instalado (Mejora B: Fallback inteligente).
- */
-export const triggerCustomProtocolWithFallback = (
-  protocolUri: string,
-  onFailed?: () => void
-) => {
-  // 1. Invocar mediante iframe invisible y enlace directo para máxima compatibilidad Chromium/Firefox
-  try {
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = protocolUri;
-    document.body.appendChild(iframe);
-    setTimeout(() => {
-      if (document.body.contains(iframe)) {
-        document.body.removeChild(iframe);
-      }
-    }, 1000);
-  } catch {
-    // Silencioso
-  }
-
-  triggerMailtoUri(protocolUri);
-
-  // 2. Si el usuario ya marcó o instaló el protocolo, no molestar con falsas alarmas
-  if (isOutlookProtocolInstalled()) {
-    return;
-  }
-
-  let hasBlurred = false;
-  const onBlurHandler = () => {
-    hasBlurred = true;
-  };
-
-  window.addEventListener('blur', onBlurHandler);
-
-  // Margen de 4.5 segundos para no interrumpir el cuadro de diálogo de Chrome/Edge
-  setTimeout(() => {
-    window.removeEventListener('blur', onBlurHandler);
-    if (!hasBlurred && document.hasFocus() && !isOutlookProtocolInstalled()) {
-      if (onFailed) {
-        onFailed();
-      }
-      window.dispatchEvent(
-        new CustomEvent('dts:outlook-protocol-not-installed', {
-          detail: { protocolUri },
-        })
-      );
-    }
-  }, 4500);
-};
-
-/**
  * Limpia el asunto del correo eliminando prefijos de tipología del CRM (ej. [📥 Recibido · 📋 Petición oferta]),
  * normalizando caracteres especiales, emojis y guiones tipográficos para compatibilidad total con Outlook.
  */
@@ -282,142 +209,14 @@ export const cleanEmailSubjectForOutlook = (rawSubject?: string | null): string 
 };
 
 /**
- * Abre un correo existente en Outlook respetando la preferencia del usuario
- */
-export const openExistingEmailInOutlook = (options: {
-  webLink?: string | null;
-  itemId?: string | null;
-  email?: string | null;
-  subject?: string | null;
-  target?: 'desktop' | 'web';
-  exchangeSyncStatus?: string | null;
-  onProtocolFailed?: () => void;
-}) => {
-  const target = options.target || getPreferredOutlookClient();
-  const { webLink, itemId, email, exchangeSyncStatus, onProtocolFailed } = options;
-  const cleanSubject = cleanEmailSubjectForOutlook(options.subject);
-
-  // 1. Si el usuario tiene configurado Outlook de Escritorio (Classic / App)
-  if (target === 'desktop') {
-    const params: string[] = [];
-    if (itemId) params.push(`id=${encodeURIComponent(itemId)}`);
-    if (email) params.push(`from=${encodeURIComponent(email)}`);
-    if (cleanSubject) params.push(`subject=${encodeURIComponent(cleanSubject)}`);
-
-    const queryString = params.length > 0 ? `?${params.join('&')}` : '';
-    const dtsMailUri = `dts-mail://open${queryString}`;
-
-    triggerCustomProtocolWithFallback(dtsMailUri, () => {
-      if (onProtocolFailed) {
-        onProtocolFailed();
-      } else {
-        // Fallback estándar en caso de fallo: ventana de redacción o diálogo de protocolo
-        const sub = cleanSubject ? (cleanSubject.startsWith('Re:') ? cleanSubject : `Re: ${cleanSubject}`) : '';
-        const mailtoParams: string[] = [];
-        if (sub) mailtoParams.push(`subject=${encodeURIComponent(sub)}`);
-        const qStr = mailtoParams.length > 0 ? `?${mailtoParams.join('&')}` : '';
-        const toParam = email ? encodeURIComponent(email) : '';
-        triggerMailtoUri(`mailto:${toParam}${qStr}`);
-      }
-    });
-    return;
-  }
-
-  // 2. Si el usuario tiene configurado Outlook Web (M365):
-  // 2.1 Si existe enlace directo generado por Microsoft Graph/Exchange
-  if (webLink) {
-    window.open(webLink, OUTLOOK_WEB_TAB_NAME);
-    return;
-  }
-
-  // 2.2 Si tenemos el ItemID de Exchange (guardado por ejemplo desde el Add-in de Outlook)
-  if (itemId) {
-    const directItemUrl = `https://outlook.office.com/mail/deeplink?ItemID=${encodeURIComponent(itemId)}&exvsurl=1`;
-    window.open(directItemUrl, OUTLOOK_WEB_TAB_NAME);
-    return;
-  }
-
-  // 2.3 Si es un borrador sin enlace directo, abrir la bandeja de borradores
-  if (exchangeSyncStatus === 'draft') {
-    window.open('https://outlook.office.com/mail/drafts', OUTLOOK_WEB_TAB_NAME);
-    return;
-  }
-
-  // 2.4 Si tenemos email del contacto pero no enlace directo al mensaje
-  if (email) {
-    const composeUrl = new URL('https://outlook.office.com/mail/deeplink/compose');
-    composeUrl.searchParams.set('to', email);
-    if (cleanSubject) {
-      composeUrl.searchParams.set('subject', cleanSubject.startsWith('Re:') ? cleanSubject : `Re: ${cleanSubject}`);
-    }
-    window.open(composeUrl.toString(), OUTLOOK_WEB_TAB_NAME);
-    return;
-  }
-
-  // 2.5 Fallback por defecto en Outlook Web
-  window.open('https://outlook.office.com/mail/inbox', OUTLOOK_WEB_TAB_NAME);
-};
-
-/**
- * Abre Outlook en modo respuesta (Reply / Responder a todos) citando el correo (Mejora D)
- */
-export const replyInOutlook = (options: {
-  itemId?: string | null;
-  email?: string | null;
-  subject?: string | null;
-  target?: 'desktop' | 'web';
-  onProtocolFailed?: () => void;
-}) => {
-  const target = options.target || getPreferredOutlookClient();
-  const { itemId, email, onProtocolFailed } = options;
-  const cleanSubject = cleanEmailSubjectForOutlook(options.subject);
-
-  if (target === 'desktop') {
-    const params: string[] = [];
-    if (itemId) params.push(`id=${encodeURIComponent(itemId)}`);
-    if (email) params.push(`from=${encodeURIComponent(email)}`);
-    if (cleanSubject) params.push(`subject=${encodeURIComponent(cleanSubject)}`);
-
-    const queryString = params.length > 0 ? `?${params.join('&')}` : '';
-    const dtsMailUri = `dts-mail://reply${queryString}`;
-
-    triggerCustomProtocolWithFallback(dtsMailUri, onProtocolFailed);
-    return;
-  }
-
-  // Si es Web, abrir compositor con Re:
-  const composeUrl = new URL('https://outlook.office.com/mail/deeplink/compose');
-  if (email) composeUrl.searchParams.set('to', email);
-  if (cleanSubject) {
-    composeUrl.searchParams.set('subject', cleanSubject.startsWith('Re:') ? cleanSubject : `Re: ${cleanSubject}`);
-  }
-  window.open(composeUrl.toString(), OUTLOOK_WEB_TAB_NAME);
-};
-
-/**
  * Abre la búsqueda de la conversación o hilo completo en Outlook (Mejora E)
  */
 export const searchConversationInOutlook = (options: {
   email?: string | null;
   subject?: string | null;
-  target?: 'desktop' | 'web';
-  onProtocolFailed?: () => void;
 }) => {
-  const target = options.target || getPreferredOutlookClient();
-  const { email, onProtocolFailed } = options;
+  const { email } = options;
   const cleanSubject = cleanEmailSubjectForOutlook(options.subject);
-
-  if (target === 'desktop') {
-    const params: string[] = [];
-    if (email) params.push(`from=${encodeURIComponent(email)}`);
-    if (cleanSubject) params.push(`subject=${encodeURIComponent(cleanSubject)}`);
-
-    const queryString = params.length > 0 ? `?${params.join('&')}` : '';
-    const dtsMailUri = `dts-mail://search${queryString}`;
-
-    triggerCustomProtocolWithFallback(dtsMailUri, onProtocolFailed);
-    return;
-  }
 
   // Si es Web, enlace canónico de búsqueda en Outlook Web (M365)
   const baseSub = cleanSubject ? cleanSubject.replace(/^Re:\s*/i, '').trim() : '';

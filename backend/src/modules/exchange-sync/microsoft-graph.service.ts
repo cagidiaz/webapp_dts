@@ -1,5 +1,4 @@
 import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
-import { emailIdentityEnabled } from './email-identity-settings';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -595,7 +594,7 @@ export class MicrosoftGraphService {
     }
 
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, select: { email: true, is_active: true } });
-    const immutable = !!profile?.is_active && emailIdentityEnabled(this.configService, profile.email);
+    const immutable = !!profile?.is_active;
     const message: any = {
       subject: mailPayload.subject,
       body: {

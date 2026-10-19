@@ -36,11 +36,11 @@ describe('email registration identity', () => {
     expect(await service.prepare('user', 'ews-original', 'ewsId')).toEqual({ enabled: false, patch: {} });
     expect(request).not.toHaveBeenCalled();
   });
-  it('does not enable other users when the pilot flag is true', async () => {
+  it('enables any active profile independently of the obsolete pilot allowlist', async () => {
     prisma.profiles.findUnique.mockResolvedValue({ is_active: true, email: 'other@test.invalid' });
-    expect(await service.enabledFor('other')).toBe(false);
-    expect((await service.prepare('other', 'ews-original', 'ewsId')).enabled).toBe(false);
-    expect(request).not.toHaveBeenCalled();
+    expect(await service.enabledFor('other')).toBe(true);
+    config.get.mockImplementation(() => 'false');
+    expect(await service.enabledFor('other')).toBe(true);
   });
   it('requires reconnection when OAuth is unavailable', async () => {
     graph.getValidAccessToken.mockResolvedValue(null);

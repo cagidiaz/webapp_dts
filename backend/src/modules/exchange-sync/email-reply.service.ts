@@ -29,7 +29,6 @@ export class EmailReplyService {
 
   async prepare(userId: string, activityId: string, mode: ReplyMode, candidateId?: string): Promise<EmailOpenResult> {
     await this.access.actor(userId);
-    if (this.config.get('CRM_EMAIL_REPLY_ENABLED') !== 'true') return { status: 'disabled', message: 'Las respuestas verificadas todavía no están habilitadas. Abre el correo y responde desde Outlook.' };
     const resolved = await this.emails.resolve(userId, activityId, candidateId);
     if (resolved.status !== 'resolved') return resolved;
     const activity = await this.prisma.crm_activities.findUnique({ where: { id: activityId } });

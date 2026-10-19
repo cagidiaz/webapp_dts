@@ -5,7 +5,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { MicrosoftGraphService } from './microsoft-graph.service';
 import { OutlookMessageIdentityClient, OutlookIdentityError, type ExchangeIdFormat } from './outlook-message-identity';
 import { resolvedEmailIdentityPatch } from './email-identity-contract';
-import { emailIdentityEnabled } from './email-identity-settings';
 import { attachmentState, type EmailAttachments } from './email-attachments';
 
 /** Call only after the SAME access token has been accepted by Graph /me. Never trusts browser claims. */
@@ -33,12 +32,12 @@ export class EmailIdentityService {
 
   async enabledFor(userId: string): Promise<boolean> {
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, select: { email: true, is_active: true } });
-    return !!profile?.is_active && emailIdentityEnabled(this.config, profile.email);
+    return !!profile?.is_active;
   }
 
   async prepare(userId: string, originalId: string, source: ExchangeIdFormat, includeAttachments = false): Promise<PreparedEmailIdentity> {
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, select: { email: true, is_active: true } });
-    if (!profile?.is_active || !emailIdentityEnabled(this.config, profile.email)) return { enabled: false, patch: {} };
+    if (!profile?.is_active) return { enabled: false, patch: {} };
     const base: EmailIdentityPatch = { exchange_original_id_type: source, exchange_resolution_status: 'pending' };
     try {
       const account = await this.prisma.user_exchange_accounts.findUnique({ where: { user_id: userId }, select: { email: true, microsoft_user_id: true } });

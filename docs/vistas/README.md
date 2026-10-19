@@ -130,3 +130,7 @@ La [vista de Contactos y Emails](03_crm/crm_contactos_mails.md) documenta el bor
 El usuario indicó: «he probado sincronizar un correo con adjuntos y los muestra perfectamente, esa funcionalidad ya esta verificada». Queda registrada la captura y visualización correcta de los nombres para el correo probado. No se especificó si se utilizó Classic o Web, si era enviado o recibido, ni se confirmó individualmente la matriz completa (ambas pestañas, expansión, modos claro/oscuro, incrustados o conciliación de borradores).
 
 La corrección del borrado exclusivo del CRM y los contadores de tipología por oferta son cambios posteriores independientes: su verificación real sigue pendiente de confirmación. No se inicia ninguna recuperación histórica ni se modifica ningún registro por esta actualización documental.
+
+### Outlook verificado para todos los usuarios autorizados (19/10/2026)
+
+Se retira la apertura heredada y su configurador; Ajustes descarga Classic 1.1.0 y enlaza a la vinculación. La búsqueda de conversaciones se conserva en Web. Disponibilidad por perfil activo y permisos CRM del rol, sin listas de correos ni flags de piloto. Véanse [Ajustes](06_administracion_configuracion/ajustes_generales.md), [Contactos y Emails](03_crm/crm_contactos_mails.md), [complemento](03_crm/complemento_outlook_crm.md), [manual](../manual-usuario.md) e [instalación](../manual-instalacion-addin-outlook.md). Entrega preparada; pendiente de despliegue y aceptación real del nuevo comportamiento general.

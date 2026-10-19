@@ -1,5 +1,7 @@
 # Manual de Usuario — WebApp dTS Instruments
 
+> **Entrega del 19/10/2026, pendiente de despliegue:** Outlook verificado para todos los perfiles activos con permiso CRM por rol. Sin listas por correo ni flags de piloto. Ajustes utiliza el ZIP Classic 1.1.0 y la vinculación de equipos. Véase «Uso general de Outlook verificado» al final; las secciones anteriores fechadas describen entregas históricas.
+
 > Guía operativa y técnica del sistema **dTS Instruments WebApp**. Este documento describe el funcionamiento de cada módulo, la interpretación de KPIs, el flujo de datos sincronizado con Microsoft Dynamics 365 Business Central y las herramientas de productividad comercial.
 
 ---
@@ -329,7 +331,7 @@ Integrada en la ficha del contacto/cliente en el CRM (`/crm/contacts/:id?tab=ema
 * **Botón Directo "Abrir en Outlook" y Resolución Dinámica Web**:
   * En cada tarjeta de email de la pestaña *Emails*, en los eventos de correo del *Timeline* y en la cabecera del contacto, se incluye la acción **"Abrir en Outlook"** acompañada de un menú desplegable contextual (`...`):
   * **Comportamiento Determinista por Preferencia**:
-    * **Outlook Classic / Escritorio**: Para las cuentas habilitadas en el piloto, utiliza el componente Windows vinculado al usuario para localizar y verificar el mensaje exacto, incluso después de moverlo dentro del mismo buzón. Requiere instalar el ZIP y completar la vinculación. El resto de usuarios conserva temporalmente el flujo anterior; responder y buscar conversación siguen usando sus acciones existentes.
+    * **Outlook Classic / Escritorio**: Utiliza el componente Windows vinculado al usuario para localizar y verificar el mensaje exacto, incluso después de moverlo dentro del mismo buzón. Requiere instalar el ZIP actual y completar la vinculación. Es la vía de apertura para todos los usuarios con permiso CRM; Responder y Responder a todos usan la misma identidad verificada. Buscar conversación abre una búsqueda en Outlook Web.
     * **Outlook Web (M365) — Resolución Dinámica Segura**: Abre el mensaje exacto mediante el resolvedor backend del CRM (`POST /api/exchange-sync/emails/:activityId/resolve`), pre-abriendo una ventana sin riesgo de bloqueo por navegador (popup blocker) y con aislamiento de contexto (`window.opener = null`). Si el correo fue movido a otra carpeta, Microsoft Graph lo localiza de forma determinista mediante su `ImmutableId`; y si existen varias copias en el buzón, despliega un selector de carpeta/fecha para abrir la deseada.
   * **Menú Desplegable de Acciones Secundarias (`...`)**:
     1. **Abrir en Outlook Classic**: Fuerza la apertura en la aplicación de escritorio.
@@ -444,7 +446,7 @@ Ubicado en `/finance/ratios-charts` y `/finance/simulations`.
   * Botones para forzar sincronización manual de borradores y eventos o desconectar la cuenta.
 * **Cliente de Outlook Predeterminado**:
   * Selector dual entre **Outlook de Escritorio (App Windows/Mac)** y **Outlook Web (Microsoft 365)**.
-  * **Instalación de Classic para el piloto**: En `/outlook-classic`, descarga el ZIP, extráelo completo y ejecuta `Instalar_Outlook_dTS.bat` sin administrador. El configurador antiguo de Ajustes sigue disponible para flujos heredados y no sustituye este paquete. La distribución interna no exige certificado; Windows puede mostrar un aviso de editor desconocido.
+  * **Instalación de Classic**: En `/outlook-classic`, descarga el ZIP, extráelo completo y ejecuta `Instalar_Outlook_dTS.bat` sin administrador. Ajustes descarga este mismo paquete actual y permite acceder a la vinculación; el configurador antiguo ya no está disponible. La distribución interna no exige certificado; Windows puede mostrar un aviso de editor desconocido.
   * **Memorización persistente en el navegador local (`localStorage`)**: El ajuste se recuerda de forma global para toda la WebApp y aplica tanto a la redacción como a la apertura de correos existentes en la ficha de contactos y el timeline del CRM.
   * Botón de prueba inmediata para validar la apertura de Outlook.
 
@@ -531,3 +533,15 @@ Correcciones comprobadas automáticamente; pendiente de comprobación real despu
 El usuario indicó: «he probado sincronizar un correo con adjuntos y los muestra perfectamente, esa funcionalidad ya esta verificada». Queda registrada la captura y visualización correcta de los nombres para el correo probado. No se especificó si se utilizó Classic o Web, si era enviado o recibido, ni se confirmó individualmente la matriz completa (ambas pestañas, expansión, modos claro/oscuro, incrustados o conciliación de borradores).
 
 La corrección del borrado exclusivo del CRM y los contadores de tipología por oferta son cambios posteriores independientes: su verificación real sigue pendiente de confirmación. No se inicia ninguna recuperación histórica ni se modifica ningún registro por esta actualización documental.
+
+## Uso general de Outlook verificado (19/10/2026)
+
+**Entrega preparada para desplegar y validar.** Se retira el fallback antiguo de apertura y el configurador `dts-mail` de Ajustes y de las descargas públicas. Abrir un mensaje concreto, Responder y Responder a todos utilizan siempre la identidad verificada: Microsoft Graph en Web y componente `dts-outlook` en Classic. Si falta una identidad o un equipo vinculado, se explica el problema y se ofrece la configuración o Web; no se busca otro mensaje por asunto.
+
+La búsqueda de conversaciones se conserva como **«Buscar conversación en Outlook Web»**, independiente de la preferencia Classic/Web. Copiar datos de búsqueda continúa disponible. La redacción de correos nuevos y los eventos de calendario conservan sus flujos existentes; no son el fallback antiguo de apertura de mensajes.
+
+Ajustes descarga **`/downloads/outlook-classic/OutlookClassic.zip`**, versión **1.1.0**, cuando su metadata está publicada, y enlaza a **`/outlook-classic`** para vincular, revisar o revocar equipos propios. Extraer el ZIP completo y ejecutar `Instalar_Outlook_dTS.bat` con el usuario Windows habitual, sin administrador. Si el componente ya estaba instalado y la base restaurada perdió el vínculo, usar `Vincular_Outlook_dTS.bat`. El ejecutable no cambia en esta entrega; no es necesario reinstalar un componente 1.1.0 que funciona y conserva su vínculo.
+
+El acceso se administra mediante los permisos de rol ya existentes para CRM/Contactos y los perfiles activos. No hay excepciones por correo electrónico. Las antiguas variables `CRM_EMAIL_IDENTITY_ENABLED`, `CRM_EMAIL_IDENTITY_EMAILS`, `CRM_OUTLOOK_CLASSIC_ENABLED` y `CRM_EMAIL_REPLY_ENABLED` dejan de controlar el flujo; pueden retirarse de Dokploy al desplegar. No alteran ya la disponibilidad aunque conserven valores antiguos. Se mantienen OAuth por usuario, pertenencia al buzón y cartera, firma de solicitudes, versión compatible del componente y vinculación/revocación de cada equipo. Los permisos se revisan en backend en cada operación.
+
+**Despliegue:** publicar backend y frontend de esta entrega, recargar la app y comprobar perfil activo/rol, apertura Web/Classic, respuestas, descarga del ZIP y búsqueda Web. No requiere SQL adicional si ya están recuperados el esquema de identidad, las tablas Classic y `action`. No se modifica ninguna tabla sincronizada desde BC ni se inicia recuperación histórica. Tras desplegar, comprobar también que denegar el permiso de CRM por rol impide las operaciones aunque el equipo permanezca vinculado.

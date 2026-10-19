@@ -46,7 +46,7 @@ sqlSuite('Classic lifecycle with real isolated PostgreSQL', () => {
       crm_activities: { findUnique: jest.fn(async () => activity) }, user_exchange_accounts: { findUnique: jest.fn().mockResolvedValue(account) } };
     access = { actor: jest.fn().mockResolvedValue({ customerScope: {} }) };
     emails = { resolve: jest.fn().mockResolvedValue({ status: 'resolved' }) };
-    service = new OutlookClassicService(db, new ConfigService({ CRM_OUTLOOK_CLASSIC_ENABLED: 'true', AZURE_TENANT_ID: tenant }), { enabledFor: jest.fn().mockResolvedValue(true) } as any, access, emails,
+    service = new OutlookClassicService(db, new ConfigService({ AZURE_TENANT_ID: tenant }), { enabledFor: jest.fn().mockResolvedValue(true) } as any, access, emails,
       { getValidAccessToken: jest.fn().mockResolvedValue(`x.${Buffer.from(JSON.stringify({ tid: tenant })).toString('base64url')}.x`) } as any);
     originalFetch = global.fetch;
     global.fetch = jest.fn(async (url: string | URL | Request) => new Response(JSON.stringify(String(url).includes('translateExchangeIds')
@@ -127,7 +127,7 @@ sqlSuite('Classic lifecycle with real isolated PostgreSQL', () => {
     expect((await service.status(owner, request.requestId)).state).toBe('failed');
   });
   it('stores each reply action and only releases it to a compatible signed component',async()=>{
-    service=new OutlookClassicService(db,new ConfigService({CRM_OUTLOOK_CLASSIC_ENABLED:'true',CRM_EMAIL_REPLY_ENABLED:'true',AZURE_TENANT_ID:tenant}),{enabledFor:async()=>true} as any,access,emails,{getValidAccessToken:async()=>`h.${Buffer.from(JSON.stringify({tid:tenant})).toString('base64url')}.s`} as any);
+    service=new OutlookClassicService(db,new ConfigService({AZURE_TENANT_ID:tenant}),{enabledFor:async()=>true} as any,access,emails,{getValidAccessToken:async()=>`h.${Buffer.from(JSON.stringify({tid:tenant})).toString('base64url')}.s`} as any);
     const before=await service.create(owner,activityId,pairing.pairingId,undefined,'reply_all');expect(before.status).toBe('device_required');
     await pool.query("UPDATE crm_outlook_devices SET helper_version='1.1.0'");
     for(const action of ['reply','reply_all'] as const){

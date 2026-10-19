@@ -31,9 +31,9 @@ describe('Classic device proof contract', () => {
     const small = generateKeyPairSync('rsa', { modulusLength: 1024 }).publicKey.export({ format: 'jwk' });
     expect(() => classicPublicKey(small.n!, small.e!)).toThrow();
   });
-  it('leaves the new SQL unused while the Classic feature is disabled', async () => {
+  it('does not access Classic storage for an inactive profile', async () => {
     const query = jest.fn();
-    const service = new OutlookClassicService({ $queryRaw: query } as any, new ConfigService({}), { enabledFor: jest.fn().mockResolvedValue(true) } as any,
+    const service = new OutlookClassicService({ $queryRaw: query } as any, new ConfigService({}), { enabledFor: jest.fn().mockResolvedValue(false) } as any,
       { actor: jest.fn().mockResolvedValue({}) } as any, {} as any, {} as any);
     expect(await service.devices('user')).toEqual({ enabled: false, devices: [] });
     await expect(service.create('user', 'activity', 'device')).rejects.toThrow();
