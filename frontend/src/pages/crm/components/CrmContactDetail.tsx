@@ -319,11 +319,13 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   };
 
   const resolveClassicEmail = async (activityId: string, candidateId?: string, selectedDevice?: string, action: ClassicAction = 'open') => {
+    const clientStartedAt = performance.now();
     const replyMode = action === 'open' ? undefined : action;
     setClassicReady(null);
     setEmailOpenNotice({ activityId, status: 'pending', message: 'Preparando apertura en Outlook Classic…' });
     try {
       const configuration = await getClassicDevices();
+      const devicesReadyAt = performance.now();
       const preferred = selectedDevice || localStorage.getItem(classicDeviceKey);
       const device = configuration.devices.find(value => value.id === preferred) || (configuration.devices.length === 1 ? configuration.devices[0] : null);
       if (!configuration.enabled || !device) {
@@ -333,7 +335,9 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       localStorage.setItem(classicDeviceKey, device.id);
       const result = await prepareClassicRequest(activityId, device.id, candidateId, action);
       if (result.status === 'ready') {
-        const prepared = { ...result, activityId, action };
+        const preparedAt = performance.now();
+        console.info('[Classic timing]', { requestId: result.requestId, stage: 'browser_prepare', devicesMs: Math.round(devicesReadyAt - clientStartedAt), prepareMs: Math.round(preparedAt - devicesReadyAt), totalMs: Math.round(preparedAt - clientStartedAt) });
+        const prepared = { ...result, activityId, action, clientStartedAt, preparedAt };
         setClassicReady(prepared);
         setEmailOpenNotice({ activityId, status: 'pending', canOpenWeb: true, message: action === 'open' ? 'Correo listo para abrir en Outlook Classic.' : 'Respuesta lista para preparar en Outlook Classic.' });
         if (navigator.userActivation?.isActive) void launchPreparedClassic(prepared);

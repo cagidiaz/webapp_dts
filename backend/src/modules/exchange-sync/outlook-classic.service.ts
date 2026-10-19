@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -12,6 +12,12 @@ import { CLASSIC_REPLY_VERSIONS, CLASSIC_VERSION, classicProofText, classicPubli
 
 @Injectable()
 export class OutlookClassicService {
+  private readonly logger = new Logger(OutlookClassicService.name);
+  private async measured<T>(requestId: string, stage: string, work: () => Promise<T>): Promise<T> {
+    const started = performance.now(); let success = false;
+    try { const result = await work(); success = true; return result; }
+    finally { this.logger.log(JSON.stringify({ event: 'classic_timing', requestId, stage, ms: Math.round(performance.now() - started), success })); }
+  }
   private readonly pairRates = new Map<string, { count: number; until: number }>();
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly identities: EmailIdentityService,
     private readonly access: OutlookAddinAccessService, private readonly emails: EmailOpenService, private readonly graph: MicrosoftGraphService) {}
@@ -77,16 +83,17 @@ export class OutlookClassicService {
     return { success: true };
   }
   async create(userId: string, activityId: string, deviceId: string, candidateId?: string, action: 'open' | 'reply' | 'reply_all' = 'open') {
-    await this.actor(userId);
+    const diagnosticId = randomUUID();
+    await this.measured(diagnosticId, 'prepare_permissions', () => this.actor(userId));
     if (!['open','reply','reply_all'].includes(action)) throw new BadRequestException('Acción no permitida.');
     const [device] = await this.rows(Prisma.sql`SELECT id,helper_version FROM public.crm_outlook_devices WHERE id=${deviceId}::uuid AND user_id=${userId}::uuid AND paired_at IS NOT NULL AND revoked_at IS NULL`);
     if (!device) return { status: 'device_required', message: 'Vincula este equipo con tu cuenta del CRM para abrir correos en Classic.' };
     if (action !== 'open' && !CLASSIC_REPLY_VERSIONS.includes(device.helper_version || '')) return { status: 'device_required', message: 'Actualiza el componente de Classic a 1.1.0 y abre primero un correo para registrar su versión. Después podrás responder desde el CRM.' };
-    const resolution = await this.emails.resolve(userId, activityId, candidateId);
+    const resolution = await this.measured(diagnosticId, 'prepare_resolve', () => this.emails.resolve(userId, activityId, candidateId));
     if (resolution.status !== 'resolved') return resolution;
     const activity = await this.prisma.crm_activities.findUnique({ where: { id: activityId } });
     if (!activity?.exchange_immutable_id || !activity.exchange_internet_message_id || !activity.exchange_tenant_id || !activity.exchange_mailbox_id) return { status: 'pending', message: 'La referencia del correo aún no está completa. Puedes abrirlo en Outlook Web.' };
-    const id = randomUUID(), token = randomBytes(32).toString('base64url');
+    const id = diagnosticId, token = randomBytes(32).toString('base64url');
     await this.rows(Prisma.sql`DELETE FROM public.crm_outlook_requests WHERE expires_at<now()-interval '7 days' RETURNING id`);
     const actionColumn = action === 'open' ? Prisma.empty : Prisma.sql`,action`;
     const actionValue = action === 'open' ? Prisma.empty : Prisma.sql`,${action}`;
@@ -106,24 +113,24 @@ export class OutlookClassicService {
     return row;
   }
   async claim(id: string, proof: ClassicProof) {
-    const row = await this.signedRequest(id, proof, 'claim');
+    const row = await this.measured(id, 'claim_permissions_signature', () => this.signedRequest(id, proof, 'claim'));
     if (!['open','reply','reply_all'].includes(row.action || 'open')) throw new ConflictException('Acción no válida.');
     if (row.action && row.action !== 'open' && (!CLASSIC_REPLY_VERSIONS.includes(proof.version))) throw new ConflictException('Actualiza el componente de Outlook Classic para responder.');
     const claimed = await this.rows(Prisma.sql`UPDATE public.crm_outlook_requests SET state='claiming',claimed_at=now(),helper_version=${proof.version}
       WHERE id=${id}::uuid AND state='pending' AND expires_at>now() AND EXISTS (SELECT 1 FROM public.crm_outlook_devices d WHERE d.id=device_id AND d.revoked_at IS NULL) RETURNING id`);
     if (!claimed.length) throw new ConflictException('La solicitud ya fue utilizada o ha caducado.');
     try {
-      const resolved = await this.emails.resolve(row.user_id, row.activity_id);
+      const resolved = await this.measured(id, 'claim_resolve', () => this.emails.resolve(row.user_id, row.activity_id));
       if (resolved.status !== 'resolved') throw new Error('RESOLUTION_FAILED');
       const activity = await this.prisma.crm_activities.findUnique({ where: { id: row.activity_id } });
       if (!activity || activity.exchange_immutable_id !== row.immutable_id || activity.exchange_internet_message_id !== row.internet_message_id || activity.exchange_mailbox_id !== row.mailbox_id || activity.exchange_tenant_id !== row.tenant_id) throw new Error('IDENTITY_CHANGED');
       const account = await this.prisma.user_exchange_accounts.findUnique({ where: { user_id: row.user_id } });
-      const token = await this.graph.getValidAccessToken(row.user_id);
+      const token = await this.measured(id, 'claim_access_token', () => this.graph.getValidAccessToken(row.user_id));
       if (!token || !account || account.microsoft_user_id !== row.mailbox_id) throw new Error('MAILBOX_CHANGED');
       const client = new OutlookMessageIdentityClient(token);
-      await client.verifyMailbox(row.mailbox_id, account.email);
+      await this.measured(id, 'claim_verify_mailbox', () => client.verifyMailbox(row.mailbox_id, account.email));
       if (tenantFromGraphAcceptedToken(token, this.config.get('AZURE_TENANT_ID')) !== row.tenant_id) throw new Error('TENANT_CHANGED');
-      const entryId = exchangeIdToMapiHex(await client.translate(row.immutable_id, 'restImmutableEntryId', 'entryId'));
+      const entryId = exchangeIdToMapiHex(await this.measured(id, 'claim_translate_mapi', () => client.translate(row.immutable_id, 'restImmutableEntryId', 'entryId')));
       const claimNonce = randomBytes(32).toString('base64url');
       const ready = await this.rows(Prisma.sql`UPDATE public.crm_outlook_requests SET state='claimed',claim_nonce_hash=${hashClassicSecret(claimNonce)} WHERE id=${id}::uuid AND state='claiming' AND expires_at>now() AND EXISTS (SELECT 1 FROM public.crm_outlook_devices d WHERE d.id=device_id AND d.revoked_at IS NULL) RETURNING id`);
       if (!ready.length) throw new Error('EXPIRED');

@@ -1,8 +1,8 @@
 import { createHash, createPublicKey, timingSafeEqual, verify } from 'node:crypto';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 
-export const CLASSIC_VERSION = '1.1.1';
-export const CLASSIC_REPLY_VERSIONS = ['1.1.0', CLASSIC_VERSION];
+export const CLASSIC_VERSION = '1.1.2';
+export const CLASSIC_REPLY_VERSIONS = ['1.1.0', '1.1.1', CLASSIC_VERSION];
 export const hashClassicSecret = (value: string) => createHash('sha256').update(value).digest('hex');
 export function equalClassicSecret(value: string, hash: string): boolean {
   return /^[0-9a-f]{64}$/.test(hash) && timingSafeEqual(Buffer.from(hashClassicSecret(value), 'hex'), Buffer.from(hash, 'hex'));

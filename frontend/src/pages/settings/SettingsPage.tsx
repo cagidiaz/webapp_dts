@@ -63,7 +63,7 @@ export const SettingsPage: React.FC = () => {
     void fetch('/downloads/outlook-classic/package.json').then(async response => {
       if (!response.ok) return;
       const value = await response.json();
-      if (active) setClassicPackageAvailable(value.version === '1.1.1' && value.file === 'dTS.OutlookClassic.exe');
+      if (active) setClassicPackageAvailable(value.version === '1.1.2' && value.file === 'dTS.OutlookClassic.exe');
     }).catch(() => {});
     return () => { active = false; };
   }, []);

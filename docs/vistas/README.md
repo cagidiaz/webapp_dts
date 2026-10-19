@@ -150,3 +150,8 @@ En Ajustes Generales, «Probar Apertura en Outlook» muestra la ventana principa
 
 
 **Prueba Web actualizada (19/10/2026):** En Ajustes, «Probar Apertura en Outlook» abre la bandeja de entrada de Outlook Web en otra pestaña, sin generar borradores ni actividades. Puede solicitar inicio de sesión Microsoft. No necesita actualizar el componente Windows ni ejecutar SQL. Pendiente de confirmación del usuario.
+
+
+### Diagnóstico de tiempos Classic (19/10/2026)
+
+Componente 1.1.2: instalar el ZIP actualizado conservando la vinculación. Sin SQL. El navegador registra preparación (equipos y solicitud), espera de clic adicional y confirmación en consola `[Classic timing]`; backend registra `classic_timing` por etapa y UUID de solicitud. El componente guarda tiempos de carga, consulta al backend, conexión/arranque de Outlook, localización y visualización en `%LOCALAPPDATA%\dTS\OutlookClassic\timings.jsonl` (se trunca al superar 256 KiB). Solo UUID técnico, versión, etapa y tiempos: sin asunto, cuerpo, destinatarios ni tokens. Una etapa registrada no acredita éxito; prevalece la confirmación autenticada existente. Comparar un correo con Classic abierto y otro con Classic cerrado; el tiempo total del navegador puede incluir confirmación manual adicional. Pendiente de medición real con esta versión.

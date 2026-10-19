@@ -10,7 +10,7 @@ export async function approveClassicPair(pairingId: string, code: string): Promi
   const { data } = await apiClient.post('/exchange-sync/classic/pair/approve', { pairingId, code }); return data;
 }
 export async function revokeClassicDevice(id: string) { await apiClient.post(`/exchange-sync/classic/devices/${encodeURIComponent(id)}/revoke`); }
-export interface ClassicRequest { status: 'ready'; requestId: string; protocolUri: string; expiresInSeconds: number }
+export interface ClassicRequest { clientStartedAt?: number; preparedAt?: number; status: 'ready'; requestId: string; protocolUri: string; expiresInSeconds: number }
 export type ClassicAction = 'open' | 'reply' | 'reply_all';
 export async function prepareClassicRequest(activityId: string, deviceId: string, candidateId?: string, action: ClassicAction = 'open'): Promise<ClassicRequest | EmailResolveResult | { status: 'device_required'; message: string }> {
   const { data } = await apiClient.post('/exchange-sync/classic/requests', { activityId, deviceId, candidateId, action }); return data;
@@ -19,13 +19,19 @@ export async function launchClassicAndWait(request: ClassicRequest): Promise<{ s
   // Exactly one protocol invocation; never infer installation or success from browser blur.
   const match = /^dts-outlook:\/\/v1\/open\?request=([a-f0-9-]{36})&token=[A-Za-z0-9_-]{43}$/.exec(request.protocolUri);
   if (!match || match[1] !== request.requestId) throw new Error('INVALID_CLASSIC_REQUEST');
+  const protocolStartedAt = performance.now();
+  console.info('[Classic timing]', { requestId: request.requestId, stage: 'user_wait_before_protocol', ms: request.preparedAt === undefined ? null : Math.round(protocolStartedAt - request.preparedAt) });
   const anchor = document.createElement('a'); anchor.href = request.protocolUri;
   document.body.appendChild(anchor); anchor.click(); anchor.remove();
   const until = Date.now() + 45000;
   while (Date.now() < until) {
     const { data } = await apiClient.get(`/exchange-sync/classic/requests/${encodeURIComponent(request.requestId)}`);
-    if (['opened','failed','expired'].includes(data.state)) return data;
+    if (['opened','failed','expired'].includes(data.state)) {
+      console.info('[Classic timing]', { requestId: request.requestId, stage: 'protocol_to_browser_confirmation', ms: Math.round(performance.now() - protocolStartedAt), totalMs: request.clientStartedAt === undefined ? null : Math.round(performance.now() - request.clientStartedAt), state: data.state });
+      return data;
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
+  console.info('[Classic timing]', { requestId: request.requestId, stage: 'protocol_timeout', ms: Math.round(performance.now() - protocolStartedAt) });
   return { state: 'unconfirmed' };
 }

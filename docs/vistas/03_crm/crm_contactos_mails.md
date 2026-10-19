@@ -246,3 +246,8 @@ Cada aviso se cierra automáticamente a los 10 segundos; la X permite cerrarlo a
 Se conservan todas las acciones existentes: abrir Classic/Web, elegir copia o dispositivo y configurar el equipo. También se cierran a los 10 segundos los avisos con acciones; si ya desaparecieron, se puede volver a solicitar la apertura desde la tarjeta. No hay reintentos ni aperturas automáticas añadidas por el temporizador.
 
 Prueba reproducible: `node scripts/check-floating-outlook-notice.cjs` en frontend. Comprueba portal fuera del flujo, conservación de acciones, cierre a 10 s, plazo estable al renderizar, reinicio por mensaje y limpieza al desmontar. Sin cambios de backend, SQL ni permisos. Preparado para publicar y comprobar visualmente en la app.
+
+
+### Diagnóstico de tiempos Classic (19/10/2026)
+
+Componente 1.1.2: instalar el ZIP actualizado conservando la vinculación. Sin SQL. El navegador registra preparación (equipos y solicitud), espera de clic adicional y confirmación en consola `[Classic timing]`; backend registra `classic_timing` por etapa y UUID de solicitud. El componente guarda tiempos de carga, consulta al backend, conexión/arranque de Outlook, localización y visualización en `%LOCALAPPDATA%\dTS\OutlookClassic\timings.jsonl` (se trunca al superar 256 KiB). Solo UUID técnico, versión, etapa y tiempos: sin asunto, cuerpo, destinatarios ni tokens. Una etapa registrada no acredita éxito; prevalece la confirmación autenticada existente. Comparar un correo con Classic abierto y otro con Classic cerrado; el tiempo total del navegador puede incluir confirmación manual adicional. Pendiente de medición real con esta versión.

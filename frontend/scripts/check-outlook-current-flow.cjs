@@ -32,7 +32,7 @@ assert.ok(settings.includes('href="/downloads/outlook-classic/OutlookClassic.zip
 assert.ok(settings.includes('to="/outlook-classic"'));
 assert.ok(!settings.includes('downloadOutlookClassicInstaller'));
 const packageInfo = JSON.parse(fs.readFileSync(path.join(root, 'public/downloads/outlook-classic/package.json'), 'utf8'));
-assert.equal(packageInfo.version, '1.1.1');
+assert.equal(packageInfo.version, '1.1.2');
 assert.equal(packageInfo.file, 'dTS.OutlookClassic.exe');
 console.log('PASS: conversation search remains in Web; legacy API and protocol absent; Settings links to current installer and pairing.');
 
