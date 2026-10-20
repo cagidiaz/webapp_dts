@@ -774,7 +774,7 @@ export class QuotesService {
       // 3. Ejecutar consulta
       const source = await this.followups.context();
       let quotes = await this.prisma.sales_quotes.findMany({
-        where: source ? source.where({ ...where, ...await this.followups.scope(userId) }) : where,
+        where: source ? source.where({ ...where, ...await this.followups.scope(userId, params.contactId ? '/crm/contacts' : '/crm/pipeline') }) : where,
         include: {
           customer: {
             select: {

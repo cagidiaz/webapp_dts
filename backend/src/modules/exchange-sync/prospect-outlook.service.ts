@@ -10,13 +10,11 @@ const html = (value: string | null | undefined) => (value || '').replace(/&/g, '
 export class ProspectOutlookService {
   constructor(private readonly prisma: PrismaService, private readonly graph: MicrosoftGraphService, private readonly config: ConfigService) {}
 
-  enabled() { return this.config.get('CRM_PROSPECTS_PILOT_ENABLED') === 'true' && this.config.get('CRM_PROSPECTS_OUTLOOK_ENABLED') === 'true'; }
+  enabled() { return this.config.get('CRM_PROSPECTS_OUTLOOK_ENABLED') === 'true'; }
 
   private async ownerAllowed(userId: string) {
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } });
-    if (!profile?.is_active || !profile.role_id || profile.roles?.name?.toUpperCase() !== 'TESTER') return false;
-    const email = this.config.get('CRM_PROSPECTS_PILOT_EMAIL') || 'aciurans@dtsinstruments.com';
-    if (profile.email.toLowerCase() !== email.toLowerCase()) return false;
+    if (!profile?.is_active || !profile.role_id || profile.roles?.name?.toUpperCase() === 'DIRECCION') return false;
     const permissions = await this.prisma.role_modules.findMany({ where: { role_id: profile.role_id, module: { is_active: true, route_path: { in: ['/crm', '/crm/pipeline'] } } }, include: { module: true } });
     return ['/crm', '/crm/pipeline'].every(path => permissions.some(permission => permission.module.route_path === path && permission.can_view === true));
   }

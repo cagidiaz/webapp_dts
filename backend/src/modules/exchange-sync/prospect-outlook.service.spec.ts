@@ -83,3 +83,15 @@ describe('Outlook de prospectos sin llamadas reales', () => {
     expect(record.time_scheduled).toBe('23:30');expect(db.crm_prospect_events.create).not.toHaveBeenCalled();
   });
 });
+
+
+describe('Outlook de prospectos para cuentas autorizadas sin lista de correo',()=>{
+  it.each(['ADMIN','VENTAS','TESTER'])('admite %s y exige los permisos actuales',async(role)=>{
+    const db:any={profiles:{findUnique:jest.fn().mockResolvedValue({is_active:true,role_id:'role',email:'otro@example.com',roles:{name:role}})},role_modules:{findMany:jest.fn().mockResolvedValue(['/crm','/crm/pipeline'].map(route_path=>({can_view:true,module:{route_path}})))}};
+    const service=new ProspectOutlookService(db,{} as any,{get:(key:string)=>key==='CRM_PROSPECTS_OUTLOOK_ENABLED'?'true':'false'} as any);
+    expect(service.enabled()).toBe(true);
+    expect(await (service as any).ownerAllowed('user')).toBe(true);
+    db.role_modules.findMany.mockResolvedValue([]);
+    expect(await (service as any).ownerAllowed('user')).toBe(false);
+  });
+});

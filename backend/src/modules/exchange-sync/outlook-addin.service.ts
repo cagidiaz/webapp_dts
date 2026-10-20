@@ -479,7 +479,7 @@ export class OutlookAddinService {
     let quoteLinked = false;
     if (quoteDocumentNo) {
       try {
-        const pilot = this.config.get('CRM_PROSPECTS_PILOT_ENABLED') === 'true' ? await this.prisma.crm_offer_followups.findUnique({ where: { document_no: quoteDocumentNo } }) : null;
+        const pilot = await this.prisma.crm_offer_followups.findUnique({ where: { document_no: quoteDocumentNo } });
         if (pilot) {
           await this.prisma.crm_offer_activities.upsert({ where: { id: createdActivity.id }, update: {}, create: { id: createdActivity.id, followup_id: pilot.id, tipo: 'Email', notas: `${formattedTitle}\n\n${processedBody ? processedBody.substring(0, 500) : ''}`, fecha: activityDate, hecho: true } });
           quoteLinked = true;
@@ -597,7 +597,7 @@ export class OutlookAddinService {
       take: 10,
     });
 
-    const source = this.config.get('CRM_PROSPECTS_PILOT_ENABLED') === 'true' ? new OfferSourceContext(await loadOfferContacts(this.prisma, await this.prisma.crm_offer_followups.findMany())) : null;
+    const source = new OfferSourceContext(await loadOfferContacts(this.prisma, await this.prisma.crm_offer_followups.findMany()));
     return quotes.map((original) => {
       const q = source ? source.overlay(original) : original;
       const crm = q.sales_quotes_crm;

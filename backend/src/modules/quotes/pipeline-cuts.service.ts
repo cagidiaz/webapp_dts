@@ -20,7 +20,7 @@ export class PipelineCutsService implements OnModuleInit, OnModuleDestroy {
   private ticking=false;
   private readonly logger=new Logger(PipelineCutsService.name);
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
-  enabled() { return this.config.get('CRM_PROSPECTS_PILOT_ENABLED')==='true'; }
+  enabled() { return true; }
   onModuleInit() {
     if(this.enabled() && this.config.get('CRM_CUTS_AUTOMATION_ENABLED')==='true') {
       this.timer=setInterval(()=>void this.tick(),60000); this.timer.unref();

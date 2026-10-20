@@ -48,7 +48,19 @@ Para conciliar la operativa comercial ágil con la integridad absoluta de datos 
 ```
 
 > [!NOTE]
-> **Modo Piloto y Salvaguardas:** El acceso a las pestañas de Prospección y Cortes está condicionado a variables de entorno del backend (`CRM_PROSPECTS_PILOT_ENABLED` y `CRM_CUTS_AUTOMATION_ENABLED`) y a los permisos de rol. Si el piloto está desactivado para un usuario, la aplicación renderiza de forma transparente el Pipeline clásico garantizando continuidad operativa total.
+## Acceso por rol y pruebas locales — 20/10/2026
+
+Oportunidades ya no depende de un piloto, de un correo concreto ni de `CRM_PROSPECTS_PILOT_ENABLED`. El administrador asigna el acceso desde Gestión de Usuarios mediante los permisos **CRM** y **CRM: Oportunidades** del rol; ambos deben estar concedidos. El backend comprueba estos permisos también para Admin. Si falla la comprobación, la vista muestra un aviso y no abre un pipeline alternativo.
+
+- **Admin:** consulta global, creación de prospectos propios, edición de datos y fases de cualquier prospecto y seguimiento APP de cualquier comercial. No cambia propietarios; archivo, restauración y vinculación de prospectos conservan sus restricciones de propietario.
+- **Dirección:** consulta global y creación de cortes manuales; sin edición comercial.
+- **Otros roles autorizados, incluido Tester:** prospectos propios y ofertas de su código comercial. Un código comercial ausente no concede acceso global.
+- **Business Central:** tablas importadas de solo lectura. Las ofertas se crean en BC. n8n suministra `crm_offer_followups`; la app no prepara ni crea seguimientos automáticamente. Solo las filas `source=APP` admiten edición; las filas BC y las ofertas sin seguimiento permanecen consultables.
+- **Automatizaciones:** los cortes programados requieren `CRM_CUTS_AUTOMATION_ENABLED=true`; el calendario de prospectos requiere `CRM_PROSPECTS_OUTLOOK_ENABLED=true`. Son opciones independientes, desactivadas por defecto para las pruebas locales. Los cortes manuales siguen disponibles para Admin y Dirección.
+
+Para probar: reiniciar la aplicación desde `C:\proyectos\webapp_dts`, acceder como Admin y abrir CRM → Oportunidades. Revisar Prospección (crear y editar), Ofertas (filtros, Kanban y tabla) y Cortes. Los cambios manuales desde la app local utilizan la misma base compartida. No se ha desplegado en producción ni cambiado permisos en Supabase.
+
+
 
 ---
 
@@ -123,7 +135,7 @@ Al marcar una oferta como Ganada o Perdida, el comercial debe seleccionar obliga
 
 ### 3.5 Convivencia de Fuentes (`BC` vs `APP`)
 * **Datos Documentales (BC):** Cliente, importes brutos, descuentos, fecha de emisión y estado contable proceden de Business Central (solo lectura).
-* **Seguimiento Comercial (APP):** Las ofertas asignadas al piloto almacenan su seguimiento en tablas independientes (`crm_offer_followups` y `crm_offer_activities`), evitando que sincronizaciones automáticas de n8n sobrescriban fases, notas o probabilidades locales.
+* **Seguimiento Comercial (APP):** Las ofertas con seguimiento APP almacenan su seguimiento en tablas independientes (`crm_offer_followups` y `crm_offer_activities`), evitando que sincronizaciones automáticas de n8n sobrescriban fases, notas o probabilidades locales.
 
 ---
 
@@ -165,7 +177,7 @@ Al seleccionar un corte publicado, la pantalla despliega un panel de inteligenci
 | **`VENTAS` / `OPERACIONES`** | Crear, editar y gestionar prospectos de **su propia cartera**. Vincular/desvincular clientes propios. | Mover fases de sus ofertas con nota/motivo obligatorio. Ver solo su cartera. | Consultar y exportar fotografías congeladas correspondientes a su ámbito. |
 | **`DIRECCION`** | Consulta global de todas las carteras y prospectos de la compañía. | Consulta global de todo el pipeline y métricas consolidadas (sin arrastre de ofertas ajenas). | Consulta y exportación de todos los cortes e informes. Crear cortes manuales con motivo. |
 | **`ADMIN`** | Control total. Puede editar datos de prospectos ajenos preservando la autoría original. | Control total del pipeline, parámetros y tipologías. | Consulta global, generación de cortes manuales y reintento de capturas fallidas. |
-| **`TESTER`** | Acceso condicionado al comercial asignado en el piloto (entorno controlado). | Idéntico a rol comercial en su código comercial asignado. | Consulta de cortes según su ámbito autorizado. |
+| **`TESTER`** | Acceso mediante los permisos CRM/Oportunidades; prospectos propios. | Idéntico a rol comercial en su código comercial asignado. | Consulta de cortes según su ámbito autorizado. |
 
 ---
 
@@ -173,7 +185,7 @@ Al seleccionar un corte publicado, la pantalla despliega un panel de inteligenci
 
 ```
 # Prospección
-GET    /crm-prospects/access                   -> Verifica permisos y rol para el piloto
+GET    /crm-prospects/access                   -> Verifica permisos y alcance del usuario
 GET    /crm-prospects?status=&search=&page=    -> Listado paginado de prospectos
 GET    /crm-prospects/:id                      -> Detalle con historial de auditoría
 POST   /crm-prospects                          -> Alta de prospecto (unicidad por comercial)

@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),ts=require('typescript');
+const source=fs.readFileSync('frontend/src/pages/crm/components/CrmOpportunities.tsx','utf8');
+const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+let query={isPending:false,isError:false,data:{enabled:true,canCreate:true,canEditAll:true}},profile={id:'admin'},pipeline=[];
+const react=require('react');
+const mock=name=>name==='react'?{...react,useState:()=>['offers',()=>{}]}:name==='@tanstack/react-query'?{useQuery:opts=>opts.queryKey[0]==='prospect-access'?query:{data:{enabled:true}}}:name.includes('authStore')?{useAuthStore:fn=>fn({profile})}:name.includes('CrmPipeline')?{CrmPipeline:props=>{pipeline.push(props);return react.createElement('div',null,'PIPELINE')}}:name.startsWith('./')?{}:name.startsWith('../')?{}:require(''+name);
+const loaded={};new Function('require','exports',js)(mock,loaded);
+const render=()=>require('react-dom/server').renderToStaticMarkup(loaded.CrmOpportunities());
+assert.match(render(),/PIPELINE/);assert.equal(pipeline[0].pilotMode,true);assert.equal(pipeline[0].canEditPilot,true);
+pipeline=[];query={isPending:false,data:{enabled:false}};assert.match(render(),/No tienes acceso/);assert.equal(pipeline.length,0);
+query={isPending:true};assert.match(render(),/Comprobando permisos/);assert.equal(pipeline.length,0);
+query={isPending:false,isError:true};assert.match(render(),/Reintentar/);assert.equal(pipeline.length,0);
+query={data:{enabled:true,canCreate:false,canEditAll:false}};render();assert.equal(pipeline[0].canEditPilot,false);
+console.log('OK: acceso Admin, consulta Dirección y bloqueo sin permiso, durante carga y ante error.');

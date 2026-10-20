@@ -13,23 +13,21 @@ export class ProspectsService {
 
   async access(userId: string) {
     const disabled = { enabled: false, canCreate: false, canEditAll: false, canViewAll: false, userId };
-    if (this.config.get<string>('CRM_PROSPECTS_PILOT_ENABLED') !== 'true') return disabled;
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } });
     if (!profile || profile.is_active !== true) return disabled;
     if (!profile.role_id) return disabled;
     const permissions = await this.prisma.role_modules.findMany({ where: { role_id: profile.role_id, module: { is_active: true, route_path: { in: ['/crm', '/crm/pipeline'] } } }, include: { module: true } });
     if (!['/crm', '/crm/pipeline'].every(path => permissions.some(permission => permission.module.route_path === path && permission.can_view === true))) return disabled;
     const role = profile.roles?.name?.toUpperCase();
-    const pilotEmail = this.config.get<string>('CRM_PROSPECTS_PILOT_EMAIL') || 'aciurans@dtsinstruments.com';
-    const isPilot = role === 'TESTER' && profile.email.toLowerCase() === pilotEmail.toLowerCase();
     const isAdmin = role === 'ADMIN';
     const canViewAll = isAdmin || role === 'DIRECCION';
-    return { enabled: isPilot || canViewAll, canCreate: isPilot || isAdmin, canEditAll: isAdmin, canViewAll, userId, canSyncOutlook: this.outlook.enabled() && (isPilot || isAdmin) };
+    const canCreate = isAdmin || !canViewAll;
+    return { enabled: true, canCreate, canEditAll: isAdmin, canViewAll, userId, canSyncOutlook: this.outlook.enabled() && canCreate };
   }
 
   private async authorize(userId: string) {
     const access = await this.access(userId);
-    if (!access.enabled) throw new ForbiddenException('El piloto de Prospección no está habilitado para este usuario.');
+    if (!access.enabled) throw new ForbiddenException('No tienes permiso de CRM/Oportunidades.');
     return access;
   }
 
@@ -75,7 +73,7 @@ export class ProspectsService {
 
   async create(userId: string, data: CreateProspectDto) {
     const access = await this.authorize(userId);
-    if (!access.canCreate) throw new ForbiddenException('Solo Admin y el comercial del piloto pueden crear sus prospectos.');
+    if (!access.canCreate) throw new ForbiddenException('No tienes permiso para crear prospectos.');
     try {
       return await this.prisma.crm_prospects.create({ data: {
         ...this.fields(data), owner_id: userId,

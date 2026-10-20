@@ -80,7 +80,7 @@ describe('Graph attachment metadata', () => {
 describe('new email persistence', () => {
   const metadata = { version: 1, status: 'complete', files: [{ name: 'Presupuesto.pdf', downloadUrl: 'secret' }] };
   it('modern registration preserves category, quote and sent date; duplicates leave snapshot untouched', async () => {
-    const db: any = { profiles: {}, contacts: { findFirst: jest.fn().mockResolvedValue({ id: 'contact' }), findUnique: jest.fn().mockResolvedValue({ email: 'contact@test.invalid' }) }, sales_quotes: { findFirst: jest.fn().mockResolvedValue({ id: 'quote' }) },
+    const db: any = { crm_offer_followups: { findUnique: jest.fn().mockResolvedValue(null) }, profiles: {}, contacts: { findFirst: jest.fn().mockResolvedValue({ id: 'contact' }), findUnique: jest.fn().mockResolvedValue({ email: 'contact@test.invalid' }) }, sales_quotes: { findFirst: jest.fn().mockResolvedValue({ id: 'quote' }) },
       crm_activities: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn(async ({ data }) => ({ id: 'new', ...data })) },
       sales_quotes_crm: { findUnique: jest.fn().mockResolvedValue({ id: 'quote' }) }, sales_quote_activities: { create: jest.fn() } };
     const access: any = { actor: jest.fn().mockResolvedValue({ profile: { id: 'user' }, customerScope: {} }), company: jest.fn() };

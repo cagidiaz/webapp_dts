@@ -9,6 +9,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
+import { getProspectAccess } from '../../../api/prospects';
 import { 
   updateContactLinkedin, updateContactLocation,
   getCrmActivitiesByContact, createCrmActivity, updateCrmActivity, deleteCrmActivity,
@@ -162,6 +163,7 @@ interface CrmContactDetailProps {
 export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, onBack }) => {
   const queryClient = useQueryClient();
   const { profile } = useAuthStore();
+  const { data: opportunityAccess } = useQuery({ queryKey: ['prospect-access', profile?.id], queryFn: getProspectAccess, enabled: !!profile?.id, retry: false });
   const [searchParams, setSearchParams] = useSearchParams();
 
   const urlTab = searchParams.get('tab') as 'info' | 'timeline' | 'ofertas' | 'eventos' | 'emails' | null;
@@ -2333,7 +2335,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           {activeTab === 'ofertas' && (
             <div className="flex flex-col h-full space-y-4">
               {crmQuotes.some(quote => quote.followup_source === 'APP') ? (
-                <CrmPipeline pilotMode contactId={contactId} canEditPilot={['ADMIN', 'TESTER'].includes(profile?.roles?.name?.toUpperCase() || '')} />
+                <CrmPipeline pilotMode contactId={contactId} canEditPilot={opportunityAccess?.enabled === true && (opportunityAccess.canCreate || opportunityAccess.canEditAll)} />
               ) : isLoadingQuotes ? (
                 <div className="text-center py-10 text-xs text-gray-400 uppercase font-medium">Cargando ofertas comerciales...</div>
               ) : crmQuotes.length === 0 ? (

@@ -14,26 +14,19 @@ const dates = new Set(['cierreprev_date', 'confirmacion_date', 'fecha_proxima_ac
 @Injectable()
 export class OfferFollowupService {
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly prospects: ProspectsService) {}
-  enabled() { return this.config.get('CRM_PROSPECTS_PILOT_ENABLED') === 'true'; }
+  enabled() { return true; }
   async context() {
     if (!this.enabled()) return null;
     const rows = await this.prisma.crm_offer_followups.findMany({ where: { source: 'APP' }, include: { activities: { where: { tipo: { not: 'Auditoría' } }, orderBy: { fecha: 'desc' } } } });
     return new OfferSourceContext(await loadOfferContacts(this.prisma, rows));
   }
-  private async pilot(allowAdminEditingWithoutPilotAccess = false) {
-    const email = this.config.get<string>('CRM_PROSPECTS_PILOT_EMAIL') || 'aciurans@dtsinstruments.com';
-    const profile = await this.prisma.profiles.findUnique({ where: { email }, include: { roles: true } });
-    if (!profile?.is_active || profile.roles?.name?.toUpperCase() !== 'TESTER' || !profile.code?.trim()) throw new ConflictException('Antoni debe tener rol TESTER activo y código comercial configurado.');
-    if (!allowAdminEditingWithoutPilotAccess && !(await this.prospects.access(profile.id)).enabled) throw new ForbiddenException('El propietario del piloto no tiene permiso CRM/Oportunidades.');
-    return profile;
-  }
-  async scope(userId: string) {
+  async scope(userId: string, requiredPath?: '/crm/pipeline' | '/crm/contacts') {
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } });
     if (!profile?.is_active) throw new ForbiddenException('Perfil no disponible.');
-    if (['ADMIN', 'DIRECCION', 'TESTER'].includes(profile.roles?.name?.toUpperCase() || '')) {
+    if (requiredPath) {
       if (!profile.role_id) throw new ForbiddenException('Sin rol configurado.');
-      const permissions = await this.prisma.role_modules.findMany({ where: { role_id: profile.role_id, module: { is_active: true, route_path: { in: ['/crm', '/crm/pipeline'] } } }, include: { module: true } });
-      if (!['/crm', '/crm/pipeline'].every(path => permissions.some(permission => permission.module.route_path === path && permission.can_view))) throw new ForbiddenException('Sin permiso CRM/Oportunidades.');
+      const permissions = await this.prisma.role_modules.findMany({ where: { role_id: profile.role_id, module: { is_active: true, route_path: { in: ['/crm', requiredPath] } } }, include: { module: true } });
+      if (!['/crm', requiredPath].every(path => permissions.some(permission => permission.module.route_path === path && permission.can_view))) throw new ForbiddenException('Sin permiso CRM/Oportunidades.');
     }
     if (['ADMIN', 'DIRECCION'].includes(profile.roles?.name?.toUpperCase() || '')) return {};
     if (!profile.code) throw new ForbiddenException('Código comercial no configurado.');
@@ -41,44 +34,42 @@ export class OfferFollowupService {
   }
   private async writeAccess(userId: string) {
     const access = await this.prospects.access(userId);
-    if (!access.enabled || !access.canCreate && !access.canEditAll) throw new ForbiddenException('No tienes permiso para editar ofertas del piloto.');
+    if (!access.enabled || !access.canCreate && !access.canEditAll) throw new ForbiddenException('No tienes permiso para editar ofertas.');
     return access;
   }
   async closeReasons(userId: string) {
-    await this.scope(userId);
+    await this.scope(userId, '/crm/pipeline');
     return { ganada: [...OFFER_CLOSE_REASONS.ganada], perdida: [...OFFER_CLOSE_REASONS.perdida] };
   }
   async isManagedQuote(id: string) {
     if (!this.enabled()) return false;
     const quote = await this.prisma.sales_quotes.findUnique({ where: { id } });
     if (!quote) throw new NotFoundException('Oferta no encontrada.');
-    const existing = await this.prisma.crm_offer_followups.findUnique({ where: { document_no: quote.document_no } });
-    if (existing && existing.source !== 'BC') return true;
-    const email = this.config.get<string>('CRM_PROSPECTS_PILOT_EMAIL') || 'aciurans@dtsinstruments.com';
-    const profile = await this.prisma.profiles.findUnique({ where: { email }, include: { roles: true } });
-    return !!profile?.code && profile.roles?.name?.toUpperCase() === 'TESTER' && quote.salesperson_code === profile.code;
+    // Todas las escrituras pasan por seguimiento local; BC permanece de solo lectura.
+    return true;
   }
   async save(userId: string, quoteId: string, data: UpdateCrmQuoteDto) {
     if (data.contact_id !== undefined) {
       if (data.contacto_id !== undefined && data.contact_id !== data.contacto_id) throw new BadRequestException('Las referencias del contacto no coinciden.');
       data = { ...data, contacto_id: data.contact_id };
     }
-    const access = await this.writeAccess(userId), pilot = await this.pilot(access.canEditAll);
-    const quote = await this.prisma.sales_quotes.findFirst({ where: { id: quoteId, salesperson_code: pilot.code }, select: { document_no: true, customer_no: true } });
-    if (!quote) throw new NotFoundException('Oferta no encontrada en la cartera del piloto.');
-    if (!access.canEditAll && pilot.id !== userId) throw new ForbiddenException('Oferta ajena.');
+    const access = await this.writeAccess(userId);
+    const scope = access.canEditAll ? {} : await this.scope(userId);
+    const quote = await this.prisma.sales_quotes.findFirst({ where: { id: quoteId, ...scope }, select: { document_no: true, customer_no: true, salesperson_code: true } });
+    if (!quote) throw new NotFoundException('Oferta no encontrada en tu cartera.');
+    if ('salesperson_code' in scope && quote.salesperson_code !== scope.salesperson_code) throw new ForbiddenException('Oferta ajena.');
     if (data.motivo_ganada !== undefined || data.motivo_perdida !== undefined) {
       const reasons = await this.closeReasons(userId);
       for (const [field, allowed] of [['motivo_ganada', reasons.ganada], ['motivo_perdida', reasons.perdida]] as const) {
         if (data[field] !== undefined && !allowed.includes(data[field]?.trim() || '')) {
-          throw new BadRequestException('Selecciona un motivo del catálogo aprobado. La opción Otros no está disponible en el piloto.');
+          throw new BadRequestException('Selecciona un motivo del catálogo aprobado. La opción Otros no está disponible en el seguimiento.');
         }
       }
     }
     return this.prisma.$transaction(async tx => {
       const current = await tx.crm_offer_followups.findUnique({ where: { document_no: quote.document_no } });
       if (!current) throw new ConflictException('El seguimiento de esta oferta aún no ha llegado desde n8n. Actualiza la vista cuando termine la importación.');
-      if (current.source !== 'APP') throw new ConflictException('Esta oferta sigue gestionada desde BC. n8n debe habilitar su seguimiento APP para el piloto.');
+      if (current.source !== 'APP') throw new ConflictException('Esta oferta sigue gestionada desde BC. n8n debe suministrar su seguimiento APP para editarla desde la app.');
       if (data.followup_version === undefined || current.version !== data.followup_version) throw new ConflictException('Recarga la oferta para obtener su versión antes de guardar.');
       if (data.contacto_id === null || data.contacto_id === '') throw new BadRequestException('El contacto de la oferta es obligatorio.');
       if (data.contacto_id !== undefined && !await tx.contacts.findFirst({ where: { contact_no: data.contacto_id, client_id: quote.customer_no }, select: { id: true } })) throw new BadRequestException('El contacto debe existir en contacts y pertenecer al cliente de la oferta.');
@@ -123,8 +114,8 @@ export class OfferFollowupService {
       return null;
     }
     if (data) {
-      const pilot = await this.pilot(!!access?.canEditAll);
-      if (quote.salesperson_code !== pilot.code || !access?.canEditAll && pilot.id !== userId) throw new ForbiddenException('La actividad pertenece a otra cartera.');
+      const scope = access?.canEditAll ? {} : await this.scope(userId);
+      if ('salesperson_code' in scope && quote.salesperson_code !== scope.salesperson_code) throw new ForbiddenException('La actividad pertenece a otra cartera.');
     }
     if (data) return this.prisma.crm_offer_activities.create({ data: { followup_id: row.id, author_id: userId, tipo: data.tipo, notas: data.notas, fecha: new Date(data.fecha), hecho: data.hecho || false } });
     return this.prisma.crm_offer_activities.findMany({ where: { followup_id: row.id, tipo: { not: 'Auditoría' } }, orderBy: { fecha: 'desc' } });
@@ -132,14 +123,14 @@ export class OfferFollowupService {
   async editActivity(userId: string, id: string, data: any) {
     if (!this.enabled()) return null;
     const row = await this.prisma.crm_offer_activities.findUnique({ where: { id }, include: { followup: true } });
-    if (!row) return null;
+    if (!row) throw new ConflictException('La actividad pertenece al histórico de solo lectura.');
     const access = await this.writeAccess(userId);
-    const pilot = await this.pilot(access.canEditAll);
-    const quote = await this.prisma.sales_quotes.findFirst({ where: { document_no: row.followup.document_no, salesperson_code: pilot.code } });
-    if (!quote || !access.canEditAll && pilot.id !== userId) throw new ForbiddenException('Actividad ajena.');
+    const scope = access.canEditAll ? {} : await this.scope(userId);
+    const quote = await this.prisma.sales_quotes.findFirst({ where: { document_no: row.followup.document_no, ...scope } });
+    if (!quote || 'salesperson_code' in scope && quote.salesperson_code !== scope.salesperson_code) throw new ForbiddenException('Actividad ajena.');
     if (row.followup.source !== 'APP') throw new ConflictException('Esta oferta sigue gestionada desde BC.');
     if (row.tipo === 'Auditoría') throw new ForbiddenException('El historial de cambios es inmutable.');
-    if (data === null) throw new BadRequestException('Las actividades del piloto se conservan. Marca la actividad como realizada o corrige sus notas.');
+    if (data === null) throw new BadRequestException('Las actividades de seguimiento se conservan. Marca la actividad como realizada o corrige sus notas.');
     return this.prisma.crm_offer_activities.update({ where: { id }, data: { ...(data.tipo !== undefined ? {tipo:data.tipo}:{}), ...(data.notas !== undefined ? {notas:data.notas}:{}), ...(data.fecha ? {fecha:new Date(data.fecha)}:{}), ...(data.hecho !== undefined ? {hecho:data.hecho}:{}) } });
   }
 }

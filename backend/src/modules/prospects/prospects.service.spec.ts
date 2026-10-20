@@ -26,12 +26,10 @@ describe('Permisos y convivencia del piloto de Prospección', () => {
     service = new ProspectsService(db, config as any, { enabled: () => false, sync: jest.fn() } as any);
   });
 
-  it('no consulta perfiles ni tablas nuevas cuando el piloto está apagado', async () => {
+  it('el acceso depende del rol y no del antiguo interruptor de piloto', async () => {
     enabled = false;
-    expect((await service.access('pilot')).enabled).toBe(false);
-    await expect(service.detail('pilot', 'prospect')).rejects.toBeInstanceOf(ForbiddenException);
-    expect(db.profiles.findUnique).not.toHaveBeenCalled();
-    expect(db.crm_prospects.findFirst).not.toHaveBeenCalled();
+    expect((await service.access('pilot')).enabled).toBe(true);
+    expect(db.profiles.findUnique).toHaveBeenCalled();
   });
 
   it('Antoni TESTER requiere los permisos de CRM y Oportunidades del panel', async () => {
@@ -49,15 +47,17 @@ describe('Permisos y convivencia del piloto de Prospección', () => {
     expect(db.crm_prospects.findFirst).not.toHaveBeenCalled();
   });
 
-  it('el permiso de TESTER no incorpora otros testers ni cambia a Antoni al rol VENTAS', async () => {
-    email='otrotester@example.com';expect((await service.access('other')).enabled).toBe(false);
-    email='aciurans@dtsinstruments.com';role='VENTAS';expect((await service.access('pilot')).enabled).toBe(false);
+  it('el permiso habilita otros testers y comerciales sin lista de emails', async () => {
+    email='otrotester@example.com';expect((await service.access('other')).canCreate).toBe(true);
+    role='VENTAS';expect((await service.access('other')).canCreate).toBe(true);
+    db.role_modules.findMany.mockResolvedValue([]);
+    expect((await service.access('other')).enabled).toBe(false);
   });
 
-  it('mantiene fuera del piloto a los otros comerciales', async () => {
-    email = 'otro@example.com';
-    await expect(service.create('other', fields)).rejects.toBeInstanceOf(ForbiddenException);
-    expect(db.crm_prospects.create).not.toHaveBeenCalled();
+  it('un comercial autorizado crea solo prospectos propios', async () => {
+    email = 'otro@example.com';role='VENTAS';
+    await service.create('other', fields);
+    expect(db.crm_prospects.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({owner_id:'other'})}));
   });
 
   it('filtra los IDs consultados por el propietario y no expone registros ajenos', async () => {
@@ -268,12 +268,12 @@ describe('Permisos y convivencia del piloto de Prospección', () => {
     expect(db.crm_prospect_activities.create).not.toHaveBeenCalled();
   });
 
-  it('el cliente no expone seguimiento ajeno ni consulta tablas nuevas si el piloto está apagado', async () => {
+  it('el cliente no expone seguimiento ajeno aunque el antiguo piloto esté apagado', async () => {
     db.customers.findFirst.mockResolvedValue(null);
     await expect(service.clientActivities('pilot', 'foreign')).rejects.toBeInstanceOf(NotFoundException);
     expect(db.crm_prospect_activities.findMany).not.toHaveBeenCalled();
     enabled = false;
-    expect(await service.clientActivities('pilot', 'client')).toEqual([]);
+    await expect(service.clientActivities('pilot', 'client')).rejects.toBeInstanceOf(NotFoundException);
     expect(db.crm_prospect_activities.findMany).not.toHaveBeenCalled();
   });
 
@@ -305,8 +305,8 @@ describe('Permisos y convivencia del piloto de Prospección', () => {
     expect(db.crm_prospect_activities.findMany).not.toHaveBeenCalled();
   });
 
-  it('la agenda no consulta tablas del piloto cuando está apagado', async () => {
-    enabled = false;
+  it('la agenda no consulta seguimiento cuando se revoca el permiso', async () => {
+    db.role_modules.findMany.mockResolvedValue([]);
     expect(await service.agenda('pilot')).toEqual([]);
     expect(db.crm_prospect_activities.findMany).not.toHaveBeenCalled();
   });

@@ -26,7 +26,7 @@ describe('Captura y permisos de cortes',()=>{
   db.$transaction.mockImplementation(callback=>callback(db));
   service=new PipelineCutsService(db,{get:(key:string)=>key==='CRM_PROSPECTS_PILOT_ENABLED'?String(enabled):key==='CRM_CUTS_AUTOMATION_ENABLED'?String(automatic):undefined} as any);
  });
- it('apagado no accede a tablas nuevas ni perfiles',async()=>{enabled=false;expect((await service.access('viewer')).enabled).toBe(false);await service.tick();expect(db.profiles.findUnique).not.toHaveBeenCalled();expect(db.crm_pipeline_cuts.create).not.toHaveBeenCalled();});
+ it('consulta por permisos sin activar automatización ni depender de piloto',async()=>{enabled=false;automatic=false;expect((await service.access('viewer')).enabled).toBe(true);await service.tick();expect(db.crm_pipeline_cuts.create).not.toHaveBeenCalled();});
  it('respeta revocación de permisos',async()=>{db.role_modules.findMany.mockResolvedValue([]);await expect(service.list('viewer')).rejects.toBeInstanceOf(ForbiddenException);});
  it.each(['TESTER','VENTAS','OPERACIONES'])('rol %s no puede generar cortes manuales',async(value)=>{role=value;await expect(service.manual('viewer',{request_id:'request',reason:'Inicio'})).rejects.toBeInstanceOf(ForbiddenException);expect(db.crm_pipeline_cuts.create).not.toHaveBeenCalled();});
  it('Admin y Dirección pueden iniciar captura idempotente',async()=>{for(const value of ['ADMIN','DIRECCION']){role=value;await service.manual('viewer',{request_id:'request',reason:'Inicio del piloto'});}expect(db.crm_pipeline_cuts.create.mock.calls.map((c:any)=>c[0].data.request_key)).toEqual(['manual:viewer:request','manual:viewer:request']);});

@@ -56,8 +56,8 @@ describe('Seguimiento APP independiente de BC', () => {
     await service.save('pilot','bc1',{followup_version:1,motivo_perdida:'Falta de financiación'});
     await expect(service.save('pilot','bc1',{followup_version:1,motivo_ganada:'Falta de financiación'})).rejects.toThrow('catálogo aprobado');
   });
-  it('no consulta la tabla nueva con el piloto apagado',async()=>{
-    enabled=false;expect(await service.context()).toBeNull();expect(db.crm_offer_followups.findMany).not.toHaveBeenCalled();
+  it('resuelve el seguimiento local aunque la antigua variable de piloto esté apagada',async()=>{
+    enabled=false;expect(await service.context()).toBeInstanceOf(OfferSourceContext);expect(db.crm_offer_followups.findMany).toHaveBeenCalled();
   });
   it('conserva seguimiento al actualizar y recrear BC, pero recoge sus nuevos importes',()=>{
     const source=new OfferSourceContext([local]);
@@ -96,11 +96,11 @@ describe('Seguimiento APP independiente de BC', () => {
     expect(prospectAccess.mock.calls.every(([id]) => id === 'admin')).toBe(true);
     expect(db.crm_offer_followups.upsert).not.toHaveBeenCalled();
   });
-  it('un usuario sin permiso administrativo sigue necesitando el acceso de Antoni', async () => {
+  it('la edición no consulta permisos ni perfil de un comercial piloto ajeno', async () => {
     const prospectAccess = (service as any).prospects.access as jest.Mock;
-    prospectAccess.mockResolvedValueOnce(access).mockResolvedValueOnce({ enabled: false });
-    await expect(service.save('pilot','bc1',{ followup_version: 1 })).rejects.toThrow('El propietario del piloto no tiene permiso');
-    expect(db.crm_offer_followups.updateMany).not.toHaveBeenCalled();
+    await service.save('pilot','bc1',{followup_version:1});
+    expect(prospectAccess.mock.calls).toEqual([['pilot']]);
+    expect(db.profiles.findUnique.mock.calls.every(([args]:any[]) => args.where.id === 'pilot')).toBe(true);
   });
   it('si n8n aún no ha suministrado el seguimiento, no crea ni copia registros', async () => {
     db.crm_offer_followups.findUnique.mockResolvedValue(null);
@@ -172,7 +172,7 @@ describe('Seguimiento APP independiente de BC', () => {
   });
   it('el cambio de propietario exige revisión explícita',async()=>{
     db.sales_quotes.findFirst.mockResolvedValue(null);
-    await expect(service.save('pilot','bc1',{followup_version:1})).rejects.toThrow('cartera del piloto');
+    await expect(service.save('pilot','bc1',{followup_version:1})).rejects.toThrow('tu cartera');
     expect(db.crm_offer_followups.updateMany).not.toHaveBeenCalled();
   });
   it('no permite añadir actividades a un propietario diferente según el código BC',async()=>{
@@ -198,5 +198,29 @@ describe('Seguimiento APP independiente de BC', () => {
   });
   it('no permite vaciar la fase mediante null',async()=>{
     await expect(service.save('pilot','bc1',{followup_version:1,estado_oferta:null} as any)).rejects.toThrow('no puede quedar vacía');
+  });
+});
+
+
+describe('Admin sin propietario piloto ni código comercial', () => {
+  it('separa permiso de editar y datos importados, permitiendo cualquier cartera APP', async () => {
+    const db:any = {
+      sales_quotes:{findFirst:jest.fn().mockResolvedValue({document_no:'OF-OTRA',customer_no:'CL',salesperson_code:'OTRO'})},
+      crm_offer_followups:{findUnique:jest.fn().mockResolvedValue({id:'follow',source:'APP',version:1}),updateMany:jest.fn().mockResolvedValue({count:1}),findUniqueOrThrow:jest.fn().mockResolvedValue({version:2})},
+      crm_offer_activities:{create:jest.fn()},profiles:{findUnique:jest.fn()},$transaction:jest.fn(),
+    };
+    db.$transaction.mockImplementation((work:any)=>work(db));
+    const service=new OfferFollowupService(db,{} as any,{access:jest.fn().mockResolvedValue({enabled:true,canCreate:true,canEditAll:true})} as any);
+    await service.save('admin','quote',{followup_version:1,observaciones:'Nota local'});
+    expect(db.sales_quotes.findFirst).toHaveBeenCalledWith(expect.objectContaining({where:{id:'quote'}}));
+    expect(db.profiles.findUnique).not.toHaveBeenCalled();
+    expect(db.crm_offer_followups.updateMany).toHaveBeenCalled();
+    expect(db.sales_quotes.update).toBeUndefined();
+  });
+  it('no usa la escritura heredada cuando falta seguimiento de n8n',async()=>{
+    const db:any={sales_quotes:{findUnique:jest.fn().mockResolvedValue({document_no:'OF'})}};
+    const service=new OfferFollowupService(db,{} as any,{} as any);
+    expect(await service.isManagedQuote('quote')).toBe(true);
+    expect(db.crm_offer_followups).toBeUndefined();
   });
 });
