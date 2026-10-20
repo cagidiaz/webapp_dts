@@ -161,3 +161,8 @@ Todas las rutas requieren autenticación JWT. En el frontend, la ruta CRM está 
 * Un saldo pendiente elevado no implica por sí mismo que la cuenta esté bloqueada: ambos valores se muestran de forma independiente.
 * La comparación YTD debe interpretarse con el mismo corte temporal para evitar atribuir a crecimiento lo que sea simplemente diferencia de días transcurridos.
 * Las categorías A–F son un dato de gestión comercial. Conviene acordar sus criterios de asignación y revisar periódicamente las cuentas *Sin clasificar* para que la matriz sea accionable.
+
+
+## Manual práctico de usuario
+
+Para formación desde cero, consulta el [manual de CRM Clientes y Contactos](../../manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md), edición 19/10/2026, con capturas reales, clasificación A-F, matriz YTD, procedimientos y ejemplos.

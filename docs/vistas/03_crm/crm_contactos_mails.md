@@ -251,3 +251,37 @@ Prueba reproducible: `node scripts/check-floating-outlook-notice.cjs` en fronten
 ### Diagnóstico de tiempos Classic (19/10/2026)
 
 Componente 1.1.2: instalar el ZIP actualizado conservando la vinculación. Sin SQL. El navegador registra preparación (equipos y solicitud), espera de clic adicional y confirmación en consola `[Classic timing]`; backend registra `classic_timing` por etapa y UUID de solicitud. El componente guarda tiempos de carga, consulta al backend, conexión/arranque de Outlook, localización y visualización en `%LOCALAPPDATA%\dTS\OutlookClassic\timings.jsonl` (se trunca al superar 256 KiB). Solo UUID técnico, versión, etapa y tiempos: sin asunto, cuerpo, destinatarios ni tokens. Una etapa registrada no acredita éxito; prevalece la confirmación autenticada existente. Comparar un correo con Classic abierto y otro con Classic cerrado; el tiempo total del navegador puede incluir confirmación manual adicional. Pendiente de medición real con esta versión.
+
+
+## Manual práctico de usuario
+
+Disponible el [manual de CRM Clientes y Contactos](../../manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md), edición 19/10/2026. Incluye las cinco pestañas de la ficha, actividades y conclusiones, informes, registro de emails, adjuntos, apertura y respuestas, configuración y funciones condicionales.
+
+
+## Aceptación comunicada por el usuario (20/10/2026)
+
+El usuario aprueba expresamente estas cinco comprobaciones: prueba de apertura sin crear borradores; vinculaciones de equipos; permisos por rol; avisos flotantes; contadores de tipología al filtrar por oferta. Esta confirmación actualiza los pendientes históricos de esos puntos. No se amplía a casos individuales adicionales que el usuario no haya detallado.
+
+Prueba real de Classic 1.1.2: dos aperturas correctas del mismo correo, con Outlook abierto y cerrado. Desde solicitud emitida hasta confirmación: 2,51 s abierto y 6,23 s cerrado. Trabajo local de Outlook: 1,56 s y 5,16 s; consulta HTTP del componente al backend: 0,65 s y 0,57 s. El arranque en el caso cerrado consume 2,01 s. Los totales no incluyen la preparación inicial anterior a emitir la solicitud; son una muestra por situación, no una garantía de rendimiento. Recomendación: conservar el flujo actual de momento, sin optimización aplicada en esta entrega.
+
+Actualización posterior del 20/10/2026: el usuario aprueba los adjuntos tras editar, el correo preparado desde CRM y las pruebas del segundo usuario. Queda completada la lista principal de aceptación de Outlook. No consta confirmación específica de nombres de adjuntos muy largos, selección entre varias copias del mensaje o escenarios con múltiples cuentas; se conservan como cobertura adicional no verificada. Se conservan las validaciones anteriores de apertura/respuestas, movimiento entre carpetas, adjuntos y borrado exclusivo del CRM.
+
+
+## Cierre de las pruebas principales de Outlook (20/10/2026)
+
+El usuario confirma: «adjuntos tras editar aprobado», «correo preparado desde crm aprobado» y «segundo usuario pruebas ok». Estas tres aceptaciones completan la lista principal junto con las aprobaciones de prueba sin borradores, vinculaciones, permisos por rol, avisos flotantes y contadores por oferta. Se mantienen las validaciones anteriores de apertura y respuestas Classic/Web, enviados/recibidos, cambio de carpeta, adjuntos y borrado exclusivo del CRM.
+
+La apertura con Classic abierto y cerrado también finalizó correctamente con 1.1.2 (2,51 s y 6,23 s desde solicitud emitida hasta confirmación, respectivamente). No se aplica optimización de rendimiento. Este cierre es aceptación funcional del recorrido principal; no certifica todos los escenarios posibles. Los nombres de adjuntos muy largos, la selección de varias copias y múltiples cuentas siguen sin confirmación específica. PST, archivo en línea y buzones compartidos no quedan acreditados por estas pruebas. Sin cambios de código, SQL ni datos.
+
+
+## Mejora pendiente: abrir correos dentro de Outlook PWA (20/10/2026)
+
+**Estado: aplazada a petición del usuario. No implementada.** Objetivo: que al abrir un correo desde el CRM con preferencia Outlook Web se utilice la PWA instalada y, si Microsoft y el navegador lo permiten, su ventana ya abierta, evitando una pestaña convencional adicional.
+
+El flujo actual preabre `about:blank`, resuelve la identidad del mensaje y redirige la ventana a su enlace verificado. No se ha demostrado todavía cómo interviene ese flujo en la captura de enlaces de la PWA; no se atribuye el comportamiento a una causa única.
+
+Antes de desarrollar: identificar si Outlook se instaló desde Chrome o Edge, versión, perfil del navegador, dominios asociados y configuración de apertura de enlaces. Probar primero un enlace directo verificado con la PWA abierta y cerrada, distinguiendo tres resultados: pestaña de navegador, nueva ventana PWA y reutilización de la PWA existente. La reutilización depende de las capacidades y configuración de Outlook y del navegador; no debe prometerse desde el CRM.
+
+Si es necesario adaptar el lanzamiento, conservar permisos, comprobación de buzón e identidad exacta, validación de destinos HTTPS, protección frente a bloqueo de ventanas, tratamiento de errores y alternativa Web convencional. No sustituirlo por búsqueda por asunto ni por protocolos inventados. Validar también respuestas, copias ambiguas, varios perfiles/cuentas y equipos sin PWA, sin repetir aperturas involuntariamente. No cambiar Classic ni realizar SQL para esta anotación.
+
+Referencias para retomar la investigación: [captura de navegación en Chrome](https://developer.chrome.com/docs/capabilities/pwa-navigation-management) y [apertura de enlaces en PWA de Edge](https://learn.microsoft.com/en-us/microsoft-edge/progressive-web-apps/how-to/handle-urls). Revisar su vigencia antes de implementar.

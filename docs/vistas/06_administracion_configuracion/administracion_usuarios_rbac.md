@@ -129,3 +129,19 @@ Se utiliza la conexión SQL del backend para las tablas Classic; no acceso del n
 Pruebas HTTP con JWT: anonimato, roles no administrativos, administrador inactivo, revocación del rol entre peticiones, metadatos permitidos, usuarios sin conexión, ID inválido, equipo ausente y error de esquema. Pruebas PostgreSQL aisladas: estados de cuenta, no exposición de secretos, revocación idempotente y bloqueo de una solicitud firmada pendiente. Componente frontend: filtros, estados, confirmación/cancelación, error, caché por actor y estilo oscuro.
 
 Publicar backend y frontend, abrir Gestión de usuarios → Vinculaciones Outlook, comprobar con una cuenta ADMIN y revocar solo un equipo elegido para la prueba. Confirmar que el propietario ya no puede abrir con ese vínculo. No se ha revocado ningún equipo real durante el desarrollo. La aceptación real de esta pestaña queda pendiente.
+
+
+## Aceptación comunicada por el usuario (20/10/2026)
+
+El usuario aprueba expresamente estas cinco comprobaciones: prueba de apertura sin crear borradores; vinculaciones de equipos; permisos por rol; avisos flotantes; contadores de tipología al filtrar por oferta. Esta confirmación actualiza los pendientes históricos de esos puntos. No se amplía a casos individuales adicionales que el usuario no haya detallado.
+
+Prueba real de Classic 1.1.2: dos aperturas correctas del mismo correo, con Outlook abierto y cerrado. Desde solicitud emitida hasta confirmación: 2,51 s abierto y 6,23 s cerrado. Trabajo local de Outlook: 1,56 s y 5,16 s; consulta HTTP del componente al backend: 0,65 s y 0,57 s. El arranque en el caso cerrado consume 2,01 s. Los totales no incluyen la preparación inicial anterior a emitir la solicitud; son una muestra por situación, no una garantía de rendimiento. Recomendación: conservar el flujo actual de momento, sin optimización aplicada en esta entrega.
+
+Actualización posterior del 20/10/2026: el usuario aprueba los adjuntos tras editar, el correo preparado desde CRM y las pruebas del segundo usuario. Queda completada la lista principal de aceptación de Outlook. No consta confirmación específica de nombres de adjuntos muy largos, selección entre varias copias del mensaje o escenarios con múltiples cuentas; se conservan como cobertura adicional no verificada. Se conservan las validaciones anteriores de apertura/respuestas, movimiento entre carpetas, adjuntos y borrado exclusivo del CRM.
+
+
+## Cierre de las pruebas principales de Outlook (20/10/2026)
+
+El usuario confirma: «adjuntos tras editar aprobado», «correo preparado desde crm aprobado» y «segundo usuario pruebas ok». Estas tres aceptaciones completan la lista principal junto con las aprobaciones de prueba sin borradores, vinculaciones, permisos por rol, avisos flotantes y contadores por oferta. Se mantienen las validaciones anteriores de apertura y respuestas Classic/Web, enviados/recibidos, cambio de carpeta, adjuntos y borrado exclusivo del CRM.
+
+La apertura con Classic abierto y cerrado también finalizó correctamente con 1.1.2 (2,51 s y 6,23 s desde solicitud emitida hasta confirmación, respectivamente). No se aplica optimización de rendimiento. Este cierre es aceptación funcional del recorrido principal; no certifica todos los escenarios posibles. Los nombres de adjuntos muy largos, la selección de varias copias y múltiples cuentas siguen sin confirmación específica. PST, archivo en línea y buzones compartidos no quedan acreditados por estas pruebas. Sin cambios de código, SQL ni datos.

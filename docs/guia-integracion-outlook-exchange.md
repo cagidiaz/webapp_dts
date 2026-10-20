@@ -282,3 +282,10 @@ Gestión de usuarios incorpora la pestaña «Vinculaciones Outlook», exclusiva 
 Las consultas usan la conexión Prisma de backend. El estado de conexión se calcula en SQL sin devolver tokens; los dispositivos se proyectan solo a campos de presentación, sin claves ni hashes. La revocación actualiza exclusivamente `revoked_at`, es idempotente y el manejador Classic la comprueba antes de consumir solicitudes firmadas. Se conserva la gestión personal de equipos en `/outlook-classic`.
 
 Una vinculación vigente y una conexión registrada no acreditan presencia online ni una comprobación inmediata de Microsoft Graph. [Operación y diagnóstico](vistas/06_administracion_configuracion/administracion_usuarios_rbac.md#pestaña-3-vinculaciones-outlook-19102026). Sin migración SQL ni cambios de permisos sobre tablas BC. Entrega pendiente de prueba real tras publicar backend y frontend.
+
+
+## Cierre de las pruebas principales de Outlook (20/10/2026)
+
+El usuario confirma: «adjuntos tras editar aprobado», «correo preparado desde crm aprobado» y «segundo usuario pruebas ok». Estas tres aceptaciones completan la lista principal junto con las aprobaciones de prueba sin borradores, vinculaciones, permisos por rol, avisos flotantes y contadores por oferta. Se mantienen las validaciones anteriores de apertura y respuestas Classic/Web, enviados/recibidos, cambio de carpeta, adjuntos y borrado exclusivo del CRM.
+
+La apertura con Classic abierto y cerrado también finalizó correctamente con 1.1.2 (2,51 s y 6,23 s desde solicitud emitida hasta confirmación, respectivamente). No se aplica optimización de rendimiento. Este cierre es aceptación funcional del recorrido principal; no certifica todos los escenarios posibles. Los nombres de adjuntos muy largos, la selección de varias copias y múltiples cuentas siguen sin confirmación específica. PST, archivo en línea y buzones compartidos no quedan acreditados por estas pruebas. Sin cambios de código, SQL ni datos.
