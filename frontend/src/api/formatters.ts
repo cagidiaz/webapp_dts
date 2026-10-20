@@ -36,3 +36,9 @@ export const formatDecimal = (val: number | undefined | null, decimals: number =
   if (val === undefined || val === null || isNaN(val) || !isFinite(val)) return '---';
   return val.toFixed(decimals);
 };
+
+/** El valor centinela del año 1 representa una fecha sin informar en ofertas importadas. */
+export const offerDateInputValue = (value: string | null | undefined): string => {
+  const day = value?.split('T')[0] || '';
+  return day === '0001-01-01' ? '' : day;
+};

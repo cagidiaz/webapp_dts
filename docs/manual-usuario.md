@@ -604,3 +604,13 @@ Oportunidades ya no depende de un piloto, de un correo concreto ni de `CRM_PROSP
 
 Para probar: reiniciar la aplicación desde `C:\proyectos\webapp_dts`, acceder como Admin y abrir CRM → Oportunidades. Revisar Prospección (crear y editar), Ofertas (filtros, Kanban y tabla) y Cortes. Los cambios manuales desde la app local utilizan la misma base compartida. No se ha desplegado en producción ni cambiado permisos en Supabase.
 
+
+
+### Finalización de oferta sin informar (20/10/2026)
+
+En Oportunidades y en la ficha del contacto, la fecha de finalización se muestra vacía cuando el valor recibido es nulo o `0001-01-01` (incluido su formato con hora). Las fechas reales se conservan. Es una corrección de visualización: no modifica los registros importados desde Business Central.
+
+
+### Embudo de seis columnas ajustado al ancho (20/10/2026)
+
+Las seis fases abiertas se presentan en una sola fila de columnas iguales, sin separación entre columnas ni ancho mínimo que fuerce desplazamiento horizontal. El margen lateral interior se reduce a 4 px y las cabeceras pueden repartir su contenido en varias líneas. Se mantienen los tamaños de letra, los filtros, el arrastre, la vista tabla y los modos claro y oscuro. La altura y el desplazamiento vertical de cada columna se conservan.

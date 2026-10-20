@@ -215,3 +215,13 @@ GET    /crm-pipeline-cuts/:id/reports          -> Los 8 informes analíticos con
 GET    /crm-pipeline-cuts/:id/compare/:baseId  -> Informe comparativo diferencial entre 2 cortes
 GET    /crm-pipeline-cuts/:id/export           -> Descarga CSV segura de la fotografía
 ```
+
+
+### Finalización de oferta sin informar (20/10/2026)
+
+En Oportunidades y en la ficha del contacto, la fecha de finalización se muestra vacía cuando el valor recibido es nulo o `0001-01-01` (incluido su formato con hora). Las fechas reales se conservan. Es una corrección de visualización: no modifica los registros importados desde Business Central.
+
+
+### Embudo de seis columnas ajustado al ancho (20/10/2026)
+
+Las seis fases abiertas se presentan en una sola fila de columnas iguales, sin separación entre columnas ni ancho mínimo que fuerce desplazamiento horizontal. El margen lateral interior se reduce a 4 px y las cabeceras pueden repartir su contenido en varias líneas. Se mantienen los tamaños de letra, los filtros, el arrastre, la vista tabla y los modos claro y oscuro. La altura y el desplazamiento vertical de cada columna se conservan.

@@ -19,7 +19,7 @@ import {
   getPreferredOutlookClient, setPreferredOutlookClient, openVerifiedEmailInWeb,
   searchConversationInOutlook, copyEmailSearchToClipboard
 } from '../../../api';
-import { formatCurrency } from '../../../api/formatters';
+import { formatCurrency, offerDateInputValue } from '../../../api/formatters';
 import { 
   ArrowLeft, Phone, Mail, MapPin, Smartphone,
   Linkedin, Edit2, Check, X, Plus, Calendar, Clock, Percent,
@@ -3788,7 +3788,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     <input 
                       type="date" 
                       disabled
-                      value={selectedQuote.confirmacion_date ? selectedQuote.confirmacion_date.split('T')[0] : ''}
+                      value={offerDateInputValue(selectedQuote.confirmacion_date)}
                       className="w-full bg-slate-50/50 dark:bg-slate-800/10 border border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 text-xs rounded-lg p-2 cursor-not-allowed"
                     />
                   </div>

@@ -12,7 +12,7 @@ import {
 } from '../../../api/quotes';
 import { getContacts } from '../../../api/contacts';
 import { getCustomerSalespersons } from '../../../api/customers';
-import { formatCurrency, formatNumber } from '../../../api/formatters';
+import { formatCurrency, formatNumber, offerDateInputValue } from '../../../api/formatters';
 import { 
   Briefcase, Euro, Percent, Sparkles, AlertTriangle, 
   Search, Calendar, User, Mail, Phone, Plus, Trash2,
@@ -603,19 +603,19 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
       </div>}
       {/* Kanban / Table View Conditional Rendering */}
       {viewMode === 'kanban' ? (
-        <div className={pilotMode ? "flex gap-4 overflow-x-auto h-[calc(100vh-390px)] min-h-[450px] pb-3" : "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-[calc(100vh-390px)] min-h-[450px]"}>
+        <div className={pilotMode ? "grid grid-cols-6 gap-0 min-w-0 h-[calc(100vh-390px)] min-h-[450px] pb-3" : "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-[calc(100vh-390px)] min-h-[450px]"}>
           {STAGES.map(stage => {
             const stageQuotes = groupedQuotes[stage.id] || [];
             
             return (
               <div 
                 key={stage.id}
-                style={pilotMode ? {minWidth: 200, flex: '1 0 200px'} : undefined}
+                style={pilotMode ? { minWidth: 0 } : undefined}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, stage.id)}
                 className="bg-gray-50/50 dark:bg-white/1 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col h-full overflow-hidden"
               >
-                <div className={`p-4 border-t-4 ${stage.color} border-b border-b-gray-200/60 dark:border-b-white/5 bg-white dark:bg-surface-card-dark flex justify-between items-center`}>
+                <div className={`${pilotMode ? 'px-2 py-4 gap-1 flex-wrap' : 'p-4'} border-t-4 ${stage.color} border-b border-b-gray-200/60 dark:border-b-white/5 bg-white dark:bg-surface-card-dark flex justify-between items-center`}>
                   <span className="font-bold text-xs uppercase tracking-wider text-gray-800 dark:text-gray-200">
                     {stage.label}
                   </span>
@@ -624,7 +624,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                   </span>
                 </div>
 
-                <div className="flex-1 p-3 overflow-y-auto custom-scrollbar space-y-3">
+                <div className={`flex-1 min-w-0 ${pilotMode ? 'px-1 py-3' : 'p-3'} overflow-y-auto custom-scrollbar space-y-3`}>
                   {stageQuotes.length === 0 ? (
                     <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-white/5 rounded-xl py-10">
                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Soltar aquí</span>
@@ -903,7 +903,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                     <input 
                       type="date" 
                       disabled
-                      value={selectedQuote.confirmacion_date ? selectedQuote.confirmacion_date.split('T')[0] : ''}
+                      value={offerDateInputValue(selectedQuote.confirmacion_date)}
                       className="w-full bg-slate-50/50 dark:bg-slate-800/10 border border-gray-200 dark:border-gray-800 text-gray-500 dark:text-gray-400 text-xs rounded-lg p-2 cursor-not-allowed"
                     />
                   </div>
