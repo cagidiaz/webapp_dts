@@ -494,8 +494,10 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
                       fill={fillColor}
                       stroke={strokeColor}
                       strokeWidth={strokeWidth}
-                      className="transition-all duration-200"
+                      className="duration-200"
                       style={{
+                        // La geometría cambia a la vez que los marcadores; solo animar el resaltado.
+                        transitionProperty: 'fill, stroke, stroke-width, opacity',
                         cursor: hasVendors ? 'pointer' : 'default',
                         opacity: selectedZone && !isSelected ? 0.45 : 1,
                       }}

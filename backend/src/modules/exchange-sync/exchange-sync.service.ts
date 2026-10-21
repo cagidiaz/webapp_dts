@@ -10,6 +10,7 @@ import { attachmentState } from './email-attachments';
 export class ExchangeSyncService {
   private readonly logger = new Logger(ExchangeSyncService.name);
   private readonly inFlightSyncs = new Set<string>();
+  private readonly pendingSyncs = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -120,11 +121,22 @@ export class ExchangeSyncService {
    */
   async syncActivityToOutlook(activityId: string) {
     if (this.inFlightSyncs.has(activityId)) {
-      this.logger.debug(`syncActivityToOutlook ya está en curso para ${activityId}, ignorando llamada concurrente.`);
+      this.pendingSyncs.add(activityId);
       return;
     }
     this.inFlightSyncs.add(activityId);
+    try {
+      do {
+        this.pendingSyncs.delete(activityId);
+        await this.syncActivitySnapshotToOutlook(activityId);
+      } while (this.pendingSyncs.has(activityId));
+    } finally {
+      this.pendingSyncs.delete(activityId);
+      this.inFlightSyncs.delete(activityId);
+    }
+  }
 
+  private async syncActivitySnapshotToOutlook(activityId: string) {
     try {
       const activity = await this.prisma.crm_activities.findUnique({
         where: { id: activityId },
@@ -150,6 +162,7 @@ export class ExchangeSyncService {
       });
 
       if (!userAccount || !userAccount.calendar_sync_enabled) {
+        await this.prisma.crm_activities.update({ where: { id: activityId }, data: { exchange_sync_status: 'no_connection' } });
         return;
       }
 
@@ -242,6 +255,7 @@ export class ExchangeSyncService {
           categories,
         });
 
+        if (!updated) throw new Error('Outlook no confirmó la actualización del evento.');
         if (updated) {
           const canonicalWebLink = `https://outlook.office.com/calendar/item/${encodeURIComponent(currentExchangeItemId)}`;
           await this.prisma.crm_activities.update({
@@ -249,7 +263,7 @@ export class ExchangeSyncService {
             data: {
               exchange_change_key: updated.changeKey,
               exchange_web_link: canonicalWebLink,
-              exchange_sync_status: 'synced',
+              exchange_sync_status: this.pendingSyncs.has(activityId) ? 'pending' : 'synced',
               exchange_last_synced_at: new Date(),
             },
           });
@@ -267,6 +281,7 @@ export class ExchangeSyncService {
           categories,
         });
 
+        if (!created) throw new Error('Outlook no confirmó la creación del evento.');
         if (created) {
           const canonicalWebLink = `https://outlook.office.com/calendar/item/${encodeURIComponent(created.id)}`;
           await this.prisma.crm_activities.update({
@@ -275,7 +290,7 @@ export class ExchangeSyncService {
               exchange_item_id: created.id,
               exchange_change_key: created.changeKey,
               exchange_web_link: canonicalWebLink,
-              exchange_sync_status: 'synced',
+              exchange_sync_status: this.pendingSyncs.has(activityId) ? 'pending' : 'synced',
               exchange_last_synced_at: new Date(),
             },
           });
@@ -289,8 +304,6 @@ export class ExchangeSyncService {
           exchange_sync_status: 'failed',
         },
       }).catch(() => null);
-    } finally {
-      this.inFlightSyncs.delete(activityId);
     }
   }
 
@@ -596,6 +609,13 @@ export class ExchangeSyncService {
             });
 
             if (existingActivity) {
+              // Una lectura remota no confirma el envío de cambios locales.
+              if (this.inFlightSyncs.has(existingActivity.id) || ['pending', 'failed', 'no_connection'].includes(existingActivity.exchange_sync_status || '')) continue;
+              const completed = Boolean(existingActivity.is_completed || existingActivity.conclusions?.trim());
+              const expectedCategory = completed ? 'dTS CRM - Completado' : 'dTS CRM';
+              const crmManaged = (ev.categories || []).some((name: string) => name === 'dTS CRM' || name === 'dTS CRM - Completado')
+                || /^\[(?:✓\s*)?dTS CRM/i.test(ev.subject || '');
+              const categoryMismatch = crmManaged && !(ev.categories || []).includes(expectedCategory);
               // Limpiar prefijo dTS del título si viene modificado desde Outlook
               let cleanTitle = existingActivity.title;
               if (ev.subject && !ev.subject.startsWith('[dTS CRM') && !ev.subject.startsWith('[✓ dTS CRM')) {
@@ -615,8 +635,8 @@ export class ExchangeSyncService {
                   location: ev.location?.displayName || existingActivity.location,
                   exchange_change_key: ev.changeKey || existingActivity.exchange_change_key,
                   exchange_web_link: canonicalWebLink,
-                  exchange_sync_status: 'synced',
-                  exchange_last_synced_at: new Date(),
+                  ...(categoryMismatch ? { exchange_sync_status: 'out_of_sync' } : {}),
+                  // Conservar la fecha del último envío confirmado al calendario.
                   updated_at: new Date(),
                 },
               });
@@ -677,6 +697,15 @@ export class ExchangeSyncService {
       } catch (calError) {
         this.logger.error(`Error al sincronizar calendario desde Outlook para ${userId}:`, calError);
       }
+    }
+
+    if (account.calendar_sync_enabled) {
+      const pending = await this.prisma.crm_activities.findMany({
+        where: { created_by: userId, type: { in: ['EVENT', 'REUNION', 'VIDEOLLAMADA', 'VISITA', 'CALL', 'TASK'] },
+          exchange_item_id: { not: null }, exchange_sync_status: { in: ['pending', 'failed', 'no_connection'] } },
+        select: { id: true }, orderBy: { updated_at: 'asc' }, take: 20,
+      });
+      for (const activity of pending) await this.syncActivityToOutlook(activity.id);
     }
 
     // 2. Sincronizar y reconciliar únicamente los borradores pendientes de la app

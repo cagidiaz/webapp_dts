@@ -263,13 +263,14 @@ export class MicrosoftGraphService {
     ];
 
     const accessToken = await this.getValidAccessToken(userId);
-    if (!accessToken) return;
+    if (!accessToken) throw new Error('Conexión de Outlook no disponible para configurar categorías.');
 
     try {
       const listRes = await fetch('https://graph.microsoft.com/v1.0/me/outlook/masterCategories', {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
+      if (!listRes.ok) throw new Error(`Outlook rechazó consultar categorías (HTTP ${listRes.status}).`);
       if (listRes.ok) {
         const data = await listRes.json();
         const existingList = data.value || [];
@@ -291,11 +292,12 @@ export class MicrosoftGraphService {
                 color: cat.color,
               }),
             });
+            if (!createRes.ok) throw new Error(`Outlook rechazó crear la categoría (HTTP ${createRes.status}).`);
             if (createRes.ok) {
               this.logger.log(`Categoría "${cat.name}" (${cat.color}) registrada exitosamente en Outlook para ${userId}`);
             }
           } else if (existing.color !== cat.color) {
-            await fetch(`https://graph.microsoft.com/v1.0/me/outlook/masterCategories/${existing.id}`, {
+            const patchRes = await fetch(`https://graph.microsoft.com/v1.0/me/outlook/masterCategories/${existing.id}`, {
               method: 'PATCH',
               headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -303,12 +305,14 @@ export class MicrosoftGraphService {
               },
               body: JSON.stringify({ color: cat.color }),
             });
+            if (!patchRes.ok) throw new Error(`Outlook rechazó actualizar la categoría (HTTP ${patchRes.status}).`);
             this.logger.log(`Categoría "${cat.name}" actualizada a ${cat.color} para ${userId}`);
           }
         }
       }
     } catch (error) {
       this.logger.warn(`No se pudieron asegurar las categorías de Outlook para ${userId}:`, error);
+      throw error;
     }
   }
 
@@ -408,7 +412,7 @@ export class MicrosoftGraphService {
    */
   async updateCalendarEvent(userId: string, eventId: string, eventData: Partial<CalendarEventPayload>) {
     const accessToken = await this.getValidAccessToken(userId);
-    if (!accessToken) return null;
+    if (!accessToken) throw new Error('Conexión de Outlook no disponible para actualizar el evento.');
 
     // Asegurar categoría maestra de color en Outlook
     await this.ensureDtsCategory(userId);
@@ -465,7 +469,7 @@ export class MicrosoftGraphService {
     if (!response.ok) {
       const errorText = await response.text();
       this.logger.error(`Error al actualizar evento ${eventId} en Microsoft Graph: ${errorText}`);
-      return null;
+      throw new Error(`Outlook rechazó actualizar el evento (HTTP ${response.status}).`);
     }
 
     const updatedEvent = await response.json();

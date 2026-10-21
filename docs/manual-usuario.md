@@ -623,3 +623,16 @@ Los registros EMAIL se conservan en Emails y Timeline, pero no forman parte de A
 Las rutas de registro de correo lo guardan como completado a efectos de actividad. En los borradores, el estado de envío sigue controlado por exchange_sync_status: este indicador no significa que el correo se haya enviado. Las reuniones, llamadas, visitas, videollamadas, tareas y eventos mantienen su funcionamiento. Solo REUNION se etiqueta como Reunión; los tipos no reconocidos se muestran como Actividad.
 
 Si un correo necesita una acción futura, crear una tarea independiente desde el CRM, con fecha y estado propios. La fecha del correo se conserva como dato histórico.
+
+
+### Conclusiones y color de los eventos en Outlook — 21/10/2026
+
+Al guardar conclusiones no vacías, el CRM completa la actividad y deja su actualización de calendario pendiente. El evento vinculado recibe las conclusiones, el prefijo de realizado y la categoría `dTS CRM - Completado` (`preset4`, verde). Las actividades abiertas usan `dTS CRM` (`preset7`, azul). Los correos EMAIL no se exportan como eventos.
+
+Si se guarda otra modificación mientras se está enviando la anterior, se conserva y se envía una nueva lectura de los datos al finalizar. Los errores de permisos, categorías o actualización ya no se ocultan como sincronización correcta. Sin cuenta o calendario habilitado se conserva el estado de falta de conexión.
+
+La sincronización habitual de Outlook/CRM vuelve a intentar hasta 20 actualizaciones pendientes, fallidas o sin conexión de eventos ya vinculados. No crea otra convocatoria para sustituir un evento cuya actualización falló. Una lectura desde Outlook no confirma que los cambios del CRM hayan llegado al calendario ni borra un envío pendiente. Si detecta una categoría distinta de la esperada en un evento CRM, registra `out_of_sync`; este estado histórico no dispara reparaciones masivas.
+
+**Comprobación del usuario:** reiniciar la app local, abrir una actividad exportada al calendario, escribir conclusiones y guardar. Comprobar en Outlook que el mismo evento muestra las conclusiones y la categoría verde. Para corregir una actividad antigua concreta, guardar de nuevo sus conclusiones. Si no hay conexión, reconectar Microsoft 365, activar sincronización de calendario y utilizar la sincronización existente.
+
+Las pruebas automatizadas comprueban concurrencia, estados, reintentos y errores de Microsoft Graph. La aceptación real en Outlook queda pendiente de esa comprobación del usuario. No se ha realizado una reparación masiva ni modificado tablas de Business Central. No se necesita SQL adicional.

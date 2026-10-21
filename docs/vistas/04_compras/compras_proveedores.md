@@ -97,6 +97,7 @@ Muchos registros heredados de Business Central no disponen del campo `country_co
   - Un *badge* interactivo en la cabecera permite cancelar el filtro territorial en cualquier momento con un solo clic.
 
 ### 4.4. Ajustes y revisión del mapa (21/10/2026)
+- **Cambio de región y zoom:** La geometría de los países se actualiza inmediatamente junto con los marcadores. Se limita la transición CSS a color, contorno y opacidad; no se anima el atributo `d`, evitando que los puntos aparezcan en el nuevo encuadre antes que la cartografía.
 - **Emergentes:** Países y marcadores comparten coordenadas del ratón relativas al contenedor real. Se mide el emergente para mantenerlo dentro del mapa. Los datos se derivan de la consulta vigente para evitar importes retenidos de otro ejercicio.
 - **Espacio:** `ResizeObserver` adapta la proyección sin deformar los países. Altura de 440 px en móvil y 500 px desde `sm`. Se elimina la ampliación CSS de marcadores que podía interferir con su traslación geográfica.
 - **Teclado:** Países con proveedores y marcadores admiten foco, Enter/Espacio para seleccionar y Escape para cerrar el emergente. El ranking cerrado en móvil vuelve a mostrarse al pasar a escritorio.

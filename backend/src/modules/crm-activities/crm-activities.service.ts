@@ -447,6 +447,9 @@ export class CrmActivitiesService {
         }
       }
 
+      if (['EVENT', 'REUNION', 'VIDEOLLAMADA', 'VISITA', 'CALL', 'TASK'].includes(existing.type)) {
+        prismaData.exchange_sync_status = 'pending';
+      }
       const metadataPatch = prismaData.attendees;
       delete prismaData.attendees;
       const update = (db: Pick<PrismaService, 'crm_activities'>) => db.crm_activities.update({
