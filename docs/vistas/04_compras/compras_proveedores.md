@@ -5,7 +5,7 @@
 > **Componente Mapa:** [`WorldGeoVendorsMap.tsx`](file:///c:/proyectos/webapp_dts/frontend/src/pages/purchases/components/WorldGeoVendorsMap.tsx)  
 > **Componente Drawer:** [`VendorDetailDrawer.tsx`](file:///c:/proyectos/webapp_dts/frontend/src/pages/purchases/components/VendorDetailDrawer.tsx)  
 > **Servicio Backend:** [`vendors.service.ts`](file:///c:/proyectos/webapp_dts/backend/src/modules/vendors/vendors.service.ts) (`getAll`, `getKPIs`, `getMapData`, `getById`)  
-> **Última actualización:** Septiembre 2026
+> **Última actualización:** 21 de octubre de 2026
 
 ---
 
@@ -33,7 +33,7 @@ La pantalla sigue la arquitectura corporativa de dTS (paleta `#003E51` y `#00B0B
 │  Mapa Geoespacial de Distribución Global (WorldGeoVendorsMap)                     │
 │  - Proyección D3 Mercator / TopoJSON mundial                                     │
 │  - Selector de Métrica (Volumen € vs Deuda €) + Presets Regionales (Mundo/EU/ES)│
-│  - Ranking Lateral Top 5 Países + Tooltips interactivos                          │
+│  - Ranking lateral de países + emergentes adaptados al contenedor                          │
 │  - Clic en país -> Filtra tabla inferior reactivamente                           │
 ├──────────────────────────────────────────────────────────────────────────────────┤
 │  Barra de Filtros y Búsqueda (Input con debounce, Año, Estado Bloqueo, Exportar) │
@@ -73,7 +73,7 @@ El mapa interactivo es el componente central de inteligencia geográfica de la v
 
 ### 4.2. Inferencia y Normalización de Países (`detectVendorCountryCode`)
 Muchos registros heredados de Business Central no disponen del campo `country_code` formalizado. El motor incluye un algoritmo heurístico multi-capa:
-1. **Código ISO Directo:** Si `v.country_code` está relleno, se valida contra el diccionario ISO 3166-1 (`ES`, `DE`, `FR`, `US`, `CH`, `IT`, `GB`, etc.).
+1. **Código ISO Directo:** Si `v.country_code` está relleno, se normaliza a mayúsculas y se utiliza directamente. No existe validación ISO completa; los códigos sin metadatos permanecen en el ranking como «Sin marcador geográfico».
 2. **Detección de NIF Estadounidense (EIN):** Reconocimiento de formato `XX-XXXXXXX` o mención a estados y ciudades industriales americanas (San Diego, California, Texas, Carolina del Norte, Horsham).
 3. **Prefijos VIES / VAT Comunitarios:** Inferencia por los 2 primeros caracteres del `vat_no` (ej. `DE...`, `FR...`, `IT...`, `NL...`).
 4. **Geolocalización por Texto y Sede:** Mapeo de ciudades de fabricantes reconocidos (ej. Güglingen, Venlo, Stockerau, Allerød, Malmö, Vestec).
@@ -89,12 +89,28 @@ Muchos registros heredados de Business Central no disponen del campo `country_co
   - 🇪🇸 **España:** Detalle del aprovisionamiento nacional.
   - 🇺🇸 **América:** Vista centrada en proveedores de Estados Unidos.
   - 🌏 **Asia:** Enfoque en fabricantes asiáticos.
-- **Zoom Continuo:** Botones de `+`, `-` y restablecer escala, con soporte para arrastre panorámico (*pan*).
-- **Ranking Lateral Top 5:** Tarjetas compactas con las banderas de los principales países suministradores, su volumen y porcentaje sobre el total.
+- **Zoom:** Botones de `+`, `-` y restablecer escala. El desplazamiento por arrastre todavía no está implementado.
+- **Ranking lateral:** Todos los países/códigos, ordenados por la métrica activa. Columna de 384 px en escritorio (antes 320 px), debajo del mapa en móvil. Las barras comparan cada importe con el máximo, no con el total; los valores cero o negativos no dibujan barra positiva. El desglose de proveedores ordena y muestra la métrica activa.
 - **Interacción Bidireccional:**
   - Al hacer clic en un país del mapa o del ranking lateral, se emite `onSelectZone({ id: 'DE', name: 'Alemania' })`.
   - La tabla inferior se actualiza automáticamente con `keepPreviousData` para listar únicamente los proveedores de ese país.
   - Un *badge* interactivo en la cabecera permite cancelar el filtro territorial en cualquier momento con un solo clic.
+
+### 4.4. Ajustes y revisión del mapa (21/10/2026)
+- **Emergentes:** Países y marcadores comparten coordenadas del ratón relativas al contenedor real. Se mide el emergente para mantenerlo dentro del mapa. Los datos se derivan de la consulta vigente para evitar importes retenidos de otro ejercicio.
+- **Espacio:** `ResizeObserver` adapta la proyección sin deformar los países. Altura de 440 px en móvil y 500 px desde `sm`. Se elimina la ampliación CSS de marcadores que podía interferir con su traslación geográfica.
+- **Teclado:** Países con proveedores y marcadores admiten foco, Enter/Espacio para seleccionar y Escape para cerrar el emergente. El ranking cerrado en móvil vuelve a mostrarse al pasar a escritorio.
+- **Semántica:** Compras etiquetadas con ejercicio o como históricas; saldo actual de la ficha, no reconstruido al cierre del ejercicio. Los puntos son agregados por país, no direcciones exactas. Se denomina «proveedores» al conjunto sin atribuirles la condición de fabricantes.
+- **Cobertura:** Añadidos Hungría (`HU`), Taiwán (`TW`), Chipre (`CY`) y Emiratos Árabes Unidos (`AE`). Los códigos sin metadatos (por ejemplo `AN`) se señalan sin inventarles ubicación.
+
+**Verificación:** compilación de frontend y backend; comprobación visual local con datos ficticios en escritorio y viewport móvil de 390 px, sin desbordamiento horizontal; emergente dentro del mapa, Escape, selección por teclado y orden/importes del desglose al cambiar entre compras y saldo. Pendiente aceptación funcional con datos reales. Sin despliegue.
+
+**Fallos y mejoras pendientes por revisión de código:**
+1. La heurística del mapa y los filtros territoriales del backend difieren y pueden dar recuentos distintos. Códigos no contemplados por el backend, incluidos algunos con nuevos metadatos, caen en búsqueda por ciudad/provincia. Centralizar la resolución de países antes de ampliar los filtros.
+2. Sin coincidencia se asigna España. Hay inferencias amplias por subcadenas (`EDE`, `USA`) y `BG-` se interpreta como Reino Unido. Propuesta: mostrar procedencia/confianza y una categoría «Sin país confirmado» compartida con el backend.
+3. Búsqueda y bloqueo filtran la tabla; el mapa representa el conjunto global del ejercicio. Propuesta: indicar el alcance o incorporar filtros equivalentes.
+4. Puntos próximos se solapan a escala mundial. Propuesta: agrupación y desplazamiento por arrastre; actualmente existen presets y zoom.
+5. La consulta del mapa no presenta error específico ni reintento: un fallo de red puede parecer ausencia de datos. Separar carga, error y vacío.
 
 ---
 

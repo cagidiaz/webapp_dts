@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { geoMercator, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
+import type { Feature, Geometry, Polygon } from 'geojson';
+import type { GeometryCollection, Topology } from 'topojson-specification';
 import worldData from 'world-atlas/countries-110m.json';
 import {
   MapPin, TrendingUp, Euro,
@@ -25,11 +27,13 @@ interface WorldGeoVendorsMapProps {
   year?: number;
 }
 
+type WorldFeature = Feature<Geometry, { name: string }>;
+
 type MapMetric = 'volume' | 'debt';
 type RegionPreset = 'world' | 'europe' | 'spain' | 'america' | 'asia';
 
 // Información y metadatos de países
-export const COUNTRY_METADATA: Record<string, { nameEs: string; atlasName: string; flag: string; centerCoords: [number, number] }> = {
+const COUNTRY_METADATA: Record<string, { nameEs: string; atlasName: string; flag: string; centerCoords: [number, number] }> = {
   ES: { nameEs: 'España', atlasName: 'Spain', flag: '🇪🇸', centerCoords: [-3.7, 40.4] },
   DE: { nameEs: 'Alemania', atlasName: 'Germany', flag: '🇩🇪', centerCoords: [10.4, 51.1] },
   FR: { nameEs: 'Francia', atlasName: 'France', flag: '🇫🇷', centerCoords: [2.2, 46.2] },
@@ -50,10 +54,14 @@ export const COUNTRY_METADATA: Record<string, { nameEs: string; atlasName: strin
   CZ: { nameEs: 'República Checa', atlasName: 'Czechia', flag: '🇨🇿', centerCoords: [15.4, 49.8] },
   NO: { nameEs: 'Noruega', atlasName: 'Norway', flag: '🇳🇴', centerCoords: [8.4, 60.4] },
   FI: { nameEs: 'Finlandia', atlasName: 'Finland', flag: '🇫🇮', centerCoords: [25.7, 61.9] },
+  HU: { nameEs: 'Hungría', atlasName: 'Hungary', flag: '🇭🇺', centerCoords: [19.5, 47.2] },
+  TW: { nameEs: 'Taiwán', atlasName: 'Taiwan', flag: '🇹🇼', centerCoords: [121, 23.7] },
+  CY: { nameEs: 'Chipre', atlasName: 'Cyprus', flag: '🇨🇾', centerCoords: [33.4, 35.1] },
+  AE: { nameEs: 'Emiratos Árabes Unidos', atlasName: 'United Arab Emirates', flag: '🇦🇪', centerCoords: [54.4, 24.4] },
 };
 
 // Detección de país para cada proveedor
-export function detectVendorCountryCode(v: VendorDataRow): string {
+function detectVendorCountryCode(v: VendorDataRow): string {
   // 1. Si el campo country_code viene ya populado desde la BD, usarlo directamente
   if (v.country_code && v.country_code.trim().length > 0) {
     return v.country_code.trim().toUpperCase();
@@ -122,31 +130,57 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
   const [region, setRegion] = useState<RegionPreset>('world');
   const [zoomFactor, setZoomFactor] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [hoveredCountry, setHoveredCountry] = useState<{
-    code: string;
-    name: string;
-    flag: string;
-    volume: number;
-    debt: number;
-    count: number;
-    vendors: VendorDataRow[];
-    x: number;
-    y: number;
-  } | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [mapSize, setMapSize] = useState({ width: 860, height: 500 });
+  const [tooltipSize, setTooltipSize] = useState({ width: 288, height: 260 });
+  const [hoveredPoint, setHoveredCountry] = useState<{ code: string; x: number; y: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const element = mapRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => {
+      setMapSize({ width: element.clientWidth, height: element.clientHeight });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    const element = tooltipRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => {
+      setTooltipSize({ width: element.offsetWidth, height: element.offsetHeight });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [hoveredPoint?.code, isLoading]);
+
+  // Países y marcadores comparten coordenadas en píxeles del contenedor real.
+  const showCountry = (code: string, event: React.MouseEvent<SVGElement> | React.FocusEvent<SVGElement>) => {
+    const rect = mapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const target = event.currentTarget.getBoundingClientRect();
+    setHoveredCountry({
+      code,
+      x: 'clientX' in event ? event.clientX - rect.left : target.left + target.width / 2 - rect.left,
+      y: 'clientY' in event ? event.clientY - rect.top : target.top + target.height / 2 - rect.top,
+    });
+  };
 
   // Convertir TopoJSON a Features GeoJSON
   const worldFeatures = useMemo(() => {
-    const geo = feature(worldData as any, (worldData as any).objects.countries);
-    const rawFeatures = (geo as any).features || [];
+    const atlas = worldData as unknown as Topology<{ countries: GeometryCollection<{ name: string }> }>;
+    const rawFeatures = feature(atlas, atlas.objects.countries).features;
 
     // Desacoplar Guayana Francesa (Sudamérica) de Francia Metropolitana
     // para que Francia no se pinte erróneamente en América.
-    return rawFeatures.flatMap((f: any) => {
+    return rawFeatures.flatMap<WorldFeature>((f) => {
       if (f.properties?.name === 'France' && f.geometry?.type === 'MultiPolygon') {
-        const europeanPolygons: any[] = [];
-        const overseasPolygons: any[] = [];
+        const europeanPolygons: Polygon['coordinates'][] = [];
+        const overseasPolygons: Polygon['coordinates'][] = [];
 
-        f.geometry.coordinates.forEach((poly: any) => {
+        f.geometry.coordinates.forEach((poly) => {
           const ring = poly[0];
           const avgLng = ring.reduce((sum: number, p: number[]) => sum + p[0], 0) / ring.length;
           const avgLat = ring.reduce((sum: number, p: number[]) => sum + p[1], 0) / ring.length;
@@ -158,7 +192,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
           }
         });
 
-        const resultFeatures: any[] = [];
+        const resultFeatures: WorldFeature[] = [];
         if (europeanPolygons.length > 0) {
           resultFeatures.push({
             ...f,
@@ -174,8 +208,8 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
             id: 'FrenchGuiana',
             properties: { name: 'French Guiana' },
             geometry: {
-              type: overseasPolygons.length === 1 ? 'Polygon' : 'MultiPolygon',
-              coordinates: overseasPolygons.length === 1 ? overseasPolygons[0] : overseasPolygons,
+              type: 'MultiPolygon',
+              coordinates: overseasPolygons,
             },
           });
         }
@@ -200,13 +234,13 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
       agg[code].vendors.push(v);
     });
 
-    // Ordenar proveedores dentro de cada país por volumen descendente
+    // El desglose sigue la misma métrica que el ranking de países.
     Object.values(agg).forEach(c => {
-      c.vendors.sort((a, b) => Number(b.purchase_volume || 0) - Number(a.purchase_volume || 0));
+      c.vendors.sort((a, b) => Number((metric === 'volume' ? b.purchase_volume : b.balance_lcy) || 0) - Number((metric === 'volume' ? a.purchase_volume : a.balance_lcy) || 0));
     });
 
     return agg;
-  }, [vendors]);
+  }, [vendors, metric]);
 
   const maxVolume = useMemo(() => {
     const vals = Object.values(countryAggregations).map(c => c.volume);
@@ -225,15 +259,31 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
     });
   }, [countryAggregations, metric]);
 
-  // Proyección cartográfica SVG
-  const width = 860;
-  const height = 480;
+  // Derivar los datos evita conservar importes obsoletos al cambiar de año.
+  const hoveredAggregation = hoveredPoint ? countryAggregations[hoveredPoint.code] : undefined;
+  const hoveredCountry = hoveredPoint && hoveredAggregation && !isLoading ? {
+    ...hoveredAggregation,
+    name: COUNTRY_METADATA[hoveredPoint.code]?.nameEs || hoveredPoint.code,
+    flag: COUNTRY_METADATA[hoveredPoint.code]?.flag || '🌐',
+  } : null;
+  const tooltipPosition = hoveredPoint ? {
+    left: Math.max(10, Math.min(
+      hoveredPoint.x + 16 + tooltipSize.width > mapSize.width - 10
+        ? hoveredPoint.x - tooltipSize.width - 16 : hoveredPoint.x + 16,
+      mapSize.width - tooltipSize.width - 10,
+    )),
+    top: Math.max(10, Math.min(hoveredPoint.y - 30, mapSize.height - tooltipSize.height - 10)),
+  } : {};
+
+  // La proyección ocupa el espacio disponible sin deformar los países.
+  const width = Math.max(mapSize.width, 1);
+  const height = Math.max(mapSize.height, 1);
 
   const projection = useMemo(() => {
     const cfg = REGION_CONFIGS[region];
     return geoMercator()
       .center(cfg.center)
-      .scale(cfg.scale * zoomFactor)
+      .scale(cfg.scale * zoomFactor * Math.min(width / 860, height / 480))
       .translate([width / 2, height / 2]);
   }, [region, zoomFactor, width, height]);
 
@@ -251,6 +301,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
   }, []);
 
   const handleCountryClick = (code: string) => {
+    setHoveredCountry(null);
     if (!onSelectZone) return;
     const meta = COUNTRY_METADATA[code];
     if (selectedZone?.id === code) {
@@ -267,15 +318,15 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
   return (
     <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl overflow-hidden transition-all duration-300">
       {/* CABECERA DE CONTROL SUPERIOR */}
-      <div className="p-4 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/2 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="p-4 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/2 flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#003E51] text-white flex items-center justify-center shadow-md shadow-[#003E51]/20">
+          <div className="w-10 h-10 shrink-0 rounded-xl bg-[#003E51] text-white flex items-center justify-center shadow-md shadow-[#003E51]/20">
             <Globe size={20} className="text-[#00B0B9]" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-bold text-sm text-gray-900 dark:text-white">
-                Mapa Mundial de Proveedores y Fabricantes
+                Mapa Mundial de Proveedores
               </h3>
               {year && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#003E51]/10 dark:bg-[#00B0B9]/20 text-[#003E51] dark:text-[#00B0B9] font-bold">
@@ -284,7 +335,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
               )}
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {Object.keys(countryAggregations).length} países proveedores · Haz clic en cualquier país para filtrar la tabla
+              {Object.keys(countryAggregations).length} países/códigos de origen · Selecciona un país con proveedores para filtrar la tabla
             </p>
           </div>
         </div>
@@ -292,11 +343,11 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
         {/* CONTROLES: REGIONES Y MÉTRICAS */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Selector de Región */}
-          <div className="flex bg-gray-100 dark:bg-white/5 p-0.5 rounded-lg border border-gray-200/60 dark:border-white/10">
+          <div className="flex flex-wrap bg-gray-100 dark:bg-white/5 p-0.5 rounded-lg border border-gray-200/60 dark:border-white/10">
             {(Object.keys(REGION_CONFIGS) as RegionPreset[]).map((r) => (
               <button
                 key={r}
-                onClick={() => { setRegion(r); setZoomFactor(1); }}
+                onClick={() => { setHoveredCountry(null); setRegion(r); setZoomFactor(1); }}
                 className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
                   region === r
                     ? 'bg-[#003E51] text-white shadow-sm'
@@ -311,7 +362,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
           {/* Selector de Métrica */}
           <div className="flex bg-gray-100 dark:bg-white/5 p-0.5 rounded-lg border border-gray-200/60 dark:border-white/10">
             <button
-              onClick={() => setMetric('volume')}
+              onClick={() => { setHoveredCountry(null); setMetric('volume'); }}
               className={`flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
                 metric === 'volume'
                   ? 'bg-[#00B0B9] text-white shadow-sm'
@@ -322,7 +373,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
               Volumen Compra
             </button>
             <button
-              onClick={() => setMetric('debt')}
+              onClick={() => { setHoveredCountry(null); setMetric('debt'); }}
               className={`flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
                 metric === 'debt'
                   ? 'bg-amber-600 text-white shadow-sm'
@@ -330,28 +381,28 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
               }`}
             >
               <Euro size={12} />
-              Saldo Pendiente
+              Saldo actual
             </button>
           </div>
 
           {/* Zoom Controls */}
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 p-0.5 rounded-lg border border-gray-200/60 dark:border-white/10">
             <button
-              onClick={() => setZoomFactor(prev => Math.min(prev + 0.3, 3))}
+              onClick={() => { setHoveredCountry(null); setZoomFactor(prev => Math.min(prev + 0.3, 3)); }}
               className="p-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded"
               title="Aumentar zoom"
             >
               <ZoomIn size={14} />
             </button>
             <button
-              onClick={() => setZoomFactor(prev => Math.max(prev - 0.3, 0.7))}
+              onClick={() => { setHoveredCountry(null); setZoomFactor(prev => Math.max(prev - 0.3, 0.7)); }}
               className="p-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded"
               title="Disminuir zoom"
             >
               <ZoomOut size={14} />
             </button>
             <button
-              onClick={() => setZoomFactor(1)}
+              onClick={() => { setHoveredCountry(null); setZoomFactor(1); }}
               className="p-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded"
               title="Restablecer zoom"
             >
@@ -364,7 +415,10 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
       {/* ÁREA PRINCIPAL: MAPA + PANEL LATERAL */}
       <div className="relative flex flex-col lg:flex-row">
         {/* LIENZO CARTOGRÁFICO SVG */}
-        <div className="flex-1 relative overflow-hidden bg-slate-900 p-2 select-none min-h-[440px]">
+        <div ref={mapRef} className="flex-none lg:flex-1 min-w-0 relative overflow-hidden bg-slate-900 select-none h-[440px] sm:h-[500px]"
+          onMouseLeave={() => setHoveredCountry(null)}
+          onKeyDown={(event) => { if (event.key === 'Escape') setHoveredCountry(null); }}
+        >
           {isLoading ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 z-20 gap-3">
               <div className="w-8 h-8 rounded-full border-2 border-[#00B0B9] border-t-transparent animate-spin" />
@@ -375,7 +429,8 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
           ) : (
             <svg
               viewBox={`0 0 ${width} ${height}`}
-              className="w-full h-full max-h-[500px]"
+              className="absolute inset-0 w-full h-full"
+              aria-label="Distribución de proveedores por país"
               style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' }}
             >
               <defs>
@@ -400,7 +455,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
 
               {/* Capa de países del mundo */}
               <g className="countries-layer">
-                {worldFeatures.map((f: any) => {
+                {worldFeatures.map((f) => {
                   const countryName = f.properties?.name;
                   const code = atlasNameToCode[countryName];
                   const agg = code ? countryAggregations[code] : undefined;
@@ -444,23 +499,20 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
                         cursor: hasVendors ? 'pointer' : 'default',
                         opacity: selectedZone && !isSelected ? 0.45 : 1,
                       }}
-                      onMouseEnter={(e) => {
-                        if (hasVendors && code) {
-                          const meta = COUNTRY_METADATA[code] || { nameEs: countryName, flag: '🌐' };
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setHoveredCountry({
-                            code,
-                            name: meta.nameEs,
-                            flag: meta.flag,
-                            volume: agg.volume,
-                            debt: agg.debt,
-                            count: agg.count,
-                            vendors: agg.vendors,
-                            x: e.clientX - rect.left,
-                            y: e.clientY - rect.top,
-                          });
+                      role={hasVendors ? 'button' : undefined}
+                      tabIndex={hasVendors ? 0 : undefined}
+                      aria-label={hasVendors ? `${COUNTRY_METADATA[code]?.nameEs || countryName}: ${agg.count} proveedores. Filtrar tabla` : undefined}
+                      aria-pressed={hasVendors ? isSelected : undefined}
+                      onFocus={(e) => { if (hasVendors && code) showCountry(code, e); }}
+                      onBlur={() => setHoveredCountry(null)}
+                      onKeyDown={(e) => {
+                        if (hasVendors && code && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault();
+                          handleCountryClick(code);
                         }
                       }}
+                      onMouseEnter={(e) => { if (hasVendors && code) showCountry(code, e); }}
+                      onMouseMove={(e) => { if (hasVendors && code) showCountry(code, e); }}
                       onMouseLeave={() => setHoveredCountry(null)}
                       onClick={() => hasVendors && code && handleCountryClick(code)}
                     />
@@ -477,13 +529,13 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
                   if (meta?.centerCoords) {
                     coords = projection(meta.centerCoords);
                   } else {
-                    const feat = worldFeatures.find((f: any) => atlasNameToCode[f.properties?.name] === code);
+                    const feat = worldFeatures.find((f) => atlasNameToCode[f.properties?.name] === code);
                     if (feat) {
                       coords = pathGenerator.centroid(feat);
                     }
                   }
 
-                  if (!coords || isNaN(coords[0]) || isNaN(coords[1])) return null;
+                  if (!coords || !Number.isFinite(coords[0]) || !Number.isFinite(coords[1]) || coords[0] < 0 || coords[0] > width || coords[1] < 0 || coords[1] > height) return null;
 
                   const metricValue = metric === 'volume' ? agg.volume : agg.debt;
                   const maxMetric = metric === 'volume' ? maxVolume : maxDebt;
@@ -495,21 +547,22 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
                     <g
                       key={`marker-${code}`}
                       transform={`translate(${coords[0]}, ${coords[1]})`}
-                      className="cursor-pointer transition-transform hover:scale-125"
+                      className="cursor-pointer"
                       onClick={() => handleCountryClick(code)}
-                      onMouseEnter={() => {
-                        setHoveredCountry({
-                          code,
-                          name: meta?.nameEs || code,
-                          flag: meta?.flag || '🌐',
-                          volume: agg.volume,
-                          debt: agg.debt,
-                          count: agg.count,
-                          vendors: agg.vendors,
-                          x: coords[0],
-                          y: coords[1],
-                        });
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${meta?.nameEs || code}: ${agg.count} proveedores. Filtrar tabla`}
+                      aria-pressed={isSelected}
+                      onFocus={(e) => showCountry(code, e)}
+                      onBlur={() => setHoveredCountry(null)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleCountryClick(code);
+                        }
                       }}
+                      onMouseEnter={(e) => showCountry(code, e)}
+                      onMouseMove={(e) => showCountry(code, e)}
                       onMouseLeave={() => setHoveredCountry(null)}
                     >
                       {/* Círculo pulsante exterior */}
@@ -551,10 +604,13 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
           {/* TOOLTIP FLOTANTE SOBRE EL MAPA */}
           {hoveredCountry && (
             <div
-              className="absolute z-30 pointer-events-none p-3.5 rounded-xl bg-[#003E51]/95 text-white shadow-2xl border border-white/20 backdrop-blur-md max-w-xs animate-in fade-in zoom-in-95 duration-150"
+              ref={tooltipRef}
+              role="tooltip"
+              className="absolute z-30 pointer-events-none w-72 overflow-hidden p-3.5 rounded-xl bg-[#003E51]/95 text-white shadow-2xl border border-white/20 backdrop-blur-md"
               style={{
-                left: Math.min(Math.max(hoveredCountry.x + 15, 10), width - 260),
-                top: Math.min(Math.max(hoveredCountry.y - 40, 10), height - 160),
+                ...tooltipPosition,
+                maxWidth: Math.max(mapSize.width - 20, 0),
+                maxHeight: Math.max(mapSize.height - 20, 0),
               }}
             >
               <div className="flex items-center gap-2 border-b border-white/10 pb-1.5 mb-2">
@@ -571,13 +627,13 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
 
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between gap-3">
-                  <span className="text-gray-300 text-[11px]">Volumen Compras:</span>
+                  <span className="text-gray-300 text-[11px]">Compras {year || 'históricas'}:</span>
                   <span className="font-bold text-[#00B0B9]">
                     {formatCurrency(hoveredCountry.volume)}
                   </span>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <span className="text-gray-300 text-[11px]">Saldo Pendiente:</span>
+                  <span className="text-gray-300 text-[11px]">Saldo actual:</span>
                   <span className="font-semibold text-white">
                     {formatCurrency(hoveredCountry.debt)}
                   </span>
@@ -587,7 +643,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
               {hoveredCountry.vendors.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-white/10">
                   <p className="text-[9px] uppercase tracking-wider text-gray-400 font-bold mb-1">
-                    Principales Fabricantes:
+                    Principales proveedores · {metric === 'volume' ? 'compras' : 'saldo'}:
                   </p>
                   <ul className="space-y-0.5 text-[10px] text-gray-200">
                     {hoveredCountry.vendors.slice(0, 3).map(v => (
@@ -610,6 +666,10 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
             </div>
           )}
 
+          <p className="absolute bottom-2 left-3 right-3 pointer-events-none text-[10px] text-slate-300">
+            Puntos agregados por país · Tamaño según {metric === 'volume' ? 'compras' : 'saldo actual'} · No representan direcciones exactas
+          </p>
+
           {/* CHIP DE FILTRO ACTIVO FLOTANTE */}
           {selectedZone && (
             <div className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 bg-[#00B0B9] text-white rounded-xl shadow-lg text-xs font-bold animate-in fade-in">
@@ -627,7 +687,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
         </div>
 
         {/* PANEL LATERAL: RANKING DE PAÍSES Y FABRICANTES */}
-        <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-white/2 flex flex-col max-h-[500px]">
+        <div className="w-full lg:w-96 shrink-0 min-w-0 border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-white/2 flex flex-col max-h-[500px]">
           <div className="p-3.5 border-b border-gray-100 dark:border-white/10 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Award size={16} className="text-[#00B0B9]" />
@@ -637,14 +697,15 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
             </div>
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              aria-label="Mostrar u ocultar países proveedores"
+              aria-expanded={isSidebarOpen}
               className="text-xs text-gray-400 hover:text-gray-600 lg:hidden"
             >
               {isSidebarOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
           </div>
 
-          {isSidebarOpen && (
-            <div className="flex-1 overflow-y-auto p-3 space-y-2.5 custom-scrollbar">
+          <div className={`${isSidebarOpen ? 'flex' : 'hidden'} lg:flex flex-col flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5 custom-scrollbar`}>
               {sortedCountries.length === 0 ? (
                 <div className="text-center py-8 text-gray-400 text-xs italic">
                   No hay datos para la métrica seleccionada
@@ -676,6 +737,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
                             </p>
                             <p className={`text-[10px] ${isSelected ? 'text-gray-300' : 'text-gray-400'}`}>
                               {c.count} proveedor{c.count > 1 ? 'es' : ''}
+                              {!COUNTRY_METADATA[c.code] && ' · Sin marcador geográfico'}
                             </p>
                           </div>
                         </div>
@@ -699,7 +761,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
                               ? 'bg-[#00B0B9]'
                               : (metric === 'volume' ? 'bg-[#003E51] dark:bg-[#00B0B9]' : 'bg-amber-500')
                           }`}
-                          style={{ width: `${Math.max(percentage, 3)}%` }}
+                          style={{ width: `${Math.min(100, Math.max(percentage, 0))}%` }}
                         />
                       </div>
 
@@ -707,7 +769,7 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
                       {isSelected && c.vendors.length > 0 && (
                         <div className="mt-2.5 pt-2 border-t border-white/10 space-y-1">
                           <p className="text-[9px] uppercase tracking-wider text-[#00B0B9] font-bold">
-                            Fabricantes ({c.vendors.length}):
+                            Proveedores ({c.vendors.length}):
                           </p>
                           <div className="max-h-28 overflow-y-auto space-y-1">
                             {c.vendors.map((v) => (
@@ -717,13 +779,13 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
                                   e.stopPropagation();
                                   onSelectVendor(v);
                                 }}
-                                className="flex justify-between items-center text-[10px] py-1 px-1.5 rounded hover:bg-white/10 transition-colors"
+                                className="flex justify-between items-center gap-2 text-[10px] py-1 px-1.5 rounded hover:bg-white/10 transition-colors"
                               >
-                                <span className="truncate max-w-[150px] font-medium text-gray-200" title={v.name}>
+                                <span className="truncate flex-1 min-w-0 font-medium text-gray-200" title={v.name}>
                                   {v.name}
                                 </span>
                                 <span className="font-mono text-white text-[10px]">
-                                  {formatCurrency(Number(v.purchase_volume || 0), 0)}
+                                  {formatCurrency(Number((metric === 'volume' ? v.purchase_volume : v.balance_lcy) || 0), 0)}
                                 </span>
                               </div>
                             ))}
@@ -735,7 +797,6 @@ export const WorldGeoVendorsMap: React.FC<WorldGeoVendorsMapProps> = React.memo(
                 })
               )}
             </div>
-          )}
         </div>
       </div>
     </div>

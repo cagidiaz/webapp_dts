@@ -44,7 +44,7 @@ Los documentos están organizados físicamente en **carpetas temáticas estructu
 ### 4. 🛍️ Compras y Aprovisionamiento (`04_compras/`)
 | Vista / Documento | Ruta WebApp | Componentes Clave | Propósito Principal |
 | :--- | :--- | :--- | :--- |
-| [**Compras: Cartera de Proveedores**](file:///c:/proyectos/webapp_dts/docs/vistas/04_compras/compras_proveedores.md) | `/purchases/vendors` | `VendorsPage.tsx`<br>`WorldGeoVendorsMap.tsx`<br>`VendorDetailDrawer.tsx` | Mapa mundial interactivo D3 de fabricantes y distribuidores, análisis de deuda comercial, saldo vencido y volumen de compras. |
+| [**Compras: Cartera de Proveedores**](file:///c:/proyectos/webapp_dts/docs/vistas/04_compras/compras_proveedores.md) | `/purchases/vendors` | `VendorsPage.tsx`<br>`WorldGeoVendorsMap.tsx`<br>`VendorDetailDrawer.tsx` | Mapa mundial D3 de proveedores, emergentes adaptativos, ranking lateral ampliado y navegación por teclado. Compras por ejercicio y saldo actual; revisión y limitaciones geográficas documentadas (21/10/2026). |
 | [**Compras: Pedidos de Compra Abiertos**](file:///c:/proyectos/webapp_dts/docs/vistas/04_compras/compras_pedidos.md) | `/purchases/orders` | `PurchaseOrdersPage.tsx` | Cartera de pedidos de aprovisionamiento pendientes de recepción, control de fechas prometidas y coste comprometido. |
 
 ---
