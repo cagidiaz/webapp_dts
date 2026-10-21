@@ -1,9 +1,11 @@
+import { mergePublicCalendarBody } from './calendar-public-body';
 import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CalendarEventPayload {
   transactionId?: string;
+  publicInvitation?: boolean;
   title: string;
   description?: string;
   startDate: string; // ISO String o YYYY-MM-DD
@@ -455,6 +457,25 @@ export class MicrosoftGraphService {
         emailAddress: { address: att.email, name: att.name || att.email },
         type: 'required',
       }));
+    }
+
+    if (eventData.publicInvitation) {
+      const currentRes = await fetch(`https://graph.microsoft.com/v1.0/me/events/${encodeURIComponent(eventId)}?$select=body,isOnlineMeeting,onlineMeeting,subject,start,end,location,attendees,categories`, {
+        headers: { Authorization: `Bearer ${accessToken}`, Prefer: 'outlook.timezone="Europe/Madrid"' },
+      });
+      if (!currentRes.ok) throw new Error(`No se pudo comprobar la convocatoria existente (HTTP ${currentRes.status}).`);
+      const current = await currentRes.json();
+      if (payload.body) {
+        payload.body.content = mergePublicCalendarBody(current.body?.content || '', payload.body.content, !!current.isOnlineMeeting, current.onlineMeeting?.joinUrl);
+        if (payload.body.content === current.body?.content) delete payload.body;
+      }
+      if (payload.subject === current.subject) delete payload.subject;
+      if (payload.location?.displayName === (current.location?.displayName || '')) delete payload.location;
+      if (payload.start?.dateTime === current.start?.dateTime?.slice(0, 19) && payload.end?.dateTime === current.end?.dateTime?.slice(0, 19)) { delete payload.start; delete payload.end; }
+      const emails = (items: any[]) => items.map(item => String(item.emailAddress?.address || '').toLowerCase()).sort().join(';');
+      if (payload.attendees && emails(payload.attendees) === emails(current.attendees || [])) delete payload.attendees;
+      // Conservar categorías personales y cambiar únicamente el estado CRM del organizador.
+      payload.categories = [...new Set([...(current.categories || []).filter((name: string) => !['dTS CRM', 'dTS CRM - Completado'].includes(name)), ...(payload.categories || [])])];
     }
 
     const response = await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}`, {

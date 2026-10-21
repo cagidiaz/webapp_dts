@@ -1,3 +1,5 @@
+import { publicCalendarBody } from './calendar-public-body';
+import type { CalendarInvitation } from '../crm-activities/calendar-invitation';
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MicrosoftGraphService } from './microsoft-graph.service';
@@ -167,16 +169,14 @@ export class ExchangeSyncService {
       }
 
       const dateStr = activity.due_date.toISOString().split('T')[0];
+      const invitation = (activity.attendees as any)?.calendarInvitation as CalendarInvitation | undefined;
+      const publicMeeting = activity.type === 'VISITA' || activity.type === 'VIDEOLLAMADA';
       const attendees: { email: string; name?: string }[] = [];
-
-      // Solo generar convocatoria/invitación de reunión por correo si es Videollamada
-      // Las reuniones internas (REUNION), visitas a cliente (VISITA), visitas no programadas (EVENT), tareas (TASK) y llamadas (CALL) son apuntes en el calendario del comercial sin enviar correos al contacto
-      const isMeetingWithInvite = activity.type === 'VIDEOLLAMADA';
-      if (isMeetingWithInvite && activity.contact?.email) {
-        attendees.push({
-          email: activity.contact.email,
-          name: activity.contact.name,
-        });
+      if (publicMeeting && invitation) {
+        if (invitation.enabled) attendees.push(...invitation.recipients);
+      } else if (activity.type === 'VIDEOLLAMADA' && activity.contact?.email) {
+        // Compatibilidad: no invitar automáticamente a contactos de visitas antiguas.
+        attendees.push({ email: activity.contact.email, name: activity.contact.name });
       }
 
       const isCompleted = Boolean(activity.is_completed || (activity.conclusions && activity.conclusions.trim()));
@@ -198,6 +198,7 @@ export class ExchangeSyncService {
       while (/^\[(✓\s*)?dTS CRM[^\]]*\]\s*/i.test(cleanTitle)) {
         cleanTitle = cleanTitle.replace(/^\[(✓\s*)?dTS CRM[^\]]*\]\s*/i, '').trim();
       }
+      cleanTitle = cleanTitle.replace(/^(?:Visita|Videollamada) de dTS Instruments\s*[—-]\s*/i, '');
       const clientOrContactName = (activity.customer?.name || activity.contact?.name || '').trim();
       if (clientOrContactName) {
         const escapedClient = clientOrContactName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -208,7 +209,9 @@ export class ExchangeSyncService {
       }
 
       const clientSuffix = clientOrContactName ? ` (${clientOrContactName})` : '';
-      const fullTitle = `${eventPrefix} ${cleanTitle || 'Actividad Comercial'}${clientSuffix}`;
+      const fullTitle = publicMeeting
+        ? `${activity.type === 'VISITA' ? 'Visita de dTS Instruments' : 'Videollamada de dTS Instruments'} — ${cleanTitle || 'Reunión comercial'}`
+        : `${eventPrefix} ${cleanTitle || 'Actividad Comercial'}${clientSuffix}`;
 
       // Categoría oficial de Outlook para colorear el evento:
       // 'dTS CRM - Completado' (preset4 - Verde) si está terminada; 'dTS CRM' (preset7 - Azul) si está abierta
@@ -231,6 +234,12 @@ export class ExchangeSyncService {
         descriptionHtml += `<hr/><p><strong>Conclusiones:</strong> ${activity.conclusions.replace(/\n/g, '<br/>')}</p>`;
       }
 
+      if (publicMeeting) descriptionHtml = publicCalendarBody(invitation?.message || 'Le invitamos a la reunión programada con dTS Instruments.');
+      const time = activity.time_scheduled || '09:00';
+      const start = `${dateStr}T${time}:00`;
+      const end = new Date(`${start}.000Z`);
+      end.setUTCMinutes(end.getUTCMinutes() + (invitation?.durationMinutes || 60));
+
       // Comprobar nuevamente el ID en BD para evitar duplicados por carreras
       let currentExchangeItemId = activity.exchange_item_id;
       if (!currentExchangeItemId) {
@@ -248,8 +257,9 @@ export class ExchangeSyncService {
         const updated = await this.graphService.updateCalendarEvent(activity.created_by, currentExchangeItemId, {
           title: fullTitle,
           description: descriptionHtml,
-          startDate: dateStr,
-          timeScheduled: activity.time_scheduled || undefined,
+          startDate: start,
+          endDate: end.toISOString().slice(0, 19),
+          publicInvitation: publicMeeting,
           location: locationDisplay || undefined,
           attendees,
           categories,
@@ -271,10 +281,12 @@ export class ExchangeSyncService {
       } else {
         // Crear nuevo evento en Outlook
         const created = await this.graphService.createCalendarEvent(activity.created_by, {
+          transactionId: activity.id,
           title: fullTitle,
           description: descriptionHtml,
-          startDate: dateStr,
-          timeScheduled: activity.time_scheduled || undefined,
+          startDate: start,
+          endDate: end.toISOString().slice(0, 19),
+          publicInvitation: publicMeeting,
           isOnlineMeeting: isTeams,
           location: locationDisplay || undefined,
           attendees,

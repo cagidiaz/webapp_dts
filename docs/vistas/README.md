@@ -208,12 +208,31 @@ Si un correo necesita una acción futura, crear una tarea independiente desde el
 
 ### Conclusiones y color de los eventos en Outlook — 21/10/2026
 
-Al guardar conclusiones no vacías, el CRM completa la actividad y deja su actualización de calendario pendiente. El evento vinculado recibe las conclusiones, el prefijo de realizado y la categoría `dTS CRM - Completado` (`preset4`, verde). Las actividades abiertas usan `dTS CRM` (`preset7`, azul). Los correos EMAIL no se exportan como eventos.
+Al guardar conclusiones no vacías, el CRM completa la actividad y deja su actualización de calendario pendiente. Los eventos internos reciben las conclusiones y el prefijo de realizado; las visitas y videollamadas conservan el mensaje público sin notas internas. El evento del organizador recibe la categoría `dTS CRM - Completado` (`preset4`, verde). Las actividades abiertas usan `dTS CRM` (`preset7`, azul). Los correos EMAIL no se exportan como eventos.
 
 Si se guarda otra modificación mientras se está enviando la anterior, se conserva y se envía una nueva lectura de los datos al finalizar. Los errores de permisos, categorías o actualización ya no se ocultan como sincronización correcta. Sin cuenta o calendario habilitado se conserva el estado de falta de conexión.
 
 La sincronización habitual de Outlook/CRM vuelve a intentar hasta 20 actualizaciones pendientes, fallidas o sin conexión de eventos ya vinculados. No crea otra convocatoria para sustituir un evento cuya actualización falló. Una lectura desde Outlook no confirma que los cambios del CRM hayan llegado al calendario ni borra un envío pendiente. Si detecta una categoría distinta de la esperada en un evento CRM, registra `out_of_sync`; este estado histórico no dispara reparaciones masivas.
 
-**Comprobación del usuario:** reiniciar la app local, abrir una actividad exportada al calendario, escribir conclusiones y guardar. Comprobar en Outlook que el mismo evento muestra las conclusiones y la categoría verde. Para corregir una actividad antigua concreta, guardar de nuevo sus conclusiones. Si no hay conexión, reconectar Microsoft 365, activar sincronización de calendario y utilizar la sincronización existente.
+**Comprobación del usuario:** reiniciar la app local, abrir una actividad exportada al calendario, escribir conclusiones y guardar. Comprobar en Outlook la categoría verde del mismo evento. En visitas y videollamadas, verificar que las conclusiones se conservan únicamente en el CRM. Para corregir una actividad antigua concreta, guardar de nuevo sus conclusiones. Si no hay conexión, reconectar Microsoft 365, activar sincronización de calendario y utilizar la sincronización existente.
 
 Las pruebas automatizadas comprueban concurrencia, estados, reintentos y errores de Microsoft Graph. La aceptación real en Outlook queda pendiente de esa comprobación del usuario. No se ha realizado una reparación masiva ni modificado tablas de Business Central. No se necesita SQL adicional.
+
+
+### Convocatorias con varios invitados — 21/10/2026
+
+En la ficha de un contacto de cliente, **Eventos → Nueva actividad** permite configurar invitados para **Visita a Cliente** y **Videollamada**. Los mismos campos están disponibles al editar estas actividades desde la ficha, agenda o resumen inicial. Esta selección de contactos de empresa corresponde a actividades de cliente; no modifica el formulario de prospectos sin cliente BC.
+
+1. Elegir el tipo, título, fecha y hora. En las visitas, indicar la dirección.
+2. La casilla **Enviar invitación al contacto** aparece activada al crear una visita o videollamada. El contacto de la ficha se selecciona si tiene email válido. Desactivarla permite un apunte personal sin invitados.
+3. En **Contactos invitados de la empresa**, seleccionar o deseleccionar destinatarios. Solo se ofrecen contactos de esa empresa y los que carecen de email válido no pueden añadirse. El servidor vuelve a verificar empresa y cartera.
+4. Solo en **Videollamada**, utilizar **Otros invitados** para escribir emails externos. Confirmar con Enter o Añadir; también se admiten direcciones separadas por coma, punto y coma o espacios. Cada dirección se puede quitar. Se validan y se eliminan duplicados al preparar la convocatoria. No se crean contactos nuevos.
+5. Elegir duración (60 minutos por defecto) y escribir el **Mensaje para los invitados**. Este es el contenido externo. La descripción y las conclusiones son internas y no se envían.
+6. Guardar. El backend sincroniza una sola convocatoria con todos los invitados; las videollamadas incluyen Teams y las visitas no. Es necesario tener Microsoft 365 conectado y la sincronización de calendario habilitada. El contacto decide si acepta y su proveedor determina cómo incorpora el evento al calendario.
+7. Al editar fecha, mensaje, ubicación o participantes se actualiza el mismo evento. Al retirar invitados o borrar la actividad vinculada, Outlook gestiona las actualizaciones/cancelaciones. Desactivar el envío en una actividad ya invitada retira sus asistentes. Los participantes pueden ver a los demás invitados.
+
+**Privacidad y finalización:** completar una visita o videollamada cambia la categoría del organizador a verde sin incluir conclusiones en el cuerpo externo. Las actualizaciones evitan reenviar campos que no han cambiado y preservan el bloque generado por Teams. En eventos antiguos, si no se identifica de forma segura dicho bloque, se deja un fallo de sincronización para revisión en lugar de sobrescribirlo o compartir notas antiguas. No se ha reparado ni enviado ninguna convocatoria real durante estas pruebas.
+
+**Datos y permisos:** la configuración y la lista resuelta se guardan en `crm_activities.attendees.calendarInvitation`. La fusión conserva el resto del JSON. No se necesitan tablas, columnas ni SQL nuevos. Los contactos y clientes de Business Central se consultan en solo lectura. Solo el propietario o Admin puede cambiar invitados; se mantiene la comprobación de cartera para el comercial.
+
+**Prueba real pendiente:** crear una visita con dos contactos, comprobar convocatoria sin Teams; crear una videollamada con contactos y un email externo, comprobar enlace y recepción; añadir/quitar participantes y reprogramar; completar con una conclusión interna y verificar que no llega al destinatario. Comprobar también el modo sin invitación y los estilos claro/oscuro.

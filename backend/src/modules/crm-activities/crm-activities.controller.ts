@@ -54,6 +54,11 @@ export class CrmActivitiesController {
     return this.crmActivitiesService.getByContact(contactId, req.user?.userId);
   }
 
+  @Get('invitation-contacts/:clientId')
+  async invitationContacts(@Param('clientId') clientId: string, @Req() req: any) {
+    return this.crmActivitiesService.invitationContacts(req.user?.userId, clientId);
+  }
+
   @Get(':clientId')
   @ApiOperation({ summary: 'Obtener todas las actividades comerciales de un cliente' })
   async getByClient(@Param('clientId') clientId: string, @Req() req: any) {
@@ -76,6 +81,7 @@ export class CrmActivitiesController {
     @Body('conclusions') conclusions?: string,
     @Body('location') location?: string,
     @Body('emailAttachments') emailAttachments?: unknown,
+    @Body('calendarInvitation') calendarInvitation?: unknown,
   ) {
     const userId = req.user?.userId;
     return this.crmActivitiesService.create({
@@ -92,6 +98,7 @@ export class CrmActivitiesController {
       conclusions,
       location,
       emailAttachments,
+      calendarInvitation,
     });
   }
 
@@ -108,6 +115,8 @@ export class CrmActivitiesController {
     @Body('location') location?: string,
     @Body('categoryTag') categoryTag?: string,
     @Body('quoteDocumentNo') quoteDocumentNo?: string,
+    @Body('calendarInvitation') calendarInvitation?: unknown,
+    @Req() req?: any,
   ) {
     return this.crmActivitiesService.update(id, {
       isCompleted,
@@ -119,7 +128,8 @@ export class CrmActivitiesController {
       location,
       categoryTag,
       quoteDocumentNo,
-    });
+      calendarInvitation,
+    }, req?.user?.userId);
   }
 
   @Delete(':id')

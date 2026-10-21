@@ -1,3 +1,4 @@
+import { publicCalendarBody } from './calendar-public-body';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
@@ -57,6 +58,10 @@ export class ProspectOutlookService {
         attendees: invite ? [{ email: current.prospect.email!, name: current.prospect.contact_name || undefined }] : [],
         categories: [current.is_completed ? 'dTS CRM - Completado' : 'dTS CRM'],
       };
+      if (invite) {
+        payload.description = publicCalendarBody('Le invitamos a la videollamada programada con dTS Instruments.');
+        payload.publicInvitation = true;
+      }
       let result;
       if (current.exchange_item_id) {
         result = await this.graph.updateCalendarEvent(ownerId, current.exchange_item_id, payload);

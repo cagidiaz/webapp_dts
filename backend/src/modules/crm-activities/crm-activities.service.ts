@@ -1,5 +1,6 @@
+import { resolveCalendarInvitation } from './calendar-invitation';
 import { normalizeAttachments } from '../exchange-sync/email-attachments';
-import { Injectable, InternalServerErrorException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException, ForbiddenException, HttpException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CrmActivityType } from '@prisma/client';
 import { ExchangeSyncService } from '../exchange-sync/exchange-sync.service';
@@ -13,6 +14,22 @@ export class CrmActivitiesService {
     private readonly exchangeSyncService: ExchangeSyncService,
     private readonly prospectsService: ProspectsService,
   ) {}
+
+  private async authorizeInvitationCompany(userId: string | undefined, clientId: string) {
+    if (!userId) throw new ForbiddenException('Sesión no disponible.');
+    const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } });
+    if (!profile?.is_active) throw new ForbiddenException('Perfil no disponible.');
+    const global = ['ADMIN', 'DIRECCION', 'GERENCIA'].includes(profile.roles?.name?.toUpperCase() || '');
+    if (!global && !profile.code) throw new ForbiddenException('Código comercial no configurado.');
+    const customer = await this.prisma.customers.findFirst({ where: { client_id: clientId, ...(global ? {} : { salesperson_code: profile.code! }) }, select: { client_id: true } });
+    if (!customer) throw new ForbiddenException('La empresa no pertenece a tu cartera.');
+    return { canEditAll: profile.roles?.name?.toUpperCase() === 'ADMIN' };
+  }
+
+  async invitationContacts(userId: string, clientId: string) {
+    await this.authorizeInvitationCompany(userId, clientId);
+    return this.prisma.contacts.findMany({ where: { client_id: clientId }, select: { id: true, name: true, email: true }, orderBy: { name: 'asc' } });
+  }
 
   /**
    * Obtiene todas las actividades de un cliente comercial ordenadas por fecha.
@@ -307,6 +324,7 @@ export class CrmActivitiesService {
    */
   async create(data: {
     emailAttachments?: unknown;
+    calendarInvitation?: unknown;
     clientId?: string;
     contactId?: string;
     userId: string;
@@ -347,11 +365,19 @@ export class CrmActivitiesService {
       throw new NotFoundException(`El cliente con código "${resolvedClientId}" no existe en la ficha de clientes`);
     }
 
+    let invitation: any;
+    if (data.calendarInvitation !== undefined) {
+      await this.authorizeInvitationCompany(userId, resolvedClientId);
+      invitation = await resolveCalendarInvitation(this.prisma, data.calendarInvitation, type, resolvedClientId);
+      if (invitation.enabled && (!dueDate || !/^\d{2}:\d{2}$/.test(timeScheduled || '') || Number(timeScheduled!.slice(0, 2)) > 23 || Number(timeScheduled!.slice(3)) > 59)) throw new BadRequestException('Indica fecha y hora para la convocatoria.');
+    }
+
     console.log(`[CRM Service] Creando actividad con tipo=${type}, title="${title}", contactId=${contactId || 'null'}, resolvedClientId=${resolvedClientId}`);
     try {
       const activity = await this.prisma.crm_activities.create({
         data: {
           ...(type === 'EMAIL' && data.emailAttachments !== undefined ? { attendees: { emailAttachments: normalizeAttachments(data.emailAttachments, 'office') } } : {}),
+          ...(invitation ? { attendees: { calendarInvitation: invitation } } : {}),
           client_id: resolvedClientId,
           contact_id: contactId || null,
           created_by: userId,
@@ -393,7 +419,8 @@ export class CrmActivitiesService {
     location?: string;
     categoryTag?: string;
     quoteDocumentNo?: string;
-  }) {
+    calendarInvitation?: unknown;
+  }, userId?: string) {
     try {
       // Verificar existencia
       const existing = await this.prisma.crm_activities.findUnique({ where: { id } });
@@ -447,6 +474,15 @@ export class CrmActivitiesService {
         }
       }
 
+      if (data.calendarInvitation !== undefined) {
+        const access = await this.authorizeInvitationCompany(userId, existing.client_id);
+        if (!access.canEditAll && existing.created_by !== userId) throw new ForbiddenException('Solo el propietario o Admin puede cambiar los invitados.');
+        const invitation = await resolveCalendarInvitation(this.prisma, data.calendarInvitation, existing.type, existing.client_id);
+        const day = data.dueDate === undefined ? existing.due_date : data.dueDate;
+        const time = data.timeScheduled === undefined ? existing.time_scheduled : data.timeScheduled;
+        if (invitation.enabled && (!day || !/^\d{2}:\d{2}$/.test(time || '') || Number(time!.slice(0, 2)) > 23 || Number(time!.slice(3)) > 59)) throw new BadRequestException('Indica fecha y hora para la convocatoria.');
+        prismaData.attendees = { ...(prismaData.attendees || {}), calendarInvitation: invitation };
+      }
       if (['EVENT', 'REUNION', 'VIDEOLLAMADA', 'VISITA', 'CALL', 'TASK'].includes(existing.type)) {
         prismaData.exchange_sync_status = 'pending';
       }
@@ -472,7 +508,7 @@ export class CrmActivitiesService {
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      if (error instanceof HttpException) throw error;
       console.error('Error en CrmActivitiesService.update:', error);
       throw new InternalServerErrorException('Error al actualizar la actividad');
     }
@@ -498,7 +534,7 @@ export class CrmActivitiesService {
 
       return { success: true };
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      if (error instanceof HttpException) throw error;
       console.error('Error en CrmActivitiesService.delete:', error);
       throw new InternalServerErrorException('Error al eliminar la actividad');
     }

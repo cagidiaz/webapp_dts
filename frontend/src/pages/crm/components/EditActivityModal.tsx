@@ -1,3 +1,4 @@
+import { CalendarInvitationFields, newCalendarInvitation } from './CalendarInvitationFields';
 import React, { useState, useEffect } from 'react';
 import { isAxiosError } from 'axios';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +15,10 @@ import {
 
 export interface EditableActivityData {
   source?: 'PROSPECT';
+  client_id?: string;
+  contact_id?: string | null;
+  contact?: { id: string };
+  attendees?: any;
   prospect_id?: string;
   version?: number;
   id: string;
@@ -90,6 +95,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
   const [description, setDescription] = useState('');
   const [conclusions, setConclusions] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
+  const [invitation, setInvitation] = useState(newCalendarInvitation());
   const [selectedCategory, setSelectedCategory] = useState<EmailCategoryKey>('PETICION_OFERTA');
 
   useEffect(() => {
@@ -97,6 +103,9 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
       setTitle(activity.title || '');
       const normType = normalizeType(activity.type);
       setActivityType(normType);
+      const initial = newCalendarInvitation(activity.contact_id || activity.contact?.id || contactId);
+      initial.enabled = normType === 'VIDEOLLAMADA';
+      setInvitation(activity.attendees?.calendarInvitation || initial);
 
       if (normType === 'EMAIL' || (activity.type || '').toUpperCase() === 'EMAIL') {
         const parsed = parseEmailActivity({
@@ -174,6 +183,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
       payload.timeScheduled = time || null;
     }
 
+    if (activity.source !== 'PROSPECT' && (activityType === 'VISITA' || activityType === 'VIDEOLLAMADA')) payload.calendarInvitation = { ...invitation, externalEmails: activityType === 'VIDEOLLAMADA' ? invitation.externalEmails : [] };
     updateMutation.mutate(payload);
   };
 
@@ -340,6 +350,8 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
               />
             </div>
           )}
+
+          {activity.source !== 'PROSPECT' && (activityType === 'VISITA' || activityType === 'VIDEOLLAMADA') && <CalendarInvitationFields clientId={activity.client_id || activity.customer?.client_id} allowExternal={activityType === 'VIDEOLLAMADA'} value={invitation} onChange={setInvitation} />}
 
           {/* Descripción / Notas */}
           <div className="space-y-1">

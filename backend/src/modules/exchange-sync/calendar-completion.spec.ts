@@ -5,7 +5,7 @@ import { CrmActivitiesService } from '../crm-activities/crm-activities.service';
 
 describe('Conclusiones y categoría verde del calendario', () => {
   function fixture() {
-    let row: any = { id: 'activity', created_by: 'user', type: 'VISITA', title: 'Visita', due_date: new Date('2026-10-21'), time_scheduled: '10:00', exchange_item_id: 'event', is_completed: false, conclusions: null, exchange_sync_status: 'synced' };
+    let row: any = { id: 'activity', created_by: 'user', type: 'EVENT', title: 'Visita', due_date: new Date('2026-10-21'), time_scheduled: '10:00', exchange_item_id: 'event', is_completed: false, conclusions: null, exchange_sync_status: 'synced' };
     const db: any = {
       crm_activities: {
         findUnique: jest.fn(async () => ({ ...row })), findFirst: jest.fn(async () => ({ ...row })), findMany: jest.fn().mockResolvedValue([]),

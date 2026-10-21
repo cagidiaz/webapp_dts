@@ -2,6 +2,18 @@ import apiClient from './apiClient';
 import { saveProspectActivity } from './prospects';
 import type { ProspectActivity, ProspectActivityType } from './prospects';
 
+export interface CalendarInvitationInput {
+  enabled: boolean;
+  contactIds: string[];
+  externalEmails: string[];
+  message: string;
+  durationMinutes: number;
+}
+export const getInvitationContacts = async (clientId: string): Promise<{ id: string; name: string; email: string | null }[]> => {
+  const { data } = await apiClient.get(`/crm-activities/invitation-contacts/${encodeURIComponent(clientId)}`);
+  return data;
+};
+
 export type CrmActivityType = 'NOTE' | 'TASK' | 'EMAIL' | 'EVENT' | 'CALL' | 'REUNION' | 'VIDEOLLAMADA' | 'VISITA';
 
 export interface CrmActivity {
@@ -140,6 +152,7 @@ export const getWeeklyAgenda = async (startDate?: string, endDate?: string): Pro
  * Crea una nueva actividad comercial en la base de datos
  */
 export const createCrmActivity = async (payload: {
+  calendarInvitation?: CalendarInvitationInput;
   clientId?: string;
   contactId?: string; // ← NUEVO
   type: CrmActivityType;
@@ -162,6 +175,7 @@ export const createCrmActivity = async (payload: {
 export const updateCrmActivity = async (
   id: string,
   payload: {
+    calendarInvitation?: CalendarInvitationInput;
     isCompleted?: boolean;
     title?: string;
     description?: string;

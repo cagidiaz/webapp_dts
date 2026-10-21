@@ -1,3 +1,4 @@
+import { CalendarInvitationFields, newCalendarInvitation } from './CalendarInvitationFields';
 import { filterEmailCategories } from '../../../utils/emailCategoryFilters';
 import { EmailAttachments } from './EmailAttachments';
 import { FloatingOutlookNotice } from './FloatingOutlookNotice';
@@ -223,6 +224,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [activityType, setActivityType] = useState<'TASK' | 'NOTE' | 'REUNION' | 'VIDEOLLAMADA' | 'VISITA' | 'CALL' | 'EVENT'>('TASK');
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [newInvitation, setNewInvitation] = useState(newCalendarInvitation());
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [newTime, setNewTime] = useState('10:00');
   const [newConclusions, setNewConclusions] = useState('');
@@ -455,6 +457,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   };
 
   const handleOpenEventModal = () => {
+    setNewInvitation(newCalendarInvitation(contact?.email && /^[^\s@<>;,]+@[^\s@<>;,]+\.[^\s@<>;,]+$/.test(contact.email.trim()) ? contactId : undefined));
     if ((activityType === 'VISITA' || activityType === 'EVENT') && !newLocation.trim()) {
       const addr = getCompanyAddress();
       if (addr) setNewLocation(addr);
@@ -1391,7 +1394,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   };
 
   // Event creation handler
-  const handleCreateActivity = (e: React.FormEvent) => {
+  const handleCreateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (activityType === 'REUNION') return;
     if (!newTitle.trim() && activityType !== 'NOTE') return;
@@ -1417,7 +1420,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       }
     }
 
-    createActivityMutation.mutate(payload);
+    if (activityType === 'VISITA' || activityType === 'VIDEOLLAMADA') payload.calendarInvitation = { ...newInvitation, externalEmails: activityType === 'VIDEOLLAMADA' ? newInvitation.externalEmails : [] };
+    try { await createActivityMutation.mutateAsync(payload); } catch { return; }
 
     // Reset form
     setNewTitle('');
@@ -3292,6 +3296,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     </div>
                   )}
 
+                  {(activityType === 'VISITA' || activityType === 'VIDEOLLAMADA') && <CalendarInvitationFields clientId={contact?.client_id} allowExternal={activityType === 'VIDEOLLAMADA'} value={newInvitation} onChange={setNewInvitation} />}
+                  {createActivityMutation.isError && <p role="alert" className="text-xs text-rose-500">{(createActivityMutation.error as any)?.response?.data?.message || 'No se pudo guardar la actividad.'}</p>}
                   <div className="space-y-1">
                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Detalles / Descripción</label>
                     <textarea
