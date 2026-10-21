@@ -11,6 +11,7 @@ import {
 import { formatCurrency } from '../../../api/formatters';
 import { ClientProspectActivities } from '../../crm/components/ProspectActivities';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '../../../store/authStore';
 import { 
   Phone, Mail, MapPin, Smartphone, 
   MessageCircle, ExternalLink, User,
@@ -32,13 +33,14 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
   customerCode
 }) => {
   const queryClient = useQueryClient();
+  const { profile } = useAuthStore();
   const [editingLinkedinId, setEditingLinkedinId] = useState<string | null>(null);
   const [linkedinValue, setLinkedinValue] = useState<string>('');
   const [isSavingLinkedin, setIsSavingLinkedin] = useState<boolean>(false);
 
   // If we have a code but no full customer object, fetch it
   const { data: fetchedCustomer, isLoading } = useQuery({
-    queryKey: ['customerDetail', customerCode],
+    queryKey: ['customerDetail', customerCode, profile?.id],
     queryFn: () => customerCode ? getCustomerByClientId(customerCode) : null,
     enabled: isOpen && !!customerCode && !propCustomer,
   });
@@ -56,7 +58,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
   });
 
   const { data: contacts, isLoading: isLoadingContacts } = useQuery({
-    queryKey: ['customerContacts', customer?.client_id],
+    queryKey: ['customerContacts', customer?.client_id, profile?.id],
     queryFn: () => customer?.client_id ? getContacts({ clientId: customer.client_id }) : Promise.resolve([]),
     enabled: isOpen && !!customer?.client_id,
   });

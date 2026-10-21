@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Query, Body, Patch } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Query, Body, Patch, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { ContactsService } from './contacts.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -16,17 +16,18 @@ export class ContactsController {
   @ApiQuery({ name: 'relation', required: false, type: String, description: 'Filtrar por tipo de relación (ej. Customer, Vendor)' })
   @ApiQuery({ name: 'search', required: false, type: String, description: 'Búsqueda por texto (nombre, cargo, email, client_id)' })
   async getAll(
+    @Req() req: any,
     @Query('clientId') clientId?: string,
     @Query('relation') relation?: string,
     @Query('search') search?: string,
   ) {
-    return this.contactsService.getAll({ clientId, relation, search });
+    return this.contactsService.getAll({ clientId, relation, search }, req.user?.userId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un contacto por su ID (UUID)' })
-  async getById(@Param('id') id: string) {
-    return this.contactsService.getById(id);
+  async getById(@Param('id') id: string, @Req() req: any) {
+    return this.contactsService.getById(id, req.user?.userId);
   }
 
   @Patch(':id/linkedin')
@@ -34,8 +35,9 @@ export class ContactsController {
   async updateLinkedin(
     @Param('id') id: string,
     @Body('linkedin') linkedin: string,
+    @Req() req: any,
   ) {
-    return this.contactsService.updateLinkedin(id, linkedin);
+    return this.contactsService.updateLinkedin(id, linkedin, req.user?.userId);
   }
 
   @Patch(':id/location')
@@ -50,7 +52,8 @@ export class ContactsController {
       county?: string | null;
       territory_code?: string | null;
     },
+    @Req() req: any,
   ) {
-    return this.contactsService.updateLocation(id, body);
+    return this.contactsService.updateLocation(id, body, req.user?.userId);
   }
 }

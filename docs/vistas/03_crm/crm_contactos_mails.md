@@ -326,3 +326,21 @@ En la ficha de un contacto de cliente, **Eventos → Nueva actividad** permite c
 **Datos y permisos:** la configuración y la lista resuelta se guardan en `crm_activities.attendees.calendarInvitation`. La fusión conserva el resto del JSON. No se necesitan tablas, columnas ni SQL nuevos. Los contactos y clientes de Business Central se consultan en solo lectura. Solo el propietario o Admin puede cambiar invitados; se mantiene la comprobación de cartera para el comercial.
 
 **Prueba real pendiente:** crear una visita con dos contactos, comprobar convocatoria sin Teams; crear una videollamada con contactos y un email externo, comprobar enlace y recepción; añadir/quitar participantes y reprogramar; completar con una conclusión interna y verificar que no llega al destinatario. Comprobar también el modo sin invitación y los estilos claro/oscuro.
+
+### Formulario adaptativo en dos columnas y ergonomía visual (21/10/2026)
+
+Para evitar desbordamientos verticales en pantallas de portátiles y facilitar la lectura completa de la actividad sin perder de vista los botones de acción:
+
+1. **Diseño Adaptativo a Dos Columnas (`max-w-4xl`):**
+   - En **Visita a Cliente** y **Videollamada Teams** (tanto al crear desde `CrmContactDetail.tsx` como al editar desde `EditActivityModal.tsx`), el modal se amplía suavemente y divide su contenido en 2 columnas:
+     - **Columna Izquierda (Agenda e Información Interna):** Título/Concepto, Fecha y Hora, Ubicación (en visitas con botón de autocompletado con la dirección de la empresa), Detalles/Descripción interna, Conclusiones/Acuerdos internos y Estado de sincronización en Outlook.
+     - **Columna Derecha (Convocatoria y Participantes):** Panel de `CalendarInvitationFields` con el selector de activación de convocatoria, lista de contactos de la empresa con scroll independiente, selector de emails externos (videollamadas), duración en minutos y mensaje público.
+   - En actividades de tipología simple (`TASK`, `CALL`, `NOTE`, `EVENT`), el modal mantiene su formato compacto de una sola columna (`max-w-lg`).
+
+2. **Cabecera y Pie Fijo (Sticky / Fixed Footer):**
+   - El contenedor del modal dispone de `max-h-[90vh]` / `max-h-[92vh]` con un área central con scroll suave (`custom-scrollbar`).
+   - La cabecera superior (tipo de evento y botón de cierre) y la botonera inferior (**Cancelar** y **Guardar y Sincronizar**) permanecen siempre visibles fijadas en los extremos, impidiendo que los botones queden ocultos fuera de pantalla.
+
+3. **Separación Visual Estricta de Privacidad:**
+   - **Campos Internos:** Los campos de Detalles/Descripción y Conclusiones/Acuerdos muestran una insignia visual distintiva verde: `🔒 Solo interno dTS CRM`.
+   - **Campos Externos:** El mensaje de convocatoria muestra la insignia azul: `✉️ Visible en invitación`, reforzando la seguridad y confianza del usuario al redactar.

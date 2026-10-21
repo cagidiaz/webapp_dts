@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, UseGuards, Query, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { CustomersService } from './customers.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -26,6 +26,7 @@ export class CustomersController {
   @ApiQuery({ name: 'sortBy', required: false, type: String })
   @ApiQuery({ name: 'sortDir', required: false, enum: ['asc', 'desc'] })
   async getAll(
+    @Req() req: any,
     @Query('take') take?: number,
     @Query('skip') skip?: number,
     @Query('search') search?: string,
@@ -40,7 +41,7 @@ export class CustomersController {
     @Query('sortBy') sortBy?: string,
     @Query('sortDir') sortDir?: 'asc' | 'desc',
   ) {
-    return this.customersService.getAll({ 
+    return this.customersService.getAll({
       take, 
       skip, 
       search, 
@@ -54,19 +55,19 @@ export class CustomersController {
       shipmentMethod,
       sortBy,
       sortDir
-    });
+    }, req.user?.userId);
   }
 
   @Get('filter-options')
   @ApiOperation({ summary: 'Obtener opciones únicas de filtrado para clientes' })
-  async getFilterOptions() {
-    return this.customersService.getFilterOptions();
+  async getFilterOptions(@Req() req: any) {
+    return this.customersService.getFilterOptions(req.user?.userId);
   }
 
   @Get('salespersons')
   @ApiOperation({ summary: 'Obtener lista de vendedores únicos' })
-  async getSalespersons() {
-    return this.customersService.getSalespersons();
+  async getSalespersons(@Req() req: any) {
+    return this.customersService.getSalespersons(req.user?.userId);
   }
 
   @Get('relationship-matrix')
@@ -75,6 +76,7 @@ export class CustomersController {
   @ApiQuery({ name: 'salespersonCode', required: false, type: String })
   @ApiQuery({ name: 'limitToToday', required: false, type: Boolean })
   async getRelationshipMatrix(
+    @Req() req: any,
     @Query('year') year?: number,
     @Query('salespersonCode') salespersonCode?: string,
     @Query('limitToToday') limitToToday?: string,
@@ -83,25 +85,25 @@ export class CustomersController {
       year: year ? Number(year) : undefined,
       salespersonCode,
       limitToToday: limitToToday === 'false' ? false : true,
-    });
+    }, req.user?.userId);
   }
 
   @Get('by-email/:email')
   @ApiOperation({ summary: 'Obtener cliente por dirección de email (del cliente o de sus contactos)' })
-  async getByEmail(@Param('email') email: string) {
-    return this.customersService.getByEmail(email);
+  async getByEmail(@Param('email') email: string, @Req() req: any) {
+    return this.customersService.getByEmail(email, req.user?.userId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un cliente por ID (UUID)' })
-  async getById(@Param('id') id: string) {
-    return this.customersService.getById(id);
+  async getById(@Param('id') id: string, @Req() req: any) {
+    return this.customersService.getById(id, req.user?.userId);
   }
 
   @Get('code/:clientId')
   @ApiOperation({ summary: 'Obtener un cliente por su client_id (Navision)' })
-  async getByClientId(@Param('clientId') clientId: string) {
-    return this.customersService.getByClientId(clientId);
+  async getByClientId(@Param('clientId') clientId: string, @Req() req: any) {
+    return this.customersService.getByClientId(clientId, req.user?.userId);
   }
 
   @Patch(':clientId/client-type')
@@ -109,7 +111,8 @@ export class CustomersController {
   async updateClientType(
     @Param('clientId') clientId: string,
     @Body('clientType') clientType: string | null,
+    @Req() req: any,
   ) {
-    return this.customersService.updateClientType(clientId, clientType);
+    return this.customersService.updateClientType(clientId, clientType, req.user?.userId);
   }
 }

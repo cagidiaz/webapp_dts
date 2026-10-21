@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useInfiniteQuery, useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllCustomers } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { 
@@ -27,6 +27,10 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDataRow | null>(null);
   const prospectAccess = useQuery({ queryKey: ['prospect-access', profile?.id], queryFn: getProspectAccess, enabled: !!profile?.id, retry: false });
 
+  useEffect(() => {
+    setSelectedCustomer(null);
+  }, [profile?.id]);
+
   const observerTarget = useRef<HTMLTableRowElement>(null);
   const itemsPerPage = 50;
 
@@ -38,21 +42,18 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const userRole = (profile?.roles?.name || '').toUpperCase();
+  const isGlobalViewer = ['ADMIN', 'DIRECCION'].includes(userRole);
+  const isCommercial = !isGlobalViewer;
+  const effectiveSalespersonFilter = isGlobalViewer ? salespersonFilter : (profile?.code || '');
+  const canLoadScopedData = !!profile?.id && (isGlobalViewer || !!profile?.code);
+
   // Fetch Salespersons
   const { data: salespersons } = useQuery({
-    queryKey: ['customer-salespersons'],
+    queryKey: ['customer-salespersons', profile?.id],
     queryFn: getCustomerSalespersons,
+    enabled: canLoadScopedData,
   });
-
-  // Role based filtering
-  const userRole = (profile?.roles?.name || '').toUpperCase();
-  const isCommercial = userRole === 'VENTAS' || userRole === 'OPERACIONES' || userRole === 'PRODUCCION';
-
-  useEffect(() => {
-    if (isCommercial && profile?.code) {
-      setSalespersonFilter(profile.code);
-    }
-  }, [isCommercial, profile]);
 
   // Mutation to update client_type
   const updateClientTypeMutation = useMutation({
@@ -73,12 +74,12 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
     isLoading,
     isFetching
   } = useInfiniteQuery({
-    queryKey: ['crm-customers-infinite', debouncedSearch, salespersonFilter, clientTypeFilter],
+    queryKey: ['crm-customers-infinite', profile?.id, debouncedSearch, effectiveSalespersonFilter, clientTypeFilter],
     queryFn: ({ pageParam = 0 }) => getAllCustomers({
       take: itemsPerPage,
       skip: pageParam as number,
       search: debouncedSearch || undefined,
-      salesperson: salespersonFilter || undefined,
+      salesperson: effectiveSalespersonFilter || undefined,
       clientType: clientTypeFilter || undefined,
       sortBy: 'name',
       sortDir: 'asc'
@@ -88,7 +89,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
       const nextSkip = allPages.length * itemsPerPage;
       return nextSkip < lastPage.total ? nextSkip : undefined;
     },
-    placeholderData: keepPreviousData,
+    enabled: canLoadScopedData,
   });
 
   // Intersection Observer for Infinite Scroll
@@ -169,10 +170,16 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
         </button>
       </div>
 
-      {activeSubTab === 'matrix' ? (
+      {profile?.id && !canLoadScopedData ? (
+        <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          Tu usuario no tiene un código de vendedor asociado. Contacta con Administración para habilitar la cartera.
+        </div>
+      ) : activeSubTab === 'matrix' ? (
         <CustomerRelationshipMatrix
+          key={profile?.id}
+          profileId={profile?.id}
           onDrillDown={handleDrillDown}
-          defaultSalesperson={salespersonFilter}
+          defaultSalesperson={effectiveSalespersonFilter}
           isCommercialUser={isCommercial}
         />
       ) : (

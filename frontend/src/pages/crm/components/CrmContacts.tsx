@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getContacts, updateContactLinkedin } from '../../../api';
 import { openInOutlook } from '../../../api/exchangeSync';
+import { useAuthStore } from '../../../store/authStore';
 import { 
   Search, User, Linkedin, Edit2, Check, X, 
   Mail, Phone, Smartphone, Users, MapPin, Briefcase
@@ -14,6 +15,10 @@ interface CrmContactsProps {
 
 export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact, onOpenReportModal }) => {
   const queryClient = useQueryClient();
+  const { profile } = useAuthStore();
+  const role = (profile?.roles?.name || '').toUpperCase();
+  const isGlobalViewer = ['ADMIN', 'DIRECCION'].includes(role);
+  const canLoadScopedData = !!profile?.id && (isGlobalViewer || !!profile?.code);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   
@@ -41,8 +46,9 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact, onOpe
 
   // Fetch all contacts
   const { data: allContacts = [], isLoading } = useQuery({
-    queryKey: ['crm-contacts-all'],
+    queryKey: ['crm-contacts-all', profile?.id],
     queryFn: () => getContacts(),
+    enabled: canLoadScopedData,
   });
 
   // Mutación para guardar LinkedIn inline
@@ -130,6 +136,12 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact, onOpe
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+
+      {profile?.id && !canLoadScopedData && (
+        <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          Tu usuario no tiene un código de vendedor asociado. Contacta con Administración para habilitar la cartera.
+        </div>
+      )}
       
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

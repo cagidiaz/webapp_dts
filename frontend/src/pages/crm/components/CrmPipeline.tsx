@@ -84,8 +84,9 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
 
   // Fetch Salespersons
   const { data: salespersons } = useQuery({
-    queryKey: ['customer-salespersons'],
+    queryKey: ['customer-salespersons', profile?.id],
     queryFn: getCustomerSalespersons,
+    enabled: !!profile?.id,
   });
 
   // Automatically restrict filter to user salesperson code if role is VENTAS/OPERACIONES/PRODUCCION

@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveCrmDataScope } from '../../common/crm-data-scope';
 
 @Injectable()
 export class ContactsService {
@@ -8,9 +9,12 @@ export class ContactsService {
   /**
    * Obtiene todos los contactos, permitiendo filtrar por client_id, relación comercial o búsqueda de texto.
    */
-  async getAll(params: { clientId?: string; relation?: string; search?: string } = {}) {
+  async getAll(params: { clientId?: string; relation?: string; search?: string } = {}, userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
     const { clientId, relation, search } = params;
-    const where: any = {};
+    const where: any = scope.salespersonCode
+      ? { customer: { is: { salesperson_code: scope.salespersonCode } } }
+      : {};
 
     if (clientId) {
       where.client_id = clientId;
@@ -59,10 +63,14 @@ export class ContactsService {
   /**
    * Obtiene un contacto por su ID único (UUID), enriquecido con la información de su empresa padre.
    */
-  async getById(id: string) {
+  async getById(id: string, userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
     try {
-      const contact = await this.prisma.contacts.findUnique({
-        where: { id },
+      const contact = await this.prisma.contacts.findFirst({
+        where: {
+          id,
+          ...(scope.salespersonCode ? { customer: { is: { salesperson_code: scope.salespersonCode } } } : {}),
+        },
         include: {
           customer: true
         }
@@ -80,9 +88,9 @@ export class ContactsService {
   /**
    * Actualiza únicamente el campo LinkedIn de un contacto.
    */
-  async updateLinkedin(id: string, linkedin: string) {
+  async updateLinkedin(id: string, linkedin: string, userId?: string) {
     // Verificar si el contacto existe
-    await this.getById(id);
+    await this.getById(id, userId);
 
     try {
       return await this.prisma.contacts.update({
@@ -108,9 +116,9 @@ export class ContactsService {
     post_code?: string | null;
     county?: string | null;
     territory_code?: string | null;
-  }) {
+  }, userId?: string) {
     // Verificar si el contacto existe
-    await this.getById(id);
+    await this.getById(id, userId);
 
     try {
       return await this.prisma.contacts.update({

@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveCrmDataScope } from '../../common/crm-data-scope';
 
 @Injectable()
 export class CustomersService {
@@ -23,7 +24,7 @@ export class CustomersService {
     shipmentMethod?: string;
     sortBy?: string;
     sortDir?: 'asc' | 'desc';
-  } = {}) {
+  } = {}, userId?: string) {
     const { 
       skip, 
       take, 
@@ -85,9 +86,12 @@ export class CustomersService {
       }
     }
 
-    // Filtro por vendedor
-    if (salesperson) {
-      and.push({ salesperson_code: salesperson });
+    // El vendedor procede del perfil autenticado; el parámetro solo se aplica
+    // a los roles globales y nunca puede ampliar la cartera de un comercial.
+    const scope = await resolveCrmDataScope(this.prisma, userId);
+    const effectiveSalesperson = scope.salespersonCode || salesperson;
+    if (effectiveSalesperson) {
+      and.push({ salesperson_code: effectiveSalesperson });
     }
 
     // Filtro por tipo de cliente (A, B, C, D, E, F)
@@ -298,35 +302,37 @@ export class CustomersService {
   /**
    * Obtiene las opciones únicas de filtrado para mercados, modelos de negocio, territorios, términos de pago y portes.
    */
-  async getFilterOptions() {
+  async getFilterOptions(userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
+    const scopeWhere = scope.salespersonCode ? { salesperson_code: scope.salespersonCode } : {};
     try {
       const [marketSegments, businessModels, counties, paymentTerms, shipmentMethods] = await Promise.all([
         this.prisma.customers.findMany({
-          where: { market_segment: { not: null } },
+          where: { ...scopeWhere, market_segment: { not: null } },
           select: { market_segment: true },
           distinct: ['market_segment'],
           orderBy: { market_segment: 'asc' }
         }),
         this.prisma.customers.findMany({
-          where: { business_model: { not: null } },
+          where: { ...scopeWhere, business_model: { not: null } },
           select: { business_model: true },
           distinct: ['business_model'],
           orderBy: { business_model: 'asc' }
         }),
         this.prisma.customers.findMany({
-          where: { county: { not: null } },
+          where: { ...scopeWhere, county: { not: null } },
           select: { county: true },
           distinct: ['county'],
           orderBy: { county: 'asc' }
         }),
         this.prisma.customers.findMany({
-          where: { payment_terms_code: { not: null } },
+          where: { ...scopeWhere, payment_terms_code: { not: null } },
           select: { payment_terms_code: true },
           distinct: ['payment_terms_code'],
           orderBy: { payment_terms_code: 'asc' }
         }),
         this.prisma.customers.findMany({
-          where: { shipment_method_code: { not: null } },
+          where: { ...scopeWhere, shipment_method_code: { not: null } },
           select: { shipment_method_code: true },
           distinct: ['shipment_method_code'],
           orderBy: { shipment_method_code: 'asc' }
@@ -349,9 +355,11 @@ export class CustomersService {
   /**
    * Obtiene la lista de vendedores únicos con clientes asignados.
    */
-  async getSalespersons() {
+  async getSalespersons(userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
     try {
       return await this.prisma.sales_reps.findMany({
+        where: scope.salespersonCode ? { code: scope.salespersonCode } : undefined,
         orderBy: { code: 'asc' }
       });
     } catch (error) {
@@ -362,10 +370,11 @@ export class CustomersService {
   /**
    * Obtiene un cliente por su ID (UUID).
    */
-  async getById(id: string) {
+  async getById(id: string, userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
     try {
-      const customer = await this.prisma.customers.findUnique({
-        where: { id },
+      const customer = await this.prisma.customers.findFirst({
+        where: { id, ...(scope.salespersonCode ? { salesperson_code: scope.salespersonCode } : {}) },
       });
       if (!customer) throw new NotFoundException('Cliente no encontrado');
       return customer;
@@ -378,10 +387,11 @@ export class CustomersService {
   /**
    * Obtiene un cliente por su client_id (Navision code).
    */
-  async getByClientId(clientId: string) {
+  async getByClientId(clientId: string, userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
     try {
-      const customer = await this.prisma.customers.findUnique({
-        where: { client_id: clientId },
+      const customer = await this.prisma.customers.findFirst({
+        where: { client_id: clientId, ...(scope.salespersonCode ? { salesperson_code: scope.salespersonCode } : {}) },
       });
       if (!customer) throw new NotFoundException('Cliente no encontrado');
       return customer;
@@ -395,7 +405,9 @@ export class CustomersService {
    * Obtiene un cliente por una dirección de correo, buscando primero en sus personas de contacto
    * y luego en el correo principal del cliente.
    */
-  async getByEmail(email: string) {
+  async getByEmail(email: string, userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
+    const salespersonWhere = scope.salespersonCode ? { salesperson_code: scope.salespersonCode } : {};
     try {
       if (!email || !email.trim()) {
         throw new NotFoundException('Email no válido');
@@ -406,6 +418,7 @@ export class CustomersService {
       // 1. Buscar en contactos
       const contact = await this.prisma.contacts.findFirst({
         where: {
+          ...(scope.salespersonCode ? { customer: { is: salespersonWhere } } : {}),
           email: {
             equals: emailTrimmed,
             mode: 'insensitive'
@@ -414,8 +427,8 @@ export class CustomersService {
       });
 
       if (contact && contact.client_id) {
-        const customer = await this.prisma.customers.findUnique({
-          where: { client_id: contact.client_id }
+        const customer = await this.prisma.customers.findFirst({
+          where: { client_id: contact.client_id, ...salespersonWhere }
         });
         if (customer) {
           return { customer, contact };
@@ -425,6 +438,7 @@ export class CustomersService {
       // 2. Si no se encontró en contactos, buscar en la tabla de clientes directamente
       const customer = await this.prisma.customers.findFirst({
         where: {
+          ...salespersonWhere,
           email: {
             equals: emailTrimmed,
             mode: 'insensitive'
@@ -446,10 +460,11 @@ export class CustomersService {
   /**
    * Actualiza el tipo de cliente (relación con la marca: A, B, C, D, E, F o null)
    */
-  async updateClientType(clientId: string, clientType: string | null) {
+  async updateClientType(clientId: string, clientType: string | null, userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
     try {
-      const existing = await this.prisma.customers.findUnique({
-        where: { client_id: clientId },
+      const existing = await this.prisma.customers.findFirst({
+        where: { client_id: clientId, ...(scope.salespersonCode ? { salesperson_code: scope.salespersonCode } : {}) },
       });
 
       if (!existing) {
@@ -508,12 +523,13 @@ export class CustomersService {
     year?: number;
     salespersonCode?: string;
     limitToToday?: boolean;
-  }) {
+  }, userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
     try {
       const year = params.year ? Number(params.year) : new Date().getFullYear();
       const prevYear = year - 1;
       const limitToToday = params.limitToToday !== undefined ? Boolean(params.limitToToday) : true;
-      const salespersonFilter = params.salespersonCode ? params.salespersonCode.trim() : undefined;
+      const salespersonFilter = scope.salespersonCode || (params.salespersonCode ? params.salespersonCode.trim() : undefined);
 
       const SALES_DOC_TYPES = ['Sales Invoice', 'Sales Credit Memo'];
 
@@ -526,10 +542,12 @@ export class CustomersService {
       // 2. Obtener lista de comerciales y clientes
       const [salesReps, allCustomers] = await Promise.all([
         this.prisma.sales_reps.findMany({
+          where: salespersonFilter ? { code: salespersonFilter } : undefined,
           select: { code: true, name: true },
           orderBy: { name: 'asc' }
         }),
         this.prisma.customers.findMany({
+          where: salespersonFilter ? { salesperson_code: salespersonFilter } : undefined,
           select: {
             client_id: true,
             name: true,
@@ -538,29 +556,32 @@ export class CustomersService {
           }
         })
       ]);
+      const visibleClientIds = allCustomers.map(customer => customer.client_id).filter(Boolean);
 
       const salesRepMap = new Map<string, string>();
       salesReps.forEach(sr => salesRepMap.set(sr.code, sr.name));
 
       // 3. Obtener sumatorio de ventas de value_entries por cliente para el año y el año anterior
       const [salesCurrentRaw, salesPrevRaw] = await Promise.all([
-        currentDates.length > 0
+        currentDates.length > 0 && visibleClientIds.length > 0
           ? this.prisma.value_entries.groupBy({
               by: ['source_no'],
               _sum: { sales_amount: true },
               where: {
                 document_type: { in: SALES_DOC_TYPES },
-                reg_date: { in: currentDates }
+                reg_date: { in: currentDates },
+                source_no: { in: visibleClientIds },
               }
             })
           : Promise.resolve([] as any[]),
-        prevDates.length > 0
+        prevDates.length > 0 && visibleClientIds.length > 0
           ? this.prisma.value_entries.groupBy({
               by: ['source_no'],
               _sum: { sales_amount: true },
               where: {
                 document_type: { in: SALES_DOC_TYPES },
-                reg_date: { in: prevDates }
+                reg_date: { in: prevDates },
+                source_no: { in: visibleClientIds },
               }
             })
           : Promise.resolve([] as any[])

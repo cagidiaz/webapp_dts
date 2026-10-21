@@ -12,6 +12,7 @@ import {
 import { KPISkeleton, TableSkeleton, InfoPopover, type InfoBreakdownItem, ExportButton } from '../../components/ui';
 import { Drawer } from '../../components/shared';
 import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 import { exportToXlsx } from '../../utils/exportToXlsx';
 import {
   ResponsiveContainer,
@@ -31,6 +32,7 @@ import {
 
 export const QuotesPage: React.FC = () => {
   const { setPageInfo } = useUIStore();
+  const { profile } = useAuthStore();
 
   const queryClient = useQueryClient();
 
@@ -110,8 +112,9 @@ export const QuotesPage: React.FC = () => {
 
   // Query salespeople
   const { data: salespersons } = useQuery({
-    queryKey: ['customer-salespersons'],
+    queryKey: ['customer-salespersons', profile?.id],
     queryFn: getCustomerSalespersons,
+    enabled: !!profile?.id,
   });
 
   // Query quotes with infinite scroll

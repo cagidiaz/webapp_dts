@@ -236,3 +236,12 @@ En la ficha de un contacto de cliente, **Eventos → Nueva actividad** permite c
 **Datos y permisos:** la configuración y la lista resuelta se guardan en `crm_activities.attendees.calendarInvitation`. La fusión conserva el resto del JSON. No se necesitan tablas, columnas ni SQL nuevos. Los contactos y clientes de Business Central se consultan en solo lectura. Solo el propietario o Admin puede cambiar invitados; se mantiene la comprobación de cartera para el comercial.
 
 **Prueba real pendiente:** crear una visita con dos contactos, comprobar convocatoria sin Teams; crear una videollamada con contactos y un email externo, comprobar enlace y recepción; añadir/quitar participantes y reprogramar; completar con una conclusión interna y verificar que no llega al destinatario. Comprobar también el modo sin invitación y los estilos claro/oscuro.
+
+
+### Formulario adaptativo en dos columnas y ergonomía visual — 21/10/2026
+
+Para optimizar la ergonomía y evitar el desbordamiento vertical en pantallas de resolución estándar o portátiles:
+- **Adaptabilidad a 2 Columnas (`max-w-4xl`):** En creación y edición de **Visitas a Cliente** y **Videollamadas**, el modal se divide en dos columnas equilibradas: izquierda para datos de agenda y notas internas de CRM, y derecha para configuración de la convocatoria de calendario (contactos, emails externos, duración y mensaje público). En tareas, llamadas o notas simples, el modal conserva el formato compacto de 1 columna (`max-w-lg`).
+- **Cabecera y Pie Fijos:** Encabezado con selector de actividad y pie con botones `Cancelar` y `Guardar y Sincronizar` siempre visibles (sticky), con scroll suave independiente (`custom-scrollbar`) en el cuerpo del formulario.
+- **Insignias de Privacidad:** Indicador visual verde `🔒 Solo interno dTS CRM` en descripción/conclusiones e indicador azul `✉️ Visible en invitación` en el mensaje de la convocatoria para garantizar total claridad sobre qué contenido ve el cliente.
+

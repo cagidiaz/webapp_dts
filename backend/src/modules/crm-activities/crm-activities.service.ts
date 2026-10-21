@@ -2,6 +2,7 @@ import { resolveCalendarInvitation } from './calendar-invitation';
 import { normalizeAttachments } from '../exchange-sync/email-attachments';
 import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException, ForbiddenException, HttpException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveCrmDataScope } from '../../common/crm-data-scope';
 import { CrmActivityType } from '@prisma/client';
 import { ExchangeSyncService } from '../exchange-sync/exchange-sync.service';
 import { ProspectsService } from '../prospects/prospects.service';
@@ -19,7 +20,7 @@ export class CrmActivitiesService {
     if (!userId) throw new ForbiddenException('Sesión no disponible.');
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } });
     if (!profile?.is_active) throw new ForbiddenException('Perfil no disponible.');
-    const global = ['ADMIN', 'DIRECCION', 'GERENCIA'].includes(profile.roles?.name?.toUpperCase() || '');
+    const global = ['ADMIN', 'DIRECCION', 'GERENCIA', 'TESTER', 'PRODUCCION'].includes(profile.roles?.name?.toUpperCase() || '');
     if (!global && !profile.code) throw new ForbiddenException('Código comercial no configurado.');
     const customer = await this.prisma.customers.findFirst({ where: { client_id: clientId, ...(global ? {} : { salesperson_code: profile.code! }) }, select: { client_id: true } });
     if (!customer) throw new ForbiddenException('La empresa no pertenece a tu cartera.');
@@ -35,9 +36,13 @@ export class CrmActivitiesService {
    * Obtiene todas las actividades de un cliente comercial ordenadas por fecha.
    */
   async getByClient(clientId: string, userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
     try {
       let activities = await this.prisma.crm_activities.findMany({
-        where: { client_id: clientId },
+        where: {
+          client_id: clientId,
+          ...(scope.salespersonCode ? { customer: { is: { salesperson_code: scope.salespersonCode } } } : {}),
+        },
         include: {
           contact: true,
         },
@@ -57,9 +62,15 @@ export class CrmActivitiesService {
    * Obtiene todas las actividades de un contacto comercial ordenadas por fecha.
    */
   async getByContact(contactId: string, userId?: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
     try {
       let activities = await this.prisma.crm_activities.findMany({
-        where: { contact_id: contactId },
+        where: {
+          contact_id: contactId,
+          ...(scope.salespersonCode
+            ? { contact: { is: { customer: { is: { salesperson_code: scope.salespersonCode } } } } }
+            : {}),
+        },
         include: {
           customer: true,
         },

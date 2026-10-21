@@ -20,12 +20,14 @@ interface CustomerRelationshipMatrixProps {
   onDrillDown: (filters: { clientType?: string; salespersonCode?: string }) => void;
   defaultSalesperson?: string;
   isCommercialUser?: boolean;
+  profileId?: string;
 }
 
 export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProps> = ({
   onDrillDown,
   defaultSalesperson,
   isCommercialUser = false,
+  profileId,
 }) => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
@@ -36,7 +38,7 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
 
   // Datos de la matriz
   const { data: matrixData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['customer-relationship-matrix', selectedYear, limitToToday],
+    queryKey: ['customer-relationship-matrix', profileId, selectedYear, limitToToday],
     queryFn: () => getCustomerRelationshipMatrix({
       year: selectedYear,
       limitToToday,
@@ -575,17 +577,19 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
               {/* Selector de Total Empresa / Comerciales */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 {/* Opción Total Empresa */}
-                <button
-                  key="TOTAL"
-                  onClick={() => setActiveCommercialTab('TOTAL')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    activeCommercialTab === 'TOTAL'
-                      ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20 border border-[#003E51]'
-                      : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
-                  }`}
-                >
-                  Total Empresa
-                </button>
+                {!isCommercialUser && (
+                  <button
+                    key="TOTAL"
+                    onClick={() => setActiveCommercialTab('TOTAL')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      activeCommercialTab === 'TOTAL'
+                        ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20 border border-[#003E51]'
+                        : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
+                    }`}
+                  >
+                    Total Empresa
+                  </button>
+                )}
 
                 {/* Comerciales individuales */}
                 {filteredCommercials.map((c: CustomerRelationshipBlock) => (

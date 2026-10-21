@@ -164,6 +164,8 @@ interface CrmContactDetailProps {
 export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, onBack }) => {
   const queryClient = useQueryClient();
   const { profile } = useAuthStore();
+  const roleName = (profile?.roles?.name || '').toUpperCase();
+  const canLoadScopedData = !!profile?.id && (!!profile?.code || ['ADMIN', 'DIRECCION'].includes(roleName));
   const { data: opportunityAccess } = useQuery({ queryKey: ['prospect-access', profile?.id], queryFn: getProspectAccess, enabled: !!profile?.id, retry: false });
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -380,18 +382,21 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   };
 
   const { data: contact, isLoading: isLoadingContact } = useQuery({
-    queryKey: ['crmContactDetail', contactId],
+    queryKey: ['crmContactDetail', contactId, profile?.id],
     queryFn: () => getContactById(contactId),
+    enabled: canLoadScopedData,
   });
 
   const { data: dbActivities = [], isLoading: isLoadingActivities } = useQuery({
-    queryKey: ['crmActivitiesByContact', contactId],
+    queryKey: ['crmActivitiesByContact', contactId, profile?.id],
     queryFn: () => getCrmActivitiesByContact(contactId),
+    enabled: canLoadScopedData,
   });
 
   const { data: crmQuotes = [], isLoading: isLoadingQuotes } = useQuery({
-    queryKey: ['contactCrmQuotes', contactId],
+    queryKey: ['contactCrmQuotes', contactId, profile?.id],
     queryFn: () => getAllCrmQuotes({ contactId }),
+    enabled: canLoadScopedData,
   });
 
   // Helper para obtener la dirección completa de la sede/centro del contacto o de su empresa
@@ -790,7 +795,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   const [newQuoteActivityNotes, setNewQuoteActivityNotes] = useState('');
 
   const { data: quoteActivities = [] } = useQuery({
-    queryKey: ['crm-quote-activities', selectedQuote?.id],
+    queryKey: ['crm-quote-activities', selectedQuote?.id, profile?.id],
     queryFn: () => getQuoteActivities(selectedQuote!.id),
     enabled: !!selectedQuote,
   });
@@ -3167,197 +3172,354 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       </div>
 
       {/* MODAL: Nueva Actividad Unificada */}
-      {showEventModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 max-w-md w-full shadow-xl space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">Nueva Actividad</h3>
-              <button onClick={() => setShowEventModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"><X size={16} /></button>
-            </div>
-
-            <form onSubmit={handleCreateActivity} className="space-y-4 text-xs">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipo de Actividad</label>
-                <select
-                  value={activityType}
-                  onChange={(e) => {
-                    const nextType = e.target.value as any;
-                    setActivityType(nextType);
-                    if ((nextType === 'VISITA' || nextType === 'EVENT') && !newLocation.trim()) {
-                      const addr = getCompanyAddress();
-                      if (addr) setNewLocation(addr);
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white font-bold outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                >
-                  <option value="TASK">Tarea</option>
-                  <option value="NOTE">Nota Interna</option>
-                  <option value="REUNION">Reunión Interna</option>
-                  <option value="VISITA">Visita a Cliente</option>
-                  <option value="VIDEOLLAMADA">Videollamada Teams / Online</option>
-                  <option value="CALL">Llamada Telefónica</option>
-                  <option value="EVENT">Visita no programada</option>
-                </select>
+      {showEventModal && (() => {
+        const isDualColumn = activityType === 'VISITA' || activityType === 'VIDEOLLAMADA';
+        return (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className={`bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden transition-all duration-200 ${
+              isDualColumn ? 'max-w-4xl' : 'max-w-lg'
+            }`}>
+              {/* Cabecera Fija */}
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-white/2 shrink-0">
+                <div className="flex items-center gap-2">
+                  <Calendar size={16} className="text-dts-secondary" />
+                  <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">Nueva Actividad</h3>
+                </div>
+                <button onClick={() => setShowEventModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"><X size={16} /></button>
               </div>
 
-              {activityType === 'REUNION' ? (
-                <div className="py-8 px-4 text-center rounded-2xl bg-gray-50/70 dark:bg-white/5 border border-dashed border-gray-200 dark:border-gray-700 space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center mx-auto">
-                    <Users size={22} />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white">
-                      Reunión Interna
-                    </h4>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 max-w-xs mx-auto">
-                      Esta opción se configurará próximamente para coordinar reuniones internas del equipo.
-                    </p>
-                  </div>
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowEventModal(false)}
-                      className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 font-bold text-xs cursor-pointer"
+              {/* Formulario con cuerpo scrolleable y pie fijo */}
+              <form onSubmit={handleCreateActivity} className="flex-1 flex flex-col min-h-0 text-xs">
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 custom-scrollbar">
+                  {/* Selector de Tipo de Actividad (ancho completo) */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipo de Actividad</label>
+                    <select
+                      value={activityType}
+                      onChange={(e) => {
+                        const nextType = e.target.value as any;
+                        setActivityType(nextType);
+                        if ((nextType === 'VISITA' || nextType === 'EVENT') && !newLocation.trim()) {
+                          const addr = getCompanyAddress();
+                          if (addr) setNewLocation(addr);
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white font-bold outline-none focus:ring-2 focus:ring-dts-secondary/50"
                     >
-                      Cerrar
-                    </button>
+                      <option value="TASK">Tarea</option>
+                      <option value="NOTE">Nota Interna</option>
+                      <option value="REUNION">Reunión Interna</option>
+                      <option value="VISITA">Visita a Cliente</option>
+                      <option value="VIDEOLLAMADA">Videollamada Teams / Online</option>
+                      <option value="CALL">Llamada Telefónica</option>
+                      <option value="EVENT">Visita no programada</option>
+                    </select>
                   </div>
+
+                  {activityType === 'REUNION' ? (
+                    <div className="py-8 px-4 text-center rounded-2xl bg-gray-50/70 dark:bg-white/5 border border-dashed border-gray-200 dark:border-gray-700 space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center mx-auto">
+                        <Users size={22} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white">
+                          Reunión Interna
+                        </h4>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 max-w-xs mx-auto">
+                          Esta opción se configurará próximamente para coordinar reuniones internas del equipo.
+                        </p>
+                      </div>
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowEventModal(false)}
+                          className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 font-bold text-xs cursor-pointer"
+                        >
+                          Cerrar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {activityType === 'EVENT' && (
+                        <div className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 flex items-start gap-2 text-[11px] text-amber-800 dark:text-amber-300">
+                          <Info size={14} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                          <span>
+                            <strong>Visita no programada:</strong> No envía correo electrónico al contacto. Quedará registrada en la app y en tu calendario de Outlook.
+                          </span>
+                        </div>
+                      )}
+
+                      {createActivityMutation.isError && (
+                        <p role="alert" className="text-xs text-rose-500 font-semibold p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800">
+                          {(createActivityMutation.error as any)?.response?.data?.message || 'No se pudo guardar la actividad.'}
+                        </p>
+                      )}
+
+                      {isDualColumn ? (
+                        /* DISPOSICIÓN EN 2 COLUMNAS PARA VISITA Y VIDEOLLAMADA */
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+                          {/* COLUMNA 1: Datos de Agenda e Información Interna */}
+                          <div className="space-y-3.5">
+                            <div className="space-y-1">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Título / Concepto <span className="text-rose-500">*</span></label>
+                              <input
+                                type="text"
+                                required
+                                placeholder={activityType === 'VISITA' ? 'Ej. Demostración técnica presencial...' : 'Ej. Videollamada comercial Teams...'}
+                                value={newTitle}
+                                onChange={(e) => setNewTitle(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 font-medium"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fecha <span className="text-rose-500">*</span></label>
+                                <input
+                                  type="date"
+                                  required
+                                  value={newDate}
+                                  onChange={(e) => setNewDate(e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hora</label>
+                                <input
+                                  type="time"
+                                  value={newTime}
+                                  onChange={(e) => setNewTime(e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 font-mono"
+                                />
+                              </div>
+                            </div>
+
+                            {activityType === 'VISITA' && (
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
+                                  {getCompanyAddress() && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setNewLocation(getCompanyAddress())}
+                                      className="text-[10px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                                      title="Rellenar con la dirección de la empresa del contacto"
+                                    >
+                                      <MapPin size={11} />
+                                      <span>Usar dirección empresa</span>
+                                    </button>
+                                  )}
+                                </div>
+                                <input
+                                  type="text"
+                                  placeholder="Sede del cliente / Dirección visitada..."
+                                  value={newLocation}
+                                  onChange={(e) => setNewLocation(e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                                />
+                              </div>
+                            )}
+
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Detalles / Descripción</label>
+                                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60">
+                                  🔒 Solo interno dTS CRM
+                                </span>
+                              </div>
+                              <textarea
+                                placeholder="Puntos a tratar, notas internas previas..."
+                                rows={3}
+                                value={newDescription}
+                                onChange={(e) => setNewDescription(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none font-medium leading-relaxed"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Conclusiones / Resultado</label>
+                                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60">
+                                  🔒 Solo interno dTS CRM
+                                </span>
+                              </div>
+                              <textarea
+                                placeholder="Acuerdos alcanzados o seguimiento posterior..."
+                                rows={2}
+                                value={newConclusions}
+                                onChange={(e) => setNewConclusions(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none font-medium leading-relaxed"
+                              />
+                            </div>
+
+                            <div className="p-2.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/10 border border-cyan-100 dark:border-cyan-900/30 flex items-center justify-between text-[11px]">
+                              <div className="flex items-center gap-1.5 text-dts-primary dark:text-cyan-400 font-semibold">
+                                <Calendar size={13} className="text-dts-secondary" />
+                                <span>Sincronizar en Outlook</span>
+                              </div>
+                              <div className="text-[10px] text-gray-400 font-mono">
+                                {isExchangeConnected ? (
+                                  <span className="text-emerald-500 font-bold">● Conectado a Exchange (dTS CRM)</span>
+                                ) : (
+                                  <span className="text-amber-500 font-bold">● Modo Local</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* COLUMNA 2: Convocatoria e Invitados */}
+                          <div className="space-y-3.5">
+                            <CalendarInvitationFields
+                              clientId={contact?.client_id}
+                              allowExternal={activityType === 'VIDEOLLAMADA'}
+                              value={newInvitation}
+                              onChange={setNewInvitation}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        /* DISPOSICIÓN ESTÁNDAR DE COLUMNA ÚNICA PARA TAREAS, LLAMADAS, NOTAS Y VISITAS NO PROGRAMADAS */
+                        <div className="space-y-3.5">
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Título / Concepto <span className="text-rose-500">*</span></label>
+                            <input
+                              type="text"
+                              required
+                              placeholder={activityType === 'EVENT' ? 'Ej. Visita presencial no programada...' : 'Ej. Seguimiento comercial...'}
+                              value={newTitle}
+                              onChange={(e) => setNewTitle(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                            />
+                          </div>
+
+                          {activityType !== 'NOTE' && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fecha</label>
+                                <input
+                                  type="date"
+                                  required
+                                  value={newDate}
+                                  onChange={(e) => setNewDate(e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hora</label>
+                                <input
+                                  type="time"
+                                  value={newTime}
+                                  onChange={(e) => setNewTime(e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 font-mono"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {activityType === 'EVENT' && (
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
+                                {getCompanyAddress() && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setNewLocation(getCompanyAddress())}
+                                    className="text-[10px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                                    title="Rellenar con la dirección de la empresa del contacto"
+                                  >
+                                    <MapPin size={11} />
+                                    <span>Usar dirección de la empresa</span>
+                                  </button>
+                                )}
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="Sede del cliente / Dirección visitada..."
+                                value={newLocation}
+                                onChange={(e) => setNewLocation(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
+                              />
+                            </div>
+                          )}
+
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Detalles / Descripción</label>
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60">
+                                🔒 Solo interno dTS CRM
+                              </span>
+                            </div>
+                            <textarea
+                              placeholder="Detalla los puntos a tratar o temas abordados..."
+                              rows={3}
+                              value={newDescription}
+                              onChange={(e) => setNewDescription(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Conclusiones / Resultado (Opcional)</label>
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60">
+                                🔒 Solo interno dTS CRM
+                              </span>
+                            </div>
+                            <textarea
+                              placeholder="Acuerdos alcanzados..."
+                              rows={2}
+                              value={newConclusions}
+                              onChange={(e) => setNewConclusions(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
+                            />
+                          </div>
+
+                          {activityType !== 'NOTE' && (
+                            <div className="p-2.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/10 border border-cyan-100 dark:border-cyan-900/30 flex items-center justify-between text-[11px]">
+                              <div className="flex items-center gap-1.5 text-dts-primary dark:text-cyan-400 font-semibold">
+                                <Calendar size={13} className="text-dts-secondary" />
+                                <span>Sincronizar en Outlook</span>
+                              </div>
+                              <div className="text-[10px] text-gray-400 font-mono">
+                                {isExchangeConnected ? (
+                                  <span className="text-emerald-500 font-bold">● Conectado a Exchange (Categoría dTS CRM)</span>
+                                ) : (
+                                  <span className="text-amber-500 font-bold">● Modo Local</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-              ) : (
-                <>
-                  {activityType === 'EVENT' && (
-                    <div className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 flex items-start gap-2 text-[11px] text-amber-800 dark:text-amber-300">
-                      <Info size={14} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-                      <span>
-                        <strong>Visita no programada:</strong> No envía correo electrónico al contacto. Quedará registrada en la app y en tu calendario de Outlook.
-                      </span>
-                    </div>
-                  )}
 
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Título / Concepto</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder={activityType === 'EVENT' ? 'Ej. Visita presencial no programada...' : 'Ej. Seguimiento comercial...'}
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                    />
-                  </div>
-
-                  {activityType !== 'NOTE' && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fecha</label>
-                        <input
-                          type="date"
-                          required
-                          value={newDate}
-                          onChange={(e) => setNewDate(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hora</label>
-                        <input
-                          type="time"
-                          value={newTime}
-                          onChange={(e) => setNewTime(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {(activityType === 'VISITA' || activityType === 'EVENT') && (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ubicación / Lugar</label>
-                        {getCompanyAddress() && (
-                          <button
-                            type="button"
-                            onClick={() => setNewLocation(getCompanyAddress())}
-                            className="text-[10px] font-semibold text-dts-secondary hover:underline flex items-center gap-1 cursor-pointer transition-colors"
-                            title="Rellenar con la dirección de la empresa del contacto"
-                          >
-                            <MapPin size={11} />
-                            <span>Usar dirección de la empresa</span>
-                          </button>
-                        )}
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Sede del cliente / Dirección visitada..."
-                        value={newLocation}
-                        onChange={(e) => setNewLocation(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50"
-                      />
-                    </div>
-                  )}
-
-                  {(activityType === 'VISITA' || activityType === 'VIDEOLLAMADA') && <CalendarInvitationFields clientId={contact?.client_id} allowExternal={activityType === 'VIDEOLLAMADA'} value={newInvitation} onChange={setNewInvitation} />}
-                  {createActivityMutation.isError && <p role="alert" className="text-xs text-rose-500">{(createActivityMutation.error as any)?.response?.data?.message || 'No se pudo guardar la actividad.'}</p>}
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Detalles / Descripción</label>
-                    <textarea
-                      placeholder="Detalla los puntos a tratar o temas abordados..."
-                      rows={3}
-                      value={newDescription}
-                      onChange={(e) => setNewDescription(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Conclusiones / Resultado (Opcional)</label>
-                    <textarea
-                      placeholder="Acuerdos alcanzados..."
-                      rows={2}
-                      value={newConclusions}
-                      onChange={(e) => setNewConclusions(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
-                    />
-                  </div>
-
-                  {activityType !== 'NOTE' && (
-                    <div className="p-2.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/10 border border-cyan-100 dark:border-cyan-900/30 flex items-center justify-between text-[11px]">
-                      <div className="flex items-center gap-1.5 text-dts-primary dark:text-cyan-400 font-semibold">
-                        <Calendar size={13} className="text-dts-secondary" />
-                        <span>Sincronizar en Outlook</span>
-                      </div>
-                      <div className="text-[10px] text-gray-400 font-mono">
-                        {isExchangeConnected ? (
-                          <span className="text-emerald-500 font-bold">● Conectado a Exchange (Categoría dTS CRM)</span>
-                        ) : (
-                          <span className="text-amber-500 font-bold">● Modo Local</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-3 justify-end pt-2">
+                {/* Pie Fijo con botones de acción */}
+                {activityType !== 'REUNION' && (
+                  <div className="px-6 py-3.5 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3 shrink-0 bg-gray-50/50 dark:bg-white/2 rounded-b-2xl">
                     <button
                       type="button"
                       onClick={() => setShowEventModal(false)}
-                      className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 font-bold cursor-pointer"
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 font-bold cursor-pointer transition-colors"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={createActivityMutation.isPending}
-                      className="px-4 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer disabled:opacity-50"
+                      className="px-5 py-2 bg-dts-secondary hover:brightness-110 text-white font-bold rounded-xl shadow-md cursor-pointer disabled:opacity-50 transition-all flex items-center gap-2"
                     >
                       {createActivityMutation.isPending ? 'Guardando...' : 'Guardar y Sincronizar'}
                     </button>
                   </div>
-                </>
-              )}
-            </form>
+                )}
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL: Preparar y Abrir Correo en Outlook */}
       {showEmailModal && (
