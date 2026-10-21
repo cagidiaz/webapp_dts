@@ -377,6 +377,8 @@ export class ExchangeSyncService {
         contact_id: contactId || null,
         created_by: userId,
         type: 'EMAIL',
+        // Registro de correo: su estado de envío se controla por exchange_sync_status.
+        is_completed: true,
         title: subject,
         description: body,
         email: to.join(', '),
@@ -452,6 +454,8 @@ export class ExchangeSyncService {
         contact_id: contactId || null,
         created_by: userId,
         type: 'EMAIL',
+        // Registro de correo: su estado de envío se controla por exchange_sync_status.
+        is_completed: true,
         title: subject,
         description: body,
         email: to.join(', '),

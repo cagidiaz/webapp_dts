@@ -216,6 +216,7 @@ export class CrmActivitiesService {
       let todayActivities: any[] = await this.prisma.crm_activities.findMany({
         where: {
           created_by: userId,
+          type: { not: 'EMAIL' },
           due_date: {
             gte: todayStart,
             lte: todayEnd,
@@ -235,6 +236,7 @@ export class CrmActivitiesService {
       let pendingActivities: any[] = await this.prisma.crm_activities.findMany({
         where: {
           created_by: userId,
+          type: { not: 'EMAIL' },
           is_completed: false,
           due_date: {
             lt: todayStart,
@@ -262,6 +264,7 @@ export class CrmActivitiesService {
       if (isAdminOrDireccion) {
         teamTodayTotal = await this.prisma.crm_activities.count({
           where: {
+            type: { not: 'EMAIL' },
             due_date: {
               gte: todayStart,
               lte: todayEnd,
@@ -359,7 +362,7 @@ export class CrmActivitiesService {
           time_scheduled: timeScheduled || null,
           email: email || null,
           conclusions: conclusions ? conclusions.trim() : null,
-          is_completed: Boolean(conclusions && conclusions.trim()),
+          is_completed: type === 'EMAIL' || Boolean(conclusions && conclusions.trim()),
           location: location || null,
           created_at: createdAt ? new Date(createdAt) : undefined
         }

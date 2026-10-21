@@ -51,4 +51,18 @@ describe('tracked outgoing emails', () => {
     expect(graph.sendDraft).toHaveBeenCalledTimes(1);
     expect(graph.sendMail).not.toHaveBeenCalled();
   });
+  it('registra borradores y correos enviados sin generar actividades pendientes', async () => {
+    const prisma: any = { crm_activities: { create: jest.fn(async ({ data }) => ({ id: 'mail', ...data })) } };
+    const graph: any = { createDraftMail: jest.fn().mockResolvedValue({ id: 'draft', idType: 'restImmutableEntryId', webLink: 'https://outlook.office.com/mail/item/draft' }), sendMail: jest.fn() };
+    const identity: any = { enabledFor: jest.fn().mockResolvedValue(false), prepare: jest.fn().mockResolvedValue({ patch: {} }) };
+    const sync = new ExchangeSyncService(prisma, graph, {} as any, identity);
+    const payload = { clientId: 'client', to: ['contact@test.invalid'], subject: 'Oferta', body: 'Texto' };
+    const draft = await sync.createDraftFromCrm('user', payload);
+    expect(draft.activity).toMatchObject({ type: 'EMAIL', is_completed: true, exchange_sync_status: 'draft' });
+    expect(graph.sendMail).not.toHaveBeenCalled();
+    const sent = await sync.sendEmailFromCrm('user', payload);
+    expect(sent.activity).toMatchObject({ type: 'EMAIL', is_completed: true, exchange_sync_status: 'synced' });
+    expect(graph.sendMail).toHaveBeenCalledTimes(1);
+  });
+
 });

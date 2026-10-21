@@ -285,3 +285,12 @@ Antes de desarrollar: identificar si Outlook se instaló desde Chrome o Edge, ve
 Si es necesario adaptar el lanzamiento, conservar permisos, comprobación de buzón e identidad exacta, validación de destinos HTTPS, protección frente a bloqueo de ventanas, tratamiento de errores y alternativa Web convencional. No sustituirlo por búsqueda por asunto ni por protocolos inventados. Validar también respuestas, copias ambiguas, varios perfiles/cuentas y equipos sin PWA, sin repetir aperturas involuntariamente. No cambiar Classic ni realizar SQL para esta anotación.
 
 Referencias para retomar la investigación: [captura de navegación en Chrome](https://developer.chrome.com/docs/capabilities/pwa-navigation-management) y [apertura de enlaces en PWA de Edge](https://learn.microsoft.com/en-us/microsoft-edge/progressive-web-apps/how-to/handle-urls). Revisar su vigencia antes de implementar.
+
+
+### Correos históricos y resumen inicial — 21/10/2026
+
+Los registros EMAIL se conservan en Emails y Timeline, pero no forman parte de Agenda de Hoy, Pendientes de Cierre ni sus contadores personales o de equipo en la ventana inicial. Esta exclusión se aplica también a correos antiguos que tengan el indicador de completado a false; no requiere borrar ni actualizar el histórico mediante SQL.
+
+Las rutas de registro de correo lo guardan como completado a efectos de actividad. En los borradores, el estado de envío sigue controlado por exchange_sync_status: este indicador no significa que el correo se haya enviado. Las reuniones, llamadas, visitas, videollamadas, tareas y eventos mantienen su funcionamiento. Solo REUNION se etiqueta como Reunión; los tipos no reconocidos se muestran como Actividad.
+
+Si un correo necesita una acción futura, crear una tarea independiente desde el CRM, con fecha y estado propios. La fecha del correo se conserva como dato histórico.

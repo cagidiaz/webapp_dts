@@ -106,3 +106,12 @@ El modal existente y el briefing guardan las actividades locales mediante su end
 * `GET /sales-budget/evolution?year=YYYY`: Serie temporal mes a mes de ventas reales y presupuesto.
 * `GET /products/top?limit=5&year=YYYY`: Top productos con mayor volumen y margen.
 * `GET /crm/agenda/weekly?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`: Citas y eventos agendados en la semana del comercial.
+
+
+### Correos históricos y resumen inicial — 21/10/2026
+
+Los registros EMAIL se conservan en Emails y Timeline, pero no forman parte de Agenda de Hoy, Pendientes de Cierre ni sus contadores personales o de equipo en la ventana inicial. Esta exclusión se aplica también a correos antiguos que tengan el indicador de completado a false; no requiere borrar ni actualizar el histórico mediante SQL.
+
+Las rutas de registro de correo lo guardan como completado a efectos de actividad. En los borradores, el estado de envío sigue controlado por exchange_sync_status: este indicador no significa que el correo se haya enviado. Las reuniones, llamadas, visitas, videollamadas, tareas y eventos mantienen su funcionamiento. Solo REUNION se etiqueta como Reunión; los tipos no reconocidos se muestran como Actividad.
+
+Si un correo necesita una acción futura, crear una tarea independiente desde el CRM, con fecha y estado propios. La fecha del correo se conserva como dato histórico.

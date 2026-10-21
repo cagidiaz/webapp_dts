@@ -5,7 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { 
   X, Sparkles, Github, ExternalLink, Calendar, CheckSquare, 
   Clock, Building2, User, Phone, Video, MapPin, AlertTriangle, 
-  CheckCircle2, ArrowRight, Bell, CalendarDays
+  CheckCircle2, ArrowRight, Bell, CalendarDays, Mail, FileText
 } from 'lucide-react';
 
 export const UpdatesModal: React.FC = () => {
@@ -75,12 +75,18 @@ export const UpdatesModal: React.FC = () => {
           label: 'Evento',
           className: 'bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800/60'
         };
-      default:
+      case 'EMAIL':
+        return { icon: <Mail size={11} />, label: 'Correo', className: 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300' };
+      case 'NOTE':
+        return { icon: <FileText size={11} />, label: 'Nota', className: 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300' };
+      case 'REUNION':
         return {
           icon: <UsersIcon size={11} />,
           label: 'Reunión',
           className: 'bg-teal-100 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800/60'
         };
+      default:
+        return { icon: <Calendar size={11} />, label: 'Actividad', className: 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300' };
     }
   };
 

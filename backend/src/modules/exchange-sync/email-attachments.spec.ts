@@ -101,6 +101,7 @@ describe('new email persistence', () => {
     const sync: any = { syncActivityToOutlook: jest.fn().mockResolvedValue(null) };
     const service = new CrmActivitiesService(db, sync, {} as any);
     const activity = await service.create({ clientId: 'client', userId: 'user', type: 'EMAIL', title: 'Email', emailAttachments: metadata });
+    expect(activity.is_completed).toBe(true);
     expect(activity.attendees).toMatchObject({ emailAttachments: { files: [{ name: 'Presupuesto.pdf' }] } });
     db.crm_activities.findUnique.mockResolvedValue(activity);
     db.crm_activities.findUniqueOrThrow.mockResolvedValue(activity);
@@ -109,5 +110,6 @@ describe('new email persistence', () => {
     expect(db.$executeRaw.mock.calls[0][1]).toBe(JSON.stringify({ categoryTag: 'NEGOCIACION', quoteDocumentNo: 'OF1' }));
     await service.create({ clientId: 'client', userId: 'user', type: 'CALL', title: 'Call', emailAttachments: metadata });
     expect(db.crm_activities.create.mock.calls[1][0].data.attendees).toBeUndefined();
+    expect(db.crm_activities.create.mock.calls[1][0].data.is_completed).toBe(false);
   });
 });

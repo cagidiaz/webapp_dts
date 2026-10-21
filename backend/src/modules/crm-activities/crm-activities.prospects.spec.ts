@@ -48,4 +48,18 @@ describe('Convivencia de agenda BC y actividades de prospección', () => {
     jest.setSystemTime(new Date('2026-10-12T22:30:00Z'));
     expect((await service.getDailyBriefing('pilot')).todayStr).toBe('2026-10-13');
   });
+  it('excluye correos antiguos y nuevos antes de limitar pendientes y contar el equipo', async () => {
+    db.profiles.findUnique.mockResolvedValue({ roles: { name: 'ADMIN' } });
+    await service.getDailyBriefing('admin');
+    expect(db.crm_activities.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      where: expect.objectContaining({ created_by: 'admin', type: { not: 'EMAIL' } }),
+    }));
+    expect(db.crm_activities.findMany).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      where: expect.objectContaining({ created_by: 'admin', type: { not: 'EMAIL' }, is_completed: false }), take: 20,
+    }));
+    expect(db.crm_activities.count).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ type: { not: 'EMAIL' } }),
+    }));
+  });
+
 });

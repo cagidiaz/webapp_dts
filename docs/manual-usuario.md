@@ -614,3 +614,12 @@ En Oportunidades y en la ficha del contacto, la fecha de finalización se muestr
 ### Embudo de seis columnas ajustado al ancho (20/10/2026)
 
 Las seis fases abiertas se presentan en una sola fila de columnas iguales, sin separación entre columnas ni ancho mínimo que fuerce desplazamiento horizontal. El margen lateral interior se reduce a 4 px y las cabeceras pueden repartir su contenido en varias líneas. Se mantienen los tamaños de letra, los filtros, el arrastre, la vista tabla y los modos claro y oscuro. La altura y el desplazamiento vertical de cada columna se conservan.
+
+
+### Correos históricos y resumen inicial — 21/10/2026
+
+Los registros EMAIL se conservan en Emails y Timeline, pero no forman parte de Agenda de Hoy, Pendientes de Cierre ni sus contadores personales o de equipo en la ventana inicial. Esta exclusión se aplica también a correos antiguos que tengan el indicador de completado a false; no requiere borrar ni actualizar el histórico mediante SQL.
+
+Las rutas de registro de correo lo guardan como completado a efectos de actividad. En los borradores, el estado de envío sigue controlado por exchange_sync_status: este indicador no significa que el correo se haya enviado. Las reuniones, llamadas, visitas, videollamadas, tareas y eventos mantienen su funcionamiento. Solo REUNION se etiqueta como Reunión; los tipos no reconocidos se muestran como Actividad.
+
+Si un correo necesita una acción futura, crear una tarea independiente desde el CRM, con fecha y estado propios. La fecha del correo se conserva como dato histórico.

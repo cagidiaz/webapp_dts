@@ -195,3 +195,12 @@ Oportunidades ya no depende de un piloto, de un correo concreto ni de `CRM_PROSP
 
 Para probar: reiniciar la aplicación desde `C:\proyectos\webapp_dts`, acceder como Admin y abrir CRM → Oportunidades. Revisar Prospección (crear y editar), Ofertas (filtros, Kanban y tabla) y Cortes. Los cambios manuales desde la app local utilizan la misma base compartida. No se ha desplegado en producción ni cambiado permisos en Supabase.
 
+
+
+### Correos históricos y resumen inicial — 21/10/2026
+
+Los registros EMAIL se conservan en Emails y Timeline, pero no forman parte de Agenda de Hoy, Pendientes de Cierre ni sus contadores personales o de equipo en la ventana inicial. Esta exclusión se aplica también a correos antiguos que tengan el indicador de completado a false; no requiere borrar ni actualizar el histórico mediante SQL.
+
+Las rutas de registro de correo lo guardan como completado a efectos de actividad. En los borradores, el estado de envío sigue controlado por exchange_sync_status: este indicador no significa que el correo se haya enviado. Las reuniones, llamadas, visitas, videollamadas, tareas y eventos mantienen su funcionamiento. Solo REUNION se etiqueta como Reunión; los tipos no reconocidos se muestran como Actividad.
+
+Si un correo necesita una acción futura, crear una tarea independiente desde el CRM, con fecha y estado propios. La fecha del correo se conserva como dato histórico.
