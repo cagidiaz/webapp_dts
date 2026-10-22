@@ -1,5 +1,5 @@
 export const escapeCalendarHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-export const publicCalendarBody = (message: string) => `<div id="dts-crm-invitation"><p><strong>Convocatoria de dTS Instruments</strong></p><p>${escapeCalendarHtml(message).replace(/\n/g, '<br/>')}</p></div>`;
+export const publicCalendarBody = (message: string) => `<div id="dts-crm-invitation" lang="es-ES"><p><strong>Convocatoria de dTS Instruments</strong></p><p>${escapeCalendarHtml(message).replace(/\n/g, '<br/>')}</p></div>`;
 
 function divRanges(html: string) {
   const stack: number[] = [], ranges: { start: number; end: number }[] = [];

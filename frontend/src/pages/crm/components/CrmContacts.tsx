@@ -13,6 +13,9 @@ interface CrmContactsProps {
   onOpenReportModal?: () => void;
 }
 
+const normalizeContactSearch = (value: string | null | undefined): string =>
+  (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
 export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact, onOpenReportModal }) => {
   const queryClient = useQueryClient();
   const { profile } = useAuthStore();
@@ -74,24 +77,14 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact, onOpe
 
   // Filtered and searched contacts
   const filteredContacts = useMemo(() => {
+    const search = normalizeContactSearch(debouncedSearch);
+    if (!search) return allContacts;
     return allContacts.filter(c => {
-      const searchLower = debouncedSearch.toLowerCase().trim();
-      if (!searchLower) return true;
-      return (
-        c.name.toLowerCase().includes(searchLower) ||
-        (c.job_title || '').toLowerCase().includes(searchLower) ||
-        (c.org_level_code || '').toLowerCase().includes(searchLower) ||
-        c.client_id.toLowerCase().includes(searchLower) ||
-        (c.customer?.name || '').toLowerCase().includes(searchLower) ||
-        (c.email || '').toLowerCase().includes(searchLower) ||
-        (c.phone_no || '').toLowerCase().includes(searchLower) ||
-        (c.mobile_no || '').toLowerCase().includes(searchLower) ||
-        (c.city || '').toLowerCase().includes(searchLower) ||
-        (c.county || '').toLowerCase().includes(searchLower) ||
-        (c.post_code || '').toLowerCase().includes(searchLower) ||
-        (c.territory_code || '').toLowerCase().includes(searchLower) ||
-        (c.address || '').toLowerCase().includes(searchLower)
-      );
+      return [
+        c.name, c.job_title, c.org_level_code, c.client_id, c.customer?.name,
+        c.email, c.phone_no, c.mobile_no, c.city, c.county, c.post_code,
+        c.territory_code, c.address,
+      ].some(value => normalizeContactSearch(value).includes(search));
     });
   }, [allContacts, debouncedSearch]);
 

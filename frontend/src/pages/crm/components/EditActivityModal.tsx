@@ -119,7 +119,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
       setDate(rawDate ? rawDate.split('T')[0] : '');
       const rawTime = activity.time_scheduled || activity.time;
       setTime(rawTime ? rawTime.substring(0, 5) : '10:00');
-      setLocation(activity.location || '');
+      setLocation(normType === 'VIDEOLLAMADA' ? 'sala Teams' : activity.location || '');
       const rawDesc = activity.description || '';
       const cleanDesc = (normType === 'EMAIL' || (activity.type || '').toUpperCase() === 'EMAIL')
         ? rawDesc
@@ -170,7 +170,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
       title: activityType === 'NOTE' ? (title.trim() || 'Nota Comercial') : title.trim(),
       description: description.trim() || null,
       conclusions: conclusions.trim() || null,
-      location: location.trim() || null,
+      location: activityType === 'VIDEOLLAMADA' ? 'sala Teams' : location.trim() || null,
       isCompleted: hasConclusions ? true : isCompleted,
     };
 
@@ -360,6 +360,13 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
                             placeholder="Ej. Oficinas del cliente, Planta, etc."
                             className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 font-medium"
                           />
+                        </div>
+                      )}
+
+                      {activityType === 'VIDEOLLAMADA' && (
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider" htmlFor="edit-video-location">Ubicación / Lugar</label>
+                          <input id="edit-video-location" type="text" value="sala Teams" readOnly className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white cursor-default" />
                         </div>
                       )}
 

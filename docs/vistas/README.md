@@ -159,7 +159,7 @@ Componente 1.1.2: instalar el ZIP actualizado conservando la vinculación. Sin S
 
 ### Manual práctico de Clientes y Contactos (19/10/2026)
 
-Disponible el [manual desde cero en Markdown](../manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md) y su [edición PDF](../../output/pdf/manual-crm-clientes-contactos.pdf): 34 capítulos, procedimientos, capturas reales y diagramas. Distingue funciones habilitables y entregas pendientes de despliegue.
+Disponible el [manual desde cero en Markdown](../manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md) y su [edición PDF](../../output/pdf/manual-crm-clientes-contactos.pdf): 34 capítulos, procedimientos, capturas reales y seis diagramas; edición 1.1 del 22/10/2026. Distingue funciones habilitables y entregas pendientes de despliegue.
 
 
 ## Aceptación comunicada por el usuario (20/10/2026)
@@ -245,3 +245,8 @@ Para optimizar la ergonomía y evitar el desbordamiento vertical en pantallas de
 - **Cabecera y Pie Fijos:** Encabezado con selector de actividad y pie con botones `Cancelar` y `Guardar y Sincronizar` siempre visibles (sticky), con scroll suave independiente (`custom-scrollbar`) en el cuerpo del formulario.
 - **Insignias de Privacidad:** Indicador visual verde `🔒 Solo interno dTS CRM` en descripción/conclusiones e indicador azul `✉️ Visible en invitación` en el mensaje de la convocatoria para garantizar total claridad sobre qué contenido ve el cliente.
 
+
+
+## Revisión CRM del 22/10/2026
+
+Actualizadas las vistas [Clientes](03_crm/crm_clientes.md), [Contactos y Emails](03_crm/crm_contactos_mails.md) y [Dashboard comercial](01_dashboards/dashboard.md): alcance por cartera, búsqueda de Contactos sin tildes, distribución de convocatorias, sala Teams fija, idioma español en Exchange y agenda de dos líneas con panel de detalle. El [manual ilustrado](../manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md) y su [PDF](../../output/pdf/manual-crm-clientes-contactos.pdf) se revisan como edición 1.1. Los capítulos de aceptación diferencian confirmación del usuario, compilación y pruebas, despliegue no acreditado y comprobaciones pendientes.

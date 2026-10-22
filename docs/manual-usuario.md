@@ -582,7 +582,7 @@ Componente 1.1.2: instalar el ZIP actualizado conservando la vinculación. Sin S
 
 ## Manual ilustrado de CRM Clientes y Contactos
 
-Consulta el [manual práctico desde cero](manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md) o su [PDF para formación](../output/pdf/manual-crm-clientes-contactos.pdf). Contiene 34 capítulos con procedimientos, 11 capturas reales y cuatro diagramas explicativos. Edición 19/10/2026.
+Consulta el [manual práctico desde cero](manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md) o su [PDF para formación](../output/pdf/manual-crm-clientes-contactos.pdf). Contiene 34 capítulos con procedimientos, 11 capturas reales y seis diagramas explicativos. Edición 22/10/2026.
 
 
 ## Cierre de las pruebas principales de Outlook (20/10/2026)
@@ -643,7 +643,7 @@ Las pruebas automatizadas comprueban concurrencia, estados, reintentos y errores
 En la ficha de un contacto de cliente, **Eventos → Nueva actividad** permite configurar invitados para **Visita a Cliente** y **Videollamada**. Los mismos campos están disponibles al editar estas actividades desde la ficha, agenda o resumen inicial. Esta selección de contactos de empresa corresponde a actividades de cliente; no modifica el formulario de prospectos sin cliente BC.
 
 1. Elegir el tipo, título, fecha y hora. En las visitas, indicar la dirección.
-2. La casilla **Enviar invitación al contacto** aparece activada al crear una visita o videollamada. El contacto de la ficha se selecciona si tiene email válido. Desactivarla permite un apunte personal sin invitados.
+2. La casilla **Enviar invitación por correo / calendario** aparece activada al crear una visita o videollamada. El contacto de la ficha se selecciona si tiene email válido. Desactivarla permite un apunte personal sin invitados.
 3. En **Contactos invitados de la empresa**, seleccionar o deseleccionar destinatarios. Solo se ofrecen contactos de esa empresa y los que carecen de email válido no pueden añadirse. El servidor vuelve a verificar empresa y cartera.
 4. Solo en **Videollamada**, utilizar **Otros invitados** para escribir emails externos. Confirmar con Enter o Añadir; también se admiten direcciones separadas por coma, punto y coma o espacios. Cada dirección se puede quitar. Se validan y se eliminan duplicados al preparar la convocatoria. No se crean contactos nuevos.
 5. Elegir duración (60 minutos por defecto) y escribir el **Mensaje para los invitados**. Este es el contenido externo. La descripción y las conclusiones son internas y no se envían.
@@ -655,3 +655,34 @@ En la ficha de un contacto de cliente, **Eventos → Nueva actividad** permite c
 **Datos y permisos:** la configuración y la lista resuelta se guardan en `crm_activities.attendees.calendarInvitation`. La fusión conserva el resto del JSON. No se necesitan tablas, columnas ni SQL nuevos. Los contactos y clientes de Business Central se consultan en solo lectura. Solo el propietario o Admin puede cambiar invitados; se mantiene la comprobación de cartera para el comercial.
 
 **Prueba real pendiente:** crear una visita con dos contactos, comprobar convocatoria sin Teams; crear una videollamada con contactos y un email externo, comprobar enlace y recepción; añadir/quitar participantes y reprogramar; completar con una conclusión interna y verificar que no llega al destinatario. Comprobar también el modo sin invitación y los estilos claro/oscuro.
+
+
+## CRM: actualización de uso del 22/10/2026
+
+### Contactos y permisos
+
+El buscador del directorio de Contactos ignora tildes y mayúsculas en los campos que ya consultaba: «Jose» coincide con «José», y «garcia» con «García». Se conservan los datos originales y el ámbito de cartera. La mejora se aplica a esa tabla, sin prometer el mismo comportamiento en todos los selectores.
+
+Ventas queda limitado en el backend a los clientes de su código comercial y sus contactos. Admin, Dirección, Tester y Producción tienen alcance global definido para Clientes y Contactos; los permisos de entrada a vistas se administran por rol. Sigue pendiente la comprobación completa de Tester/Producción en la interfaz. Alcance de lectura global y permiso de editar actividades o invitados son controles distintos.
+
+### Visitas y videollamadas
+
+Al crear una visita o videollamada, la primera columna contiene los datos de agenda y el **Mensaje para los invitados**. La segunda mantiene envío, selección de contactos, duración y emails externos en videollamadas. **Conclusiones / Resultado** queda debajo de ambas, a todo el ancho. Esta redistribución se aplica al alta; la edición conserva su disposición vigente. Los modos claro/oscuro y el formulario apilado en pantallas estrechas se mantienen.
+
+En videollamada la ubicación es siempre **sala Teams**, visible en solo lectura al crear y editar. El servidor impone ese valor y lo exporta a Outlook. El enlace de unión a Teams sigue siendo generado por Microsoft 365. No se ejecuta una actualización masiva de eventos anteriores.
+
+Para enviar una visita: marcar **Enviar invitación por correo / calendario**, seleccionar destinatarios con email válido, indicar fecha y hora y guardar con Microsoft 365 conectado y calendario habilitado. El destinatario recibe una convocatoria que puede aceptar; los detalles y conclusiones internos no se incluyen. La recepción real de una invitación de visita está confirmada por el usuario.
+
+En una convocatoria real a Gmail se detectaron `Content-Language: en-US` y `LANGUAGE=en-US` pese a que el texto y el buzón estaban en español. Las nuevas convocatorias públicas declaran español mediante la propiedad de idioma del elemento de Exchange y `lang="es-ES"` en el HTML. Al completar una actividad se conserva la actualización de categorías sin reenviar campos de invitación que no cambian. Pendiente comprobar una nueva recepción después del despliegue; lo ya enviado conserva sus marcas.
+
+### Agenda semanal compacta
+
+Cada tarjeta tiene dos líneas: fecha/hora, icono, tipo y asunto; después empresa/contacto y estado. Los textos largos se recortan. Pulsar la tarjeta abre el detalle en un panel lateral dentro de la app, con el contenido completo y adjuntos registrados si es un correo. Desde allí se accede a la edición según `can_edit`. La consulta no abre el original de Outlook ni descarga archivos.
+
+Los emails se muestran como recibidos/enviados cuando está informado y no reciben el aviso de reunión pendiente de conclusiones. La agenda semanal y el resumen inicial de jornada tienen funciones distintas: los emails históricos se excluyen del resumen inicial y de sus pendientes.
+
+### Manual de formación y estado de entrega
+
+La edición **1.1, de 22/10/2026**, del [manual de CRM Clientes y Contactos](manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md) amplía sus 34 capítulos y conserva las capturas reales del 19/10. Incluye seis diagramas, dos de ellos nuevos para agenda y convocatoria, y un [PDF actualizado](../output/pdf/manual-crm-clientes-contactos.pdf).
+
+Los cambios están sincronizados en la carpeta local; no se da por realizado su despliegue. Búsqueda, formularios y agenda tienen compilaciones correctas; las invitaciones y la ubicación tienen pruebas automatizadas. La comprobación de recepción del idioma corregido y de sala Teams en una invitación real sigue pendiente.

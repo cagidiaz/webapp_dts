@@ -400,7 +400,7 @@ export class CrmActivitiesService {
           email: email || null,
           conclusions: conclusions ? conclusions.trim() : null,
           is_completed: type === 'EMAIL' || Boolean(conclusions && conclusions.trim()),
-          location: location || null,
+          location: type === 'VIDEOLLAMADA' ? 'sala Teams' : location || null,
           created_at: createdAt ? new Date(createdAt) : undefined
         }
       });
@@ -452,7 +452,8 @@ export class CrmActivitiesService {
           prismaData.is_completed = true;
         }
       }
-      if (data.location !== undefined) prismaData.location = data.location || null;
+      if (existing.type === 'VIDEOLLAMADA') prismaData.location = 'sala Teams';
+      else if (data.location !== undefined) prismaData.location = data.location || null;
 
       // Actualizar attendees (categoryTag y/o quoteDocumentNo) si se proporcionan
       if (data.categoryTag !== undefined || data.quoteDocumentNo !== undefined) {

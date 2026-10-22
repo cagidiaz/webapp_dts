@@ -115,3 +115,14 @@ Los registros EMAIL se conservan en Emails y Timeline, pero no forman parte de A
 Las rutas de registro de correo lo guardan como completado a efectos de actividad. En los borradores, el estado de envío sigue controlado por exchange_sync_status: este indicador no significa que el correo se haya enviado. Las reuniones, llamadas, visitas, videollamadas, tareas y eventos mantienen su funcionamiento. Solo REUNION se etiqueta como Reunión; los tipos no reconocidos se muestran como Actividad.
 
 Si un correo necesita una acción futura, crear una tarea independiente desde el CRM, con fecha y estado propios. La fecha del correo se conserva como dato histórico.
+
+
+## Agenda semanal compacta y apertura de detalle - 22/10/2026
+
+`SalesDashboard.tsx` presenta cada elemento como un único botón con dos filas sin salto de línea: fecha/hora, icono, tipo y asunto; después empresa/contacto, tipología del email cuando existe y estado. `truncate` recorta texto largo; el título emergente y el nombre accesible conservan asunto y contexto. Se reduce la separación vertical entre tarjetas. El botón funciona con ratón y teclado y mantiene estilos claros/oscuros.
+
+Al pulsar se abre `AgendaActivityDetail.tsx`, que reutiliza `Drawer`. Muestra fecha, empresa, contacto, descripción completa, ubicación, mensaje público y conclusiones según el registro. Para EMAIL muestra dirección/tipología y `EmailAttachments` con los nombres guardados, sin consultar Microsoft ni descargar archivos. El acceso a editar queda dentro del detalle y respeta `can_edit`; utiliza `EditActivityModal` y la ruta correspondiente a actividad normal o prospecto.
+
+EMAIL no se marca vencido ni pendiente de conclusiones. Los eventos conservan el aviso de conclusiones y su estado. Se mantienen navegación de semanas, contadores, sincronización y consultas de datos; este cambio no amplía la cartera ni modifica el backend. El panel de detalle permite consulta del registro CRM y no abre por sí mismo el original en Outlook.
+
+El estado guardado determina el estado del detalle; un evento vencido por fecha puede seguir pendiente de completar. La confirmación visual del usuario de la agenda compacta está recogida; compilación frontend correcta. Procedimiento para usuarios: manual CRM, capítulo 31.

@@ -1,9 +1,9 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.0 · 19 de octubre de 2026 · Uso interno
+Edición 1.1 · 22 de octubre de 2026 · Uso interno
 
-Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales.
+Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
 **Cómo utilizarlo:** empieza por los capítulos 1 a 3. Después consulta el procedimiento que necesites. Los apartados de Prospección y seguimiento nuevo de ofertas solo se aplican cuando estén habilitados para tu usuario. Las funciones preparadas localmente y pendientes de desplegar se identifican expresamente.
 
@@ -79,7 +79,7 @@ Las altas de clientes y las ofertas se realizan en Business Central y se importa
 4. Si aparece el resumen de la jornada, ciérralo para continuar en la vista.
 5. En un directorio, utiliza el buscador en lugar de recorrer toda la lista.
 
-**Resultado esperado:** ves las cuentas y contactos incluidos en tu ámbito de acceso. Una lista reducida puede ser correcta: un comercial trabaja con su cartera; Admin y Dirección tienen una visión más amplia según los permisos configurados.
+**Resultado esperado:** ves las cuentas y contactos incluidos en tu ámbito de acceso. Una lista reducida puede ser correcta: Ventas trabaja con los clientes de su código comercial y con los contactos de esas empresas. La regla de alcance global definida para Clientes y Contactos incluye Admin, Dirección, Tester y Producción; el permiso para entrar en cada vista se asigna por rol. La comprobación completa de Tester y Producción en la interfaz sigue pendiente, aunque el backend ya admite ese alcance.
 
 ### Por qué tu pantalla puede ser diferente
 
@@ -303,6 +303,12 @@ Los indicadores **Total de Contactos**, **LinkedIn Vinculado**, **Con Correo Vá
 
 **«Con Correo Válido» indica que hay un email informado.** No acredita que se haya comprobado su entrega. Los porcentajes se redondean; un 100% visible no siempre significa que no falte ningún contacto por completar.
 
+### Buscar sin tildes ni diferencias de mayúsculas
+
+Escribe en el buscador y espera un instante. «jose» encuentra «José»; «garcia», «García». Mayúsculas y minúsculas dan las mismas coincidencias. Borra el texto para recuperar la lista.
+
+La comparación se aplica a los campos buscables de esta tabla. Conserva la escritura original y busca solo en tu cartera autorizada; no amplía los permisos ni cambia otros selectores.
+
 ## 12. Contactos: acciones rápidas y LinkedIn
 
 ### Procedimiento: abrir un correo nuevo desde el directorio
@@ -434,6 +440,22 @@ La pantalla puede actualizarse al volver a la ventana o periódicamente mientras
 
 **Modo Local** significa que no debes dar por creada una cita en Outlook. Comprueba la conexión antes de depender del calendario para avisos o convocatorias.
 
+### Visita a Cliente y Videollamada: preparar la convocatoria
+
+Al crear cualquiera de estas dos actividades en una pantalla amplia, el formulario se reparte en dos columnas. En una pantalla estrecha se apila para facilitar la lectura.
+
+![Distribución orientativa del formulario de creación de visita y videollamada](imagenes/diagrama-06-formulario-convocatoria.png)
+
+| Zona | Qué completar | Quién recibe esa información |
+| --- | --- | --- |
+| Primera columna | Título, fecha, hora, ubicación, detalles internos y Mensaje para los invitados. | El mensaje se incluye en la convocatoria; los detalles internos permanecen en el CRM. |
+| Segunda columna | Enviar invitación por correo / calendario, contactos invitados y duración. En videollamada, también emails externos. | Los destinatarios seleccionados reciben la convocatoria. |
+| Pie del contenido, a todo el ancho | Conclusiones / Resultado. | Es información interna del CRM. |
+
+El mensaje de invitados se muestra cuando el envío está activado. Las conclusiones se sitúan debajo de ambas columnas; no son un botón de envío. Los botones de guardar y cancelar permanecen en el pie de acciones. Al editar una actividad puede mantenerse la distribución anterior del mensaje y las conclusiones: el cambio de distribución del 22/10 corresponde al formulario de creación.
+
+**Ubicación de la videollamada:** siempre muestra **sala Teams**, en modo de solo lectura. No introduzcas la dirección de la empresa. El CRM impone este valor también al guardar y al sincronizar con Outlook, por lo que no puede sustituirse por una dirección al editarla. El enlace de acceso a Teams lo genera Microsoft 365; «sala Teams» es la etiqueta de ubicación y no sustituye ese enlace.
+
 ## 18. Actividades: ejemplo completo de ejecución
 
 ![Formulario real de Nueva Actividad, abierto sin guardar](imagenes/08-nueva-actividad-detalle.png)
@@ -451,6 +473,30 @@ La pantalla puede actualizarse al volver a la ventana o periódicamente mientras
 **Lo que aporta:** conserva una visita que no estaba agendada y permite revisarla en el histórico y los informes. No se envía una invitación al cliente por este tipo de actividad.
 
 En tareas y notas, no confíes en el campo de conclusiones del alta para completar su gestión: revisa la tarjeta y utiliza el procedimiento de cierre o edición posterior. La presencia de un campo en el formulario no convierte una tarea nueva automáticamente en realizada.
+
+### Ejemplo: concertar una visita con el cliente
+
+1. Abre la ficha del contacto correcto y entra en Eventos → Nueva Actividad.
+2. Elige **Visita a Cliente** y completa título, fecha, hora y lugar de la visita.
+3. Mantén marcada **Enviar invitación por correo / calendario**. El contacto de la ficha aparece seleccionado si tiene email válido.
+4. En la segunda columna, revisa **Contactos invitados de la empresa**. Añade las personas necesarias; los contactos sin email válido no se pueden seleccionar.
+5. En la primera columna, redacta **Mensaje para los invitados**, por ejemplo: «Confirmamos la visita a su sede para revisar la instalación».
+6. Elige la duración. Comprueba que Microsoft 365 está conectado y el calendario habilitado.
+7. Guarda una vez. Comprueba el evento en Outlook y que el destinatario recibe la invitación.
+8. El destinatario podrá aceptar, rechazar o proponer otra hora según su proveedor de calendario. Recibir una invitación no significa haberla aceptado.
+
+La recepción real de una invitación de visita ha sido confirmada por el usuario. Guardar el registro CRM no garantiza por sí solo el envío si falla la conexión a Outlook.
+
+### Ejemplo: organizar una videollamada con invitados externos
+
+1. Elige **Videollamada Teams / Online** e indica título, fecha y hora.
+2. Comprueba la ubicación fija **sala Teams**.
+3. Selecciona los contactos de la empresa en la segunda columna.
+4. En **Otros invitados (emails externos)**, escribe la dirección y pulsa **Añadir** o Enter. Puedes separar direcciones con coma, punto y coma o espacios. Revisa las etiquetas de destinatarios antes de guardar.
+5. Escribe el mensaje público en la primera columna y selecciona duración.
+6. Guarda y comprueba el enlace Teams y los destinatarios en la convocatoria de Outlook. Los invitados pueden ver a los demás participantes; añadir un email externo no crea un contacto CRM.
+
+**Privacidad:** Detalles / Descripción y Conclusiones / Resultado son internos. Solo el mensaje público se incluye en el cuerpo de la convocatoria. No escribas conclusiones en el mensaje a invitados si deseas mantenerlas privadas.
 
 ## 19. Completar, reabrir, editar y eliminar actividades
 
@@ -651,7 +697,7 @@ Selecciona Web en Ajustes. La preferencia se guarda en ese navegador. No exige b
 
 La entrega preparada el 19/10 abre la bandeja de entrada de Web y la ventana principal de Classic sin crear mensajes. Classic requiere componente 1.1.1 o posterior. **Esta prueba no acredita que un correo concreto se localice correctamente:** esa comprobación se hace desde su tarjeta.
 
-La instrumentación de tiempos 1.1.2 está preparada para diagnóstico y pendiente de la prueba del usuario al redactar este manual; no implica una mejora de velocidad ya verificada.
+El usuario ha aprobado la prueba sin borradores, la apertura en Classic abierto y cerrado, las vinculaciones, los permisos por rol y la prueba con un segundo usuario. La instrumentación de tiempos sirve para diagnóstico: estas comprobaciones no establecen un tiempo de apertura garantizado.
 
 ## 28. Ofertas dentro de la ficha de contacto
 
@@ -728,6 +774,33 @@ Si la asociación es incorrecta, utiliza **Deshacer vinculación** y confirma. L
 
 ## 31. Rutinas recomendadas: diario y semanal
 
+### Agenda semanal del Panel de Control Comercial
+
+La agenda permite localizar rápidamente qué ocurre cada día sin desplegar el contenido de todas las actividades. Cada tarjeta ocupa dos líneas, también cuando el asunto es largo.
+
+![Esquema de las tarjetas compactas y apertura del detalle de agenda](imagenes/diagrama-05-agenda-dos-lineas.png)
+
+| Línea | Información visible | Para qué sirve |
+| --- | --- | --- |
+| Primera | Fecha, hora cuando está informada, icono, tipo y asunto. | Reconocer cuándo ocurre y de qué trata. |
+| Segunda | Empresa, contacto y estado; en correos, también tipología cuando está disponible. | Identificar a quién corresponde y si queda algo por hacer. |
+
+Los textos largos se recortan con puntos suspensivos para evitar que la tarjeta aumente de altura. Al pasar el cursor se muestra el asunto y contexto completos. Los colores siguen distinguiendo los tipos y las actividades pendientes de conclusiones.
+
+### Procedimiento: abrir un evento o un correo desde la agenda
+
+1. Abre **Panel de Control Comercial** y localiza **Agenda Semanal CRM**.
+2. Utiliza los controles de semana para localizar el período adecuado.
+3. Pulsa cualquier zona de la tarjeta; con teclado, sitúa el foco en ella y pulsa Enter o espacio.
+4. Se abre un panel lateral dentro de la app con fecha, empresa, contacto y descripción completa. En correos muestra el contenido registrado y los nombres de adjuntos disponibles; en eventos, también ubicación, mensaje de invitados y conclusiones cuando existen.
+5. Si tienes permiso, utiliza **Editar / Añadir conclusiones** o **Editar datos del correo**. El editor conserva el flujo habitual y sus validaciones.
+6. Cierra el panel con la X, Escape o pulsando fuera para volver a la semana que estabas consultando.
+
+Abrir esta ficha permite consultar el registro del CRM: no lanza Outlook ni descarga adjuntos. Las acciones habituales para abrir el original en Classic o Web siguen disponibles en la ficha del contacto. En los correos no se solicita completar una reunión ni registrar conclusiones pendientes; su dirección se muestra como recibido o enviado cuando está informada.
+
+La agenda semanal del panel comercial y la ventana inicial de resumen de jornada son elementos distintos. Los correos históricos se excluyen del resumen inicial y sus pendientes de cierre; eso no implica eliminar sus registros de otras consultas.
+
+
 ### Al comenzar la jornada
 
 1. Revisa los Eventos pendientes y sus fechas.
@@ -771,6 +844,14 @@ Si la asociación es incorrecta, utiliza **Deshacer vinculación** y confirma. L
 
 Al comunicar una incidencia, indica vista, acción, hora, cuenta usada, Classic o Web y mensaje visible. Incluye código de cliente u oferta si procede. Nunca envíes contraseñas, códigos de vinculación activos ni tokens.
 
+### Si una invitación no llega o Gmail ofrece traducirla
+
+1. Comprueba que el tipo es **Visita a Cliente** o **Videollamada**, no **Visita no programada**.
+2. Revisa la casilla de envío, los destinatarios, la fecha, la hora y la conexión de calendario.
+3. Comprueba Outlook y las carpetas de correo del destinatario antes de repetir el alta.
+4. Si Gmail identifica inglés aunque el texto esté en español, distingue el idioma del texto del idioma declarado por el mensaje. En una invitación real se detectó la marca inglesa tanto en el correo como en el calendario.
+5. La corrección preparada el 22/10 declara español en las convocatorias y su HTML. Se debe desplegar y comprobar una invitación nueva en Gmail. Los mensajes ya enviados conservan sus marcas originales.
+
 ## 33. Glosario y comprobación de aprendizaje
 
 | Término | Significado práctico |
@@ -809,7 +890,15 @@ Este manual se ha contrastado con el código del proyecto y con consultas de las
 
 **Disponibilidad:** la ficha lateral de cliente y Prospección dependen de acceso habilitado. La pestaña Ofertas conserva la convivencia entre el seguimiento anterior y el nuevo. Las instrucciones explican cómo reconocerlos; no se afirma que todas las cuentas utilicen ya el mismo flujo.
 
-**Preparado en la carpeta local, sujeto a despliegue:** prueba de apertura sin borrador en ambos destinos y diagnóstico de tiempos Classic 1.1.2. Las pruebas de velocidad con esa instrumentación todavía no habían finalizado al cerrar la edición. Un manual describe el uso; no certifica todos los escenarios de calendario, dispositivos o buzones.
+### Revisión 1.1 - 22/10/2026
+
+Esta edición incorpora la búsqueda sin tildes en Contactos, el alcance de cartera acordado para cada rol, las invitaciones de visitas y videollamadas, el mensaje público en la primera columna al crear, las conclusiones a todo el ancho, la ubicación fija sala Teams y la agenda semanal de dos líneas con apertura del detalle.
+
+**Confirmado por el usuario:** recepción de invitación de visita; apertura de correo Classic/Web y tras moverlo de carpeta; prueba sin borradores; vinculaciones; permisos por rol de Outlook; avisos flotantes; contadores por oferta; adjuntos tras editar; correo preparado desde CRM; segundo usuario; adjuntos desde Classic/Web, enviados/recibidos, más de tres adjuntos y exclusión de firma; borrado del correo únicamente del CRM. El usuario valoró favorablemente la agenda compacta y solicitó incorporarla al manual.
+
+**Validado automáticamente y sincronizado en la carpeta local:** búsqueda sin tildes, cambios de formulario, ubicación de videollamada, marca de español y agenda compacta. No se presume su despliegue en producción. Quedan pendientes la recepción de una convocatoria nueva en Gmail con las marcas corregidas, la ubicación sala Teams en una nueva convocatoria real y la comprobación completa de Tester/Producción en la interfaz de Clientes y Contactos. Los escenarios con varios invitados y sus cambios no quedan certificados por la prueba de recepción de una sola visita.
+
+Las capturas reales siguen fechadas el 19/10/2026. Los dos nuevos esquemas son ayudas explicativas, no capturas nuevas de producción. El manual contiene 34 capítulos; esta revisión amplía los procedimientos existentes.
 
 ### Referencias internas
 

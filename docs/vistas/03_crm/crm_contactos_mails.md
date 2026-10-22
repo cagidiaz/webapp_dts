@@ -255,7 +255,7 @@ Componente 1.1.2: instalar el ZIP actualizado conservando la vinculación. Sin S
 
 ## Manual práctico de usuario
 
-Disponible el [manual de CRM Clientes y Contactos](../../manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md), edición 19/10/2026. Incluye las cinco pestañas de la ficha, actividades y conclusiones, informes, registro de emails, adjuntos, apertura y respuestas, configuración y funciones condicionales.
+Disponible el [manual de CRM Clientes y Contactos](../../manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md), edición 22/10/2026. Incluye las cinco pestañas de la ficha, actividades y conclusiones, informes, registro de emails, adjuntos, apertura y respuestas, configuración y funciones condicionales.
 
 
 ## Aceptación comunicada por el usuario (20/10/2026)
@@ -314,7 +314,7 @@ Las pruebas automatizadas comprueban concurrencia, estados, reintentos y errores
 En la ficha de un contacto de cliente, **Eventos → Nueva actividad** permite configurar invitados para **Visita a Cliente** y **Videollamada**. Los mismos campos están disponibles al editar estas actividades desde la ficha, agenda o resumen inicial. Esta selección de contactos de empresa corresponde a actividades de cliente; no modifica el formulario de prospectos sin cliente BC.
 
 1. Elegir el tipo, título, fecha y hora. En las visitas, indicar la dirección.
-2. La casilla **Enviar invitación al contacto** aparece activada al crear una visita o videollamada. El contacto de la ficha se selecciona si tiene email válido. Desactivarla permite un apunte personal sin invitados.
+2. La casilla **Enviar invitación por correo / calendario** aparece activada al crear una visita o videollamada. El contacto de la ficha se selecciona si tiene email válido. Desactivarla permite un apunte personal sin invitados.
 3. En **Contactos invitados de la empresa**, seleccionar o deseleccionar destinatarios. Solo se ofrecen contactos de esa empresa y los que carecen de email válido no pueden añadirse. El servidor vuelve a verificar empresa y cartera.
 4. Solo en **Videollamada**, utilizar **Otros invitados** para escribir emails externos. Confirmar con Enter o Añadir; también se admiten direcciones separadas por coma, punto y coma o espacios. Cada dirección se puede quitar. Se validan y se eliminan duplicados al preparar la convocatoria. No se crean contactos nuevos.
 5. Elegir duración (60 minutos por defecto) y escribir el **Mensaje para los invitados**. Este es el contenido externo. La descripción y las conclusiones son internas y no se envían.
@@ -335,6 +335,7 @@ Para evitar desbordamientos verticales en pantallas de portátiles y facilitar l
    - En **Visita a Cliente** y **Videollamada Teams** (tanto al crear desde `CrmContactDetail.tsx` como al editar desde `EditActivityModal.tsx`), el modal se amplía suavemente y divide su contenido en 2 columnas:
      - **Columna Izquierda (Agenda e Información Interna):** Título/Concepto, Fecha y Hora, Ubicación (en visitas con botón de autocompletado con la dirección de la empresa), Detalles/Descripción interna, Conclusiones/Acuerdos internos y Estado de sincronización en Outlook.
      - **Columna Derecha (Convocatoria y Participantes):** Panel de `CalendarInvitationFields` con el selector de activación de convocatoria, lista de contactos de la empresa con scroll independiente, selector de emails externos (videollamadas), duración en minutos y mensaje público.
+   - **Actualización del alta, 22/10/2026:** el mensaje público se mueve a la primera columna y Conclusiones / Resultado pasa a una fila inferior que abarca ambas. El panel de invitados de la derecha recibe `showMessage=false`; `CalendarInvitationMessage` se renderiza en la izquierda. La edición mantiene el reparto descrito previamente. En videollamada se añade el campo de ubicación fijo sala Teams.
    - En actividades de tipología simple (`TASK`, `CALL`, `NOTE`, `EVENT`), el modal mantiene su formato compacto de una sola columna (`max-w-lg`).
 
 2. **Cabecera y Pie Fijo (Sticky / Fixed Footer):**
@@ -344,3 +345,15 @@ Para evitar desbordamientos verticales en pantallas de portátiles y facilitar l
 3. **Separación Visual Estricta de Privacidad:**
    - **Campos Internos:** Los campos de Detalles/Descripción y Conclusiones/Acuerdos muestran una insignia visual distintiva verde: `🔒 Solo interno dTS CRM`.
    - **Campos Externos:** El mensaje de convocatoria muestra la insignia azul: `✉️ Visible en invitación`, reforzando la seguridad y confianza del usuario al redactar.
+
+
+## Revisión funcional del 22/10/2026
+
+- **Búsqueda del directorio:** `CrmContacts.tsx` normaliza consulta y valores mediante NFD, elimina marcas diacríticas y compara en minúsculas. Mantiene los campos buscables, retardo de 400 ms, scroll incremental y filtros de cartera. Sin SQL ni cambios de los datos importados.
+- **Alcance de datos:** `resolveCrmDataScope` admite alcance global para ADMIN, DIRECCION, TESTER y PRODUCCION. Los demás perfiles requieren código comercial y el servidor impone su cartera. La entrada a vistas se configura por rol. La comprobación de TESTER/PRODUCCION en toda la interfaz sigue pendiente; no se debe interpretar el cambio de backend como aceptación visual de esas cuentas.
+- **Visita a Cliente:** persiste `attendees.calendarInvitation` y exporta los destinatarios a Microsoft Graph. Requiere envío activado, contactos válidos, fecha/hora y cuenta/calendario habilitados. La recepción real de una invitación está confirmada; no certifica todos los escenarios de varios invitados.
+- **Idioma de convocatoria:** diagnóstico de un envío real: cabecera MIME y parámetros ICS en en-US, buzón es-ES. `MicrosoftGraphService` fija `Integer 0x3FF1` (PidTagMessageLocaleId) a `3082` en altas públicas y modificaciones de campos de convocatoria. `publicCalendarBody` declara `lang="es-ES"`. Una actualización solo de categoría no añade esa propiedad ni campos de convocatoria. Pendiente recepción nueva en Gmail tras despliegue.
+- **Ubicación de videollamada:** alta y edición de `crm_activities` fuerzan sala Teams; `ExchangeSyncService` aplica el mismo valor al exportar. Los campos visibles son de solo lectura. No hay migración masiva ni envío de actualizaciones a eventos previos por esta entrega.
+- **Agenda del panel comercial:** tarjetas de dos líneas y `AgendaActivityDetail` en un Drawer de consulta; el editor habitual solo se ofrece si `can_edit !== false`. Los emails conservan metadatos de dirección/tipología y adjuntos registrados; nunca se reclaman conclusiones como si fueran reuniones. Abrir el detalle no lanza Outlook.
+
+Pruebas: compilaciones frontend/backend correctas; suite de invitaciones con 19 pruebas tras la ubicación fija. La corrección de idioma y la ausencia de reenvío al completar se comprobaron también en las suites de invitaciones y finalización. Manual ampliado en los capítulos 2, 11, 17, 18, 27, 31, 32 y 34.

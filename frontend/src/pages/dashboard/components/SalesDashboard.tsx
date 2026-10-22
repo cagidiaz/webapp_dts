@@ -12,14 +12,16 @@ import {
 import { formatCurrency, formatNumber } from '../../../api/formatters';
 import { 
   TrendingUp, Target, Activity, Users, Package, BarChart2,
-  TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, Clock, MapPin, Video,
-  Edit2, Plus, User, ChevronDown, Building2, ChevronLeft, ChevronRight, RotateCcw, Loader2,
+  TrendingDown, Euro, Calendar, FileText, CheckSquare, Send, Phone, MapPin, Video,
+  ChevronDown, Building2, ChevronLeft, ChevronRight, RotateCcw, Loader2,
   RefreshCw
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
 import { CrmActivityReportModal } from '../../crm/components/CrmActivityReportModal';
 import { EditActivityModal } from '../../crm/components/EditActivityModal';
+import { AgendaActivityDetail } from './AgendaActivityDetail';
+import { parseEmailActivity } from '../../crm/utils/emailTipologia';
 import { useUIStore } from '../../../store/uiStore';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -223,6 +225,7 @@ export const SalesDashboard: React.FC = () => {
   const [selectedCustCode, setSelectedCustCode] = React.useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
+  const [agendaActivity, setAgendaActivity] = React.useState<CrmActivity | null>(null);
   const [activityToEdit, setActivityToEdit] = React.useState<CrmActivity | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isGlobalKpisExpanded, setIsGlobalKpisExpanded] = React.useState(false);
@@ -717,9 +720,8 @@ export const SalesDashboard: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="relative space-y-4 overflow-y-auto pr-2 scrollbar-thin flex-1 min-h-0">
-              {sortedWeeklyActivities.map((act, idx) => {
-                const isLast = idx === sortedWeeklyActivities.length - 1;
+            <div className="relative space-y-1.5 overflow-y-auto pr-2 scrollbar-thin flex-1 min-h-0">
+              {sortedWeeklyActivities.map((act) => {
                 const typeIconMap = {
                   NOTE: FileText,
                   TASK: CheckSquare,
@@ -768,135 +770,44 @@ export const SalesDashboard: React.FC = () => {
                   return dateObj.getTime() < new Date().getTime();
                 })();
 
-                const isFinished = act.is_completed || isPastDate;
-                const hasConclusions = Boolean(act.conclusions && act.conclusions.trim());
-                const needsConclusions = isFinished && !hasConclusions;
-
+                const isEmail = act.type === 'EMAIL';
+                const parsedEmail = isEmail ? parseEmailActivity(act) : null;
+                const hasConclusions = Boolean(act.conclusions?.trim());
+                const needsConclusions = !isEmail && (act.is_completed || isPastDate) && !hasConclusions;
+                const subject = parsedEmail?.cleanSubject || act.title || 'Sin título';
+                const context = [
+                  act.source === 'PROSPECT' ? act.prospect?.company_name : act.customer?.company_name || act.customer?.name,
+                  act.contact?.name || act.prospect?.contact_name,
+                  parsedEmail?.categoryConfig.label,
+                ].filter(Boolean).join(' · ') || 'Actividad comercial';
+                const status = isEmail ? parsedEmail?.directionLabel || 'Correo'
+                  : needsConclusions ? 'Pendiente de conclusiones'
+                  : act.is_completed ? 'Finalizado' : isPastDate ? 'Vencido' : 'Pendiente';
+                const dateLabel = new Date(actDateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
                 return (
-                  <div key={act.id} className="flex md:flex-row flex-col gap-2 md:gap-2.5 relative pl-9 md:pl-0 text-xs">
-                    <div className="w-full md:w-sidebar-collapsed shrink-0 md:text-right pt-0.5 flex md:flex-col items-center md:items-end gap-2 md:gap-0.5">
-                      <span className="font-black text-[11px] md:text-[11.5px] text-dts-secondary uppercase tracking-wider">
-                        {new Date(actDateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
-                      </span>
-                      {act.time_scheduled && (
-                        <span className="text-[10px] text-gray-400 dark:text-gray-400 font-mono font-bold flex items-center gap-1 justify-end">
-                          <Clock size={10} /> {act.time_scheduled.substring(0, 5)}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="absolute left-0 top-0 bottom-0 md:relative md:left-auto md:top-auto md:bottom-auto md:self-stretch flex flex-col items-center w-7 shrink-0">
-                      <span className={`p-1.5 rounded-xl ${style.bg} ${style.color} z-10 border-2 border-white dark:border-surface-card-dark shadow-xs flex items-center justify-center shrink-0`}>
-                        <IconComponent size={13} />
-                      </span>
-                      {!isLast && (
-                        <div className="w-0 border-l border-dashed border-gray-300 dark:border-white/20 flex-1 my-1" />
-                      )}
-                    </div>
-
-                    <div className="flex-1 pb-3">
-                      <div 
-                        className={`group/box p-3.5 rounded-xl border transition-all duration-200 shadow-xs ${
-                          needsConclusions
-                            ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300/80 dark:border-amber-500/40 hover:border-amber-400'
-                            : act.is_completed
-                            ? 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 opacity-75 hover:border-dts-secondary/35'
-                            : 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/35'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start gap-2 mb-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`font-bold text-xs group-hover/box:text-dts-secondary transition-colors ${
-                              act.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
-                            }`}>
-                              {act.title}
-                            </span>
-                            {isFinished && (
-                              <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold border ${
-                                act.is_completed 
-                                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                                  : 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
-                              }`}>
-                                {act.is_completed ? 'TERMINADO' : 'VENCIDO'}
-                              </span>
-                            )}
-                            {hasConclusions && (
-                              <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800">
-                                Conclusiones
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-white dark:bg-white/5 text-gray-400 font-bold border border-gray-100 dark:border-white/5">
-                              {typeLabel[act.type]}
-                            </span>
-                            {act.can_edit !== false && <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActivityToEdit(act);
-                                setIsEditModalOpen(true);
-                              }}
-                              className="p-1 rounded-md text-gray-400 hover:text-dts-secondary hover:bg-cyan-500/10 dark:hover:bg-cyan-500/20 transition-colors cursor-pointer"
-                              title="Editar evento"
-                            >
-                              <Edit2 size={13} />
-                            </button>}
-                          </div>
-                        </div>
-                        
-                        {act.description && (
-                          <p className="text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed text-[11px] whitespace-pre-wrap">
-                            {act.description}
-                          </p>
-                        )}
-
-                        {hasConclusions && (
-                          <div className="mt-2 text-[11px] border-l-2 border-teal-500 pl-2.5 py-1 bg-teal-50/40 dark:bg-teal-950/20 rounded-r-md text-gray-700 dark:text-gray-300">
-                            <span className="text-teal-700 dark:text-teal-400 font-bold block text-[10px] uppercase tracking-wide">
-                              Conclusiones:
-                            </span>
-                            <p className="whitespace-pre-wrap leading-relaxed mt-0.5">{act.conclusions}</p>
-                          </div>
-                        )}
-
-                        {needsConclusions && act.can_edit !== false && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActivityToEdit(act);
-                              setIsEditModalOpen(true);
-                            }}
-                            className="mt-2.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-linear-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 hover:from-amber-500/30 hover:to-amber-500/40 text-amber-950 dark:text-amber-100 font-black text-[11px] rounded-lg border-2 border-amber-400 dark:border-amber-500/70 uppercase tracking-wider transition-all cursor-pointer group/btn shadow-xs"
-                          >
-                            <Plus size={13} className="stroke-3 group-hover/btn:rotate-90 transition-transform text-amber-800 dark:text-amber-300" />
-                            <span>AGREGAR CONCLUSIONES</span>
-                          </button>
-                        )}
-
-                        {act.source === 'PROSPECT' && <p className="text-[10px] text-dts-secondary mt-2">Prospecto: {act.prospect?.company_name} · {act.exchange_sync_status === 'SYNCED' ? 'Outlook sincronizado' : act.exchange_sync_status === 'LOCAL' ? 'Modo local' : 'Outlook pendiente'}</p>}
-                        {(act.customer || act.contact) && (
-                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-white/5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-500 dark:text-gray-400 font-semibold">
-                            {act.customer && (
-                              <span className="flex items-center gap-1.5 hover:text-dts-secondary transition-colors" title="Empresa / Cliente">
-                                <span>🏢</span>
-                                <span className="text-gray-800 dark:text-gray-200 font-bold">
-                                  {act.customer.company_name || act.customer.name}
-                                </span>
-                              </span>
-                            )}
-                            {act.contact?.name && (
-                              <span className="flex items-center gap-1 text-gray-600 dark:text-gray-300 font-medium" title="Persona de Contacto">
-                                <User size={11} className="text-dts-secondary shrink-0" />
-                                <span>{act.contact.name}</span>
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <button
+                    key={act.id}
+                    type="button"
+                    onClick={() => setAgendaActivity(act)}
+                    aria-label={`Abrir ${typeLabel[act.type]}: ${subject}. ${context}. ${status}`}
+                    title={`${subject}\n${context}`}
+                    className={`group/box block w-full min-w-0 rounded-xl border px-3 py-2 text-left transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${
+                      needsConclusions
+                        ? 'bg-amber-500/10 dark:bg-amber-500/15 border-amber-300/80 dark:border-amber-500/40 hover:border-amber-400'
+                        : 'bg-gray-50/50 dark:bg-white/2 border-gray-200/50 dark:border-white/5 hover:border-dts-secondary/50'
+                    }`}
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[11px] leading-4">
+                      <IconComponent size={12} className={`shrink-0 ${style.color}`} />
+                      <span className="shrink-0 font-bold text-dts-secondary">{dateLabel}{act.time_scheduled ? ` ${act.time_scheduled.slice(0, 5)}` : ''}</span>
+                      <span className="shrink-0 text-[9px] font-semibold text-gray-500 dark:text-gray-400">{typeLabel[act.type]}</span>
+                      <span className="min-w-0 flex-1 truncate font-bold text-gray-900 dark:text-white group-hover/box:text-dts-secondary">{subject}</span>
+                    </span>
+                    <span className="flex min-w-0 items-center gap-2 whitespace-nowrap text-[10px] leading-4">
+                      <span className="min-w-0 flex-1 truncate text-gray-600 dark:text-gray-400">{context}</span>
+                      <span className={`shrink-0 font-semibold ${needsConclusions ? 'text-amber-700 dark:text-amber-300' : !isEmail && act.is_completed ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`}>{status}</span>
+                    </span>
+                  </button>
                 );
               })}
             </div>
@@ -1020,6 +931,8 @@ export const SalesDashboard: React.FC = () => {
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
       />
+
+      {agendaActivity && <AgendaActivityDetail activity={agendaActivity} onClose={() => setAgendaActivity(null)} onEdit={() => { setActivityToEdit(agendaActivity); setAgendaActivity(null); setIsEditModalOpen(true); }} />}
 
       {/* Modal de Edición de Evento de la Agenda Semanal */}
       <EditActivityModal

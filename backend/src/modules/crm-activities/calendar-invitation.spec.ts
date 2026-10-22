@@ -64,6 +64,14 @@ describe('Cartera y persistencia de la convocatoria', () => {
     await expect(service.update('event', { calendarInvitation: config() }, 'other')).rejects.toThrow('propietario');
     expect(db.crm_activities.update).not.toHaveBeenCalled();
   });
+  it('fija sala Teams al crear o editar una videollamada aunque se envíe una dirección', async () => {
+    const { service, db } = fixture();
+    await service.create({ clientId: 'CL1', userId: 'user', type: 'VIDEOLLAMADA', title: 'Reunión', location: 'Dirección del cliente' });
+    expect(db.crm_activities.create.mock.calls[0][0].data.location).toBe('sala Teams');
+    db.crm_activities.findUnique.mockResolvedValue({ id: 'event', type: 'VIDEOLLAMADA', created_by: 'user', client_id: 'CL1' });
+    await service.update('event', { location: 'Otra dirección' }, 'user');
+    expect(db.crm_activities.update.mock.calls[0][0].data.location).toBe('sala Teams');
+  });
   it('fusiona solo calendarInvitation sin sustituir el JSON de otras funcionalidades', async () => {
     const { service, db } = fixture();
     await service.update('event', { calendarInvitation: config({ message: 'Mensaje actualizado' }) }, 'user');
@@ -86,6 +94,35 @@ describe('Contenido público y enlace de Teams', () => {
   });
   it('escapa HTML proporcionado por el usuario', () => {
     expect(publicCalendarBody('<script>alert(1)</script>')).toContain('&lt;script&gt;');
+    expect(publicCalendarBody('Nos vemos en su sede.')).toContain('lang="es-ES"');
+  });
+  it('marca las nuevas convocatorias como español en Exchange, sin cambiar eventos internos', async () => {
+    const originalFetch = global.fetch;
+    try {
+      const service = new MicrosoftGraphService(new ConfigService({}), {} as any);
+      jest.spyOn(service, 'getValidAccessToken').mockResolvedValue('test');
+      jest.spyOn(service, 'ensureDtsCategory').mockResolvedValue();
+      const request = jest.fn().mockImplementation(async () => new Response(JSON.stringify({ id: 'event' })));
+      global.fetch = request;
+      for (const publicInvitation of [true, false]) {
+        await service.createCalendarEvent('user', { publicInvitation, title: 'Visita', startDate: '2026-10-23T10:00:00', description: publicCalendarBody('Nos vemos en su sede.') });
+        const payload = JSON.parse(request.mock.calls.at(-1)![1].body);
+        if (publicInvitation) expect(payload.singleValueExtendedProperties).toEqual([{ id: 'Integer 0x3FF1', value: '3082' }]);
+        else expect(payload.singleValueExtendedProperties).toBeUndefined();
+      }
+    } finally { global.fetch = originalFetch; }
+  });
+  it('mantiene el español al modificar la convocatoria existente', async () => {
+    const originalFetch = global.fetch;
+    try {
+      const service = new MicrosoftGraphService(new ConfigService({}), {} as any);
+      jest.spyOn(service, 'getValidAccessToken').mockResolvedValue('test');
+      jest.spyOn(service, 'ensureDtsCategory').mockResolvedValue();
+      const request = jest.fn().mockResolvedValueOnce(new Response(JSON.stringify({ subject: 'Visita', body: { content: publicCalendarBody('Agenda') }, categories: ['dTS CRM'] }))).mockResolvedValueOnce(new Response(JSON.stringify({ id: 'event' })));
+      global.fetch = request;
+      await service.updateCalendarEvent('user', 'event', { publicInvitation: true, location: 'Sede del cliente' });
+      expect(JSON.parse(request.mock.calls[1][1].body).singleValueExtendedProperties).toEqual([{ id: 'Integer 0x3FF1', value: '3082' }]);
+    } finally { global.fetch = originalFetch; }
   });
   it('exporta invitados de visitas/vídeos, omite notas privadas y calcula el fin al día siguiente', async () => {
     const invitation = await resolveCalendarInvitation({ contacts: { findMany: async () => [contacts[0]] } }, config(), 'VISITA', 'CL1');
@@ -99,6 +136,7 @@ describe('Contenido público y enlace de Teams', () => {
       expect(payload.description).not.toMatch(/SECRETAS/);
       expect(payload.endDate).toBe('2026-10-22T00:30:00');
       expect(payload.isOnlineMeeting).toBe(type === 'VIDEOLLAMADA');
+      if (type === 'VIDEOLLAMADA') expect(payload.location).toBe('sala Teams');
     }
   });
   it('al completar una convocatoria solo cambia la categoría sin reenviar cuerpo ni invitados', async () => {

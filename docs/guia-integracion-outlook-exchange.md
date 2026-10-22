@@ -289,3 +289,16 @@ Una vinculación vigente y una conexión registrada no acreditan presencia onlin
 El usuario confirma: «adjuntos tras editar aprobado», «correo preparado desde crm aprobado» y «segundo usuario pruebas ok». Estas tres aceptaciones completan la lista principal junto con las aprobaciones de prueba sin borradores, vinculaciones, permisos por rol, avisos flotantes y contadores por oferta. Se mantienen las validaciones anteriores de apertura y respuestas Classic/Web, enviados/recibidos, cambio de carpeta, adjuntos y borrado exclusivo del CRM.
 
 La apertura con Classic abierto y cerrado también finalizó correctamente con 1.1.2 (2,51 s y 6,23 s desde solicitud emitida hasta confirmación, respectivamente). No se aplica optimización de rendimiento. Este cierre es aceptación funcional del recorrido principal; no certifica todos los escenarios posibles. Los nombres de adjuntos muy largos, la selección de varias copias y múltiples cuentas siguen sin confirmación específica. PST, archivo en línea y buzones compartidos no quedan acreditados por estas pruebas. Sin cambios de código, SQL ni datos.
+
+
+## Idioma y ubicación de las convocatorias - 22/10/2026
+
+Se inspeccionó en solo lectura el MIME de una invitación reciente de visita enviada a Gmail. El buzón declaraba es-ES, pero el mensaje llevaba Content-Language: en-US y el adjunto text/calendar utilizaba LANGUAGE=en-US en sus propiedades de texto. El idioma del buzón no bastaba para determinar el del elemento creado por la API.
+
+La corrección usa singleValueExtendedProperties con id Integer 0x3FF1 y valor 3082 (PidTagMessageLocaleId, español de España) al crear una convocatoria pública o modificar sus campos públicos. La propiedad origina Content-Language al exportar MIME y LANGUAGE al exportar iCalendar, según las especificaciones MS-OXCMAIL y MS-OXCICAL. El bloque propio de HTML declara lang=es-ES. Las categorías por sí solas mantienen su PATCH limitado, sin añadir propiedades de idioma ni reenviar invitados/cuerpo.
+
+La ubicación de VIDEOLLAMADA se fija a sala Teams en la persistencia de actividades de cliente y en su exportación. La interfaz la muestra en solo lectura al crear y editar; el enlace Teams sigue siendo generado por Microsoft 365. Los eventos anteriores no se modifican en bloque; las modificaciones posteriores pasan por las reglas actuales.
+
+Validación automática: pruebas de payload de alta/edición, idioma del cuerpo, actualización solo de categoría y ubicación fija, además de compilación. Confirmado por el usuario: recepción real de una invitación de visita. Pendiente: recibir una nueva invitación tras desplegar y verificar Content-Language/LANGUAGE y ubicación en Gmail/Outlook. No se envió correo de prueba durante el diagnóstico ni se alteró la configuración del buzón.
+
+Fuentes del protocolo: https://learn.microsoft.com/en-us/openspecs/exchange_server_protocols/ms-oxcmail/4c30333f-b3c8-489d-a78e-f4072a15c74f y https://learn.microsoft.com/ga-ie/openspecs/exchange_server_protocols/ms-oxcical/2f5f4b08-93d7-4359-9d09-09431c0b5b60.

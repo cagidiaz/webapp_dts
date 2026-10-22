@@ -217,7 +217,7 @@ export class ExchangeSyncService {
       // 'dTS CRM - Completado' (preset4 - Verde) si está terminada; 'dTS CRM' (preset7 - Azul) si está abierta
       const categories = isCompleted ? ['dTS CRM - Completado'] : ['dTS CRM'];
 
-      let locationDisplay = activity.location || '';
+      let locationDisplay = isTeams ? 'sala Teams' : activity.location || '';
       if ((activity.type === 'VISITA' || activity.type === 'EVENT') && !locationDisplay && activity.customer) {
         locationDisplay = [activity.customer.address, activity.customer.city].filter(Boolean).join(', ');
       }

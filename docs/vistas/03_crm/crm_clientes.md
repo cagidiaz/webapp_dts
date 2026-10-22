@@ -165,4 +165,11 @@ Todas las rutas requieren autenticación JWT. En el frontend, la ruta CRM está 
 
 ## Manual práctico de usuario
 
-Para formación desde cero, consulta el [manual de CRM Clientes y Contactos](../../manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md), edición 19/10/2026, con capturas reales, clasificación A-F, matriz YTD, procedimientos y ejemplos.
+Para formación desde cero, consulta el [manual de CRM Clientes y Contactos](../../manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md), edición 22/10/2026, con capturas reales, clasificación A-F, matriz YTD, procedimientos y ejemplos.
+
+
+## Alcance de cartera y manual actualizado - 22/10/2026
+
+El backend resuelve la cartera desde el perfil autenticado: ADMIN, DIRECCION, TESTER y PRODUCCION tienen alcance global; los demás roles necesitan código comercial. No se acepta un filtro enviado por el navegador como sustituto de esa restricción. El permiso de acceso a la vista se sigue asignando desde la gestión de roles. El alcance de datos no concede por sí solo edición de actividades o invitados. Pendiente comprobar por completo TESTER/PRODUCCION en la interfaz, además del cambio del backend.
+
+El manual ilustrado se actualiza a edición 1.1 (22/10/2026), con procedimientos de cartera, búsqueda sin tildes en Contactos, convocatorias y agenda semanal compacta. Las capturas del directorio conservan su fecha de captura del 19/10; los nuevos esquemas no se presentan como capturas de producción.

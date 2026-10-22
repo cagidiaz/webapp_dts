@@ -1,4 +1,4 @@
-import { CalendarInvitationFields, newCalendarInvitation } from './CalendarInvitationFields';
+import { CalendarInvitationFields, CalendarInvitationMessage, newCalendarInvitation } from './CalendarInvitationFields';
 import { filterEmailCategories } from '../../../utils/emailCategoryFilters';
 import { EmailAttachments } from './EmailAttachments';
 import { FloatingOutlookNotice } from './FloatingOutlookNotice';
@@ -1412,7 +1412,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       title: activityType === 'NOTE' ? 'Nota Comercial Registrada' : newTitle,
       description: newDescription || undefined,
       dueDate: activityType !== 'NOTE' ? newDate : undefined,
-      location: newLocation || undefined,
+      location: activityType === 'VIDEOLLAMADA' ? 'sala Teams' : newLocation || undefined,
     };
 
     if (activityType !== 'NOTE') {
@@ -3321,6 +3321,13 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               </div>
                             )}
 
+                            {activityType === 'VIDEOLLAMADA' && (
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider" htmlFor="new-video-location">Ubicación / Lugar</label>
+                                <input id="new-video-location" type="text" value="sala Teams" readOnly className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white cursor-default" />
+                              </div>
+                            )}
+
                             <div className="space-y-1">
                               <div className="flex items-center justify-between">
                                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Detalles / Descripción</label>
@@ -3337,21 +3344,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               />
                             </div>
 
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Conclusiones / Resultado</label>
-                                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60">
-                                  🔒 Solo interno dTS CRM
-                                </span>
+                            {newInvitation.enabled && (
+                              <div className="p-4 border border-sky-200/80 dark:border-sky-900/50 bg-sky-50/20 dark:bg-sky-950/15 rounded-2xl min-w-0 shadow-2xs">
+                                <CalendarInvitationMessage value={newInvitation} onChange={setNewInvitation} />
                               </div>
-                              <textarea
-                                placeholder="Acuerdos alcanzados o seguimiento posterior..."
-                                rows={2}
-                                value={newConclusions}
-                                onChange={(e) => setNewConclusions(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none font-medium leading-relaxed"
-                              />
-                            </div>
+                            )}
 
                             <div className="p-2.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/10 border border-cyan-100 dark:border-cyan-900/30 flex items-center justify-between text-[11px]">
                               <div className="flex items-center gap-1.5 text-dts-primary dark:text-cyan-400 font-semibold">
@@ -3375,6 +3372,24 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               allowExternal={activityType === 'VIDEOLLAMADA'}
                               value={newInvitation}
                               onChange={setNewInvitation}
+                              showMessage={false}
+                            />
+                          </div>
+                          {/* PIE: Conclusiones internas a todo el ancho */}
+                          <div className="md:col-span-2 space-y-1 border-t border-gray-200 dark:border-gray-700 pt-4">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider" htmlFor="new-activity-conclusions">Conclusiones / Resultado</label>
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60">
+                                🔒 Solo interno dTS CRM
+                              </span>
+                            </div>
+                            <textarea
+                              id="new-activity-conclusions"
+                              placeholder="Acuerdos alcanzados o seguimiento posterior..."
+                              rows={2}
+                              value={newConclusions}
+                              onChange={(e) => setNewConclusions(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none font-medium leading-relaxed"
                             />
                           </div>
                         </div>

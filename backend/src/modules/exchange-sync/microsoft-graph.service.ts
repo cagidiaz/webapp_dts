@@ -3,6 +3,11 @@ import { Injectable, Logger, BadRequestException, InternalServerErrorException }
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
+// PidTagMessageLocaleId determines Content-Language and iCalendar LANGUAGE.
+// LCID 3082 = Spanish (Spain); mailbox language alone does not set item language.
+// https://learn.microsoft.com/en-us/openspecs/exchange_server_protocols/ms-oxcmail/4c30333f-b3c8-489d-a78e-f4072a15c74f
+const SPANISH_INVITATION_LOCALE = { id: 'Integer 0x3FF1', value: '3082' };
+
 export interface CalendarEventPayload {
   transactionId?: string;
   publicInvitation?: boolean;
@@ -347,6 +352,7 @@ export class MicrosoftGraphService {
 
     const payload: any = {
       subject: eventData.title,
+      ...(eventData.publicInvitation ? { singleValueExtendedProperties: [{ ...SPANISH_INVITATION_LOCALE }] } : {}),
       ...(eventData.transactionId ? { transactionId: eventData.transactionId } : {}),
       categories: eventData.categories && eventData.categories.length > 0 ? eventData.categories : ['dTS CRM'],
       body: {
@@ -476,6 +482,11 @@ export class MicrosoftGraphService {
       if (payload.attendees && emails(payload.attendees) === emails(current.attendees || [])) delete payload.attendees;
       // Conservar categorías personales y cambiar únicamente el estado CRM del organizador.
       payload.categories = [...new Set([...(current.categories || []).filter((name: string) => !['dTS CRM', 'dTS CRM - Completado'].includes(name)), ...(payload.categories || [])])];
+      // Only stamp locale when updating the public invitation. Completing an
+      // activity must remain a categories-only patch without sending an update.
+      if (['subject', 'body', 'start', 'end', 'location', 'attendees'].some(key => key in payload)) {
+        payload.singleValueExtendedProperties = [{ ...SPANISH_INVITATION_LOCALE }];
+      }
     }
 
     const response = await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}`, {

@@ -6,8 +6,23 @@ export const newCalendarInvitation = (contactId?: string): CalendarInvitationInp
 const validEmail = (email: string) => /^[^\s@<>;,]+@[^\s@<>;,]+\.[^\s@<>;,]+$/.test(email) && email.length <= 254;
 const field = 'w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white text-xs';
 
-export function CalendarInvitationFields({ clientId, allowExternal, value, onChange }: {
-  clientId?: string; allowExternal: boolean; value: CalendarInvitationInput; onChange: (value: CalendarInvitationInput) => void;
+export function CalendarInvitationMessage({ value, onChange }: {
+  value: CalendarInvitationInput; onChange: (value: CalendarInvitationInput) => void;
+}) {
+  if (!value.enabled) return null;
+  return <div className="space-y-1">
+    <div className="flex items-center justify-between">
+      <label className="block text-[10px] uppercase font-bold text-gray-400" htmlFor="calendar-invitation-message">Mensaje para los invitados</label>
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 px-1.5 py-0.5 rounded border border-sky-200 dark:border-sky-800/60">
+        ✉️ Visible en invitación
+      </span>
+    </div>
+    <textarea id="calendar-invitation-message" className={`${field} mt-1 normal-case font-normal resize-none`} rows={3} maxLength={5000} value={value.message} onChange={event => onChange({ ...value, message: event.target.value })} placeholder="Información que recibirán los participantes…" />
+  </div>;
+}
+
+export function CalendarInvitationFields({ clientId, allowExternal, value, onChange, showMessage = true }: {
+  clientId?: string; allowExternal: boolean; value: CalendarInvitationInput; onChange: (value: CalendarInvitationInput) => void; showMessage?: boolean;
 }) {
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
@@ -57,15 +72,7 @@ export function CalendarInvitationFields({ clientId, allowExternal, value, onCha
       <label className="block text-[10px] uppercase font-bold text-gray-400">Duración
         <select className={`${field} mt-1`} value={value.durationMinutes} onChange={event => onChange({ ...value, durationMinutes: Number(event.target.value) })}>{[15, 30, 45, 60, 90, 120, 180, 240, 480].map(minutes => <option key={minutes} value={minutes}>{minutes} minutos</option>)}</select>
       </label>
-      <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <label className="block text-[10px] uppercase font-bold text-gray-400">Mensaje para los invitados</label>
-          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 px-1.5 py-0.5 rounded border border-sky-200 dark:border-sky-800/60">
-            ✉️ Visible en invitación
-          </span>
-        </div>
-        <textarea className={`${field} mt-1 normal-case font-normal resize-none`} rows={3} maxLength={5000} value={value.message} onChange={event => onChange({ ...value, message: event.target.value })} placeholder="Información que recibirán los participantes…" />
-      </div>
+      {showMessage && <CalendarInvitationMessage value={value} onChange={onChange} />}
       <p className="text-[10px] text-gray-400 italic">La descripción interna y las conclusiones del CRM no se incluyen en la convocatoria.</p>
     </>}
   </fieldset>;
