@@ -16,10 +16,10 @@
 
 La vista **Cartera de Clientes** es la herramienta central para el equipo de ventas, dirección y finanzas de dTS Instruments para la monitorización de cuentas comerciales, su concentración geográfica y el análisis de crédito. Permite:
 
-* **Visión Geoespacial del Negocio en la Península Ibérica**: Mapa interactivo D3 / TopoJSON que representa las ventas acumuladas o la deuda viva por comunidades autónomas de España y regiones de Portugal.
+* **Visión Geoespacial del Negocio en la Península Ibérica**: Mapa interactivo D3 / TopoJSON que representa las ventas acumuladas o la deuda viva por provincias de España y distritos de Portugal.
 * **Seguimiento Multianual de Ventas**: Análisis comparativo de facturación histórica por cliente en columnas anuales configurables (2023, 2024, 2025, 2026) y margen comercial medio.
 * **Vigilancia del Riesgo de Crédito y DSO (Días de Cobro)**: Control del saldo vivo (`balance`), saldo vencido (`balance_due`) y los días reales medios de pago calculados a partir de las facturas cobradas.
-* **Filtrado Avanzado Segmentado**: Filtrado por Comercial/Delegado, Comunidad Autónoma, Tipo de Cliente (A–F), Modelo de Negocio, Mercado y Estado de Bloqueo.
+* **Filtrado Avanzado Segmentado**: Búsqueda por código, nombre o ciudad y filtros por vendedor, territorio, tipo de cliente (A–F), modelo de negocio, mercado, condiciones de pago y portes.
 * **Inspección Profunda mediante Drawer Lateral**: Acceso con un clic a la ficha completa del cliente, sus contactos oficiales, histórico de facturas, pedidos abiertos y ofertas vigentes.
 
 ---
@@ -28,18 +28,16 @@ La vista **Cartera de Clientes** es la herramienta central para el equipo de ven
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│  Bandeja de KPIs Superiores (4 Tarjetas Métricas)                                │
-│  [ Cartera Clientes ] [ Facturación Total ] [ Deuda Pendiente ] [ Nuevos Año ]   │
-├──────────────────────────────────────────────────────────────────────────────────┤
 │  Mapa Geoespacial Ibérico (IberianGeoSalesMap)                                   │
 │  - Proyección D3 TopoJSON España y Portugal (Península, Baleares, Canarias)      │
 │  - Selector de Métrica: Facturación (€) vs Saldo Pendiente (€)                   │
-│  - Ranking lateral Top Comunidades + Filtro interactivo al hacer clic en zona    │
+│  - Ranking lateral de clientes + filtro interactivo al hacer clic en zona       │
 ├──────────────────────────────────────────────────────────────────────────────────┤
 │  Barra de Filtros Dinámicos (Buscador con debounce, Comercial, Tipo, Columnas)   │
 ├──────────────────────────────────────────────────────────────────────────────────┤
 │  Tabla de Clientes con Scroll Infinito (useInfiniteQuery + keepPreviousData)    │
 │  - Columnas configurables: Ventas 2023-2026, Margen %, Forma de Pago, DSO...     │
+│  - Pie fijo: clientes filtrados, ventas por año y total acumulado               │
 ├──────────────────────────────────────────────────────────────────────────────────┤
 │  Drawer Lateral de Detalle (CustomerDetailDrawer sincronizado por URL ?clientId) │
 │  - Ficha BC, NIF, contactos, ofertas, pedidos abiertos y cálculo de días de cobro│
@@ -48,14 +46,9 @@ La vista **Cartera de Clientes** es la herramienta central para el equipo de ven
 
 ---
 
-## 3. Indicadores Clave de Rendimiento (KPIs) 📈
+## 3. Resumen de la cartera
 
-| KPI | Métrica | Cálculo / Origen | Utilidad de Negocio |
-| :--- | :--- | :--- | :--- |
-| **Cartera de Clientes** | Cantidad entera (ej. `1.842`) | `COUNT(customers)` que cumplen los filtros aplicados. | Tamaño de la base de clientes del segmento activo. |
-| **Facturación Acumulada** | Importe en euros (€) | Suma de las ventas históricas de los clientes visibles. | Volumen total facturado en la selección. |
-| **Saldo Pendiente (Riesgo)** | Importe en euros (€) | `SUM(balance)` de los clientes seleccionados en Business Central. | Total de crédito comercial vivo otorgado a clientes. |
-| **Nuevas Altas del Año** | Cantidad entera (ej. `64`) | Clientes con fecha de creación en el ejercicio actual. | Tasa de captación comercial y crecimiento de cartera. |
+La vista comienza directamente con el mapa. Se elimina la fila superior de cuatro tarjetas para reducir información repetida y dar más espacio a los clientes. El mapa mantiene sus indicadores y selectores de ventas/deuda; el pie de la tabla muestra el número de clientes filtrados, las ventas anuales y el total acumulado. Las etiquetas «Nuevo» de cada cliente permanecen disponibles.
 
 ---
 
@@ -71,7 +64,7 @@ La selección se conserva en un único estado (`territoryFilter`). El mapa obtie
 
 El nombre es una etiqueta de presentación: Vizcaya/Bizkaia, Gerona/Girona, Lérida/Lleida, Guipúzcoa/Gipuzkoa, La Coruña/A Coruña y Orense/Ourense se resuelven por identidad. Las provincias se presentan en español, sin renombrar los valores almacenados en Business Central. También se armonizan los identificadores de distritos portugueses que en la cartografía utilizaban espacios, guiones o caracteres acentuados inconsistentes.
 
-Los filtros comunes de búsqueda, comercial, tipo de cliente, mercado, modelo de negocio, condiciones de pago y portes se construyen una sola vez para tabla, mapa y exportación. La consulta del mapa conserva el contexto geográfico completo y la selección limita sus marcadores y ranking; la tabla, sus KPIs y el Excel reciben el identificador de esa selección. Los territorios de texto que no sean una provincia/distrito conocido conservan su filtro anterior.
+Los filtros comunes de búsqueda, comercial, tipo de cliente, mercado, modelo de negocio, condiciones de pago y portes se construyen una sola vez para tabla, mapa y exportación. La consulta del mapa conserva el contexto geográfico completo y la selección limita sus marcadores y ranking; la tabla, sus totales y el Excel reciben el identificador de esa selección. Los territorios de texto que no sean una provincia/distrito conocido conservan su filtro anterior.
 
 `CustomersService` clasifica por país, código postal y, como alternativa, provincia/ciudad y sus alias, con el mismo criterio que el mapa. La selección se aplica a la cartera autenticada y a los demás filtros antes de paginar y calcular los totales. Un código postal extranjero que comienza por 48 no se considera Vizcaya. No se normalizan datos de origen ni se crean funciones, extensiones o cambios SQL.
 
@@ -79,9 +72,17 @@ El mapa carga todas las páginas de la cartera, sin detenerse en los primeros 60
 
 **Validación:** 19 pruebas de clasificación, alias, filtros combinados, paginación, totales y permisos; comprobación de las 70 geometrías y carga de 2.005 clientes de prueba; lectura de datos reales en transacción de solo lectura el 23/10/2026. Para la cartera global de comprobación, el mapa, la consulta `ES-48` y la consulta Vizcaya coinciden en los mismos 31 clientes. Esa cifra depende del usuario, los filtros y el momento; no sustituye la prueba visual posterior al despliegue.
 
-Archivos: `geoCoordinates.ts`, `CustomersPage.tsx`, `IberianGeoSalesMap.tsx`, `customers.ts`, `customer-geography.ts` y su catálogo. La prueba de regresión contrasta los catálogos de frontend/backend para evitar diferencias de identidad. Mantener nombres y alias coordinados al ampliar el catálogo.
+Archivos: `customerTableTotals.ts`, `geoCoordinates.ts`, `CustomersPage.tsx`, `IberianGeoSalesMap.tsx`, `customers.ts`, `customer-geography.ts` y su catálogo. La prueba de regresión contrasta los catálogos de frontend/backend para evitar diferencias de identidad. Mantener nombres y alias coordinados al ampliar el catálogo.
 
 ---
+
+### Fila de totales de la tabla
+
+El pie fijo muestra el número de clientes filtrados, las ventas de 2023, 2024, 2025, 2026 (YTD) y el total acumulado. Utiliza la cartera completa ya cargada para el mapa, respetando todos los filtros y la zona seleccionada, sin limitarse a las páginas visibles ni añadir consultas. Se adapta a las columnas visibles y a los modos claro y oscuro. No suma porcentajes de margen, días de cobro ni campos descriptivos. Mientras se carga la cartera indica «Calculando…»; un fallo de carga no se presenta como un total cero.
+
+Se conservan importes negativos y se excluyen clientes comodín cuyo código comienza por `999999`. El Top del ranking y el límite visual de 100 marcadores no recortan los totales. Ocultar columnas solo oculta sus celdas del pie. La exportación mantiene los registros filtrados, sin añadir esta fila visual al Excel. El acumulado corresponde a 2023–2026, no a toda la vida del cliente.
+
+**Validación del pie y simplificación:** regresión automatizada de totales completos y por zona, importes negativos, valores alternativos y cartera vacía; compilación frontend correcta. Pendiente de comprobación visual del pie fijo, columnas ocultas, modo oscuro y eliminación de tarjetas tras recargar. No se acredita despliegue en producción. Procedimiento de usuario y criterios de aceptación en [la actualización de esta entrega](../../actualizaciones/2026-10-23-ventas-clientes-filtros-totales.md).
 
 ## 5. Drawer de Detalle del Cliente (`CustomerDetailDrawer.tsx`) 🗂️
 

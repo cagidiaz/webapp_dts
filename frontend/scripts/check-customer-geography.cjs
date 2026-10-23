@@ -11,6 +11,18 @@ function load(name, dependency = {}) {
   return module.exports;
 }
 const geo = load('src/utils/geoCoordinates.ts');
+const { getCustomerTableTotals } = load('src/utils/customerTableTotals.ts', geo);
+const totalsRows = [
+  { client_id: '1', country_reg_code: 'ES', post_code: '48001', sales_2023: 100, sales_2024: -20, sales_2025: 30, sales_2026_ytd: 40, sales_total: 150 },
+  { client_id: '2', country_reg_code: 'ES', county: 'Bizkaia', sales_2023: 10, total_sales: 5 },
+  { client_id: '3', country_reg_code: 'ES', post_code: '28001', sales_2023: 1000 },
+  { client_id: '4', country_reg_code: 'FR', post_code: '48001', total_sales: 25 },
+  { client_id: '9999999', country_reg_code: 'ES', post_code: '48001', total_sales: 99999 },
+];
+assert.deepEqual(getCustomerTableTotals(totalsRows, geo.getTerritoryZone('ES-48')), { count: 2, sales_2023: 110, sales_2024: -20, sales_2025: 30, sales_2026: 45, total: 165 });
+assert.equal(getCustomerTableTotals(totalsRows, null).total, 1190);
+assert.equal(getCustomerTableTotals(totalsRows, geo.getTerritoryZone('INTL')).total, 25);
+assert.deepEqual(getCustomerTableTotals([], null), { count: 0, sales_2023: 0, sales_2024: 0, sales_2025: 0, sales_2026: 0, total: 0 });
 const features = JSON.parse(fs.readFileSync(path.join(root, 'src/assets/geo/iberia-provinces.json'), 'utf8')).features;
 for (const feature of features) {
   const zone = geo.getTerritoryZone(feature.properties.id) || geo.getTerritoryZone(feature.properties.name);
@@ -36,6 +48,6 @@ async function main() {
   assert.deepEqual(calls.map(call => call.skip), [0, 1000, 2000]);
   assert.equal(new Set(result.data.map(row => row.client_id)).size, 2005);
   assert.ok(calls.every(call => call.sortBy === 'client_id' && call.sortDir === 'asc'));
-  console.log('Correctos: 70 zonas cartográficas, alias en español, selector único y carga de 2005 clientes conservando filtros y sin duplicados.');
+  console.log('Correctos: totales completos y por zona con abonos y cartera vacía; 70 zonas cartográficas, alias en español y carga de 2005 clientes conservando filtros y sin duplicados.');
 }
 main().catch(error => { console.error(error.message); process.exitCode = 1; });

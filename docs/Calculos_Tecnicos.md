@@ -3,6 +3,10 @@
 
 Este documento detalla la procedencia de los datos y las operaciones matemáticas aplicadas en las distintas vistas de la aplicación para obtener los KPIs financieros mostrados.
 
+### Cartera de Clientes: actualización del 23/10/2026
+
+El resumen de `/sales/customers` pasa a un pie fijo de la tabla y se eliminan las cuatro tarjetas superiores. El pie suma la cartera completa filtrada reutilizada del mapa, con selección geográfica por identificador estable, exclusión de comodines y conservación de importes negativos. No se limita a las páginas visibles ni al Top del ranking. Las fuentes, valores alternativos y alcance del acumulado 2023–2026 se detallan en [Definiciones de KPIs](kpi-definitions.md). No se añaden consultas para el pie ni se modifican las tablas de Business Central.
+
 ---
 
 ## 1. Dashboard de Control (Resumen Ejecutivo)

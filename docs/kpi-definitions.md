@@ -1,5 +1,22 @@
 # Definiciones de KPIs — dTS Instruments
 
+## Totales de Cartera de Clientes (`/sales/customers`)
+
+Desde el 23/10/2026 se presentan en el pie fijo de la tabla; se ha retirado la fila superior de cuatro KPI.
+
+| Celda | Cálculo y alcance |
+| :--- | :--- |
+| Clientes | Recuento de la cartera completa filtrada y de la zona activa, excluyendo códigos que empiezan por `999999`. |
+| 2023, 2024 y 2025 | Suma de `sales_2023`, `sales_2024` y `sales_2025` respectivamente, obtenidos de documentos netos sin IVA y deduciendo abonos según el servicio de clientes. |
+| 2026 (YTD) | Suma del valor efectivo por cliente: `sales_2026_ytd` o, si falta/es cero, `total_sales`, o cero. El servicio prioriza `customers.total_sales` sobre la agregación documental de 2026. |
+| Total | Suma de `sales_total`; si falta/es cero, usa la suma de los cuatro ejercicios del cliente. No representa toda su vida comercial. |
+
+Se conservan importes negativos. No se suman porcentajes de margen ni días de cobro. `getCustomerTableTotals` utiliza los datos completos ya cargados para el mapa y la misma clasificación de zonas, sin añadir consultas. El resultado no depende de las páginas visibles, el Top del ranking ni el límite de marcadores. Ocultar columnas no recalcula la cartera. Durante la carga se indica «Calculando…»; un error se distingue de una cartera vacía. La exportación no incorpora la fila visual de totales.
+
+La métrica de ventas del mapa sigue utilizando `total_sales`; no debe confundirse con el acumulado 2023–2026 del pie. Ver [vista y validación](vistas/02_ventas/ventas_clientes.md).
+
+---
+
 ## KPIs Financieros (Dashboard Contable)
 
 ### EBITDA

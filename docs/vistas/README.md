@@ -20,7 +20,7 @@ Los documentos están organizados físicamente en **carpetas temáticas estructu
 ### 2. 💼 Área Comercial y Ventas (`02_ventas/`)
 | Vista / Documento | Ruta WebApp | Componentes Clave | Propósito Principal |
 | :--- | :--- | :--- | :--- |
-| [**Ventas: Clientes y Mapa Peninsular**](file:///c:/proyectos/webapp_dts/docs/vistas/02_ventas/ventas_clientes.md) | `/sales/customers` | `CustomersPage.tsx`<br>`IberianGeoSalesMap.tsx`<br>`CustomerDetailDrawer.tsx` | Cartera comercial con mapa D3 provincial (España y Portugal), ventas históricas 3 años, cálculo de DSO y drawer 360°. |
+| [**Ventas: Clientes y Mapa Peninsular**](file:///c:/proyectos/webapp_dts/docs/vistas/02_ventas/ventas_clientes.md) | `/sales/customers` | `CustomersPage.tsx`<br>`IberianGeoSalesMap.tsx`<br>`CustomerDetailDrawer.tsx` | Mapa provincial, filtros mapa/tabla coordinados, ventas 2023–2026 y pie fijo de totales. Sin tarjetas KPI superiores; DSO y drawer 360°. |
 | [**Ventas: Pedidos y Cartera Viva**](file:///c:/proyectos/webapp_dts/docs/vistas/02_ventas/ventas_pedidos.md) | `/sales/orders` | `SalesOrdersPage.tsx`<br>`OrderDetailModal.tsx` | Cartera de pedidos abiertos, deducción de prepagos vivos (PFV/FV cliente a cliente) y precios netos efectivos. |
 | [**Ventas: Catálogo y Stock de Productos**](file:///c:/proyectos/webapp_dts/docs/vistas/02_ventas/ventas_productos.md) | `/sales/products` | `ProductsPage.tsx`<br>`ProductDetailDrawer.tsx` | Catálogo de referencias (Items), valoración de existencias, cálculo de PVP y márgenes teóricos/reales con historial de compras. |
 | [**Ventas: Histórico de Facturación**](file:///c:/proyectos/webapp_dts/docs/vistas/02_ventas/ventas_historico_facturacion.md) | `/sales/invoices` | `SalesInvoicesPage.tsx`<br>`InvoiceLinesDrawer.tsx` | Auditoría de facturas y abonos, comparativa mensual interanual, desglose de líneas y trazabilidad contable. |
@@ -260,3 +260,7 @@ Nueva vista [Ayuda → Manuales de usuario](06_administracion_configuracion/ayud
 ### Ventas - Clientes: identidad geográfica y sincronización (23/10/2026)
 
 Actualizada [Cartera de Clientes](02_ventas/ventas_clientes.md): nombres españoles de provincias, alias por identificador estable, un único estado para mapa/Territorio, mismos filtros en ranking/tabla/Excel y cartera completa en el mapa. Se documentan pruebas de clasificación, paginación y coincidencia real de Vizcaya en solo lectura. Sin SQL ni modificaciones de las tablas sincronizadas desde BC.
+
+### Ventas - Clientes: totales y simplificación (23/10/2026)
+
+Eliminadas las cuatro tarjetas KPI superiores. La tabla incorpora un pie fijo con clientes filtrados, ventas por año y acumulado de toda la selección, independientemente de las páginas cargadas y del Top del ranking. Actualizados el [manual general](../manual-usuario.md), las [definiciones de cálculo](../kpi-definitions.md), la [documentación técnica](../Calculos_Tecnicos.md) y el [registro de entrega](../actualizaciones/2026-10-23-ventas-clientes-filtros-totales.md). Pruebas y compilación correctas; aceptación visual y despliegue pendientes.

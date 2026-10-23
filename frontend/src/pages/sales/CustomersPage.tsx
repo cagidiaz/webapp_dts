@@ -12,14 +12,15 @@ import {
 } from '../../api/customers';
 import { formatCurrency, formatNumber } from '../../api/formatters';
 import { 
-  Search, Users, Euro, TrendingUp, UserPlus,
+  Search, Users,
   ArrowUpDown, ChevronUp, ChevronDown, Filter, X, 
   SlidersHorizontal, RotateCcw, Loader2
 } from 'lucide-react';
-import { InfoPopover, KPISkeleton, TableSkeleton, ExportButton } from '../../components/ui';
+import { InfoPopover, TableSkeleton, ExportButton } from '../../components/ui';
 import { CustomerDetailDrawer } from './components/CustomerDetailDrawer';
 import { IberianGeoSalesMap } from './components/IberianGeoSalesMap';
 import { getTerritoryZone, normalizeTerritoryOptions } from '../../utils/geoCoordinates';
+import { getCustomerTableTotals } from '../../utils/customerTableTotals';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { exportToXlsx } from '../../utils/exportToXlsx';
@@ -232,7 +233,7 @@ export const CustomersPage: React.FC = () => {
   const territoryOptions = useMemo(() => normalizeTerritoryOptions(filterOptions?.territories || [], territoryFilter), [filterOptions?.territories, territoryFilter]);
 
   // Query optimizada para el mapa geográfico (mantiene en memoria la cartera completa para conmutación instantánea entre provincias)
-  const { data: mapData, isLoading: isMapLoading, isPlaceholderData: isMapPlaceholderData } = useQuery({
+  const { data: mapData, isLoading: isMapLoading, isPlaceholderData: isMapPlaceholderData, isError: isMapError } = useQuery({
     queryKey: [
       'customersGeoMap', 
       profile?.id,
@@ -261,6 +262,11 @@ export const CustomersPage: React.FC = () => {
     );
   }, [mapData]);
 
+  const tableTotals = useMemo(() => {
+    if (!mapData || isMapLoading || isMapPlaceholderData || isMapError) return null;
+    return getCustomerTableTotals(mapCustomers, selectedGeoZone);
+  }, [mapData, mapCustomers, selectedGeoZone, isMapLoading, isMapPlaceholderData, isMapError]);
+
   // Observer optimizado: vinculado estrictamente al contenedor de la tabla con rootMargin anticipado
   useEffect(() => {
     const container = tableContainerRef.current;
@@ -288,20 +294,11 @@ export const CustomersPage: React.FC = () => {
     };
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-  const { customers, totalCustomers, globalDebt, globalSales, newCustomersCount } = useMemo(() => {
+  const customers = useMemo(() => {
     const currentData = isPlaceholderData ? undefined : data;
-    const allItems = (currentData?.pages.flatMap(page => page.data) || []).filter(
+    return (currentData?.pages.flatMap(page => page.data) || []).filter(
       c => c.client_id !== '9999999' && c.client_id !== '99999999' && !c.client_id?.startsWith('999999')
     );
-    const totalCount = currentData?.pages[0]?.total || 0;
-    const summary = currentData?.pages[0]?.summary || { totalDebt: 0, totalSales: 0, newCustomersCount: 0 };
-    return { 
-      customers: allItems, 
-      totalCustomers: totalCount, 
-      globalDebt: summary.totalDebt, 
-      globalSales: summary.totalSales,
-      newCustomersCount: summary.newCustomersCount
-    };
   }, [data, isPlaceholderData]);
 
   const handleSort = useCallback((field: string) => {
@@ -424,7 +421,6 @@ export const CustomersPage: React.FC = () => {
   if (isLoading && !data) return (
     <div className="space-y-6 pb-10">
       <div className="h-28 bg-white dark:bg-surface-card-dark rounded-2xl animate-pulse"></div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4"><KPISkeleton /><KPISkeleton /><KPISkeleton /><KPISkeleton /></div>
       <div className="bg-white dark:bg-surface-card-dark rounded-xl h-125"><TableSkeleton rows={15} columns={10} /></div>
     </div>
   );
@@ -436,53 +432,6 @@ export const CustomersPage: React.FC = () => {
         onClose={handleCloseDrawer} 
         customer={selectedCustomer} 
       />
-
-      {/* KPI CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard 
-          title="Total Clientes" 
-          value={totalCustomers} 
-          type="number" 
-          icon={Users} 
-          isLoading={isLoading || isPlaceholderData}
-          infoProps={{
-            description: "Número total de clientes que coinciden con los filtros seleccionados."
-          }}
-        />
-        <KPICard 
-          title="Clientes Nuevos" 
-          value={newCustomersCount} 
-          type="number" 
-          icon={UserPlus} 
-          isLoading={isLoading || isPlaceholderData}
-          status="success"
-          infoProps={{
-            description: "Clientes dados de alta en el ejercicio actual."
-          }}
-        />
-        <KPICard 
-          title="Deuda Total" 
-          value={globalDebt} 
-          type="currency" 
-          icon={Euro} 
-          status={globalDebt > 0 ? 'danger' : 'success'} 
-          isLoading={isLoading || isPlaceholderData}
-          infoProps={{
-            description: "Sumatorio del saldo pendiente de cobro de los clientes filtrados.",
-            formulas: "Saldo LCY"
-          }}
-        />
-        <KPICard 
-          title="Ventas 2026 (YTD)" 
-          value={globalSales} 
-          type="currency" 
-          icon={TrendingUp} 
-          isLoading={isLoading || isPlaceholderData}
-          infoProps={{
-            description: "Total de facturación acumulada del año en curso para los clientes seleccionados."
-          }}
-        />
-      </div>
 
       {/* MAPA GEOGRÁFICO DE VENTAS */}
       <IberianGeoSalesMap 
@@ -1035,6 +984,22 @@ export const CustomersPage: React.FC = () => {
                 </td>
               </tr>
             </tbody>
+            <tfoot className="sticky bottom-0 z-20 bg-gray-100 dark:bg-slate-800 text-dts-primary dark:text-gray-100 text-xs font-bold">
+              <tr title="Totales de todos los clientes filtrados, incluidas las filas aún no cargadas">
+                <th scope="row" className="sticky left-0 z-30 bg-gray-100 dark:bg-slate-800 px-3.5 py-3 border-t-2 border-dts-secondary whitespace-nowrap">Totales</th>
+                <td className="px-3.5 py-3 border-t-2 border-dts-secondary whitespace-nowrap" aria-live="polite">
+                  {tableTotals ? `${formatNumber(tableTotals.count)} clientes` : isMapError ? 'No se pudieron calcular' : 'Calculando…'}
+                </td>
+                {(['sales_2023', 'sales_2024', 'sales_2025', 'sales_2026', 'total'] as const).map(column => visibleColumns[column] && (
+                  <td key={column} className="px-3 py-3 border-t-2 border-dts-secondary text-right font-mono whitespace-nowrap">
+                    {tableTotals ? formatCurrency(tableTotals[column], 2) : '—'}
+                  </td>
+                ))}
+                {(['margin', 'portes', 'paymentTerms', 'paymentDays', 'market', 'businessModel', 'territory', 'salesperson', 'clientType'] as const).map(column => visibleColumns[column] && (
+                  <td key={column} className="px-2.5 py-3 border-t-2 border-dts-secondary text-center text-gray-400">—</td>
+                ))}
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -1252,29 +1217,3 @@ const CustomerTableRow = React.memo<CustomerTableRowProps>(({
     </tr>
   );
 });
-
-const KPICard = ({ title, value, type = 'number', icon: Icon, isLoading, status, infoProps }: any) => {
-  if (isLoading) return <div className="bg-white dark:bg-surface-card-dark p-4 rounded-xl border border-gray-100 dark:border-gray-800 h-24 animate-pulse"></div>;
-  const colorClass = status === 'success' ? 'text-emerald-500' : status === 'danger' ? 'text-red-500' : 'text-dts-primary dark:text-white';
-  const formattedValue = type === 'currency' ? formatCurrency(value, 0) : formatNumber(value, 0);
-  return (
-    <div className="bg-white dark:bg-surface-card-dark p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
-      <div className="flex justify-between items-start mb-1.5">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{title}</span>
-          {infoProps && (
-            <InfoPopover 
-              title={title} 
-              description={infoProps.description} 
-              formulas={infoProps.formulas} 
-              iconSize={12}
-              className="text-gray-300 group-hover:text-dts-secondary transition-colors"
-            />
-          )}
-        </div>
-        <Icon size={16} className="text-gray-400 group-hover:text-dts-secondary transition-colors" />
-      </div>
-      <div className={`text-xl font-black font-mono ${colorClass}`}>{formattedValue}</div>
-    </div>
-  );
-};

@@ -57,13 +57,13 @@ El **Panel de Control** (`/dashboard`) es el centro de mando visual para la moni
 ## 2. Módulo de Ventas y Gestión Comercial
 
 ### 2.1 Cartera de Clientes & Inteligencia Geográfica
-Ubicado en `/sales/customers`, ofrece un directorio analítico de clientes con facturación multianual (2023–2026 YTD), plazos de pago y geolocalización cartográfica.
+Ubicado en `/sales/customers`, ofrece un directorio analítico de clientes con facturación multianual (2023–2026 YTD), plazos de pago y geolocalización cartográfica. La vista empieza directamente con el mapa, sin la anterior fila de cuatro KPI superiores. El resumen de clientes y ventas se consulta en el pie fijo de la tabla.
 
 * **Mapa Interactivo de Inteligencia Geográfica (Península Ibérica, Canarias y Portugal)**:
   * Proyección cartográfica dual D3 con recuadro específico e inset dedicado para Canarias.
   * **Filtrado Geográfico Bidireccional**: Al hacer clic en cualquier provincia o distrito, el territorio se resalta con relleno cian (`#00B0B9`) y contorno blanco de `1.3px`, atenuando las demás zonas y filtrando simultáneamente el ranking lateral y la tabla de clientes.
-  * **Conmutación Instantánea (0 ms)**: Permite saltar de una provincia a otra de manera inmediata sin tiempos de espera.
-  * **Pin Vectorial 3D Verde Esmeralda**: Al pasar el ratón sobre cualquier cliente del ranking o del mapa, proyecta su posición geográfica exacta con un halo de radar concéntrico.
+  * **Selección coordinada**: Permite pasar de una provincia a otra sin desmarcar antes la anterior. La tabla indica carga mientras llega la consulta; la duración depende de la conexión.
+  * **Pin Vectorial 3D Verde Esmeralda**: Al pasar el ratón sobre cualquier cliente del ranking o del mapa, proyecta su ubicación geográfica aproximada con un halo de radar concéntrico.
 * **Días Reales de Cobro (Cálculo Híbrido Contractual + Mora)**:
   * Combina los términos contractuales de Business Central (`payment_terms_code`, ej. *Contado*, *30d*, *60d*) con el cálculo proporcional de retraso por saldo vencido impagado (`balance_due_lcy > 0`).
   * Muestra el plazo al corriente (ej. `30d`) o con badge de advertencia si existe demora (ej. `78d (+18d mora)`).
@@ -76,6 +76,8 @@ Ubicado en `/sales/customers`, ofrece un directorio analítico de clientes con f
   * Filtros por Tipo de Cliente (A–F), Términos de Pago, Vendedor, Portes y Mercado (con desplegable acotado a 5 elementos visibles).
   * Exclusión de clientes comodín de sistema (`9999999`).
   * Exportación completa a Excel (`.xlsx`) con desglose de días pactados, demora y totales.
+
+Consulta la [guía paso a paso de filtros y totales](#ventas--clientes-guía-de-filtros-y-totales---23102026) para seleccionar una provincia, interpretar el ranking y utilizar el nuevo pie de la tabla.
 
 ---
 
@@ -697,7 +699,7 @@ El acceso se ofrece únicamente en el menú **Ayuda → Manuales de usuario**; s
 El PDF de uso interno se incluye en cada despliegue. Administración debe publicar el manual actualizado junto con la aplicación; los archivos ya descargados no se sustituyen automáticamente. Entrega local preparada, sin afirmar despliegue ni aceptación real de la descarga en producción.
 
 
-### Ventas → Clientes: mapa y filtro Territorio coordinados - 23/10/2026
+### Ventas → Clientes: guía de filtros y totales - 23/10/2026
 
 1. Pulsa una provincia en el mapa. La etiqueta de zona y el filtro **Territorio** muestran la misma provincia; el ranking lateral y la tabla pasan a esa selección.
 2. También puedes abrir los filtros avanzados y elegir la provincia en **Territorio**. Se activa la misma zona del mapa. Los nombres de provincias se muestran en español; por ejemplo, Vizcaya corresponde también a los datos importados como Bizkaia.
@@ -706,3 +708,11 @@ El PDF de uso interno se incluye en cada despliegue. Administración debe public
 5. Para quitar la zona, vuelve a pulsarla, elimina su etiqueta, elige **Todos** en Territorio o restablece los filtros. El mapa y la tabla se desmarcan conjuntamente.
 
 El mapa ya no se limita a los primeros 600 clientes. En una comprobación de solo lectura del 23/10, Vizcaya devuelve los mismos 31 clientes en el mapa y en la tabla de la cartera global utilizada para validar. Con filtros o permisos distintos, el total puede cambiar. Esta entrega está preparada localmente; verificar visualmente ambos recorridos después de desplegar.
+
+Para interpretar el resumen de la tabla:
+
+1. Consulta el pie **Totales**: muestra el número de clientes, ventas de 2023, 2024, 2025, 2026 (YTD) y acumulado. Incluye todos los resultados filtrados, aunque todavía no hayas desplazado la tabla hasta el final. **Top 10** limita solamente el ranking y no modifica estos totales.
+2. El pie permanece visible al desplazar la tabla y se adapta a las columnas activadas. No suma porcentajes de margen, días de cobro ni campos descriptivos; conserva los importes negativos de los abonos. El acumulado corresponde a los cuatro ejercicios mostrados, no a toda la vida del cliente.
+3. **Calculando…** indica que se está cargando la cartera. Si aparece **No se pudieron calcular**, recarga y comprueba la conexión antes de utilizar los importes. Una cartera vacía muestra cero clientes y cero euros.
+
+La exportación Excel contiene los registros filtrados, pero no añade la fila visual de totales. El mapa puede representar como máximo 100 marcadores; ese límite no recorta la cartera ni los totales. Se mantienen los modos claro y oscuro. Los nombres de provincias son etiquetas de la app y no modifican los valores importados desde Business Central.
