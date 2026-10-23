@@ -173,3 +173,8 @@ Para formación desde cero, consulta el [manual de CRM Clientes y Contactos](../
 El backend resuelve la cartera desde el perfil autenticado: ADMIN, DIRECCION, TESTER y PRODUCCION tienen alcance global; los demás roles necesitan código comercial. No se acepta un filtro enviado por el navegador como sustituto de esa restricción. El permiso de acceso a la vista se sigue asignando desde la gestión de roles. El alcance de datos no concede por sí solo edición de actividades o invitados. Pendiente comprobar por completo TESTER/PRODUCCION en la interfaz, además del cambio del backend.
 
 El manual ilustrado se actualiza a edición 1.1 (22/10/2026), con procedimientos de cartera, búsqueda sin tildes en Contactos, convocatorias y agenda semanal compacta. Las capturas del directorio conservan su fecha de captura del 19/10; los nuevos esquemas no se presentan como capturas de producción.
+
+
+### Acceso al manual dentro de la app - 22/10/2026
+
+Clientes, Contactos y la ficha del contacto muestran **Manual CRM**, que abre `/help/manuals#crm-clientes-contactos`. La sección **Ayuda → Manuales de usuario** ofrece el mismo PDF con versión, fecha y tamaño, y acciones de visualización y descarga. Requiere sesión activa y permisos de CRM y Clientes o Contactos; el backend los vuelve a comprobar al entregar el archivo. Véase [Ayuda y manuales](../06_administracion_configuracion/ayuda_manuales_usuario.md).

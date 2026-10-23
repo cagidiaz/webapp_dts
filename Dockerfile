@@ -43,6 +43,7 @@ COPY --from=backend-builder /build/backend/dist ./backend/dist
 COPY --from=backend-builder /build/backend/node_modules ./backend/node_modules
 COPY --from=backend-builder /build/backend/package*.json ./backend/
 COPY --from=backend-builder /build/backend/prisma ./backend/prisma
+COPY --from=backend-builder /build/backend/assets/user-manuals ./backend/assets/user-manuals
 
 # 2. Copy Frontend build into the location NestJS Expects (see app.module.ts)
 COPY --from=frontend-builder /build/frontend/dist ./frontend/dist

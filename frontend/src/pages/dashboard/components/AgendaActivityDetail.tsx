@@ -30,7 +30,7 @@ export function AgendaActivityDetail({ activity, onClose, onEdit }: {
       </div>
       {activity.attendees?.calendarInvitation?.message && <div><h5 className="mb-2 font-bold">Mensaje para los invitados</h5><p className="whitespace-pre-wrap break-words">{activity.attendees.calendarInvitation.message}</p></div>}
       {activity.conclusions && <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/20 p-4"><h5 className="mb-2 font-bold text-emerald-700 dark:text-emerald-400">Conclusiones</h5><p className="whitespace-pre-wrap break-words leading-relaxed">{activity.conclusions}</p></div>}
-      {activity.can_edit !== false && <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-dts-primary px-4 py-2 font-bold text-white dark:bg-dts-secondary dark:text-dts-primary-dark cursor-pointer" onClick={onEdit}><Edit2 size={13} />{email ? 'Editar datos del correo' : 'Editar / Añadir conclusiones'}</button>}
+      {!email && activity.can_edit !== false && <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-dts-primary px-4 py-2 font-bold text-white dark:bg-dts-secondary dark:text-dts-primary-dark cursor-pointer" onClick={onEdit}><Edit2 size={13} />Editar / Añadir conclusiones</button>}
     </div>
   </Drawer>;
 }

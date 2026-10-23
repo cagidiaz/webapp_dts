@@ -81,6 +81,16 @@ Las altas de clientes y las ofertas se realizan en Business Central y se importa
 
 **Resultado esperado:** ves las cuentas y contactos incluidos en tu ámbito de acceso. Una lista reducida puede ser correcta: Ventas trabaja con los clientes de su código comercial y con los contactos de esas empresas. La regla de alcance global definida para Clientes y Contactos incluye Admin, Dirección, Tester y Producción; el permiso para entrar en cada vista se asigna por rol. La comprobación completa de Tester y Producción en la interfaz sigue pendiente, aunque el backend ya admite ese alcance.
 
+### Abrir o descargar este manual desde la app
+
+1. Abre **Ayuda** en el menú lateral y selecciona **Manuales de usuario**. También puedes pulsar **Manual CRM** en la parte superior de Clientes, Contactos o la ficha de una persona.
+2. Localiza **Manual CRM — Clientes y Contactos**. La ficha indica versión, fecha y tamaño del PDF.
+3. Pulsa **Ver PDF** para abrirlo en otra pestaña del navegador. Si el navegador bloquea la ventana, permite las ventanas emergentes de la app o utiliza Descargar PDF.
+4. Pulsa **Descargar PDF** para guardar una copia y leerla sin conexión. Revisa su versión si ya tenías otra copia guardada.
+5. Si no aparece ningún manual, pide a Administración que revise tus permisos de CRM y de Clientes o Contactos. El servidor comprueba el acceso también al solicitar el archivo.
+
+La descarga requiere una sesión activa. El documento disponible corresponde a la versión incluida en el despliegue de la app; no se actualiza una copia que ya hayas guardado en tu ordenador. El manual es de uso interno y puede contener capturas corporativas.
+
 ### Por qué tu pantalla puede ser diferente
 
 El administrador asigna permisos a los roles desde Gestión de Cuentas. Tener un rol no implica que todas las vistas estén habilitadas. Los módulos de prueba, como Prospección, pueden no aparecer. En pantallas estrechas, algunas etiquetas se sustituyen por iconos y puede ser necesario desplazar una tabla horizontalmente.
@@ -793,7 +803,7 @@ Los textos largos se recortan con puntos suspensivos para evitar que la tarjeta 
 2. Utiliza los controles de semana para localizar el período adecuado.
 3. Pulsa cualquier zona de la tarjeta; con teclado, sitúa el foco en ella y pulsa Enter o espacio.
 4. Se abre un panel lateral dentro de la app con fecha, empresa, contacto y descripción completa. En correos muestra el contenido registrado y los nombres de adjuntos disponibles; en eventos, también ubicación, mensaje de invitados y conclusiones cuando existen.
-5. Si tienes permiso, utiliza **Editar / Añadir conclusiones** o **Editar datos del correo**. El editor conserva el flujo habitual y sus validaciones.
+5. En los eventos, si tienes permiso, utiliza **Editar / Añadir conclusiones**. Los correos se consultan en solo lectura: no aparece botón de edición ni se permite abrir el editor desde la agenda. El editor de los demás eventos conserva el flujo habitual y sus validaciones.
 6. Cierra el panel con la X, Escape o pulsando fuera para volver a la semana que estabas consultando.
 
 Abrir esta ficha permite consultar el registro del CRM: no lanza Outlook ni descarga adjuntos. Las acciones habituales para abrir el original en Classic o Web siguen disponibles en la ficha del contacto. En los correos no se solicita completar una reunión ni registrar conclusiones pendientes; su dirección se muestra como recibido o enviado cuando está informada.
@@ -892,7 +902,7 @@ Este manual se ha contrastado con el código del proyecto y con consultas de las
 
 ### Revisión 1.1 - 22/10/2026
 
-Esta edición incorpora la búsqueda sin tildes en Contactos, el alcance de cartera acordado para cada rol, las invitaciones de visitas y videollamadas, el mensaje público en la primera columna al crear, las conclusiones a todo el ancho, la ubicación fija sala Teams y la agenda semanal de dos líneas con apertura del detalle.
+Esta edición incorpora el acceso al PDF desde Ayuda y las vistas CRM, la búsqueda sin tildes en Contactos, el alcance de cartera acordado para cada rol, las invitaciones de visitas y videollamadas, el mensaje público en la primera columna al crear, las conclusiones a todo el ancho, la ubicación fija sala Teams y la agenda semanal de dos líneas con apertura del detalle.
 
 **Confirmado por el usuario:** recepción de invitación de visita; apertura de correo Classic/Web y tras moverlo de carpeta; prueba sin borradores; vinculaciones; permisos por rol de Outlook; avisos flotantes; contadores por oferta; adjuntos tras editar; correo preparado desde CRM; segundo usuario; adjuntos desde Classic/Web, enviados/recibidos, más de tres adjuntos y exclusión de firma; borrado del correo únicamente del CRM. El usuario valoró favorablemente la agenda compacta y solicitó incorporarla al manual.
 
@@ -909,4 +919,4 @@ Las capturas reales siguen fechadas el 19/10/2026. Los dos nuevos esquemas son a
 - [Manual de instalación de Outlook](../../manual-instalacion-addin-outlook.md).
 - [Manual general de usuario](../../manual-usuario.md).
 
-**Revisión recomendada:** actualizar esta guía cuando cambien nombres de botones, permisos, clasificación, campos de actividad, flujo de ofertas o configuración de Outlook. Conservar juntas la versión Markdown y su carpeta de imágenes; el PDF incorpora las imágenes y puede leerse por separado.
+**Revisión recomendada:** actualizar esta guía cuando cambien pantallas, permisos o procedimientos. Mantener juntos el Markdown y sus imágenes; el PDF puede leerse por separado.

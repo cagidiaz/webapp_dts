@@ -932,7 +932,12 @@ export const SalesDashboard: React.FC = () => {
         onClose={() => setIsReportModalOpen(false)}
       />
 
-      {agendaActivity && <AgendaActivityDetail activity={agendaActivity} onClose={() => setAgendaActivity(null)} onEdit={() => { setActivityToEdit(agendaActivity); setAgendaActivity(null); setIsEditModalOpen(true); }} />}
+      {agendaActivity && <AgendaActivityDetail activity={agendaActivity} onClose={() => setAgendaActivity(null)} onEdit={() => {
+        if (agendaActivity.type === 'EMAIL' || agendaActivity.can_edit === false) return;
+        setActivityToEdit(agendaActivity);
+        setAgendaActivity(null);
+        setIsEditModalOpen(true);
+      }} />}
 
       {/* Modal de Edición de Evento de la Agenda Semanal */}
       <EditActivityModal

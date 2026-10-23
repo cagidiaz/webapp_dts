@@ -20,6 +20,7 @@ import { VendorsModule } from './modules/vendors/vendors.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { ExchangeSyncModule } from './modules/exchange-sync/exchange-sync.module';
 import { ProspectsModule } from './modules/prospects/prospects.module';
+import { DocumentationModule } from './modules/documentation/documentation.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ProspectsModule } from './modules/prospects/prospects.module';
     PurchaseOrdersModule,
     ExchangeSyncModule,
     ProspectsModule,
+    DocumentationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -677,7 +677,7 @@ En una convocatoria real a Gmail se detectaron `Content-Language: en-US` y `LANG
 
 ### Agenda semanal compacta
 
-Cada tarjeta tiene dos líneas: fecha/hora, icono, tipo y asunto; después empresa/contacto y estado. Los textos largos se recortan. Pulsar la tarjeta abre el detalle en un panel lateral dentro de la app, con el contenido completo y adjuntos registrados si es un correo. Desde allí se accede a la edición según `can_edit`. La consulta no abre el original de Outlook ni descarga archivos.
+Cada tarjeta tiene dos líneas: fecha/hora, icono, tipo y asunto; después empresa/contacto y estado. Los textos largos se recortan. Pulsar la tarjeta abre el detalle en un panel lateral dentro de la app, con el contenido completo y adjuntos registrados si es un correo. Desde allí se accede a editar los eventos según `can_edit`. Los correos son de solo lectura y no ofrecen edición desde la agenda. La consulta no abre el original de Outlook ni descarga archivos.
 
 Los emails se muestran como recibidos/enviados cuando está informado y no reciben el aviso de reunión pendiente de conclusiones. La agenda semanal y el resumen inicial de jornada tienen funciones distintas: los emails históricos se excluyen del resumen inicial y de sus pendientes.
 
@@ -686,3 +686,12 @@ Los emails se muestran como recibidos/enviados cuando está informado y no recib
 La edición **1.1, de 22/10/2026**, del [manual de CRM Clientes y Contactos](manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md) amplía sus 34 capítulos y conserva las capturas reales del 19/10. Incluye seis diagramas, dos de ellos nuevos para agenda y convocatoria, y un [PDF actualizado](../output/pdf/manual-crm-clientes-contactos.pdf).
 
 Los cambios están sincronizados en la carpeta local; no se da por realizado su despliegue. Búsqueda, formularios y agenda tienen compilaciones correctas; las invitaciones y la ubicación tienen pruebas automatizadas. La comprobación de recepción del idioma corregido y de sala Teams en una invitación real sigue pendiente.
+
+
+### Descargar el manual desde la aplicación
+
+En **Ayuda → Manuales de usuario** se muestra el manual CRM con versión, fecha y tamaño. **Ver PDF** lo abre en otra pestaña; **Descargar PDF** guarda una copia para consulta sin conexión. Los botones recuperan el archivo con la sesión de la app. Si se bloquea la ventana, permitir ventanas emergentes o utilizar la descarga.
+
+Clientes y Contactos, incluida la ficha del contacto, muestran el enlace **Manual CRM** a la misma ficha de ayuda. Se necesita un perfil activo con permiso para CRM y al menos una de las vistas Clientes o Contactos. Los permisos se administran desde los roles actuales; no se crea un permiso independiente ni una tabla nueva. La sección de Ayuda puede abrirse con sesión iniciada, pero solo lista los documentos autorizados.
+
+El PDF de uso interno se incluye en cada despliegue. Administración debe publicar el manual actualizado junto con la aplicación; los archivos ya descargados no se sustituyen automáticamente. Entrega local preparada, sin afirmar despliegue ni aceptación real de la descarga en producción.

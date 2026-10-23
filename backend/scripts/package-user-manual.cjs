@@ -1,0 +1,26 @@
+// Bundle the approved manual for authenticated delivery, including backend-only builds.
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const root = path.resolve(__dirname, '../..');
+const target = path.resolve(__dirname, '../assets/user-manuals');
+const filename = 'manual-crm-clientes-contactos.pdf';
+const source = path.join(root, 'output/pdf', filename);
+const markdown = path.join(root, 'docs/manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md');
+fs.mkdirSync(target, { recursive: true });
+if (fs.existsSync(source)) fs.copyFileSync(source, path.join(target, filename));
+if (!fs.existsSync(path.join(target, filename))) throw new Error('Falta el PDF de usuario CRM. Genera el manual antes de compilar.');
+const catalogPath = path.join(target, 'catalog.json');
+const previous = fs.existsSync(catalogPath) ? JSON.parse(fs.readFileSync(catalogPath, 'utf8')) : {};
+const edition = fs.existsSync(markdown) ? fs.readFileSync(markdown, 'utf8').match(/Edición\s+([\d.]+)\s*·\s*(\d+) de (\S+) de (\d{4})/i) : null;
+const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const month = edition ? months.indexOf(edition[3].toLowerCase()) + 1 : 0;
+const version = edition?.[1] || previous.version;
+const updatedAt = edition && month ? `${edition[4]}-${String(month).padStart(2,'0')}-${edition[2].padStart(2,'0')}` : previous.updatedAt;
+if (!version || !updatedAt) throw new Error('Faltan versión y fecha del manual CRM.');
+const pdf = fs.readFileSync(path.join(target, filename));
+if (!pdf.subarray(0, 5).equals(Buffer.from('%PDF-'))) throw new Error('El archivo del manual no es un PDF válido.');
+const sha256 = crypto.createHash('sha256').update(pdf).digest('hex');
+if (!edition && previous.sha256 !== sha256) throw new Error('El PDF empaquetado no coincide con su catálogo.');
+fs.writeFileSync(catalogPath, JSON.stringify({ title: 'Manual CRM — Clientes y Contactos', description: 'Guía paso a paso de clientes, contactos, actividades, agenda y correo de Outlook.', version, updatedAt, sha256 }, null, 2) + '\n');
+console.log(`Manual CRM ${version} (${updatedAt}) empaquetado para acceso autenticado.`);

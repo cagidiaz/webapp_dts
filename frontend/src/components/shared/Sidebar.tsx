@@ -12,7 +12,8 @@ import {
   ChevronUp,
   Landmark, 
   Briefcase,
-  Building2
+  Building2,
+  BookOpen
 } from 'lucide-react';
 
 import logo from '../../assets/Logodts_white.svg';
@@ -91,6 +92,7 @@ const navItems: NavItem[] = [
       { name: 'Ajustes Generales', path: '/settings' },
     ]
   },
+  { name: 'Ayuda', icon: BookOpen, children: [{ name: 'Manuales de usuario', path: '/help/manuals' }] },
 ];
 
 export const Sidebar: React.FC = () => {

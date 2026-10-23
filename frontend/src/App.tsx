@@ -19,6 +19,7 @@ import { CrmPermissionGuard } from './components/CrmPermissionGuard';
 import { VendorsPage, PurchaseOrdersPage } from './pages/purchases';
 import { SettingsPage } from './pages/settings';
 import { BudgetGeneratorPage } from './pages/settings/BudgetGeneratorPage';
+import { ManualsPage } from './pages/help/ManualsPage';
 import { OutlookAddinPage } from './pages/outlook-addin/OutlookAddinPage';
 
 import { supabase } from './api/supabase';
@@ -107,6 +108,7 @@ const App: React.FC = () => {
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="help/manuals" element={<ManualsPage />} />
 
               {/* Modulo Finanzas: ADMIN y DIRECCION */}
               <Route path="finance" element={<RoleGuard allowedRoles={['ADMIN', 'DIRECCION']}><Outlet /></RoleGuard>}>

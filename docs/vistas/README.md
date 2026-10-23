@@ -250,3 +250,8 @@ Para optimizar la ergonomía y evitar el desbordamiento vertical en pantallas de
 ## Revisión CRM del 22/10/2026
 
 Actualizadas las vistas [Clientes](03_crm/crm_clientes.md), [Contactos y Emails](03_crm/crm_contactos_mails.md) y [Dashboard comercial](01_dashboards/dashboard.md): alcance por cartera, búsqueda de Contactos sin tildes, distribución de convocatorias, sala Teams fija, idioma español en Exchange y agenda de dos líneas con panel de detalle. El [manual ilustrado](../manuales/crm-clientes-contactos/manual-crm-clientes-contactos.md) y su [PDF](../../output/pdf/manual-crm-clientes-contactos.pdf) se revisan como edición 1.1. Los capítulos de aceptación diferencian confirmación del usuario, compilación y pruebas, despliegue no acreditado y comprobaciones pendientes.
+
+
+### Ayuda y manuales disponibles en la app
+
+Nueva vista [Ayuda → Manuales de usuario](06_administracion_configuracion/ayuda_manuales_usuario.md), ruta `/help/manuals`, con ficha del manual CRM, versión, fecha, tamaño, visualización y descarga autenticadas. Clientes y Contactos añaden un acceso directo. Utiliza permisos existentes y no requiere SQL. El manual Markdown y PDF incorporan el procedimiento para descargarlo desde la app.

@@ -6,7 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "prebuild": "prisma generate",
+    "prebuild": "node scripts/package-user-manual.cjs && prisma generate",
+    "package:manuals": "node scripts/package-user-manual.cjs",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
