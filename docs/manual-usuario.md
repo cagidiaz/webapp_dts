@@ -695,3 +695,14 @@ En **Ayuda → Manuales de usuario** se muestra el manual CRM con versión, fech
 El acceso se ofrece únicamente en el menú **Ayuda → Manuales de usuario**; se han retirado los enlaces de Clientes, Contactos y de la ficha del contacto. Se necesita un perfil activo con permiso para CRM y al menos una de las vistas Clientes o Contactos. Los permisos se administran desde los roles actuales; no se crea un permiso independiente ni una tabla nueva. La sección de Ayuda puede abrirse con sesión iniciada, pero solo lista los documentos autorizados.
 
 El PDF de uso interno se incluye en cada despliegue. Administración debe publicar el manual actualizado junto con la aplicación; los archivos ya descargados no se sustituyen automáticamente. Entrega local preparada, sin afirmar despliegue ni aceptación real de la descarga en producción.
+
+
+### Ventas → Clientes: mapa y filtro Territorio coordinados - 23/10/2026
+
+1. Pulsa una provincia en el mapa. La etiqueta de zona y el filtro **Territorio** muestran la misma provincia; el ranking lateral y la tabla pasan a esa selección.
+2. También puedes abrir los filtros avanzados y elegir la provincia en **Territorio**. Se activa la misma zona del mapa. Los nombres de provincias se muestran en español; por ejemplo, Vizcaya corresponde también a los datos importados como Bizkaia.
+3. Combina la zona con comercial, tipo de cliente, mercado, modelo de negocio, condiciones de pago o portes. Se mantienen los criterios comunes en mapa, tabla y exportación.
+4. En el ranking, **Top 10** muestra solo los primeros diez de la selección; **Todos** permite revisar el conjunto completo de esa selección.
+5. Para quitar la zona, vuelve a pulsarla, elimina su etiqueta, elige **Todos** en Territorio o restablece los filtros. El mapa y la tabla se desmarcan conjuntamente.
+
+El mapa ya no se limita a los primeros 600 clientes. En una comprobación de solo lectura del 23/10, Vizcaya devuelve los mismos 31 clientes en el mapa y en la tabla de la cartera global utilizada para validar. Con filtros o permisos distintos, el total puede cambiar. Esta entrega está preparada localmente; verificar visualmente ambos recorridos después de desplegar.

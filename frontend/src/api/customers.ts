@@ -159,6 +159,19 @@ export interface Salesperson {
   name: string;
 }
 
+/** Load the whole filtered portfolio; a map must not silently stop at its first page. */
+export const getAllCustomersForMap = async (params: Parameters<typeof getAllCustomers>[0]): Promise<CustomersResponse> => {
+  const take = 1000;
+  const first = await getAllCustomers({ ...params, take, skip: 0, sortBy: 'client_id', sortDir: 'asc' });
+  const rows = [...first.data];
+  while (rows.length < first.total) {
+    const page = await getAllCustomers({ ...params, take, skip: rows.length, sortBy: 'client_id', sortDir: 'asc' });
+    if (!page.data.length) throw new Error('La cartera cambió durante la carga del mapa. Recarga para actualizarla.');
+    rows.push(...page.data);
+  }
+  return { ...first, data: rows };
+};
+
 export const getCustomerSalespersons = async (): Promise<Salesperson[]> => {
   const { data } = await apiClient.get('/customers/salespersons');
   return data;

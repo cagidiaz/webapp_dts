@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { type CustomerDataRow, CLIENT_TYPES } from '../../../api/customers';
 import { formatCurrency } from '../../../api/formatters';
-import { getCustomerGeoLocation, type GeoLocation } from '../../../utils/geoCoordinates';
+import { getCustomerGeoLocation, getTerritoryZone, isInternationalCustomer, type GeoLocation, type GeoZone } from '../../../utils/geoCoordinates';
 import iberiaGeoData from '../../../assets/geo/iberia-provinces.json';
 
 export const COUNTRY_INFO: Record<string, { name: string; flag: string }> = {
@@ -36,11 +36,7 @@ export const COUNTRY_INFO: Record<string, { name: string; flag: string }> = {
   'PL': { name: 'Polonia', flag: '🇵🇱' },
 };
 
-export interface GeoZone {
-  id: string; // 'ES-28', 'PT-lisboa', 'INTL', etc.
-  name: string; // 'Madrid', 'Barcelona', 'Internacional / Exportación', etc.
-  country?: string; // 'ES' | 'PT' | 'INTL'
-}
+export type { GeoZone } from '../../../utils/geoCoordinates';
 
 interface IberianGeoSalesMapProps {
   customers: CustomerDataRow[];
@@ -127,12 +123,14 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
     const outlines: { id: string; pathD: string }[] = [];
 
     for (const f of (iberiaGeoData as any).features) {
+      const zone = getTerritoryZone(f.properties.id) || getTerritoryZone(f.properties.name);
+      const id = zone?.id || f.properties.id;
       if (f.properties.isCanarias) {
         const d = canariasPathGenerator(f);
-        if (d) can.push({ id: f.properties.id, feature: f, pathD: d });
+        if (d) can.push({ id, feature: f, pathD: d });
       } else {
         const d = peninsulaPathGenerator(f);
-        if (d) pen.push({ id: f.properties.id, feature: f, pathD: d });
+        if (d) pen.push({ id, feature: f, pathD: d });
       }
     }
 
@@ -181,7 +179,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
 
     for (const c of customers) {
       const country = (c.country_reg_code || '').trim().toUpperCase();
-      const isForeign = country && country !== 'ES' && country !== 'PT' && country !== 'ESP' && country !== 'PRT' && country !== 'E' && country !== 'P';
+      const isForeign = isInternationalCustomer(c);
       const sales = Number(c.total_sales || 0);
       const debt = Number(c.balance_due_lcy || 0);
       const val = metric === 'sales' ? sales : debt;
@@ -268,12 +266,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
     if (activeZoneId === 'INTL') {
       activeZoneCustomers = mappedIntl;
     } else if (activeZoneId) {
-      activeZoneCustomers = mapped.filter(m => {
-        const matchId = m.geo.id === activeZoneId;
-        const normZoneName = activeZone?.name?.toLowerCase() || '';
-        const matchName = normZoneName ? m.geo.name.toLowerCase() === normZoneName : false;
-        return matchId || matchName;
-      });
+      activeZoneCustomers = mapped.filter(m => m.geo.id === activeZoneId);
     } else {
       activeZoneCustomers = mapped.filter(m => m.value > 0);
     }
@@ -293,7 +286,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
         topRegionPct: Math.round(topRegionPct * 10) / 10,
         provinceCount: provinceSet.size
       },
-      topRanked: reRankedZoneCustomers.slice(0, topLimit),
+      topRanked: topLimit === 0 ? reRankedZoneCustomers : reRankedZoneCustomers.slice(0, topLimit),
       totalZoneCount: reRankedZoneCustomers.length,
       maxProvinceVal: maxProv,
       maxCustomerVal: maxCust,
@@ -314,14 +307,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
   const displayMapCustomers = useMemo(() => {
     let list = mappedCustomers;
     if (activeZoneId) {
-      const normZoneName = activeZone?.name?.toLowerCase() || '';
-      list = list.filter(m => {
-        const matchId = m.geo.id === activeZoneId;
-        const matchName = normZoneName ? m.geo.name.toLowerCase() === normZoneName : false;
-        const matchCity = normZoneName ? Boolean(m.customer.city?.toLowerCase().includes(normZoneName)) : false;
-        const matchCounty = normZoneName ? Boolean(m.customer.county?.toLowerCase().includes(normZoneName)) : false;
-        return matchId || matchName || matchCity || matchCounty;
-      });
+      list = list.filter(m => m.geo.id === activeZoneId);
     } else {
       list = list.filter(m => m.value > 0);
     }
@@ -525,12 +511,12 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
                         }}
                         className={`cursor-pointer transition-all duration-150 ${isSelected ? 'z-20' : 'hover:stroke-dts-secondary hover:stroke-[1.3px] hover:stroke-opacity-100'}`}
                         onClick={() => {
-                          const provName = agg?.name || item.feature?.properties?.name || provId;
+                          const provName = getTerritoryZone(provId)?.name || agg?.name || item.feature?.properties?.name || provId;
                           const country = agg?.country || (provId.startsWith('PT') ? 'PT' : 'ES');
                           handleToggleZone(provId, provName, country);
                         }}
                         onMouseEnter={() => {
-                          const provName = agg?.name || item.feature?.properties?.name || provId;
+                          const provName = getTerritoryZone(provId)?.name || agg?.name || item.feature?.properties?.name || provId;
                           const country = agg?.country || (provId.startsWith('PT') ? 'PT' : 'ES');
                           setHoveredProvince({
                             name: provName,
@@ -581,12 +567,12 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
                         }}
                         className={`cursor-pointer transition-all duration-150 ${isSelected ? 'z-20' : 'hover:stroke-dts-secondary hover:stroke-[1.5px]'}`}
                         onClick={() => {
-                          const provName = agg?.name || item.feature?.properties?.name || provId;
+                          const provName = getTerritoryZone(provId)?.name || agg?.name || item.feature?.properties?.name || provId;
                           const country = agg?.country || (provId.startsWith('PT') ? 'PT' : 'ES');
                           handleToggleZone(provId, provName, country);
                         }}
                         onMouseEnter={() => {
-                          const provName = agg?.name || item.feature?.properties?.name || provId;
+                          const provName = getTerritoryZone(provId)?.name || agg?.name || item.feature?.properties?.name || provId;
                           const country = agg?.country || (provId.startsWith('PT') ? 'PT' : 'ES');
                           setHoveredProvince({
                             name: provName,
@@ -913,7 +899,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
                   <option value={15}>Top 15</option>
                   <option value={25}>Top 25</option>
                   <option value={50}>Top 50</option>
-                  <option value={500}>Todos ({totalZoneCount})</option>
+                  <option value={0}>Todos ({totalZoneCount})</option>
                 </select>
               </div>
 
@@ -1019,7 +1005,7 @@ export const IberianGeoSalesMap: React.FC<IberianGeoSalesMapProps> = React.memo(
             {/* Sumatorio y cuota global */}
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/5 rounded-xl p-3">
               <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Total Facturación Top {topLimit}:</span>
+                <span className="text-gray-500 dark:text-gray-400 font-medium">{topLimit === 0 ? 'Total facturación de la selección:' : `Total Facturación Top ${topLimit}:`}</span>
                 <span className="font-mono font-bold text-gray-900 dark:text-white">
                   {formatCurrency(topRanked.reduce((a, b) => a + b.value, 0), 0)}
                 </span>

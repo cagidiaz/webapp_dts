@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery, useQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
   getAllCustomers, 
+  getAllCustomersForMap,
   getCustomerSalespersons, 
   getCustomerFilterOptions, 
   getCustomerByClientId,
@@ -17,7 +18,8 @@ import {
 } from 'lucide-react';
 import { InfoPopover, KPISkeleton, TableSkeleton, ExportButton } from '../../components/ui';
 import { CustomerDetailDrawer } from './components/CustomerDetailDrawer';
-import { IberianGeoSalesMap, type GeoZone } from './components/IberianGeoSalesMap';
+import { IberianGeoSalesMap } from './components/IberianGeoSalesMap';
+import { getTerritoryZone, normalizeTerritoryOptions } from '../../utils/geoCoordinates';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { exportToXlsx } from '../../utils/exportToXlsx';
@@ -83,7 +85,7 @@ export const CustomersPage: React.FC = () => {
   const [marketFilter, setMarketFilter] = useState<string>('');
   const [businessModelFilter, setBusinessModelFilter] = useState<string>('');
   const [territoryFilter, setTerritoryFilter] = useState<string>('');
-  const [selectedGeoZone, setSelectedGeoZone] = useState<GeoZone | null>(null);
+  const selectedGeoZone = useMemo(() => getTerritoryZone(territoryFilter), [territoryFilter]);
   const [paymentTermsFilter, setPaymentTermsFilter] = useState<string>('');
   const [shipmentMethodFilter, setShipmentMethodFilter] = useState<string>('');
 
@@ -172,10 +174,23 @@ export const CustomersPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // Common non-geographic filters for table, map portfolio and export.
+  const customerFilters = useMemo(() => ({
+    search: debouncedSearch,
+    salesperson: salespersonFilter,
+    clientType: clientTypeFilter || undefined,
+    marketSegment: marketFilter || undefined,
+    businessModel: businessModelFilter || undefined,
+    territory: selectedGeoZone?.id || territoryFilter || undefined,
+    paymentTerms: paymentTermsFilter || undefined,
+    shipmentMethod: shipmentMethodFilter || undefined,
+  }), [debouncedSearch, salespersonFilter, clientTypeFilter, marketFilter, businessModelFilter, territoryFilter, selectedGeoZone, paymentTermsFilter, shipmentMethodFilter]);
+
   // Query principal de clientes con infinite scroll y persistencia de datos previos
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isPlaceholderData } = useInfiniteQuery({
     queryKey: [
       'customers', 
+      profile?.id,
       debouncedSearch, 
       salespersonFilter, 
       clientTypeFilter,
@@ -191,14 +206,7 @@ export const CustomersPage: React.FC = () => {
     queryFn: ({ pageParam = 0 }) => getAllCustomers({ 
       take: pageSize, 
       skip: pageParam as number, 
-      search: debouncedSearch,
-      salesperson: salespersonFilter, 
-      clientType: clientTypeFilter || undefined, 
-      marketSegment: marketFilter || undefined,
-      businessModel: businessModelFilter || undefined,
-      territory: selectedGeoZone ? (selectedGeoZone.id === 'INTL' ? 'INTL' : selectedGeoZone.name) : (territoryFilter || undefined),
-      paymentTerms: paymentTermsFilter || undefined,
-      shipmentMethod: shipmentMethodFilter || undefined,
+      ...customerFilters,
       sortBy, 
       sortDir
     }),
@@ -212,36 +220,34 @@ export const CustomersPage: React.FC = () => {
 
   // Opciones únicas de filtros
   const { data: salespersons = [] } = useQuery({ 
-    queryKey: ['customerSalespersons'], 
+    queryKey: ['customerSalespersons', profile?.id],
     queryFn: getCustomerSalespersons 
   });
 
   const { data: filterOptions } = useQuery({
-    queryKey: ['customerFilterOptions'],
+    queryKey: ['customerFilterOptions', profile?.id],
     queryFn: getCustomerFilterOptions,
     staleTime: 1000 * 60 * 10
   });
+  const territoryOptions = useMemo(() => normalizeTerritoryOptions(filterOptions?.territories || [], territoryFilter), [filterOptions?.territories, territoryFilter]);
 
   // Query optimizada para el mapa geográfico (mantiene en memoria la cartera completa para conmutación instantánea entre provincias)
-  const { data: mapData, isLoading: isMapLoading } = useQuery({
+  const { data: mapData, isLoading: isMapLoading, isPlaceholderData: isMapPlaceholderData } = useQuery({
     queryKey: [
       'customersGeoMap', 
+      profile?.id,
       debouncedSearch, 
       salespersonFilter, 
       clientTypeFilter, 
       marketFilter, 
       businessModelFilter,
-      territoryFilter
+      selectedGeoZone ? '' : territoryFilter,
+      paymentTermsFilter,
+      shipmentMethodFilter
     ],
-    queryFn: () => getAllCustomers({
-      take: 600,
-      skip: 0,
-      search: debouncedSearch,
-      salesperson: salespersonFilter,
-      clientType: clientTypeFilter || undefined,
-      marketSegment: marketFilter || undefined,
-      businessModel: businessModelFilter || undefined,
-      territory: territoryFilter || undefined,
+    queryFn: () => getAllCustomersForMap({
+      ...customerFilters,
+      territory: selectedGeoZone ? undefined : customerFilters.territory,
       sortBy: 'total_sales',
       sortDir: 'desc'
     }),
@@ -283,11 +289,12 @@ export const CustomersPage: React.FC = () => {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const { customers, totalCustomers, globalDebt, globalSales, newCustomersCount } = useMemo(() => {
-    const allItems = (data?.pages.flatMap(page => page.data) || []).filter(
+    const currentData = isPlaceholderData ? undefined : data;
+    const allItems = (currentData?.pages.flatMap(page => page.data) || []).filter(
       c => c.client_id !== '9999999' && c.client_id !== '99999999' && !c.client_id?.startsWith('999999')
     );
-    const totalCount = data?.pages[0]?.total || 0;
-    const summary = data?.pages[0]?.summary || { totalDebt: 0, totalSales: 0, newCustomersCount: 0 };
+    const totalCount = currentData?.pages[0]?.total || 0;
+    const summary = currentData?.pages[0]?.summary || { totalDebt: 0, totalSales: 0, newCustomersCount: 0 };
     return { 
       customers: allItems, 
       totalCustomers: totalCount, 
@@ -295,7 +302,7 @@ export const CustomersPage: React.FC = () => {
       globalSales: summary.totalSales,
       newCustomersCount: summary.newCustomersCount
     };
-  }, [data]);
+  }, [data, isPlaceholderData]);
 
   const handleSort = useCallback((field: string) => {
     setSortBy(prevField => {
@@ -371,7 +378,6 @@ export const CustomersPage: React.FC = () => {
     setMarketFilter('');
     setBusinessModelFilter('');
     setTerritoryFilter('');
-    setSelectedGeoZone(null);
     setPaymentTermsFilter('');
     setShipmentMethodFilter('');
   };
@@ -380,14 +386,7 @@ export const CustomersPage: React.FC = () => {
     const result = await getAllCustomers({
       take: 99999,
       skip: 0,
-      search: debouncedSearch,
-      salesperson: salespersonFilter,
-      clientType: clientTypeFilter || undefined,
-      marketSegment: marketFilter || undefined,
-      businessModel: businessModelFilter || undefined,
-      territory: selectedGeoZone ? selectedGeoZone.name : (territoryFilter || undefined),
-      paymentTerms: paymentTermsFilter || undefined,
-      shipmentMethod: shipmentMethodFilter || undefined,
+      ...customerFilters,
       sortBy,
       sortDir,
     });
@@ -445,7 +444,7 @@ export const CustomersPage: React.FC = () => {
           value={totalCustomers} 
           type="number" 
           icon={Users} 
-          isLoading={isLoading} 
+          isLoading={isLoading || isPlaceholderData}
           infoProps={{
             description: "Número total de clientes que coinciden con los filtros seleccionados."
           }}
@@ -455,7 +454,7 @@ export const CustomersPage: React.FC = () => {
           value={newCustomersCount} 
           type="number" 
           icon={UserPlus} 
-          isLoading={isLoading} 
+          isLoading={isLoading || isPlaceholderData}
           status="success"
           infoProps={{
             description: "Clientes dados de alta en el ejercicio actual."
@@ -467,7 +466,7 @@ export const CustomersPage: React.FC = () => {
           type="currency" 
           icon={Euro} 
           status={globalDebt > 0 ? 'danger' : 'success'} 
-          isLoading={isLoading} 
+          isLoading={isLoading || isPlaceholderData}
           infoProps={{
             description: "Sumatorio del saldo pendiente de cobro de los clientes filtrados.",
             formulas: "Saldo LCY"
@@ -478,7 +477,7 @@ export const CustomersPage: React.FC = () => {
           value={globalSales} 
           type="currency" 
           icon={TrendingUp} 
-          isLoading={isLoading} 
+          isLoading={isLoading || isPlaceholderData}
           infoProps={{
             description: "Total de facturación acumulada del año en curso para los clientes seleccionados."
           }}
@@ -489,9 +488,9 @@ export const CustomersPage: React.FC = () => {
       <IberianGeoSalesMap 
         customers={mapCustomers} 
         onSelectCustomer={handleRowClick} 
-        isLoading={isMapLoading} 
+        isLoading={isMapLoading || isMapPlaceholderData}
         selectedZone={selectedGeoZone}
-        onSelectZone={setSelectedGeoZone}
+        onSelectZone={zone => setTerritoryFilter(zone?.id || '')}
       />
 
       {/* CONTENEDOR PRINCIPAL DE TABLA Y FILTROS */}
@@ -529,7 +528,7 @@ export const CustomersPage: React.FC = () => {
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-dts-secondary/15 text-dts-secondary border border-dts-secondary/30 shadow-xs shrink-0 animate-in fade-in zoom-in-95 duration-150">
                   <span>{selectedGeoZone.id === 'INTL' ? '🌍' : '🗺️'} {selectedGeoZone.name}</span>
                   <button 
-                    onClick={() => setSelectedGeoZone(null)} 
+                    onClick={() => setTerritoryFilter('')}
                     className="hover:text-red-500 ml-0.5 font-black transition-colors cursor-pointer"
                     title="Quitar filtro de zona geográfica"
                   >
@@ -744,8 +743,8 @@ export const CustomersPage: React.FC = () => {
                   className="text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark rounded-lg px-2 py-1 outline-none font-semibold text-gray-700 dark:text-gray-200"
                 >
                   <option value="">Todos</option>
-                  {filterOptions?.territories?.map(t => (
-                    <option key={t} value={t}>{t}</option>
+                  {territoryOptions.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
               </div>
@@ -1006,7 +1005,7 @@ export const CustomersPage: React.FC = () => {
               {customers.length === 0 ? (
                 <tr>
                   <td colSpan={15} className="py-16 text-center text-gray-400 italic text-sm">
-                    No se encontraron clientes bajo los filtros activos.
+                    {isPlaceholderData ? 'Actualizando clientes…' : 'No se encontraron clientes bajo los filtros activos.'}
                   </td>
                 </tr>
               ) : (

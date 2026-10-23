@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveCrmDataScope } from '../../common/crm-data-scope';
+import { getCustomerGeographicId, resolveGeographicTerritory } from '../../common/customer-geography';
 
 @Injectable()
 export class CustomersService {
@@ -109,8 +110,10 @@ export class CustomersService {
       and.push({ business_model: businessModel });
     }
 
-    // Filtro por territorio / provincia / país / código postal / internacional
-    if (territory) {
+    // Provinces use a stable ID, never a translated display label. Legacy free-text
+    // territories/countries retain their original search behavior.
+    const geographicId = territory ? resolveGeographicTerritory(territory) : null;
+    if (territory && !geographicId) {
       const cleanTerritory = territory.trim();
       const isIntlFilter = cleanTerritory === 'INTL' || 
                            cleanTerritory.toUpperCase().includes('INTERNACIONAL') || 
@@ -170,6 +173,15 @@ export class CustomersService {
     orderBy[orderByField] = sortDir || 'desc';
 
     try {
+      if (geographicId) {
+        const candidates = await this.prisma.customers.findMany({
+          where,
+          select: { client_id: true, county: true, city: true, post_code: true, country_reg_code: true },
+        });
+        // Apply the map's exact classification after all ordinary filters and
+        // authenticated seller scope, before pagination, totals and KPIs.
+        where.AND.push({ client_id: { in: candidates.filter(customer => getCustomerGeographicId(customer) === geographicId).map(customer => customer.client_id) } });
+      }
       // Obtener el inicio del año actual para el KPI de clientes nuevos
       const currentYearStart = new Date(new Date().getFullYear(), 0, 1);
 

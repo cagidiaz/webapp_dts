@@ -255,3 +255,8 @@ Actualizadas las vistas [Clientes](03_crm/crm_clientes.md), [Contactos y Emails]
 ### Ayuda y manuales disponibles en la app
 
 Nueva vista [Ayuda → Manuales de usuario](06_administracion_configuracion/ayuda_manuales_usuario.md), ruta `/help/manuals`, con ficha del manual CRM, versión, fecha, tamaño, visualización y descarga autenticadas. El acceso se mantiene únicamente en el menú Ayuda, sin enlaces adicionales en las vistas CRM. Utiliza permisos existentes y no requiere SQL. El manual Markdown y PDF incorporan el procedimiento para descargarlo desde la app.
+
+
+### Ventas - Clientes: identidad geográfica y sincronización (23/10/2026)
+
+Actualizada [Cartera de Clientes](02_ventas/ventas_clientes.md): nombres españoles de provincias, alias por identificador estable, un único estado para mapa/Territorio, mismos filtros en ranking/tabla/Excel y cartera completa en el mapa. Se documentan pruebas de clasificación, paginación y coincidencia real de Vizcaya en solo lectura. Sin SQL ni modificaciones de las tablas sincronizadas desde BC.

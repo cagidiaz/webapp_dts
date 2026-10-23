@@ -30,30 +30,30 @@ export const SPANISH_PROVINCES: Record<string, Omit<GeoLocation, 'id' | 'code' |
   '12': { name: 'Castellón', region: 'C. Valenciana', country: 'ES', lat: 39.98, lng: -0.05 },
   '13': { name: 'Ciudad Real', region: 'Castilla-La Mancha', country: 'ES', lat: 38.98, lng: -3.92 },
   '14': { name: 'Córdoba', region: 'Andalucía', country: 'ES', lat: 37.88, lng: -4.77 },
-  '15': { name: 'A Coruña', region: 'Galicia', country: 'ES', lat: 43.37, lng: -8.41 },
+  '15': { name: 'La Coruña', region: 'Galicia', country: 'ES', lat: 43.37, lng: -8.41 },
   '16': { name: 'Cuenca', region: 'Castilla-La Mancha', country: 'ES', lat: 40.07, lng: -2.13 },
-  '17': { name: 'Girona', region: 'Cataluña', country: 'ES', lat: 41.98, lng: 2.82 },
+  '17': { name: 'Gerona', region: 'Cataluña', country: 'ES', lat: 41.98, lng: 2.82 },
   '18': { name: 'Granada', region: 'Andalucía', country: 'ES', lat: 37.17, lng: -3.60 },
   '19': { name: 'Guadalajara', region: 'Castilla-La Mancha', country: 'ES', lat: 40.63, lng: -3.16 },
-  '20': { name: 'Gipuzkoa', region: 'País Vasco', country: 'ES', lat: 43.31, lng: -1.98 },
+  '20': { name: 'Guipúzcoa', region: 'País Vasco', country: 'ES', lat: 43.31, lng: -1.98 },
   '21': { name: 'Huelva', region: 'Andalucía', country: 'ES', lat: 37.26, lng: -6.94 },
   '22': { name: 'Huesca', region: 'Aragón', country: 'ES', lat: 42.13, lng: -0.40 },
   '23': { name: 'Jaén', region: 'Andalucía', country: 'ES', lat: 37.77, lng: -3.79 },
   '24': { name: 'León', region: 'Castilla y León', country: 'ES', lat: 42.59, lng: -5.57 },
-  '25': { name: 'Lleida', region: 'Cataluña', country: 'ES', lat: 41.61, lng: 0.62 },
+  '25': { name: 'Lérida', region: 'Cataluña', country: 'ES', lat: 41.61, lng: 0.62 },
   '26': { name: 'La Rioja', region: 'La Rioja', country: 'ES', lat: 42.46, lng: -2.44 },
   '27': { name: 'Lugo', region: 'Galicia', country: 'ES', lat: 43.01, lng: -7.55 },
   '28': { name: 'Madrid', region: 'C. de Madrid', country: 'ES', lat: 40.41, lng: -3.70 },
   '29': { name: 'Málaga', region: 'Andalucía', country: 'ES', lat: 36.72, lng: -4.42 },
   '30': { name: 'Murcia', region: 'R. de Murcia', country: 'ES', lat: 37.99, lng: -1.13 },
   '31': { name: 'Navarra', region: 'C.F. de Navarra', country: 'ES', lat: 42.81, lng: -1.64 },
-  '32': { name: 'Ourense', region: 'Galicia', country: 'ES', lat: 42.33, lng: -7.86 },
+  '32': { name: 'Orense', region: 'Galicia', country: 'ES', lat: 42.33, lng: -7.86 },
   '33': { name: 'Asturias', region: 'P. de Asturias', country: 'ES', lat: 43.36, lng: -5.85 },
   '34': { name: 'Palencia', region: 'Castilla y León', country: 'ES', lat: 42.01, lng: -4.53 },
   '35': { name: 'Las Palmas', region: 'Canarias', country: 'ES', lat: 28.12, lng: -15.43 },
   '36': { name: 'Pontevedra', region: 'Galicia', country: 'ES', lat: 42.43, lng: -8.64 },
   '37': { name: 'Salamanca', region: 'Castilla y León', country: 'ES', lat: 40.97, lng: -5.66 },
-  '38': { name: 'S.C. Tenerife', region: 'Canarias', country: 'ES', lat: 28.46, lng: -16.25 },
+  '38': { name: 'Santa Cruz de Tenerife', region: 'Canarias', country: 'ES', lat: 28.46, lng: -16.25 },
   '39': { name: 'Cantabria', region: 'Cantabria', country: 'ES', lat: 43.46, lng: -3.80 },
   '40': { name: 'Segovia', region: 'Castilla y León', country: 'ES', lat: 40.94, lng: -4.11 },
   '41': { name: 'Sevilla', region: 'Andalucía', country: 'ES', lat: 37.38, lng: -5.98 },
@@ -63,7 +63,7 @@ export const SPANISH_PROVINCES: Record<string, Omit<GeoLocation, 'id' | 'code' |
   '45': { name: 'Toledo', region: 'Castilla-La Mancha', country: 'ES', lat: 39.86, lng: -4.02 },
   '46': { name: 'Valencia', region: 'C. Valenciana', country: 'ES', lat: 39.46, lng: -0.37 },
   '47': { name: 'Valladolid', region: 'Castilla y León', country: 'ES', lat: 41.65, lng: -4.72 },
-  '48': { name: 'Bizkaia', region: 'País Vasco', country: 'ES', lat: 43.26, lng: -2.93 },
+  '48': { name: 'Vizcaya', region: 'País Vasco', country: 'ES', lat: 43.26, lng: -2.93 },
   '49': { name: 'Zamora', region: 'Castilla y León', country: 'ES', lat: 41.50, lng: -5.74 },
   '50': { name: 'Zaragoza', region: 'Aragón', country: 'ES', lat: 41.65, lng: -0.88 },
   '51': { name: 'Ceuta', region: 'Ceuta', country: 'ES', lat: 35.88, lng: -5.31 },
@@ -92,6 +92,45 @@ export const PORTUGAL_DISTRICTS: Record<string, Omit<GeoLocation, 'id' | 'code' 
   'portalegre': { name: 'Portalegre', region: 'Alentejo', country: 'PT', lat: 39.29, lng: -7.43 },
 };
 
+export const SPANISH_PROVINCE_ALIASES: Record<string, string[]> = {
+  '01': ['Araba', 'Araba/Álava'], '03': ['Alacant', 'Alacant/Alicante'], '07': ['Illes Balears', 'Islas Baleares'],
+  '12': ['Castelló', 'Castelló/Castellón'], '15': ['A Coruña', 'Coruña'], '17': ['Girona'],
+  '20': ['Gipuzkoa', 'Gipuzkoa/Guipúzcoa'], '25': ['Lleida'], '32': ['Ourense'],
+  '38': ['S.C. Tenerife', 'Santa Cruz De Tenerife'], '46': ['València', 'València/Valencia'],
+  '48': ['Bizkaia', 'Bizkaia/Vizcaya', 'Biscaia', 'Biscaya', 'Viscaya'],
+};
+
+export interface GeoZone { id: string; name: string; country?: string; }
+
+export function isInternationalCustomer(customer: { country_reg_code?: string | null }): boolean {
+  const country = normalizeString(customer.country_reg_code || '');
+  return !!country && !['es', 'esp', 'spain', 'espana', 'e', 'pt', 'prt', 'portugal', 'p'].includes(country);
+}
+
+/** Stable identity for map paths, dropdown values and API requests; names are display-only. */
+export function getTerritoryZone(value: string): GeoZone | null {
+  const normalized = normalizeString(value);
+  if (normalized === 'intl' || normalized.includes('internacional') || normalized.includes('export')) return { id: 'INTL', name: 'Internacional / Exportación', country: 'INTL' };
+  for (const [code, province] of Object.entries(SPANISH_PROVINCES)) {
+    if (normalized === `es-${code}` || [province.name, ...(SPANISH_PROVINCE_ALIASES[code] || [])].some(name => normalizeString(name) === normalized)) return { id: `ES-${code}`, name: province.name, country: 'ES' };
+  }
+  for (const [code, district] of Object.entries(PORTUGAL_DISTRICTS)) {
+    const id = `PT-${code.replace(/\s+/g, '-')}`;
+    if (normalized === id.toLowerCase() || normalized === normalizeString(district.name) || normalized === code) return { id, name: district.name, country: 'PT' };
+  }
+  return null;
+}
+
+export function normalizeTerritoryOptions(values: string[], selected?: string) {
+  const options = new Map<string, { value: string; label: string }>();
+  for (const value of [...values, ...(selected ? [selected] : [])]) {
+    const zone = getTerritoryZone(value);
+    const id = zone?.id || value;
+    if (id.trim()) options.set(id, { value: id, label: zone?.name || value });
+  }
+  return [...options.values()].sort((a, b) => a.label.localeCompare(b.label, 'es'));
+}
+
 function normalizeString(str: string): string {
   return str
     .toLowerCase()
@@ -103,7 +142,7 @@ function normalizeString(str: string): string {
 function buildGeoLocation(code: string, data: Omit<GeoLocation, 'id' | 'code' | 'isCanarias'>): GeoLocation {
   const isCanarias = data.country === 'ES' && (code === '35' || code === '38');
   return {
-    id: `${data.country}-${code}`,
+    id: `${data.country}-${code.replace(/\s+/g, '-')}`,
     code,
     name: data.name,
     region: data.region,
@@ -129,8 +168,8 @@ export function getCustomerGeoLocation(customer: {
   const city = (customer.city || '').trim();
   const county = (customer.county || '').trim();
 
-  const isSpain = rawCountry === 'ES' || rawCountry === 'ESP' || rawCountry === 'SPAIN' || rawCountry === 'ESPAÑA' || rawCountry === 'E';
-  const isPortugal = rawCountry === 'PT' || rawCountry === 'PRT' || rawCountry === 'PORTUGAL' || rawCountry === 'P';
+  const isSpain = ['es', 'esp', 'spain', 'espana', 'e'].includes(normalizeString(rawCountry));
+  const isPortugal = ['pt', 'prt', 'portugal', 'p'].includes(normalizeString(rawCountry));
   const isUnknownCountry = !rawCountry;
 
   // Si tiene un código de país explícito y NO es España ni Portugal -> ES CLIENTE INTERNACIONAL/EXTRANJERO
@@ -156,8 +195,8 @@ export function getCustomerGeoLocation(customer: {
     const searchTarget = normalizeString(`${city} ${county}`);
     if (searchTarget) {
       for (const [code, prov] of Object.entries(SPANISH_PROVINCES)) {
-        const normProv = normalizeString(prov.name);
-        if (searchTarget.includes(normProv)) {
+        const aliases = [prov.name, ...(SPANISH_PROVINCE_ALIASES[code] || [])];
+        if (aliases.some(name => searchTarget.includes(normalizeString(name)))) {
           return buildGeoLocation(code, prov);
         }
       }
