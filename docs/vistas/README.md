@@ -254,4 +254,4 @@ Actualizadas las vistas [Clientes](03_crm/crm_clientes.md), [Contactos y Emails]
 
 ### Ayuda y manuales disponibles en la app
 
-Nueva vista [Ayuda → Manuales de usuario](06_administracion_configuracion/ayuda_manuales_usuario.md), ruta `/help/manuals`, con ficha del manual CRM, versión, fecha, tamaño, visualización y descarga autenticadas. Clientes y Contactos añaden un acceso directo. Utiliza permisos existentes y no requiere SQL. El manual Markdown y PDF incorporan el procedimiento para descargarlo desde la app.
+Nueva vista [Ayuda → Manuales de usuario](06_administracion_configuracion/ayuda_manuales_usuario.md), ruta `/help/manuals`, con ficha del manual CRM, versión, fecha, tamaño, visualización y descarga autenticadas. El acceso se mantiene únicamente en el menú Ayuda, sin enlaces adicionales en las vistas CRM. Utiliza permisos existentes y no requiere SQL. El manual Markdown y PDF incorporan el procedimiento para descargarlo desde la app.

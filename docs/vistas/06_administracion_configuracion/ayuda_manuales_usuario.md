@@ -1,7 +1,7 @@
 # Vista: Ayuda - Manuales de usuario
 
 > Ruta: `/help/manuals` · Entrega local del 22/10/2026.
-> Frontend: `ManualsPage.tsx`, `userManuals.ts`, `Sidebar.tsx` y `CrmPage.tsx`.
+> Frontend: `ManualsPage.tsx`, `userManuals.ts`, `Sidebar.tsx`.
 > Backend: `DocumentationModule`, `DocumentationController` y `DocumentationService`.
 
 ## 1. Propósito
@@ -11,9 +11,8 @@ Centralizar las guías de uso y permitir consultar el manual CRM o descargarlo p
 ## 2. Accesos y uso
 
 1. Menú lateral **Ayuda → Manuales de usuario**.
-2. Alternativamente, enlace **Manual CRM** en Clientes, Contactos o la ficha del contacto. Dirige a la misma vista y documento.
-3. **Ver PDF** abre una pestaña durante el clic y recupera el documento con JWT antes de mostrarlo. Si el navegador bloquea la ventana, se informa al usuario.
-4. **Descargar PDF** recupera el mismo documento y guarda un archivo cuyo nombre incluye su versión.
+2. **Ver PDF** abre una pestaña durante el clic y recupera el documento con JWT antes de mostrarlo. Si el navegador bloquea la ventana, se informa al usuario.
+3. **Descargar PDF** recupera el mismo documento y guarda un archivo cuyo nombre incluye su versión.
 
 La consulta del catálogo tiene estados de carga, lista vacía, error y reintento. Los botones se deshabilitan mientras se solicita el archivo. Los errores de permiso o red se muestran dentro de la vista. No se envían tokens en la URL del PDF.
 

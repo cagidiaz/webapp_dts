@@ -177,4 +177,4 @@ El manual ilustrado se actualiza a edición 1.1 (22/10/2026), con procedimientos
 
 ### Acceso al manual dentro de la app - 22/10/2026
 
-Clientes, Contactos y la ficha del contacto muestran **Manual CRM**, que abre `/help/manuals#crm-clientes-contactos`. La sección **Ayuda → Manuales de usuario** ofrece el mismo PDF con versión, fecha y tamaño, y acciones de visualización y descarga. Requiere sesión activa y permisos de CRM y Clientes o Contactos; el backend los vuelve a comprobar al entregar el archivo. Véase [Ayuda y manuales](../06_administracion_configuracion/ayuda_manuales_usuario.md).
+El acceso al manual se mantiene únicamente en **Ayuda → Manuales de usuario** (`/help/manuals`); no se muestran enlaces adicionales en Clientes, Contactos ni en la ficha del contacto. La sección **Ayuda → Manuales de usuario** ofrece el mismo PDF con versión, fecha y tamaño, y acciones de visualización y descarga. Requiere sesión activa y permisos de CRM y Clientes o Contactos; el backend los vuelve a comprobar al entregar el archivo. Véase [Ayuda y manuales](../06_administracion_configuracion/ayuda_manuales_usuario.md).

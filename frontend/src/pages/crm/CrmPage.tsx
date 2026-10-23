@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Briefcase } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Briefcase } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { CrmCustomers } from './components/CrmCustomers';
 import { CrmOpportunities } from './components/CrmOpportunities';
@@ -82,13 +82,11 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
   };
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const manualLink = mode !== 'pipeline' && <div className="flex justify-end"><Link to="/help/manuals#crm-clientes-contactos" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-dts-secondary hover:underline"><BookOpen size={14} />Manual CRM</Link></div>;
 
   // If a contact is selected, render the contact detail view
   if (selectedContactId) {
     return (
       <div className="space-y-4 animate-in fade-in duration-300">
-        {manualLink}
         <ExchangeStatusBanner />
         <CrmContactDetail 
           contactId={selectedContactId} 
@@ -104,7 +102,6 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
-      {manualLink}
       <ExchangeStatusBanner />
 
       {/* Conditionally render mode */}

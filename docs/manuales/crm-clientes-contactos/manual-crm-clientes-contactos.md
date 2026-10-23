@@ -83,7 +83,7 @@ Las altas de clientes y las ofertas se realizan en Business Central y se importa
 
 ### Abrir o descargar este manual desde la app
 
-1. Abre **Ayuda** en el menú lateral y selecciona **Manuales de usuario**. También puedes pulsar **Manual CRM** en la parte superior de Clientes, Contactos o la ficha de una persona.
+1. Abre **Ayuda** en el menú lateral y selecciona **Manuales de usuario**.
 2. Localiza **Manual CRM — Clientes y Contactos**. La ficha indica versión, fecha y tamaño del PDF.
 3. Pulsa **Ver PDF** para abrirlo en otra pestaña del navegador. Si el navegador bloquea la ventana, permite las ventanas emergentes de la app o utiliza Descargar PDF.
 4. Pulsa **Descargar PDF** para guardar una copia y leerla sin conexión. Revisa su versión si ya tenías otra copia guardada.
@@ -902,7 +902,7 @@ Este manual se ha contrastado con el código del proyecto y con consultas de las
 
 ### Revisión 1.1 - 22/10/2026
 
-Esta edición incorpora el acceso al PDF desde Ayuda y las vistas CRM, la búsqueda sin tildes en Contactos, el alcance de cartera acordado para cada rol, las invitaciones de visitas y videollamadas, el mensaje público en la primera columna al crear, las conclusiones a todo el ancho, la ubicación fija sala Teams y la agenda semanal de dos líneas con apertura del detalle.
+Esta edición incorpora el acceso al PDF desde el menú Ayuda, la búsqueda sin tildes en Contactos, el alcance de cartera acordado para cada rol, las invitaciones de visitas y videollamadas, el mensaje público en la primera columna al crear, las conclusiones a todo el ancho, la ubicación fija sala Teams y la agenda semanal de dos líneas con apertura del detalle.
 
 **Confirmado por el usuario:** recepción de invitación de visita; apertura de correo Classic/Web y tras moverlo de carpeta; prueba sin borradores; vinculaciones; permisos por rol de Outlook; avisos flotantes; contadores por oferta; adjuntos tras editar; correo preparado desde CRM; segundo usuario; adjuntos desde Classic/Web, enviados/recibidos, más de tres adjuntos y exclusión de firma; borrado del correo únicamente del CRM. El usuario valoró favorablemente la agenda compacta y solicitó incorporarla al manual.
 
