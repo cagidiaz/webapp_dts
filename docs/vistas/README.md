@@ -264,3 +264,11 @@ Actualizada [Cartera de Clientes](02_ventas/ventas_clientes.md): nombres españo
 ### Ventas - Clientes: totales y simplificación (23/10/2026)
 
 Eliminadas las cuatro tarjetas KPI superiores. La tabla incorpora un pie fijo con clientes filtrados, ventas por año y acumulado de toda la selección, independientemente de las páginas cargadas y del Top del ranking. Actualizados el [manual general](../manual-usuario.md), las [definiciones de cálculo](../kpi-definitions.md), la [documentación técnica](../Calculos_Tecnicos.md) y el [registro de entrega](../actualizaciones/2026-10-23-ventas-clientes-filtros-totales.md). Pruebas y compilación correctas; aceptación visual y despliegue pendientes.
+
+### Ficha compartida: segmentos y potencialidad anual (26/10/2026)
+
+[Entrega de segmentos](../actualizaciones/2026-10-26-segmentos-potencialidad-clientes.md): doce opciones con búsqueda, varias filas por cliente, importes anuales EUR, total, control de duplicados y Facturación reservada. Tabla local independiente y permisos de cartera; SQL pendiente de ejecución. Actualizadas fichas de CRM/Ventas y manual general Markdown. Pruebas y compilaciones correctas; persistencia real y aceptación visual pendientes.
+
+### Manual descargable actualizado - 26/10/2026
+
+El PDF de **Ayuda → Manuales de usuario** se actualiza a **edición 1.2, 26/10/2026**, con 35 capítulos y 43 páginas. Incluye contactos compactos con navegación directa, segmentos y potencialidad anual, referencia por `client_id` estable de BC y una sección diferenciada de Ventas-Clientes (mapa, filtros y pie de totales). Se conserva el estado pendiente de instalación/pruebas reales de segmentos. Markdown, PDF fuente y PDF/catálogo de `backend/assets/user-manuals` se mantienen coordinados y revisados visualmente. La copia local está preparada; la de producción requiere publicar estos archivos junto con la app.

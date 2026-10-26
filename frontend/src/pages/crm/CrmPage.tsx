@@ -58,6 +58,8 @@ export const CrmPage: React.FC<CrmPageProps> = ({ mode }) => {
   useEffect(() => {
     if (prevModeRef.current !== mode) {
       prevModeRef.current = mode;
+      // A customer link explicitly targets this contact in the Contacts view.
+      if (mode === 'contacts' && searchParams.get('contactId')) return;
       if (searchParams.get('contactId')) {
         const newParams = new URLSearchParams(searchParams);
         newParams.delete('contactId');

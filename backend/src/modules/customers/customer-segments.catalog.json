@@ -1,0 +1,14 @@
+[
+  { "value": "dtstemp-atex", "label": "dTSTemp → ATEX" },
+  { "value": "dtstemp-oem", "label": "dTSTemp → OEM" },
+  { "value": "dtstemp-process", "label": "dTSTemp → Process" },
+  { "value": "dtstemp-varios", "label": "dTSTemp → Varios" },
+  { "value": "dtspres-oem", "label": "dTSPres → OEM" },
+  { "value": "dtspres-process", "label": "dTSPres → Process" },
+  { "value": "dtsflow-basics", "label": "dTSFlow → Basics" },
+  { "value": "dtsflow-process", "label": "dTSFlow → Process" },
+  { "value": "dtsflow-tronic", "label": "dTSFlow → Tronic" },
+  { "value": "dtscal", "label": "dTSCal" },
+  { "value": "dtslevel", "label": "dTSLevel" },
+  { "value": "dtssens", "label": "dTSSens" }
+]

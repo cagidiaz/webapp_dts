@@ -1,9 +1,9 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.1 · 22 de octubre de 2026 · Uso interno
+Edición 1.2 · 26 de octubre de 2026 · Uso interno
 
-Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
+Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
 **Cómo utilizarlo:** empieza por los capítulos 1 a 3. Después consulta el procedimiento que necesites. Los apartados de Prospección y seguimiento nuevo de ofertas solo se aplican cuando estén habilitados para tu usuario. Las funciones preparadas localmente y pendientes de desplegar se identifican expresamente.
 
@@ -46,6 +46,7 @@ Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Es
 - [32. Incidencias: resolver lo habitual paso a paso](#32-incidencias-resolver-lo-habitual-paso-a-paso)
 - [33. Glosario y comprobación de aprendizaje](#33-glosario-y-comprobación-de-aprendizaje)
 - [34. Alcance, versión y referencias para mantenimiento](#34-alcance-versión-y-referencias-para-mantenimiento)
+- [35. Referencia: Ventas-Clientes y su mapa](#35-referencia-ventas-clientes-y-su-mapa)
 <!-- indice-fin -->
 
 ## 1. Qué es cada cosa y para qué sirve
@@ -292,6 +293,45 @@ Si aparece **Seguimiento de prospección**, muestra actividades de prospectos ac
 ### Datos maestros
 
 La ficha no sustituye Business Central. Para corregir datos maestros de empresa, solicita la corrección en el ERP. Los controles de clasificación o enriquecimiento que la app muestra son acciones específicas; no habilitan una edición general del cliente.
+
+### Personas de contacto en una sola fila
+
+Cada persona ocupa una fila compacta. Pulsa su nombre para abrir directamente su ficha en **CRM > Contactos**, sin tener que buscarla de nuevo. Si el nombre o cargo no caben, pasa el cursor para consultar el detalle completo. Los iconos de correo, teléfono, móvil y LinkedIn conservan sus acciones independientes; editar LinkedIn no abre la ficha.
+
+### Segmentos y potencialidad: para qué sirve
+
+Esta tabla permite registrar en qué líneas de producto puede comprar una empresa y cuánto se estima venderle al año. Una empresa puede tener varios segmentos, cada uno con su propio importe. Se conserva por el código estable del cliente en Business Central, aunque cambie el identificador técnico del registro.
+
+| Familia | Opciones que puedes elegir |
+| --- | --- |
+| dTSTemp | ATEX, OEM, Process, Varios |
+| dTSPres | OEM, Process |
+| dTSFlow | Basics, Process, Tronic |
+| dTSCal | dTSCal, sin subfamilia |
+| dTSLevel | dTSLevel, sin subfamilia |
+| dTSSens | dTSSens, sin subfamilia |
+
+Las familias que tienen subfamilias no se seleccionan solas. El buscador muestra opciones como **dTSTemp > OEM** y **dTSPres > OEM**, para que no se confundan.
+
+### Procedimiento: añadir y revisar segmentos
+
+1. En la ficha de la empresa, busca **Segmentos y potencialidad**.
+2. Pulsa **Añadir segmento** y busca el nombre de la familia o subfamilia.
+3. Selecciona la opción y escribe la **potencialidad anual en euros**, por ejemplo **12.500,00**.
+4. Pulsa **Guardar**. Repite si la empresa tiene potencial en otros segmentos. No se permite repetir el mismo segmento dentro del cliente.
+5. Comprueba las filas y el **Total estimado**. Solo suma importes completados; si hay filas pendientes, se avisa debajo.
+6. Usa el lápiz para cambiar el importe. Para quitar un segmento, pulsa su papelera y confirma. Para corregir la elección del segmento, quita esa fila y añade la correcta.
+7. Vuelve a abrir la ficha para comprobar que el dato se conserva.
+
+**Vacío no significa cero:** deja la potencialidad vacía si todavía no la conoces. Escribe 0 solo si tu estimación es cero euros. Se aceptan importes positivos o cero con dos decimales como máximo. La columna **Facturación** permanece vacía y no es editable; todavía no compara las ventas reales con la estimación.
+
+**Ejemplo didáctico, no datos reales:** dTSTemp > ATEX con 12.500,00 euros/año y dTSFlow > Process con 7.500,00 euros/año dan un total estimado de 20.000,00 euros/año. Añadir dTSCal sin importe no cambia ese total y deja un segmento pendiente.
+
+### Quién puede cambiar estos datos
+
+El comercial puede editar los segmentos de sus clientes y Admin los de todos los clientes autorizados. Los roles de consulta global no permiten por sí solos editar clientes ajenos. Los accesos de vista se siguen asignando desde Gestión de usuarios. No se habilita una edición general de los datos maestros de BC.
+
+**Instalación pendiente:** si aparece un aviso de tabla no preparada, Administración debe ejecutar el SQL de esta entrega y reiniciar la app. Si se instaló la primera versión que usaba UUID, debe ejecutar la migración a **client_id** conservando datos. El usuario comercial no debe ejecutar SQL. Ante un conflicto por cambios de otra sesión, recarga la ficha antes de volver a editar. La estimación anual es la vigente: aún no se conserva un histórico separado por ejercicios.
 
 ## 11. Contactos: localizar a la persona correcta
 
@@ -910,6 +950,12 @@ Esta edición incorpora el acceso al PDF desde el menú Ayuda, la búsqueda sin 
 
 Las capturas reales siguen fechadas el 19/10/2026. Los dos nuevos esquemas son ayudas explicativas, no capturas nuevas de producción. El manual contiene 34 capítulos; esta revisión amplía los procedimientos existentes.
 
+### Revisión 1.2 - 26/10/2026
+
+Añadidos contactos compactos con navegación directa, tabla de segmentos, potencialidad anual en EUR, ejemplos, permisos y estado pendiente de Facturación. Se documenta la relación por **client_id**, código estable de BC, y la instalación o migración necesaria antes de usar la nueva tabla. Incluye una referencia separada a los filtros coordinados y totales de Ventas-Clientes; los cuatro indicadores de CRM-Clientes del capítulo 6 no se han eliminado por ese cambio.
+
+**Verificado automáticamente:** 24 pruebas backend de segmentos, controles de importes en frontend y compilación de ambos proyectos. El usuario confirma que la app local vuelve a abrir; eso no acredita el guardado real de segmentos ni la instalación del SQL. Persistencia, permisos y revisión visual de las nuevas funciones siguen pendientes de aceptación. La nueva edición del PDF se revisa y empaqueta para la descarga del menú Ayuda; no se declara publicación en producción.
+
 ### Referencias internas
 
 - [Guía funcional y técnica de CRM Clientes](../../vistas/03_crm/crm_clientes.md).
@@ -920,3 +966,22 @@ Las capturas reales siguen fechadas el 19/10/2026. Los dos nuevos esquemas son a
 - [Manual general de usuario](../../manual-usuario.md).
 
 **Revisión recomendada:** actualizar esta guía cuando cambien pantallas, permisos o procedimientos. Mantener juntos el Markdown y sus imágenes; el PDF puede leerse por separado.
+
+## 35. Referencia: Ventas-Clientes y su mapa
+
+**Esta es otra vista:** Ventas > Clientes, no CRM > Clientes. En Ventas se ha retirado la fila superior de cuatro KPI; los indicadores propios de CRM-Clientes descritos en el capítulo 6 permanecen.
+
+### Procedimiento: seleccionar una zona
+
+1. Abre **Ventas > Clientes** y pulsa una provincia, por ejemplo **Vizcaya**.
+2. Comprueba que el selector **Territorio** y la etiqueta de zona muestran la misma selección. El ranking lateral y la tabla de abajo se filtran conjuntamente.
+3. También puedes escoger la provincia desde **Territorio** en los filtros avanzados. Los nombres se muestran en español y reconocen alias como Bizkaia.
+4. Combina la zona con comercial, búsqueda, tipo de cliente, mercado, modelo de negocio, condiciones de pago o portes.
+5. En el ranking, elige **Todos** para revisar la selección completa. Top 10 limita solo la lista lateral, no la tabla ni sus totales. La cartera ya no se corta a los primeros 600 clientes; el mapa mantiene un máximo visual de 100 marcadores.
+6. Quita la zona pulsándola de nuevo, quitando su etiqueta, eligiendo Todos en Territorio o restableciendo filtros.
+
+### Procedimiento: leer el pie de totales
+
+El pie fijo muestra clientes filtrados, ventas de 2023, 2024, 2025 y 2026 (YTD), y acumulado de esos ejercicios. Incluye toda la selección, aunque no hayas cargado todas las filas al desplazar la tabla. Los importes negativos se conservan. No se suman margen, días de cobro ni campos descriptivos.
+
+Ocultar una columna oculta su celda del total y no cambia la cartera. **Calculando...** indica carga; un error de cálculo no significa que haya cero clientes. El acumulado de cuatro años no es toda la vida comercial ni debe confundirse con la métrica de ventas del mapa. La exportación contiene los registros filtrados, sin añadir la fila visual de totales.

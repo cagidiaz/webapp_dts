@@ -716,3 +716,17 @@ Para interpretar el resumen de la tabla:
 3. **Calculando…** indica que se está cargando la cartera. Si aparece **No se pudieron calcular**, recarga y comprueba la conexión antes de utilizar los importes. Una cartera vacía muestra cero clientes y cero euros.
 
 La exportación Excel contiene los registros filtrados, pero no añade la fila visual de totales. El mapa puede representar como máximo 100 marcadores; ese límite no recorta la cartera ni los totales. Se mantienen los modos claro y oscuro. Los nombres de provincias son etiquetas de la app y no modifican los valores importados desde Business Central.
+
+### Ficha del cliente: segmentos y potencialidad anual - 26/10/2026
+
+1. Abre la empresa y busca **Segmentos y potencialidad**.
+2. Pulsa **Añadir segmento** y busca por familia o subfamilia. Las opciones muestran ambos nombres; dTSTemp, dTSPres y dTSFlow requieren escoger una subfamilia. dTSCal, dTSLevel y dTSSens se seleccionan directamente.
+3. Introduce la estimación anual en euros (ejemplo: **12.500,00**) y guarda. Se puede dejar vacía si aún no la conoces; cero significa una estimación de cero euros.
+4. Repite para los demás segmentos del cliente. No se admite el mismo segmento dos veces.
+5. El lápiz permite editar el importe; la papelera permite quitar la fila con confirmación. El pie suma los importes conocidos y avisa si hay estimaciones pendientes. Facturación se muestra vacía y no se puede rellenar todavía.
+
+El comercial edita sus clientes y Admin puede editar todos los autorizados. Si no ves controles, tu acceso a ese cliente es de consulta. Si aparece un aviso de tabla pendiente, Administración debe ejecutar el SQL de esta entrega. La funcionalidad no actualiza Business Central y requiere instalarse y probarse antes de utilizar datos reales.
+
+### Manual descargable actualizado - 26/10/2026
+
+El PDF de **Ayuda → Manuales de usuario** se actualiza a **edición 1.2, 26/10/2026**, con 35 capítulos y 43 páginas. Incluye contactos compactos con navegación directa, segmentos y potencialidad anual, referencia por `client_id` estable de BC y una sección diferenciada de Ventas-Clientes (mapa, filtros y pie de totales). Se conserva el estado pendiente de instalación/pruebas reales de segmentos. Markdown, PDF fuente y PDF/catálogo de `backend/assets/user-manuals` se mantienen coordinados y revisados visualmente. La copia local está preparada; la de producción requiere publicar estos archivos junto con la app.

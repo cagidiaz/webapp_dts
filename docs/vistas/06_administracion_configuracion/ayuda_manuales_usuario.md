@@ -50,3 +50,7 @@ Las pruebas automatizadas de API cubren sesión, perfil activo, permisos incompl
 Resultado de la entrega: 12 pruebas HTTP con JWT y datos de permisos aislados, seis comprobaciones del cliente de visualización/descarga, compilaciones frontend/backend y validación del paquete en un contexto de backend sin el origen del repositorio. El PDF empaquetado coincide por hash con el manual aprobado y sus páginas modificadas se revisaron visualmente.
 
 La aceptación visual y las acciones en el navegador de producción quedan pendientes del despliegue. La apertura utiliza el visor PDF del navegador: según sus ajustes, puede mostrarse una descarga en lugar de una vista integrada.
+
+### Manual descargable actualizado - 26/10/2026
+
+El PDF de **Ayuda → Manuales de usuario** se actualiza a **edición 1.2, 26/10/2026**, con 35 capítulos y 43 páginas. Incluye contactos compactos con navegación directa, segmentos y potencialidad anual, referencia por `client_id` estable de BC y una sección diferenciada de Ventas-Clientes (mapa, filtros y pie de totales). Se conserva el estado pendiente de instalación/pruebas reales de segmentos. Markdown, PDF fuente y PDF/catálogo de `backend/assets/user-manuals` se mantienen coordinados y revisados visualmente. La copia local está preparada; la de producción requiere publicar estos archivos junto con la app.

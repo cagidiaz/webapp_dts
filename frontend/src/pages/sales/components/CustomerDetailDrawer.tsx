@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Drawer } from '../../../components/shared';
 import { 
   type CustomerDataRow, 
@@ -10,6 +11,7 @@ import {
 } from '../../../api';
 import { formatCurrency } from '../../../api/formatters';
 import { ClientProspectActivities } from '../../crm/components/ProspectActivities';
+import { CustomerSegments } from './CustomerSegments';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { 
@@ -207,6 +209,8 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
             </div>
           </section>
 
+          <CustomerSegments key={customer.client_id} clientCode={customer.client_id} />
+
           {/* Associated Contacts */}
           <section className="space-y-4">
             <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personas de Contacto</h3>
@@ -217,28 +221,26 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
             ) : !contacts || contacts.length === 0 ? (
               <p className="text-xs text-gray-400 italic">No hay personas de contacto registradas.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-1.5">
                 {contacts.map((contact) => (
-                  <div key={contact.id} className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="text-sm font-bold text-dts-primary dark:text-white flex items-center gap-1.5">
-                          <User size={14} className="text-dts-secondary shrink-0" />
-                          {contact.name}
-                        </h4>
-                        {contact.job_title && (
-                          <span className="text-[10px] bg-dts-secondary/10 text-dts-secondary px-2 py-0.5 rounded font-bold uppercase tracking-wider mt-1 inline-block">
-                            {contact.job_title}
-                          </span>
-                        )}
-                        {contact.org_level_code && (
-                          <span className="text-[9px] text-gray-400 ml-1.5 font-mono">
-                            ({contact.org_level_code.replace(/\.+$/, '')})
-                          </span>
-                        )}
-                      </div>
-                      
-                      {editingLinkedinId === contact.id ? (
+                  <div key={contact.id} className="flex flex-nowrap items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-white/5 rounded-lg border border-gray-100 dark:border-white/5">
+                    <Link
+                      to={'/crm/contacts?contactId=' + encodeURIComponent(contact.id)}
+                      className="flex items-center gap-2 flex-1 min-w-0 text-xs text-dts-primary dark:text-white hover:text-dts-secondary focus-visible:outline-2 focus-visible:outline-dts-secondary rounded"
+                      title={[contact.name, contact.job_title, contact.org_level_code, contact.email, contact.phone_no, contact.mobile_no].filter(Boolean).join(' · ')}
+                      aria-label={'Abrir contacto: ' + contact.name}
+                    >
+                      <User size={14} className="text-dts-secondary shrink-0" />
+                      <span className="truncate font-bold">{contact.name || 'Sin nombre'}</span>
+                      {contact.job_title && <span className="truncate text-[10px] text-gray-500 dark:text-gray-400">{contact.job_title}</span>}
+                      <ExternalLink size={12} className="shrink-0 text-gray-400" />
+                    </Link>
+                    <div className="flex items-center gap-2 shrink-0 text-gray-400">
+                      {contact.email && <a href={'mailto:' + contact.email} title={'Enviar correo a ' + contact.email} aria-label={'Enviar correo a ' + contact.name} className="hover:text-dts-secondary"><Mail size={14} /></a>}
+                      {contact.phone_no && <a href={'tel:' + contact.phone_no} title={'Llamar: ' + contact.phone_no} aria-label={'Llamar a ' + contact.name} className="hover:text-dts-secondary"><Phone size={14} /></a>}
+                      {contact.mobile_no && <a href={'tel:' + contact.mobile_no} title={'Móvil: ' + contact.mobile_no} aria-label={'Llamar al móvil de ' + contact.name} className="hover:text-dts-secondary"><Smartphone size={14} /></a>}
+                    </div>
+                    {editingLinkedinId === contact.id ? (
                         <div className="flex items-center gap-1 shrink-0">
                           <input
                             type="text"
@@ -278,7 +280,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                               <Linkedin size={14} />
                             </a>
                           ) : (
-                            <span className="text-[10px] text-gray-400 italic">Sin LinkedIn</span>
+                            <span className="sr-only">Sin LinkedIn</span>
                           )}
                           <button
                             onClick={() => {
@@ -292,37 +294,6 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                           </button>
                         </div>
                       )}
-                    </div>
-                    
-                    <div className="flex flex-col gap-1.5 pt-1 border-t border-gray-100 dark:border-white/5">
-                      {contact.email && (
-                        <a 
-                          href={`mailto:${contact.email}`} 
-                          className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 hover:text-dts-secondary transition-colors"
-                        >
-                          <Mail size={12} className="text-gray-400" />
-                          <span className="truncate">{contact.email}</span>
-                        </a>
-                      )}
-                      {contact.phone_no && (
-                        <a 
-                          href={`tel:${contact.phone_no}`} 
-                          className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 hover:text-dts-secondary transition-colors"
-                        >
-                          <Phone size={12} className="text-gray-400" />
-                          <span>{contact.phone_no}</span>
-                        </a>
-                      )}
-                      {contact.mobile_no && (
-                        <a 
-                          href={`tel:${contact.mobile_no}`} 
-                          className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 hover:text-dts-secondary transition-colors"
-                        >
-                          <Smartphone size={12} className="text-gray-400" />
-                          <span>{contact.mobile_no}</span>
-                        </a>
-                      )}
-                    </div>
                   </div>
                 ))}
               </div>

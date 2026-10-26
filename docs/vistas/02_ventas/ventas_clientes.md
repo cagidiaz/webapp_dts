@@ -91,3 +91,13 @@ Al hacer clic en cualquier fila de la tabla:
 2. **Cálculo Real de DSO (Days Sales Outstanding)**: Evalúa las facturas de venta canceladas frente a sus fechas de vencimiento y cobro efectivo para calcular los días medios reales que tarda el cliente en pagar.
 3. **Acceso a Contactos y Acciones Rápidas**: Visualiza teléfonos, correos y enlaces directos a CRM.
 4. **Resumen de Pedidos y Ofertas**: Bloque desplegable con pedidos abiertos pendientes de servir y cotizaciones en curso.
+
+### Contactos compactos en la ficha del cliente - 26/10/2026
+
+Cada persona de contacto ocupa una sola fila en la ficha compartida. El nombre y el cargo se recortan si no caben; el detalle completo puede consultarse pasando el cursor o abriendo la ficha. Al pulsar el nombre se navega a `/crm/contacts?contactId=…` y se abre ese contacto directamente. Los iconos de correo, teléfono, móvil y LinkedIn conservan sus acciones independientes, incluida la edición de LinkedIn. Se mantienen los estilos claro/oscuro y los permisos existentes de la vista Contactos. El cambio se aplica en CRM, Ventas y demás accesos a `CustomerDetailDrawer`; no modifica datos de Business Central. Pendiente de aceptación visual en la app.
+
+### Segmentos y potencialidad anual - 26/10/2026
+
+La ficha compartida incorpora una tabla con Segmento, Potencialidad €/año y Facturación pendiente. Selector con búsqueda entre doce opciones; las familias con hijos no se seleccionan directamente. Admite varios segmentos por cliente sin duplicados, edición de importes, eliminación confirmada y total conocido. Un importe vacío significa pendiente y es distinto de cero. Admin edita globalmente y el comercial solo su cliente; el backend comprueba permisos y cartera. Las escrituras van a la nueva tabla independiente `crm_customer_segments`, sin modificar BC. Se requiere ejecutar el SQL antes de probar persistencia. Véase [instalación, estructura y validación](../../actualizaciones/2026-10-26-segmentos-potencialidad-clientes.md).
+
+**Relación de segmentos confirmada (26/10/2026):** `crm_customer_segments.client_id` (`varchar(50)`) referencia `customers.client_id`, código estable de BC. La app y el backend utilizan este código. Si se instaló la primera versión UUID, usar el SQL de migración descrito en la documentación de la entrega, sin borrar datos.
