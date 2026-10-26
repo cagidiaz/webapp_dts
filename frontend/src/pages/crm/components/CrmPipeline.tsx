@@ -16,7 +16,7 @@ import { formatCurrency, formatNumber, offerDateInputValue } from '../../../api/
 import { 
   Briefcase, Euro, Percent, Sparkles, AlertTriangle, 
   Search, Calendar, User, Mail, Phone, Plus, Trash2,
-  Table, LayoutGrid, ArrowRight, X
+  Table, LayoutGrid, ArrowRight, X, Info
 } from 'lucide-react';
 import { KPISkeleton, InfoPopover } from '../../../components/ui';
 import { Drawer } from '../../../components/shared';
@@ -40,6 +40,14 @@ const PILOT_STAGES = [
   { id: 'aceptada', label: 'Aceptada', color: 'border-t-emerald-400 bg-emerald-500/5' },
 ];
 const PILOT_PROB: Record<string, number> = { preliminar: 5, presentada: 20, evaluación: 35, negociación: 55, aprobación: 75, aceptada: 90, ganada: 100, perdida: 0 };
+const PILOT_STAGE_DESC: Record<string, string> = {
+  preliminar: 'Oferta en elaboración inicial o alcance exploratorio. Probabilidad baja de cierre.',
+  presentada: 'Oferta enviada formalmente al cliente para su estudio y consideración.',
+  evaluación: 'Evaluación técnica activa, comparativas de producto o pruebas en curso por parte del cliente.',
+  negociación: 'Negociación activa de condiciones económicas, plazos de entrega o términos contractuales.',
+  aprobación: 'Pendiente de aprobación presupuestaria o firma formal por parte del cliente.',
+  aceptada: 'Conformidad verbal o pre-adjudicación recibida. La oferta permanece viva en el embudo hasta formalización.',
+};
 const displayPhase = (phase: string | null | undefined) => ({borrador:'preliminar', enviada:'presentada', 'en negociación':'negociación'}[phase?.toLowerCase().trim() || ''] || phase?.toLowerCase().trim() || 'preliminar');
 export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean; contactId?: string }> = ({ pilotMode = false, canEditPilot = false, contactId }) => {
   const STAGES = pilotMode ? PILOT_STAGES : LEGACY_STAGES;
@@ -617,9 +625,25 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                 className="bg-gray-50/50 dark:bg-white/1 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col h-full overflow-hidden"
               >
                 <div className={`${pilotMode ? 'px-2 py-4 gap-1 flex-wrap' : 'p-4'} border-t-4 ${stage.color} border-b border-b-gray-200/60 dark:border-b-white/5 bg-white dark:bg-surface-card-dark flex justify-between items-center`}>
-                  <span className="font-bold text-xs uppercase tracking-wider text-gray-800 dark:text-gray-200">
-                    {stage.label}
-                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-bold text-xs uppercase tracking-wider text-gray-800 dark:text-gray-200">
+                      {stage.label}
+                    </span>
+                    {pilotMode && PILOT_PROB[stage.id] !== undefined && (
+                      <span className="text-[10px] font-bold text-dts-secondary whitespace-nowrap">
+                        {PILOT_PROB[stage.id]}%
+                      </span>
+                    )}
+                    {pilotMode && PILOT_STAGE_DESC[stage.id] && (
+                      <div className="relative group/info">
+                        <Info size={13} className="text-gray-400 hover:text-dts-secondary transition-colors cursor-help flex-shrink-0" />
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-56 p-3 bg-white dark:bg-surface-card-dark border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all duration-200 z-50 pointer-events-none">
+                          <span className="font-bold text-gray-800 dark:text-white block mb-1">{stage.label} · {PILOT_PROB[stage.id]}%</span>
+                          {PILOT_STAGE_DESC[stage.id]}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-300">
                     {stageQuotes.length}
                   </span>

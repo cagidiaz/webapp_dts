@@ -11,14 +11,23 @@ export class CreateProspectDto {
   @Transform(emptyToNull) @IsOptional() @IsString() @MaxLength(255)
   contact_name?: string | null;
 
+  @Transform(emptyToNull) @IsOptional() @IsString() @MaxLength(255)
+  contact_job_title?: string | null;
+
   @Transform(emptyToNull) @IsOptional() @IsEmail() @MaxLength(255)
   email?: string | null;
 
   @Transform(emptyToNull) @IsOptional() @IsString() @MaxLength(50)
   phone?: string | null;
 
+  @Transform(emptyToNull) @IsOptional() @IsString() @MaxLength(10000)
+  notes?: string | null;
+
   @IsInt() @IsIn([0, 1])
   phase: number;
+
+  @Transform(emptyToNull) @IsOptional() @IsUUID()
+  owner_id?: string | null;
 }
 
 export class UpdateProspectDto extends CreateProspectDto {

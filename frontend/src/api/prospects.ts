@@ -8,12 +8,23 @@ export interface ProspectAccess {
   canViewAll: boolean;
   userId: string;
 }
+export interface ProspectSalesperson {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  code: string | null;
+  roles?: { name: string } | null;
+}
 export interface ProspectFields {
   company_name: string;
   contact_name: string | null;
+  contact_job_title?: string | null;
   email: string | null;
   phone: string | null;
+  notes?: string | null;
   phase: number;
+  owner_id?: string | null;
 }
 export interface Prospect extends ProspectFields {
   id: string;
@@ -36,6 +47,7 @@ export interface ProspectList {
   counts: { phase0: number; phase1: number; converted: number };
 }
 export const getProspectAccess = async () => (await apiClient.get<ProspectAccess>('/crm-prospects/access')).data;
+export const getProspectSalespeople = async () => (await apiClient.get<ProspectSalesperson[]>('/crm-prospects/salespeople')).data;
 export const getProspects = async (status: string, search: string, page = 1) => (await apiClient.get<ProspectList>('/crm-prospects', { params: { status, search, page } })).data;
 export const getProspect = async (id: string) => (await apiClient.get<Prospect>(`/crm-prospects/${id}`)).data;
 export const createProspect = async (data: ProspectFields) => (await apiClient.post<Prospect>('/crm-prospects', data)).data;

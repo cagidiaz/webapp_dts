@@ -68,12 +68,13 @@ Para probar: reiniciar la aplicación desde `C:\proyectos\webapp_dts`, acceder c
 
 ### 2.1 Modelo de Datos y Entidad Local
 Gestiona prospectos de forma autónoma sin insertar empresas ficticias en la tabla `contacts` o `customers` sincronizadas desde Business Central:
-* **Entidad `crm_prospects`:** Identificador UUID estable, `company_name` (obligatorio, normalizado en mayúsculas y sin espacios redundantes para control estricto de unicidad por comercial), `contact_name`, `email`, `phone`, `phase` (0 o 1), `owner_id` (comercial asignado), `version` (control de concurrencia optimista) y fechas de auditoría.
+* **Entidad `crm_prospects`:** Identificador UUID estable, `company_name` (obligatorio, normalizado en mayúsculas y sin espacios redundantes para control estricto de unicidad por comercial), `contact_name` (persona de contacto), `contact_job_title` (cargo de la persona de contacto), `email`, `phone`, `notes` (comentarios / observaciones del prospecto), `phase` (0 o 1), `owner_id` (comercial asignado; configurable por `ADMIN`), `version` (control de concurrencia optimista) y fechas de auditoría.
 * **Fases del Ciclo de Prospección:**
   * **Fase 0 (Sin aproximación comercial):** Empresas objetivo identificadas o contactos preliminares sin interacción profunda.
   * **Fase 1 (Prospectos interesados):** Cuentas con interlocución técnica/comercial iniciada y necesidad confirmada.
   * **Convertidos:** Prospectos formalmente asociados a un cliente de Business Central.
 * **Archivado y Restauración:** Función para archivar prospectos descartados sin eliminarlos de la base de datos (`archived_at`), permitiendo su restauración posterior en su fase original con todo su historial.
+* **Asignación de Comercial (Admin):** Los usuarios con rol `ADMIN` disponen de un selector para asignar el comercial (`owner_id`) que gestionará el prospecto desde el momento de su creación o durante su edición, mientras que los comerciales registran prospectos directamente bajo su propia cartera.
 
 ### 2.2 Vinculación Reversible con Business Central
 * **Sugerencias y Búsqueda en Cartera:** La ficha propone coincidencias inteligentes por nombre, CIF, email o teléfono dentro de los clientes pertenecientes a la cartera del comercial.

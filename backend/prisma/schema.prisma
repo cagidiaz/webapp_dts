@@ -903,8 +903,10 @@ model crm_prospects {
   company_name       String   @db.VarChar(255)
   company_normalized String   @db.VarChar(255)
   contact_name       String?  @db.VarChar(255)
+  contact_job_title  String?  @db.VarChar(255)
   email              String?  @db.VarChar(255)
   phone              String?  @db.VarChar(50)
+  notes              String?  @db.Text
   phase              Int      @default(0)
   archived_at        DateTime? @db.Timestamptz(6)
   linked_client_id   String? @db.Uuid

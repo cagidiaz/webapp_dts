@@ -93,6 +93,20 @@ describe('Permisos y convivencia del piloto de Prospección', () => {
     expect(db.customers.findMany).not.toHaveBeenCalled();
   });
 
+  it('Admin puede asignar un comercial (salesperson) específico al crear el prospecto', async () => {
+    role = 'ADMIN'; email = 'admin@example.com';
+    db.profiles.findUnique.mockResolvedValueOnce({ id: 'admin', is_active: true, role_id: 'r1', roles: { name: 'ADMIN' } })
+      .mockResolvedValueOnce({ id: 'salesperson-1', is_active: true, first_name: 'Josep', email: 'jmontes@example.com' });
+    await service.create('admin', { ...fields, contact_job_title: 'Director de Compras', notes: 'Comentarios iniciales', owner_id: 'salesperson-1' });
+    expect(db.crm_prospects.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        owner_id: 'salesperson-1',
+        contact_job_title: 'Director de Compras',
+        notes: 'Comentarios iniciales',
+      }),
+    }));
+  });
+
   it('la creación de Admin requiere los permisos del panel y el piloto activo', async () => {
     role = 'ADMIN'; email = 'admin@example.com';
     db.role_modules.findMany.mockResolvedValue([]);

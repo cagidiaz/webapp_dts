@@ -39,7 +39,7 @@ export class ProspectsService {
     const where: Prisma.crm_prospectsWhereInput = {
       ...scope,
       ...(status === 'active' ? { archived_at: null, converted_at: null } : status === 'archived' ? { archived_at: { not: null } } : status === 'converted' ? { converted_at: { not: null } } : {}),
-      ...(search.trim() ? { OR: ['company_name', 'contact_name', 'email', 'phone'].map(field => ({ [field]: { contains: search.trim(), mode: 'insensitive' } })) } : {}),
+      ...(search.trim() ? { OR: ['company_name', 'contact_name', 'contact_job_title', 'email', 'phone', 'notes'].map(field => ({ [field]: { contains: search.trim(), mode: 'insensitive' } })) } : {}),
     };
     const [items, counts, total, converted] = await Promise.all([
       this.prisma.crm_prospects.findMany({ where, include: { owner: { select: { first_name: true, last_name: true, email: true } }, linked_client: { select: { id: true, client_id: true, name: true } } }, orderBy: [{ updated_at: 'desc' }, { id: 'asc' }], take: 200, skip: (page - 1) * 200 }),
@@ -61,7 +61,16 @@ export class ProspectsService {
   }
 
   private fields(data: CreateProspectDto) {
-    return { company_name: data.company_name.trim(), company_normalized: normalizeProspectCompany(data.company_name), contact_name: data.contact_name || null, email: data.email || null, phone: data.phone || null, phase: data.phase };
+    return {
+      company_name: data.company_name.trim(),
+      company_normalized: normalizeProspectCompany(data.company_name),
+      contact_name: data.contact_name || null,
+      contact_job_title: data.contact_job_title || null,
+      email: data.email || null,
+      phone: data.phone || null,
+      notes: data.notes || null,
+      phase: data.phase,
+    };
   }
 
   private rethrow(error: unknown): never {
@@ -74,9 +83,15 @@ export class ProspectsService {
   async create(userId: string, data: CreateProspectDto) {
     const access = await this.authorize(userId);
     if (!access.canCreate) throw new ForbiddenException('No tienes permiso para crear prospectos.');
+    let targetOwnerId = userId;
+    if (data.owner_id && access.canEditAll) {
+      const targetProfile = await this.prisma.profiles.findUnique({ where: { id: data.owner_id } });
+      if (!targetProfile || targetProfile.is_active !== true) throw new BadRequestException('El comercial asignado no es válido o está inactivo.');
+      targetOwnerId = data.owner_id;
+    }
     try {
       return await this.prisma.crm_prospects.create({ data: {
-        ...this.fields(data), owner_id: userId,
+        ...this.fields(data), owner_id: targetOwnerId,
         events: { create: { created_by: userId, type: 'AUDIT', title: 'Prospecto creado' } },
       } });
     } catch (error) { this.rethrow(error); }
@@ -91,11 +106,37 @@ export class ProspectsService {
     if (current.archived_at && current.phase !== data.phase) throw new BadRequestException('Restaura el prospecto antes de cambiar su fase.');
     if (current.converted_at && current.phase !== data.phase) throw new BadRequestException('Desvincula el cliente antes de cambiar la fase.');
     if (current.version !== data.version) throw new ConflictException('El prospecto cambió desde que abriste la ficha. Recárgala antes de guardar.');
+    let targetOwnerId = current.owner_id;
+    if (data.owner_id && data.owner_id !== current.owner_id) {
+      if (!access.canEditAll) throw new ForbiddenException('Solo Admin puede reasignar el comercial propietario.');
+      const targetProfile = await this.prisma.profiles.findUnique({ where: { id: data.owner_id } });
+      if (!targetProfile || targetProfile.is_active !== true) throw new BadRequestException('El comercial asignado no es válido o está inactivo.');
+      targetOwnerId = data.owner_id;
+    }
     try {
       return await this.prisma.$transaction(async tx => {
-        const result = await tx.crm_prospects.updateMany({ where: { id, version: data.version }, data: { ...this.fields(data), updated_at: new Date(), version: { increment: 1 } } });
+        const updateData: Prisma.crm_prospectsUpdateManyMutationInput = {
+          ...this.fields(data),
+          ...(targetOwnerId !== current.owner_id ? { owner_id: targetOwnerId } : {}),
+          updated_at: new Date(),
+          version: { increment: 1 },
+        };
+        const result = await tx.crm_prospects.updateMany({
+          where: { id, version: data.version },
+          data: updateData,
+        });
         if (result.count !== 1) throw new ConflictException('El prospecto cambió desde que abriste la ficha. Recárgala antes de guardar.');
-        await tx.crm_prospect_events.create({ data: { prospect_id: id, created_by: userId, type: 'AUDIT', title: current.phase !== data.phase ? `Fase ${current.phase} a Fase ${data.phase}` : 'Datos del prospecto actualizados', description: JSON.stringify({ before: this.fields(current), after: this.fields(data) }) } });
+        await tx.crm_prospect_events.create({
+          data: {
+            prospect_id: id,
+            created_by: userId,
+            type: 'AUDIT',
+            title: current.phase !== data.phase
+              ? `Fase ${current.phase} a Fase ${data.phase}`
+              : (targetOwnerId !== current.owner_id ? 'Comercial propietario reasignado' : 'Datos del prospecto actualizados'),
+            description: JSON.stringify({ before: { ...this.fields(current), owner_id: current.owner_id }, after: { ...this.fields(data), owner_id: targetOwnerId } }),
+          },
+        });
         return tx.crm_prospects.findUniqueOrThrow({ where: { id }, include: { linked_client: { select: { id: true, client_id: true, name: true } } } });
       });
     } catch (error) { this.rethrow(error); }
@@ -259,4 +300,15 @@ export class ProspectsService {
       return tx.crm_prospects.findUniqueOrThrow({ where: { id }, include: { linked_client: { select: { id: true, client_id: true, name: true } } } });
     });
   }
+
+  async salespeople(userId: string) {
+    const access = await this.authorize(userId);
+    if (!access.canEditAll) throw new ForbiddenException('Solo Admin puede consultar la lista de comerciales para asignación.');
+    return this.prisma.profiles.findMany({
+      where: { is_active: true },
+      select: { id: true, first_name: true, last_name: true, email: true, code: true, roles: { select: { name: true } } },
+      orderBy: [{ first_name: 'asc' }, { email: 'asc' }],
+    });
+  }
 }
+
