@@ -272,3 +272,7 @@ Eliminadas las cuatro tarjetas KPI superiores. La tabla incorpora un pie fijo co
 ### Manual descargable actualizado - 26/10/2026
 
 El PDF de **Ayuda → Manuales de usuario** se actualiza a **edición 1.2, 26/10/2026**, con 35 capítulos y 43 páginas. Incluye contactos compactos con navegación directa, segmentos y potencialidad anual, referencia por `client_id` estable de BC y una sección diferenciada de Ventas-Clientes (mapa, filtros y pie de totales). Se conserva el estado pendiente de instalación/pruebas reales de segmentos. Markdown, PDF fuente y PDF/catálogo de `backend/assets/user-manuals` se mantienen coordinados y revisados visualmente. La copia local está preparada; la de producción requiere publicar estos archivos junto con la app.
+
+### Backend: certificados HTTPS verificados (26/10/2026)
+
+Retirada la excepción global TLS del servicio de usuarios. Se mantiene la gestión de cuentas y permisos, con comprobaciones de lectura en Supabase y conexión a Microsoft. Sin cambios en BC ni en la base de datos. [Detalle y procedimiento de aplicación](../actualizaciones/2026-10-26-validacion-certificados-backend.md).

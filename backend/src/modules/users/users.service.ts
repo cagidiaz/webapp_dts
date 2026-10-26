@@ -7,7 +7,6 @@ export class UsersService {
   private supabaseAdmin;
 
   constructor() {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     const supabaseUrl = process.env.SUPABASE_URL || '';
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
     
