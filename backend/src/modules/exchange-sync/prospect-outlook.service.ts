@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MicrosoftGraphService, CalendarEventPayload } from './microsoft-graph.service';
+import { hasOpportunitiesAccess } from '../prospects/opportunities-individual-access';
 
 const html = (value: string | null | undefined) => (value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\n/g, '<br/>');
 
@@ -17,7 +18,7 @@ export class ProspectOutlookService {
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } });
     if (!profile?.is_active || !profile.role_id || profile.roles?.name?.toUpperCase() === 'DIRECCION') return false;
     const permissions = await this.prisma.role_modules.findMany({ where: { role_id: profile.role_id, module: { is_active: true, route_path: { in: ['/crm', '/crm/pipeline'] } } }, include: { module: true } });
-    return ['/crm', '/crm/pipeline'].every(path => permissions.some(permission => permission.module.route_path === path && permission.can_view === true));
+    return hasOpportunitiesAccess(this.prisma, permissions, profile.email);
   }
 
   async sync(id: string) {

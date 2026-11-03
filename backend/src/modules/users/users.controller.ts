@@ -5,6 +5,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../auth/roles.guard';
 import { Roles } from '../../auth/roles.decorator';
+import { hasIndividualOpportunitiesAccess } from '../prospects/opportunities-individual-access';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -94,6 +95,16 @@ export class UsersController {
     if (!status.existsInProfiles || !status.rawProfile.role_id) {
       return [];
     }
-    return this.usersService.getRolePermissions(status.rawProfile.role_id);
+    const permissions = await this.usersService.getRolePermissions(status.rawProfile.role_id);
+    if (status.rawProfile.is_active === true && hasIndividualOpportunitiesAccess(status.rawProfile.email)
+      && permissions.some(p => p.routePath === '/crm' && p.canView)) {
+      const module = (await this.usersService.getModules()).find(m => m.route_path === '/crm/pipeline' && m.is_active === true);
+      if (module) {
+        const existing = permissions.find(p => p.routePath === '/crm/pipeline');
+        if (existing) existing.canView = true;
+        else permissions.push({ moduleId: module.id, canView: true, name: module.name, routePath: module.route_path });
+      }
+    }
+    return permissions;
   }
 }

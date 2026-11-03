@@ -8,6 +8,7 @@ import { CreatePipelineCutDto } from './pipeline-cuts.dto';
 import { lastWeeklyCut } from './cut-schedule';
 import { compareCutRows, cutReports } from './cut-analytics';
 import { loadOfferContacts } from './offer-contacts';
+import { hasOpportunitiesAccess } from '../prospects/opportunities-individual-access';
 
 export function csvCell(value: unknown) {
   let text=String(value ?? '');
@@ -33,7 +34,7 @@ export class PipelineCutsService implements OnModuleInit, OnModuleDestroy {
     const profile=await this.prisma.profiles.findUnique({where:{id:userId},include:{roles:true}});
     if(!profile?.is_active || !profile.role_id) throw new ForbiddenException('Perfil no disponible.');
     const permissions=await this.prisma.role_modules.findMany({where:{role_id:profile.role_id,module:{is_active:true,route_path:{in:['/crm','/crm/pipeline']}}},include:{module:true}});
-    if(!['/crm','/crm/pipeline'].every(path=>permissions.some(p=>p.module.route_path===path && p.can_view))) throw new ForbiddenException('Sin permiso de Oportunidades.');
+    if(!await hasOpportunitiesAccess(this.prisma,permissions,profile.email)) throw new ForbiddenException('Sin permiso de Oportunidades.');
     const all=['ADMIN','DIRECCION'].includes(profile.roles?.name?.toUpperCase()||'');
     // El propietario congelado prima sobre el código comercial actual.
     const scope: Prisma.crm_pipeline_cut_rowsWhereInput=all?{}:{OR:[{owner_id:userId},...(profile.code?[{owner_id:null,entity_type:'OFFER',salesperson_code:profile.code}]:[])]};

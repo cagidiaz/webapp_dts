@@ -8,6 +8,7 @@ import { LOCAL_FIELDS, OfferSourceContext } from './offer-source-context';
 import { OFFER_CLOSE_REASONS } from './offer-close-reasons';
 import { pilotPhase, OFFER_PROBABILITIES } from './offer-pilot-rules';
 import { loadOfferContacts } from './offer-contacts';
+import { hasOpportunitiesAccess } from '../prospects/opportunities-individual-access';
 export { BC_FIELDS, LOCAL_FIELDS, OfferSourceContext } from './offer-source-context';
 const dates = new Set(['cierreprev_date', 'confirmacion_date', 'fecha_proxima_accion']);
 
@@ -26,7 +27,10 @@ export class OfferFollowupService {
     if (requiredPath) {
       if (!profile.role_id) throw new ForbiddenException('Sin rol configurado.');
       const permissions = await this.prisma.role_modules.findMany({ where: { role_id: profile.role_id, module: { is_active: true, route_path: { in: ['/crm', requiredPath] } } }, include: { module: true } });
-      if (!['/crm', requiredPath].every(path => permissions.some(permission => permission.module.route_path === path && permission.can_view))) throw new ForbiddenException('Sin permiso CRM/Oportunidades.');
+      const allowed = requiredPath === '/crm/pipeline'
+        ? await hasOpportunitiesAccess(this.prisma, permissions, profile.email)
+        : ['/crm', requiredPath].every(path => permissions.some(permission => permission.module.route_path === path && permission.can_view));
+      if (!allowed) throw new ForbiddenException('Sin permiso CRM/Oportunidades.');
     }
     if (['ADMIN', 'DIRECCION'].includes(profile.roles?.name?.toUpperCase() || '')) return {};
     if (!profile.code) throw new ForbiddenException('Código comercial no configurado.');

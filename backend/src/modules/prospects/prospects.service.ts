@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProspectDto, UpdateProspectDto, ProspectActivityDto, UpdateProspectActivityDto } from './prospect.dto';
 import { ProspectOutlookService } from '../exchange-sync/prospect-outlook.service';
+import { hasOpportunitiesAccess } from './opportunities-individual-access';
 
 export const normalizeProspectCompany = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('es');
 
@@ -17,7 +18,7 @@ export class ProspectsService {
     if (!profile || profile.is_active !== true) return disabled;
     if (!profile.role_id) return disabled;
     const permissions = await this.prisma.role_modules.findMany({ where: { role_id: profile.role_id, module: { is_active: true, route_path: { in: ['/crm', '/crm/pipeline'] } } }, include: { module: true } });
-    if (!['/crm', '/crm/pipeline'].every(path => permissions.some(permission => permission.module.route_path === path && permission.can_view === true))) return disabled;
+    if (!await hasOpportunitiesAccess(this.prisma, permissions, profile.email)) return disabled;
     const role = profile.roles?.name?.toUpperCase();
     const isAdmin = role === 'ADMIN';
     const canViewAll = isAdmin || role === 'DIRECCION';

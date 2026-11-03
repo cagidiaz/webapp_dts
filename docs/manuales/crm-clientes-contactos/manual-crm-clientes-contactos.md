@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.4 · 3 de noviembre de 2026 · Uso interno
+Edición 1.6 · 3 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -10,46 +10,55 @@ Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Es
 **Contenido:** primeros pasos; permisos; Clientes; clasificación A-F; matriz y Excel; Contactos; información y ubicación; Timeline; eventos y conclusiones; informes; Emails; registro desde Outlook; adjuntos; apertura y respuestas; redacción; configuración; ofertas; prospectos; rutinas; incidencias y glosario.
 
 <!-- indice-inicio -->
-### Índice navegable
-
 - [1. Qué es cada cosa y para qué sirve](#1-qué-es-cada-cosa-y-para-qué-sirve)
 - [2. Entrar, moverse y entender los permisos](#2-entrar-moverse-y-entender-los-permisos)
-- [3. Tu primera sesión, en diez minutos](#3-tu-primera-sesión-en-diez-minutos)
-- [4. Clientes: reconocer la pantalla](#4-clientes-reconocer-la-pantalla)
-- [5. Clientes: buscar, filtrar y volver a empezar](#5-clientes-buscar-filtrar-y-volver-a-empezar)
-- [6. Clientes: interpretar los cuatro indicadores](#6-clientes-interpretar-los-cuatro-indicadores)
-- [7. Clientes: clasificar la relación A-F](#7-clientes-clasificar-la-relación-a-f)
-- [8. Clientes: leer la matriz de relación](#8-clientes-leer-la-matriz-de-relación)
-- [9. Clientes: actuar desde la matriz y exportar](#9-clientes-actuar-desde-la-matriz-y-exportar)
-- [10. Clientes: la ficha lateral, cuando está disponible](#10-clientes-la-ficha-lateral-cuando-está-disponible)
-- [11. Contactos: localizar a la persona correcta](#11-contactos-localizar-a-la-persona-correcta)
-- [12. Contactos: acciones rápidas y LinkedIn](#12-contactos-acciones-rápidas-y-linkedin)
-- [13. La ficha: cinco pestañas, cinco preguntas](#13-la-ficha-cinco-pestañas-cinco-preguntas)
-- [14. Información: datos, ubicación y resumen de ofertas](#14-información-datos-ubicación-y-resumen-de-ofertas)
-- [15. Timeline: recuperar toda la conversación comercial](#15-timeline-recuperar-toda-la-conversación-comercial)
-- [16. Eventos: planificar y filtrar el trabajo](#16-eventos-planificar-y-filtrar-el-trabajo)
-- [17. Nueva actividad: elegir el tipo adecuado](#17-nueva-actividad-elegir-el-tipo-adecuado)
-- [18. Actividades: ejemplo completo de ejecución](#18-actividades-ejemplo-completo-de-ejecución)
-- [19. Completar, reabrir, editar y eliminar actividades](#19-completar-reabrir-editar-y-eliminar-actividades)
-- [20. Informe histórico: preparar PDF y Excel](#20-informe-histórico-preparar-pdf-y-excel)
-- [21. Emails: leer una tarjeta y sus adjuntos](#21-emails-leer-una-tarjeta-y-sus-adjuntos)
-- [22. Emails: filtrar por oferta y por tipología](#22-emails-filtrar-por-oferta-y-por-tipología)
-- [23. Registrar un correo desde el complemento de Outlook](#23-registrar-un-correo-desde-el-complemento-de-outlook)
-- [24. Abrir un correo en Classic o Web](#24-abrir-un-correo-en-classic-o-web)
-- [25. Responder, buscar conversación y eliminar del CRM](#25-responder-buscar-conversación-y-eliminar-del-crm)
-- [26. Redactar un correo con plantillas](#26-redactar-un-correo-con-plantillas)
-- [27. Conectar Microsoft 365 y preparar tu equipo](#27-conectar-microsoft-365-y-preparar-tu-equipo)
-- [28. Ofertas dentro de la ficha de contacto](#28-ofertas-dentro-de-la-ficha-de-contacto)
-- [29. Ofertas: cambiar de fase y cerrar correctamente](#29-ofertas-cambiar-de-fase-y-cerrar-correctamente)
-- [30. Prospectos: solo si la pestaña está habilitada](#30-prospectos-solo-si-la-pestaña-está-habilitada)
-- [31. Rutinas recomendadas: diario y semanal](#31-rutinas-recomendadas-diario-y-semanal)
-- [32. Incidencias: resolver lo habitual paso a paso](#32-incidencias-resolver-lo-habitual-paso-a-paso)
-- [33. Glosario y comprobación de aprendizaje](#33-glosario-y-comprobación-de-aprendizaje)
-- [34. Alcance, versión y referencias para mantenimiento](#34-alcance-versión-y-referencias-para-mantenimiento)
-- [35. Referencia: Ventas-Clientes y su mapa](#35-referencia-ventas-clientes-y-su-mapa)
+- [3. Tu primera sesión](#3-tu-primera-sesión)
+- [4. CRM - Clientes](#4-crm-clientes)
+  - [4.1. reconocer la pantalla](#41-reconocer-la-pantalla)
+  - [4.2. buscar, filtrar y volver a empezar](#42-buscar-filtrar-y-volver-a-empezar)
+  - [4.3. interpretar los cuatro indicadores](#43-interpretar-los-cuatro-indicadores)
+  - [4.4. clasificar la relación A-F](#44-clasificar-la-relación-a-f)
+  - [4.5. leer la matriz de relación](#45-leer-la-matriz-de-relación)
+  - [4.6. actuar desde la matriz y exportar](#46-actuar-desde-la-matriz-y-exportar)
+  - [4.7. la ficha lateral, cuando está disponible](#47-la-ficha-lateral-cuando-está-disponible)
+- [5. CRM - Contactos](#5-crm-contactos)
+  - [5.1. localizar a la persona correcta](#51-localizar-a-la-persona-correcta)
+  - [5.2. acciones rápidas y LinkedIn](#52-acciones-rápidas-y-linkedin)
+  - [5.3. La ficha: cinco pestañas, cinco preguntas](#53-la-ficha-cinco-pestañas-cinco-preguntas)
+  - [5.4. Información: datos, ubicación y resumen de ofertas](#54-información-datos-ubicación-y-resumen-de-ofertas)
+  - [5.5. Timeline: recuperar toda la conversación comercial](#55-timeline-recuperar-toda-la-conversación-comercial)
+  - [5.6. Eventos: planificar y filtrar el trabajo](#56-eventos-planificar-y-filtrar-el-trabajo)
+  - [5.7. Nueva actividad: elegir el tipo adecuado](#57-nueva-actividad-elegir-el-tipo-adecuado)
+  - [5.8. Actividades: ejemplo completo de ejecución](#58-actividades-ejemplo-completo-de-ejecución)
+  - [5.9. Completar, reabrir, editar y eliminar actividades](#59-completar-reabrir-editar-y-eliminar-actividades)
+  - [5.10. Informe histórico: preparar PDF y Excel](#510-informe-histórico-preparar-pdf-y-excel)
+  - [5.11. Emails: leer una tarjeta y sus adjuntos](#511-emails-leer-una-tarjeta-y-sus-adjuntos)
+  - [5.12. Emails: filtrar por oferta y por tipología](#512-emails-filtrar-por-oferta-y-por-tipología)
+  - [5.13. Registrar un correo desde el complemento de Outlook](#513-registrar-un-correo-desde-el-complemento-de-outlook)
+  - [5.14. Abrir un correo en Classic o Web](#514-abrir-un-correo-en-classic-o-web)
+  - [5.15. Responder, buscar conversación y eliminar del CRM](#515-responder-buscar-conversación-y-eliminar-del-crm)
+  - [5.16. Redactar un correo con plantillas](#516-redactar-un-correo-con-plantillas)
+  - [5.17. Conectar Microsoft 365 y preparar tu equipo](#517-conectar-microsoft-365-y-preparar-tu-equipo)
+- [6. CRM - Oportunidades](#6-crm-oportunidades)
+  - [6.1. Ofertas dentro de la ficha de contacto](#61-ofertas-dentro-de-la-ficha-de-contacto)
+  - [6.2. Ofertas: cambiar de fase y cerrar correctamente](#62-ofertas-cambiar-de-fase-y-cerrar-correctamente)
+  - [6.3. Prospectos: solo si la pestaña está habilitada](#63-prospectos-solo-si-la-pestaña-está-habilitada)
+  - [6.4. visión general y acceso](#64-visión-general-y-acceso)
+  - [6.5. trabajar las ofertas](#65-trabajar-las-ofertas)
+  - [6.6. prospectos](#66-prospectos)
+  - [6.7. cortes e informes](#67-cortes-e-informes)
+- [7. Rutinas, ayuda y referencias](#7-rutinas-ayuda-y-referencias)
+  - [7.1. Rutinas recomendadas: diario y semanal](#71-rutinas-recomendadas-diario-y-semanal)
+  - [7.2. Incidencias: resolver lo habitual paso a paso](#72-incidencias-resolver-lo-habitual-paso-a-paso)
+  - [7.3. Glosario y comprobación de aprendizaje](#73-glosario-y-comprobación-de-aprendizaje)
+  - [7.4. Alcance, versión y referencias para mantenimiento](#74-alcance-versión-y-referencias-para-mantenimiento)
+  - [7.5. Referencia: Ventas-Clientes y su mapa](#75-referencia-ventas-clientes-y-su-mapa)
+  - [7.6. Pestañas del CRM y cambios recientes](#76-pestañas-del-crm-y-cambios-recientes)
 <!-- indice-fin -->
 
 ## 1. Qué es cada cosa y para qué sirve
+
+
 
 Un CRM es la memoria comercial del equipo: permite encontrar a una persona, ver lo que se ha hablado con ella y decidir qué hacer después.
 
@@ -71,6 +80,8 @@ Un CRM es la memoria comercial del equipo: permite encontrar a una persona, ver 
 Las altas de clientes y las ofertas se realizan en Business Central y se importan a la app. Crear una actividad no crea una oferta, y guardar un correo no significa enviarlo.
 
 ## 2. Entrar, moverse y entender los permisos
+
+
 
 ### Procedimiento: llegar a la vista correcta
 
@@ -104,7 +115,9 @@ El administrador asigna permisos a los roles desde Gestión de Cuentas. Tener un
 
 El botón de tema de la cabecera alterna la apariencia. Los procedimientos y datos son los mismos. Las capturas de este manual utilizan el modo oscuro que estaba activo durante la consulta; no es necesario cambiar de tema para seguirlas.
 
-## 3. Tu primera sesión, en diez minutos
+## 3. Tu primera sesión
+
+
 
 **Objetivo:** localizar una empresa, encontrar a su interlocutor y comprobar el seguimiento existente antes de hacer nada nuevo.
 
@@ -127,13 +140,16 @@ El botón de tema de la cabecera alterna la apariencia. Los procedimientos y dat
 
 **Ejercicio seguro:** realiza los pasos anteriores sin pulsar Guardar, Eliminar, Sincronizar ni Enviar. La consulta del histórico es suficiente para aprender a orientarte.
 
-## 4. Clientes: reconocer la pantalla
+## 4. CRM - Clientes
+
+### 4.1 reconocer la pantalla
+
 
 La vista tiene dos áreas: **Directorio de Clientes** y **Matriz de Relación / Análisis YTD**. La primera responde «¿qué cuentas tengo?». La segunda responde «¿cómo se comporta mi cartera?».
 
 ![Vista real del Directorio de Clientes](imagenes/01-clientes-directorio.png)
 
-### Cómo leerla de arriba abajo
+#### Cómo leerla de arriba abajo
 
 1. **Pestañas:** cambian entre directorio y análisis.
 2. **Cuatro indicadores:** resumen de ventas, cuentas, nuevas incorporaciones y saldo.
@@ -146,9 +162,10 @@ Cada fila incluye código, nombre, ciudad, comercial, deuda pendiente, ventas to
 
 **Captura real:** los importes de la imagen son una fotografía de consulta, no objetivos ni cifras que deban coincidir con tu sesión. Amplía el PDF para leer el detalle de la pantalla.
 
-## 5. Clientes: buscar, filtrar y volver a empezar
+### 4.2 buscar, filtrar y volver a empezar
 
-### Procedimiento: localizar una empresa
+
+#### Procedimiento: localizar una empresa
 
 1. Abre **Directorio de Clientes**.
 2. Escribe una parte significativa del nombre o su código.
@@ -159,7 +176,7 @@ Cada fila incluye código, nombre, ciudad, comercial, deuda pendiente, ventas to
 
 También puedes buscar por información geográfica y por código comercial. Si la búsqueda por una razón social larga no funciona, prueba una palabra distintiva o el código ERP.
 
-### Procedimiento: localizar una cartera que requiere atención
+#### Procedimiento: localizar una cartera que requiere atención
 
 1. Selecciona el comercial, si tu perfil lo permite.
 2. Elige **F - Inactivos** para preparar una reactivación, o **E - Potenciales** para una acción de desarrollo.
@@ -168,13 +185,14 @@ También puedes buscar por información geográfica y por código comercial. Si 
 
 **Restablecer Filtros** limpia la búsqueda y los filtros disponibles. En perfiles limitados a una cartera, no elimina la restricción de acceso al comercial propio.
 
-### Si no encuentras nada
+#### Si no encuentras nada
 
 Antes de solicitar un alta, elimina filtros y vuelve a buscar. Comprueba que no estás buscando el nombre de una persona en el directorio de empresas. Si la empresa se acaba de crear en Business Central, espera la importación o consulta al responsable de la sincronización. No crees una segunda empresa para resolver una demora.
 
 **Lo que aporta:** trabajar con un conjunto concreto y evitar conclusiones basadas en una cartera equivocada.
 
-## 6. Clientes: interpretar los cuatro indicadores
+### 4.3 interpretar los cuatro indicadores
+
 
 | Indicador | Qué te está diciendo | Cómo utilizarlo |
 | --- | --- | --- |
@@ -185,17 +203,18 @@ Antes de solicitar un alta, elimina filtros y vuelve a buscar. Comprueba que no 
 
 **Dos etiquetas que pueden confundir:** «Cuentas Activas» es un contador del conjunto consultado; no sustituye a la columna Estado de cada empresa. «Pendiente de Revisión» identifica altas del año; no acredita por sí sola que alguien haya revisado o dejado de revisar la ficha.
 
-### Ejemplo didáctico
+#### Ejemplo didáctico
 
 Has filtrado una cartera de diez empresas. Si el indicador muestra 10 cuentas, significa que el filtro devuelve diez registros, aunque no estén todos cargados en pantalla. Si una fila dice Bloqueado, no concluyas que las otras nueve están al corriente de pago: bloqueo y saldo son datos distintos.
 
-### Qué no debes comparar directamente
+#### Qué no debes comparar directamente
 
 Las **Ventas Totales del directorio** y la **facturación YTD de la matriz** no son necesariamente la misma medida: tienen distinto origen y criterio temporal. Antes de interpretar una diferencia, revisa filtros, ejercicio y corte de fechas.
 
 **Buena práctica:** cuando comuniques una cifra, acompáñala de la vista, el filtro y el período. Por ejemplo: «Matriz, mi cartera, 2026, corte YTD».
 
-## 7. Clientes: clasificar la relación A-F
+### 4.4 clasificar la relación A-F
+
 
 La clasificación describe la relación comercial, no el tamaño de la empresa ni la fase de una oferta. Es una valoración de gestión que debe seguir los criterios acordados por el equipo.
 
@@ -209,7 +228,7 @@ La clasificación describe la relación comercial, no el tamaño de la empresa n
 | F | Inactivos | Relación anterior sin continuidad reciente. Investigar y reactivar. |
 | Sin clasificar | Sin categoría asignada | Revisar con el responsable antes de asignar. |
 
-### Procedimiento: cambiar una categoría
+#### Procedimiento: cambiar una categoría
 
 1. Localiza la empresa y confirma su código.
 2. Abre el selector **Tipo Cliente** de su fila.
@@ -221,11 +240,12 @@ La clasificación describe la relación comercial, no el tamaño de la empresa n
 
 La clasificación no mueve ofertas, no crea actividades y no convierte automáticamente un prospecto en cliente. Tampoco es una clasificación que deba deducirse únicamente de un porcentaje o importe.
 
-## 8. Clientes: leer la matriz de relación
+### 4.5 leer la matriz de relación
+
 
 ![Vista real de la matriz y del equilibrio de cartera](imagenes/02-clientes-matriz.png)
 
-### Procedimiento: comparar una cartera de forma homogénea
+#### Procedimiento: comparar una cartera de forma homogénea
 
 1. Abre **Matriz de Relación / Análisis YTD**.
 2. Selecciona el ejercicio.
@@ -239,9 +259,10 @@ La banda de equilibrio resume **A+B**, retención y lealtad, frente al bloque de
 
 La distribución mostrada es un resultado de los datos; la referencia a Pareto no obliga a que siempre se cumpla un reparto exacto 80/20.
 
-## 9. Clientes: actuar desde la matriz y exportar
+### 4.6 actuar desde la matriz y exportar
 
-### Qué significa cada columna
+
+#### Qué significa cada columna
 
 | Columna | Cómo interpretarla |
 | --- | --- |
@@ -255,14 +276,14 @@ La distribución mostrada es un resultado de los datos; la referencia a Pareto n
 
 **Ejemplo didáctico:** pasar de 100.000 a 120.000 euros es crecer un 20%. Tener el 20% de las cuentas no significa aportar el 20% de las ventas. Si el año anterior no tenía ventas, no interpretes la variación como un crecimiento porcentual ordinario.
 
-### Procedimiento: pasar de un dato a las empresas
+#### Procedimiento: pasar de un dato a las empresas
 
 1. Selecciona una categoría A-F y pulsa **Ver** o su fila.
 2. Comprueba que vuelves al directorio.
 3. Revisa el filtro de relación y, si corresponde, el comercial aplicado.
 4. Busca al contacto de la empresa para preparar la acción comercial.
 
-### Procedimiento: descargar el análisis
+#### Procedimiento: descargar el análisis
 
 1. Comprueba año, corte YTD y ámbito autorizado.
 2. Espera a que termine el cálculo.
@@ -271,11 +292,12 @@ La distribución mostrada es un resultado de los datos; la referencia a Pareto n
 
 El Excel es una copia para analizar: editarlo no cambia el CRM. Si acabas de reclasificar una cuenta y la matriz parece conservar el resultado anterior, vuelve a cargar el análisis antes de exportar.
 
-## 10. Clientes: la ficha lateral, cuando está disponible
+### 4.7 la ficha lateral, cuando está disponible
+
 
 En las cuentas con acceso habilitado a la ficha, el nombre del cliente se puede pulsar para abrir **Ficha del Cliente**. En otros despliegues puede aparecer como texto: no es un fallo de tu ratón ni hay que forzar la apertura.
 
-### Procedimiento de consulta
+#### Procedimiento de consulta
 
 1. Localiza la cuenta y pulsa su nombre si está habilitado.
 2. Confirma razón social, código y vendedor.
@@ -290,15 +312,15 @@ El enlace de correo de esta ficha puede utilizar el programa de correo predeterm
 
 Si aparece **Seguimiento de prospección**, muestra actividades de prospectos actualmente asociados a esa cuenta. Deshacer una asociación incorrecta retira ese seguimiento de la cuenta equivocada y lo conserva en el prospecto.
 
-### Datos maestros
+#### Datos maestros
 
 La ficha no sustituye Business Central. Para corregir datos maestros de empresa, solicita la corrección en el ERP. Los controles de clasificación o enriquecimiento que la app muestra son acciones específicas; no habilitan una edición general del cliente.
 
-### Personas de contacto en una sola fila
+#### Personas de contacto en una sola fila
 
 Cada persona ocupa una fila compacta. Pulsa su nombre para abrir directamente su ficha en **CRM > Contactos**, sin tener que buscarla de nuevo. Si el nombre o cargo no caben, pasa el cursor para consultar el detalle completo. Los iconos de correo, teléfono, móvil y LinkedIn conservan sus acciones independientes; editar LinkedIn no abre la ficha.
 
-### Segmentos y potencialidad: para qué sirve
+#### Segmentos y potencialidad: para qué sirve
 
 Esta tabla permite registrar en qué líneas de producto puede comprar una empresa y cuánto se estima venderle al año. Una empresa puede tener varios segmentos, cada uno con su propio importe. Se conserva por el código estable del cliente en Business Central, aunque cambie el identificador técnico del registro.
 
@@ -313,7 +335,7 @@ Esta tabla permite registrar en qué líneas de producto puede comprar una empre
 
 Las familias que tienen subfamilias no se seleccionan solas. El buscador muestra opciones como **dTSTemp > OEM** y **dTSPres > OEM**, para que no se confundan.
 
-### Procedimiento: añadir y revisar segmentos
+#### Procedimiento: añadir y revisar segmentos
 
 1. En la ficha de la empresa, busca **Segmentos y potencialidad**.
 2. Si el segmento ya aparece por sus ventas, pulsa el lápiz para introducir su potencialidad. Si no aparece, pulsa **Añadir segmento** y busca la familia o subfamilia.
@@ -327,13 +349,13 @@ Las familias que tienen subfamilias no se seleccionan solas. El buscador muestra
 
 **Ejemplo didáctico, no datos reales:** dTSTemp > ATEX con 12.500,00 euros/año y dTSFlow > Process-Seiko con 7.500,00 euros/año dan un total estimado de 20.000,00 euros/año. Añadir dTSCal sin importe no cambia ese total y deja un segmento pendiente.
 
-### Quién puede cambiar estos datos
+#### Quién puede cambiar estos datos
 
 El comercial puede editar los segmentos de sus clientes y Admin los de todos los clientes autorizados. Los roles de consulta global no permiten por sí solos editar clientes ajenos. Los accesos de vista se siguen asignando desde Gestión de usuarios. No se habilita una edición general de los datos maestros de BC.
 
 **Si aparece un aviso de tabla no preparada:** contacta con Administración para que revise la instalación y reinicie la app. Si se instaló la primera versión que usaba UUID, debe ejecutar la migración a **client_id** conservando datos. El usuario comercial no debe ejecutar SQL. Ante un conflicto por cambios de otra sesión, recarga la ficha antes de volver a editar. La estimación anual es la vigente: aún no se conserva un histórico separado por ejercicios.
 
-### Consultar segmentos y potencial de toda la cartera
+#### Consultar segmentos y potencial de toda la cartera
 
 1. En CRM > Clientes, pulsa **Segmentos y potencial**. Las pestañas superiores identifican la vista activa y resaltan al pasar el ratón.
 2. Consulta los tres indicadores: facturación clasificada y, aparte con un signo +, ventas sin clasificar; potencialidad anual registrada; y número e importe neto de líneas sin clasificar. Pulsa el icono de información de cada indicador para consultar su fórmula y filtros.
@@ -345,11 +367,14 @@ El comercial puede editar los segmentos de sus clientes y Admin los de todos los
 
 La facturación suma facturas y resta abonos de productos, sin IVA ni cuentas. Las líneas sin clasificar se muestran aparte y solo responden a los filtros de vendedor y cliente. La potencialidad es una estimación anual; la facturación corresponde a lo acumulado en el año. Son periodos diferentes. Las facturas históricas pueden hacer que una fila permanezca visible aunque su facturación del año sea cero.
 
-## 11. Contactos: localizar a la persona correcta
+## 5. CRM - Contactos
+
+### 5.1 localizar a la persona correcta
+
 
 ![Directorio real de contactos y sus cuatro indicadores](imagenes/03-contactos-directorio.png)
 
-### Procedimiento
+#### Procedimiento
 
 1. Abre **CRM > Contactos**.
 2. Escribe nombre, cargo, empresa o email en el buscador.
@@ -365,15 +390,16 @@ Los indicadores **Total de Contactos**, **LinkedIn Vinculado**, **Con Correo Vá
 
 **«Con Correo Válido» indica que hay un email informado.** No acredita que se haya comprobado su entrega. Los porcentajes se redondean; un 100% visible no siempre significa que no falte ningún contacto por completar.
 
-### Buscar sin tildes ni diferencias de mayúsculas
+#### Buscar sin tildes ni diferencias de mayúsculas
 
 Escribe en el buscador y espera un instante. «jose» encuentra «José»; «garcia», «García». Mayúsculas y minúsculas dan las mismas coincidencias. Borra el texto para recuperar la lista.
 
 La comparación se aplica a los campos buscables de esta tabla. Conserva la escritura original y busca solo en tu cartera autorizada; no amplía los permisos ni cambia otros selectores.
 
-## 12. Contactos: acciones rápidas y LinkedIn
+### 5.2 acciones rápidas y LinkedIn
 
-### Procedimiento: abrir un correo nuevo desde el directorio
+
+#### Procedimiento: abrir un correo nuevo desde el directorio
 
 1. Confirma que has encontrado la persona correcta.
 2. Pulsa su email.
@@ -382,7 +408,7 @@ La comparación se aplica a los campos buscables de esta tabla. Conserva la escr
 
 Este enlace sirve para comenzar una comunicación. Si necesitas un correo con plantilla y seguimiento preparado desde el CRM, abre la ficha y utiliza **Redactar Correo en Outlook**.
 
-### Procedimiento: añadir o corregir LinkedIn
+#### Procedimiento: añadir o corregir LinkedIn
 
 1. En la fila, pulsa **Vincular LinkedIn**, **Añadir LinkedIn** o el lápiz, según la pantalla.
 2. Pega la dirección del perfil de la persona correcta.
@@ -396,7 +422,8 @@ El mismo enriquecimiento está accesible desde la cabecera de la ficha del conta
 
 Los números de teléfono utilizan enlaces de llamada. Su funcionamiento depende de que el ordenador o móvil tenga una aplicación asociada. Abrir la llamada no crea un registro de «Llamada»; añade esa actividad después si necesitas conservar el resultado.
 
-## 13. La ficha: cinco pestañas, cinco preguntas
+### 5.3 La ficha: cinco pestañas, cinco preguntas
+
 
 ![Ficha real de contacto en la pestaña Información](imagenes/06-contacto-informacion.png)
 
@@ -414,11 +441,12 @@ En ventanas pequeñas puede mostrarse solo el icono de cada pestaña. Amplía la
 
 **No confundas las dos fichas:** la ficha de cliente resume una empresa; la de contacto organiza el seguimiento de una persona concreta.
 
-## 14. Información: datos, ubicación y resumen de ofertas
+### 5.4 Información: datos, ubicación y resumen de ofertas
+
 
 La pestaña **Información** reúne los datos del contacto, la empresa, un resumen de ofertas y las últimas actividades. En **Datos de Empresa** hay dos subpestañas: **General** y **Comunicación**.
 
-### Procedimiento: preparar una visita
+#### Procedimiento: preparar una visita
 
 1. Confirma nombre, cargo, nivel organizativo y relación comercial de la persona.
 2. Consulta la ubicación específica del contacto. Puede trabajar en un centro distinto a la sede.
@@ -426,7 +454,7 @@ La pestaña **Información** reúne los datos del contacto, la empresa, un resum
 4. Abre **Comunicación** para ver email, teléfono y dirección de empresa.
 5. Utiliza **Ver en Maps** cuando esté disponible.
 
-### Procedimiento: asignar o editar la ubicación del contacto
+#### Procedimiento: asignar o editar la ubicación del contacto
 
 1. Pulsa **Asignar ubicación** o **Editar ubicación**.
 2. Revisa dirección, complemento de dirección, código postal, ciudad, provincia y territorio.
@@ -439,11 +467,12 @@ Este control edita la ubicación disponible en la ficha del contacto; no es el f
 
 Las tres últimas actividades sirven de acceso rápido. Para consultar el historial completo, utiliza Timeline.
 
-## 15. Timeline: recuperar toda la conversación comercial
+### 5.5 Timeline: recuperar toda la conversación comercial
+
 
 ![Timeline real: mensajes y actividades en un mismo historial](imagenes/09-contacto-timeline.png)
 
-### Procedimiento: preparar una llamada con contexto
+#### Procedimiento: preparar una llamada con contexto
 
 1. Abre la ficha y entra en **Timeline**.
 2. Lee las entradas más recientes y su fecha y hora.
@@ -458,13 +487,14 @@ Las tarjetas de email conservan sus acciones de Outlook, tipología y nombres de
 
 **Importante:** un email «Tramitado» significa que su gestión en el CRM figura completada. No es una confirmación de lectura del destinatario ni una garantía de entrega del correo.
 
-## 16. Eventos: planificar y filtrar el trabajo
+### 5.6 Eventos: planificar y filtrar el trabajo
+
 
 ![Vista real de Eventos con una actividad pendiente](imagenes/07-contacto-eventos.png)
 
 La pestaña **Eventos** permite consultar y gestionar las actividades del contacto. Combina filtros por **tipología** y **estado**.
 
-### Procedimiento: encontrar lo que queda por hacer
+#### Procedimiento: encontrar lo que queda por hacer
 
 1. Abre **Eventos**.
 2. Elige **Todos** o una tipología: Tareas, Notas, Visitas Cliente, Visitas no programadas, Videollamadas, Llamadas o Reuniones Internas.
@@ -478,7 +508,8 @@ La pestaña **Eventos** permite consultar y gestionar las actividades del contac
 
 La pantalla puede actualizarse al volver a la ventana o periódicamente mientras trabajas con eventos. Esto no equivale a una confirmación instantánea de todos los cambios del calendario: revisa el resultado antes de repetir una operación.
 
-## 17. Nueva actividad: elegir el tipo adecuado
+### 5.7 Nueva actividad: elegir el tipo adecuado
+
 
 | Tipo | Utilidad | Consideración práctica |
 | --- | --- | --- |
@@ -490,7 +521,7 @@ La pantalla puede actualizarse al volver a la ventana o periódicamente mientras
 | Visita no programada | Registrar una visita espontánea. | Se registra en CRM y, con conexión, en tu calendario sin enviar correo al contacto. |
 | Reunión Interna | Opción reservada para una ampliación. | El formulario actual avisa de que se configurará próximamente. No permite completar el alta normal. |
 
-### Procedimiento general
+#### Procedimiento general
 
 1. Pulsa **Nueva Actividad**.
 2. Elige el tipo; no utilices Reunión Interna para intentar crear una visita de cliente.
@@ -502,7 +533,7 @@ La pantalla puede actualizarse al volver a la ventana o periódicamente mientras
 
 **Modo Local** significa que no debes dar por creada una cita en Outlook. Comprueba la conexión antes de depender del calendario para avisos o convocatorias.
 
-### Visita a Cliente y Videollamada: preparar la convocatoria
+#### Visita a Cliente y Videollamada: preparar la convocatoria
 
 Al crear cualquiera de estas dos actividades en una pantalla amplia, el formulario se reparte en dos columnas. En una pantalla estrecha se apila para facilitar la lectura.
 
@@ -518,11 +549,12 @@ El mensaje de invitados se muestra cuando el envío está activado. Las conclusi
 
 **Ubicación de la videollamada:** siempre muestra **sala Teams**, en modo de solo lectura. No introduzcas la dirección de la empresa. El CRM impone este valor también al guardar y al sincronizar con Outlook, por lo que no puede sustituirse por una dirección al editarla. El enlace de acceso a Teams lo genera Microsoft 365; «sala Teams» es la etiqueta de ubicación y no sustituye ese enlace.
 
-## 18. Actividades: ejemplo completo de ejecución
+### 5.8 Actividades: ejemplo completo de ejecución
+
 
 ![Formulario real de Nueva Actividad, abierto sin guardar](imagenes/08-nueva-actividad-detalle.png)
 
-### Ejemplo: registrar una visita no programada
+#### Ejemplo: registrar una visita no programada
 
 1. Abre la ficha de la persona visitada y entra en Eventos.
 2. Pulsa **Nueva Actividad** y elige **Visita no programada**.
@@ -536,7 +568,7 @@ El mensaje de invitados se muestra cuando el envío está activado. Las conclusi
 
 En tareas y notas, no confíes en el campo de conclusiones del alta para completar su gestión: revisa la tarjeta y utiliza el procedimiento de cierre o edición posterior. La presencia de un campo en el formulario no convierte una tarea nueva automáticamente en realizada.
 
-### Ejemplo: concertar una visita con el cliente
+#### Ejemplo: concertar una visita con el cliente
 
 1. Abre la ficha del contacto correcto y entra en Eventos → Nueva Actividad.
 2. Elige **Visita a Cliente** y completa título, fecha, hora y lugar de la visita.
@@ -549,7 +581,7 @@ En tareas y notas, no confíes en el campo de conclusiones del alta para complet
 
 La recepción real de una invitación de visita ha sido confirmada por el usuario. Guardar el registro CRM no garantiza por sí solo el envío si falla la conexión a Outlook.
 
-### Ejemplo: organizar una videollamada con invitados externos
+#### Ejemplo: organizar una videollamada con invitados externos
 
 1. Elige **Videollamada Teams / Online** e indica título, fecha y hora.
 2. Comprueba la ubicación fija **sala Teams**.
@@ -560,9 +592,10 @@ La recepción real de una invitación de visita ha sido confirmada por el usuari
 
 **Privacidad:** Detalles / Descripción y Conclusiones / Resultado son internos. Solo el mensaje público se incluye en el cuerpo de la convocatoria. No escribas conclusiones en el mensaje a invitados si deseas mantenerlas privadas.
 
-## 19. Completar, reabrir, editar y eliminar actividades
+### 5.9 Completar, reabrir, editar y eliminar actividades
 
-### Procedimiento: cerrar correctamente una actividad
+
+#### Procedimiento: cerrar correctamente una actividad
 
 1. Localiza la tarjeta en Eventos o Timeline.
 2. Pulsa la casilla de realizado o **Registrar conclusiones** cuando aparezca.
@@ -574,21 +607,22 @@ La recepción real de una invitación de visita ha sido confirmada por el usuari
 
 ![Estados de una actividad y significado de los avisos](imagenes/diagrama-03-estados.png)
 
-### Corregir o reabrir
+#### Corregir o reabrir
 
 Utiliza el lápiz para modificar título, detalles, fecha, hora, ubicación y conclusiones según el registro. Para reabrir, utiliza la casilla de pendiente y comprueba también las conclusiones: una actividad con conclusiones puede seguir mostrándose como terminada. Si quieres dejarla pendiente, revisa ambos datos.
 
-### Eliminar: revisar antes de confirmar
+#### Eliminar: revisar antes de confirmar
 
 La papelera de una actividad de calendario puede implicar su retirada del calendario sincronizado. No la utilices como una forma de marcar «realizado». Lee el mensaje de confirmación.
 
 **Excepción importante:** eliminar un email del CRM conserva el correo original en Outlook. Este comportamiento no debe extrapolarse a las citas de calendario.
 
-## 20. Informe histórico: preparar PDF y Excel
+### 5.10 Informe histórico: preparar PDF y Excel
+
 
 ![Informe real: períodos, responsables, tipos y exportaciones](imagenes/04-informe-eventos-detalle.png)
 
-### Procedimiento
+#### Procedimiento
 
 1. Desde el directorio de Contactos, pulsa **Informe Histórico de Eventos**.
 2. Elige Esta Semana, Semana Anterior, Este Mes, Mes Anterior o Personalizado.
@@ -604,13 +638,14 @@ Los botones pueden estar deshabilitados si no hay registros. Amplía el período
 
 **Lo que aporta:** preparar una reunión de seguimiento, justificar la actividad comercial y detectar registros sin conclusiones. El informe no sustituye la bandeja de correos: la selección inicial está orientada a eventos y tareas.
 
-## 21. Emails: leer una tarjeta y sus adjuntos
+### 5.11 Emails: leer una tarjeta y sus adjuntos
+
 
 ![Pestaña real de Emails con mensajes de prueba enviados y recibidos](imagenes/05-contacto-emails.png)
 
 Una tarjeta puede mostrar asunto, dirección Enviado o Recibido, tipología, estado de gestión, fecha y hora, texto, nombres de adjuntos, empresa y oferta vinculada cuando exista.
 
-### Procedimiento de lectura
+#### Procedimiento de lectura
 
 1. Confirma asunto, fecha y si es recibido o enviado.
 2. Lee el cuerpo; pulsa **Ver más** si está recortado.
@@ -622,7 +657,8 @@ Una tarjeta puede mostrar asunto, dirección Enviado o Recibido, tipología, est
 
 Un correo antiguo puede no tener nombres de adjuntos guardados. La ausencia de sección no prueba que el original no tuviera archivos. También pueden aparecer estados de información parcial, no disponible o pendiente tras el envío.
 
-## 22. Emails: filtrar por oferta y por tipología
+### 5.12 Emails: filtrar por oferta y por tipología
+
 
 La barra combina dos preguntas distintas: «¿de qué oferta?» y «¿qué clase de correo?». Ambos filtros se aplican a la lista.
 
@@ -634,7 +670,7 @@ La barra combina dos preguntas distintas: «¿de qué oferta?» y «¿qué clase
 | Negociación | Negociación | Discusión de condiciones o acuerdos. |
 | Cierre/Aceptación | Cierre | Confirmación o aceptación documentada. |
 
-### Procedimiento: ver las negociaciones de una oferta
+#### Procedimiento: ver las negociaciones de una oferta
 
 1. En Emails, abre el selector de ofertas.
 2. Elige su número. Si existen vínculos, también puedes elegir **Solo con oferta vinculada** o **Sin oferta vinculada (Generales)**.
@@ -642,22 +678,23 @@ La barra combina dos preguntas distintas: «¿de qué oferta?» y «¿qué clase
 4. Comprueba el conjunto de tarjetas y los contadores. Los contadores por tipología se calculan sobre la oferta filtrada, antes de limitar a una tipología.
 5. Para volver a toda la conversación registrada, elige **Todas las ofertas** y **Todos**.
 
-### Procedimiento: corregir una tipología
+#### Procedimiento: corregir una tipología
 
 Pulsa la etiqueta de categoría de la tarjeta, elige la correcta y espera a que se guarde. También está disponible en Timeline. Es una clasificación del registro del CRM; no mueve el email a una carpeta de Outlook.
 
 **Cierre/Aceptación no es una etiqueta neutra:** en el seguimiento anterior, un correo de cierre vinculado a una oferta puede actualizarla a Ganada. En el seguimiento nuevo gestionado desde la app, el cierre exige su procedimiento y motivo. Utiliza la categoría solo cuando refleje el contenido real del mensaje.
 
-## 23. Registrar un correo desde el complemento de Outlook
+### 5.13 Registrar un correo desde el complemento de Outlook
+
 
 **Objetivo:** que el mensaje aparezca en el seguimiento correcto. No todos los correos de tu buzón se incorporan al CRM por abrir la ficha de un contacto.
 
-### Procedimiento
+#### Procedimiento
 
 1. En Outlook Classic o Web, abre el mensaje que deseas registrar, recibido o enviado.
 2. Abre el complemento **dTS Instruments CRM** desde las aplicaciones o complementos de Outlook. Su ubicación puede variar según la versión de Outlook.
 3. Inicia sesión en el CRM dentro del complemento si lo solicita.
-4. Comprueba la empresa detectada. Si no es correcta, utiliza la selección manual.
+4. Comprueba la empresa y el contacto detectados. Para cambiarlos, pulsa **Cambiar empresa o contacto**; busca otra empresa si es necesario y selecciona el contacto correspondiente.
 5. Selecciona el contacto concreto de esa empresa cuando necesites verlo en su ficha. Un registro a nivel de empresa sin contacto no es lo mismo que un registro vinculado a la persona.
 6. Elige la tipología adecuada.
 7. Vincula la oferta si procede; comprueba su número.
@@ -670,9 +707,10 @@ Pulsa la etiqueta de categoría de la tarjeta, elige la correcta y espera a que 
 
 Se pueden registrar nombres de adjuntos en mensajes nuevos. No se hace una recuperación automática de todos los correos históricos al conectar Microsoft 365 o vincular el equipo.
 
-## 24. Abrir un correo en Classic o Web
+### 5.14 Abrir un correo en Classic o Web
 
-### Procedimiento habitual
+
+#### Procedimiento habitual
 
 1. En Emails o Timeline, localiza la tarjeta correcta.
 2. Pulsa el icono de Outlook. Se utiliza tu preferencia de Ajustes Generales.
@@ -685,21 +723,22 @@ Se pueden registrar nombres de adjuntos en mensajes nuevos. No se hace una recup
 
 El flujo comprueba el mensaje concreto. Moverlo entre carpetas del mismo buzón está contemplado. No se promete el mismo comportamiento para archivos PST, archivo en línea u otros buzones: consulta a soporte si se ha trasladado allí.
 
-### Avisos que no desplazan la pantalla
+#### Avisos que no desplazan la pantalla
 
 En la versión actualizada, los avisos aparecen flotantes en la parte inferior y se cierran a los **10 segundos**. La X permite cerrarlos antes. Cerrar el aviso no cancela una apertura ya solicitada y su resultado puede mostrar otro aviso.
 
 Si indica que la apertura no está confirmada, mira Classic antes de repetir el clic. La app no declara éxito solo porque el navegador haya perdido el foco.
 
-### Forzar otro destino
+#### Forzar otro destino
 
 Abre los tres puntos y elige **Abrir en Outlook Classic** o **Abrir en Outlook Web (M365)**. Esta elección puntual no cambia la preferencia general del navegador.
 
-## 25. Responder, buscar conversación y eliminar del CRM
+### 5.15 Responder, buscar conversación y eliminar del CRM
+
 
 ![Menú real de acciones de Outlook](imagenes/10-menu-outlook-detalle.png)
 
-### Responder o responder a todos
+#### Responder o responder a todos
 
 1. Abre los tres puntos de la tarjeta.
 2. Selecciona **Responder** o **Responder a todos**.
@@ -709,19 +748,20 @@ Abre los tres puntos y elige **Abrir en Outlook Classic** o **Abrir en Outlook W
 
 Preparar una respuesta **no la envía automáticamente**. Los destinatarios proceden del mensaje original; no se sustituyen simplemente por el email actual de la ficha del contacto.
 
-### Buscar o copiar
+#### Buscar o copiar
 
 **Buscar conversación en Outlook Web** abre una búsqueda para consultar el hilo. Puede mostrar varios mensajes; no es la apertura exacta del icono de Outlook. **Copiar datos de búsqueda** copia una consulta para pegarla en Outlook cuando necesites buscar manualmente.
 
-### Eliminar del CRM
+#### Eliminar del CRM
 
 Pulsa la papelera y lee la confirmación. Al aceptar, se elimina el registro y sus detalles guardados en la app; **el original permanece en Outlook**. No es una forma de archivar la conversación ni de borrarla del buzón. Si solo necesitas corregir tipología, oferta o notas, utiliza la edición.
 
-## 26. Redactar un correo con plantillas
+### 5.16 Redactar un correo con plantillas
+
 
 ![Formulario real para preparar un mensaje en Outlook](imagenes/11-redactar-correo-detalle.png)
 
-### Procedimiento
+#### Procedimiento
 
 1. En Emails, pulsa **Redactar Correo en Outlook**.
 2. Elige **Outlook Escritorio** o **Outlook Web (M365)**.
@@ -736,9 +776,10 @@ Pulsa la papelera y lee la confirmación. Al aceptar, se elimina el registro y s
 
 Después de preparar el mensaje puede existir un borrador pendiente. El seguimiento debe conciliarse con el enviado: si aparece un aviso de envío sin confirmar, comprueba Elementos enviados antes de volver a mandarlo.
 
-## 27. Conectar Microsoft 365 y preparar tu equipo
+### 5.17 Conectar Microsoft 365 y preparar tu equipo
 
-### Primera configuración
+
+#### Primera configuración
 
 1. Abre **Ajustes Generales** y pulsa **Conectar con Microsoft 365**.
 2. Inicia sesión con tu buzón corporativo y completa el consentimiento que corresponda.
@@ -751,21 +792,24 @@ Después de preparar el mensaje puede existir un borrador pendiente. El seguimie
 
 No confundas instalar, conectar el buzón y vincular el ordenador: son tres preparaciones distintas. Si falta alguna, puede funcionar Web pero no Classic.
 
-### Cambiar de Classic a Web
+#### Cambiar de Classic a Web
 
 Selecciona Web en Ajustes. La preferencia se guarda en ese navegador. No exige borrar registros ni desinstalar Classic. En otro navegador o equipo puede ser necesario seleccionar de nuevo la preferencia.
 
-### Botón de prueba sin borrador
+#### Botón de prueba sin borrador
 
 La entrega preparada el 19/10 abre la bandeja de entrada de Web y la ventana principal de Classic sin crear mensajes. Classic requiere componente 1.1.1 o posterior. **Esta prueba no acredita que un correo concreto se localice correctamente:** esa comprobación se hace desde su tarjeta.
 
 El usuario ha aprobado la prueba sin borradores, la apertura en Classic abierto y cerrado, las vinculaciones, los permisos por rol y la prueba con un segundo usuario. La instrumentación de tiempos sirve para diagnóstico: estas comprobaciones no establecen un tiempo de apertura garantizado.
 
-## 28. Ofertas dentro de la ficha de contacto
+## 6. CRM - Oportunidades
+
+### 6.1 Ofertas dentro de la ficha de contacto
+
 
 Esta pestaña consulta propuestas asociadas a la persona. **Las ofertas se crean en Business Central**; la app recibe los datos y permite el seguimiento habilitado. Que el contacto tenga empresa no implica que todas sus ofertas estén vinculadas automáticamente a esa persona.
 
-### Procedimiento de consulta y seguimiento
+#### Procedimiento de consulta y seguimiento
 
 1. Abre **Ofertas** y localiza el número correcto.
 2. Revisa importe, fase, probabilidad y próxima acción.
@@ -774,7 +818,7 @@ Esta pestaña consulta propuestas asociadas a la persona. **Las ofertas se crean
 5. Comprueba el resultado después de guardar o del guardado automático del campo.
 6. Registra interacciones y próxima acción con fecha cuando estén disponibles.
 
-### Dos presentaciones que pueden convivir
+#### Dos presentaciones que pueden convivir
 
 | Presentación | Qué reconocerás | Cómo actuar |
 | --- | --- | --- |
@@ -785,9 +829,10 @@ En el nuevo seguimiento: Preliminar 5%, Presentada 20%, Evaluación 35%, Negocia
 
 El importe ponderado es importe por probabilidad dividido entre 100. Ejemplo didáctico: 10.000 euros al 55% son 5.500 euros de previsión, no una venta ya realizada.
 
-## 29. Ofertas: cambiar de fase y cerrar correctamente
+### 6.2 Ofertas: cambiar de fase y cerrar correctamente
 
-### Procedimiento para el seguimiento nuevo
+
+#### Procedimiento para el seguimiento nuevo
 
 1. Confirma que estás trabajando con una oferta habilitada para seguimiento desde la app y con permiso de edición.
 2. Arrastra la tarjeta a la fase de destino o utiliza el campo correspondiente.
@@ -797,7 +842,7 @@ El importe ponderado es importe por probabilidad dividido entre 100. Ejemplo did
 
 Arrastrar no debe confundirse con pulsar una tarjeta: la tarjeta abre el detalle; el cambio de fase tiene su confirmación cuando la presentación lo requiere.
 
-### Ganar o perder
+#### Ganar o perder
 
 En el nuevo seguimiento, Ganada y Perdida se consultan fuera de las columnas abiertas. Registra el resultado real y selecciona un motivo. No cierres una oferta solo para quitarla de tu vista.
 
@@ -807,13 +852,14 @@ En el nuevo seguimiento, Ganada y Perdida se consultan fuera de las columnas abi
 
 La fase, el tipo de oferta y el cierre previsto son datos esenciales del seguimiento acordado. Los datos económicos y maestros importados no se corrigen desde esta ficha. Si aparece una ficha de consulta o un error de versión, recarga antes de intentar guardar; otra persona o sincronización puede haber actualizado el registro.
 
-Este manual cubre Ofertas como parte de Contactos. El análisis global y los cortes históricos de la vista Oportunidades tienen un alcance distinto.
+La vista global Oportunidades y sus cortes históricos se explican en los apartados 6.4 a 6.7.
 
-## 30. Prospectos: solo si la pestaña está habilitada
+### 6.3 Prospectos: solo si la pestaña está habilitada
+
 
 Algunos usuarios ven **Contactos BC** y **Prospectos**. Si tu directorio no muestra estas pestañas, continúa con el funcionamiento habitual: no tienes que crear contactos ficticios ni pedir que se modifiquen tus permisos para seguir este manual.
 
-### Crear y desarrollar un prospecto
+#### Crear y desarrollar un prospecto
 
 1. En Prospectos, pulsa **Crear prospecto**.
 2. Introduce el nombre de empresa, que es obligatorio.
@@ -824,19 +870,99 @@ Algunos usuarios ven **Contactos BC** y **Prospectos**. Si tu directorio no mues
 
 Se contempla una persona de contacto por empresa prospecto. El control de duplicidad se aplica dentro de la cartera del comercial: comprueba el nombre antes de crear otra ficha.
 
-### Editar, archivar y recuperar
+#### Editar, archivar y recuperar
 
 El propietario y Admin pueden editar los prospectos autorizados; Dirección consulta. El archivo, la restauración y la vinculación se muestran al propietario en la interfaz actual. Cambia el filtro a **Archivados** para localizar y restaurar una ficha. Archivar conserva la información; no equivale a eliminarla.
 
-### Vincular con un cliente formalizado
+#### Vincular con un cliente formalizado
 
 El propietario abre la ficha, busca el cliente ya importado de Business Central, revisa código y empresa y confirma la vinculación. No hace falta esperar a que exista una oferta. El prospecto se conserva como **Convertido** con su historial.
 
 Si la asociación es incorrecta, utiliza **Deshacer vinculación** y confirma. Los eventos se conservan en el prospecto y dejan de verse ligados al cliente equivocado. Esta asociación no crea, borra ni fusiona el cliente de Business Central.
 
-## 31. Rutinas recomendadas: diario y semanal
+### 6.4 visión general y acceso
 
-### Agenda semanal del Panel de Control Comercial
+
+La vista **CRM - Oportunidades** reúne la prospección, el seguimiento de ofertas y, cuando está habilitado, los cortes históricos. Su utilidad es revisar la cartera comercial desde una sola pantalla. Los apartados y acciones disponibles dependen del permiso asignado y de la configuración. Si no aparece una pestaña o un botón, consulta con la persona administradora.
+
+| Pestaña | Para qué sirve |
+| --- | --- |
+| Prospección | Trabajar empresas aún no formalizadas y conservar su seguimiento. |
+| Ofertas | Revisar el embudo comercial, las ofertas y sus fases. |
+| Cortes | Consultar fotografías históricas, informes y exportaciones disponibles. |
+
+#### Antes de empezar
+
+1. En el menú CRM, abre **Oportunidades** y elige la pestaña necesaria.
+2. Comprueba los filtros y el comercial seleccionado antes de interpretar los indicadores.
+3. Usa los controles **Tablero** y **Tabla** para cambiar la presentación cuando estén disponibles.
+4. Selecciona un registro para consultar su detalle; solo modifica campos para los que tengas acceso.
+
+Las ofertas se crean en Business Central y llegan por sincronización. La vista no crea presupuestos nuevos. La información de seguimiento puede depender de la configuración de la oferta y de su fuente; si aparece en modo de consulta, no fuerces una modificación ni supongas que la sincronización ha fallado.
+
+### 6.5 trabajar las ofertas
+
+
+#### Consultar el embudo
+
+1. Abre **Ofertas**. Los indicadores superiores resumen la cartera mostrada; consulta sus etiquetas y filtros para interpretarlos.
+2. Busca por los datos disponibles y aplica los filtros que necesites. Usa **Tabla** si necesitas revisar los registros en filas.
+3. En el tablero, localiza la fase y abre una tarjeta para consultar el detalle y las actividades.
+4. Utiliza los accesos de abiertas, ganadas, perdidas o todas en tabla para revisar el grupo correspondiente.
+
+En el seguimiento nuevo las columnas abiertas son Preliminar, Presentada, Evaluación, Negociación, Aprobación y Aceptada. Ganada y Perdida se consultan en la tabla de cerradas. La probabilidad se calcula a partir de la fase; el importe ponderado es el importe sin IVA multiplicado por la probabilidad. Los importes mostrados no garantizan una venta futura.
+
+#### Registrar un cambio de fase
+
+1. Con permiso de edición, arrastra la tarjeta hasta la fase deseada o cambia la fase desde el detalle cuando esté disponible.
+2. Revisa el formulario de confirmación y completa la información requerida, incluidos el tipo de oferta, el cierre previsto y la nota cuando se soliciten.
+3. Para Ganada o Perdida, selecciona el motivo correspondiente; comprueba el resultado antes de confirmar.
+4. Confirma y revisa que la fase aparezca correctamente. El cierre registra la fecha correspondiente; no escribas una fecha ficticia si el dato está vacío.
+
+Para consultar los porcentajes y las listas de motivos, utiliza los apartados 6.1 y 6.2. La presentación anterior puede mostrar fases distintas. Los campos maestros de la oferta proceden de Business Central.
+
+### 6.6 prospectos
+
+
+La pestaña **Prospección** presenta Fase 0 (sin aproximación comercial) y Fase 1 (interesado). Los mismos prospectos pueden consultarse desde la pestaña **Prospectos** de CRM - Contactos cuando está disponible. No son clientes creados en Business Central.
+
+#### Crear y seguir un prospecto
+
+1. Pulsa **Crear prospecto**, escribe el nombre de la empresa y añade los datos conocidos de la persona de contacto. El nombre de empresa es obligatorio.
+2. Revisa las coincidencias y guarda. Un prospecto tiene una persona de contacto y el control de duplicados se aplica por comercial.
+3. Registra actividades desde la ficha y actualiza la fase con el selector o arrastrando la tarjeta, según la presentación disponible.
+4. Usa los filtros de activos, archivados o convertidos y cambia a tabla para revisar los que no están activos.
+
+#### Cuando la empresa ya es cliente
+
+Abre el prospecto y busca el cliente sincronizado desde Business Central. Comprueba nombre y código y confirma la vinculación; no es necesario esperar a tener una oferta. El prospecto pasa a **Convertidos** y se conserva su historial. Si la asociación es incorrecta, el propietario puede usar **Deshacer vinculación** y confirmar. Los eventos permanecen en el prospecto.
+
+El propietario y Administración pueden editar dentro de los permisos disponibles. El archivo, la restauración y la vinculación se presentan según la autorización; archivar no borra el historial.
+
+### 6.7 cortes e informes
+
+
+Un corte es una fotografía de la cartera en un momento concreto. Permite comparar periodos sin confundir la situación actual con la que existía cuando se capturó. Los importes del informe se presentan sin IVA y cada usuario consulta los datos autorizados.
+
+#### Consultar o descargar un corte
+
+1. Abre **Cortes** y revisa su estado: pendiente, en curso, fallido o publicado.
+2. En un corte publicado, pulsa **Consultar** para ver sus registros y el resumen.
+3. Utiliza el icono de descarga para obtener el archivo CSV.
+4. En los informes disponibles puedes consultar resumen, matriz mensual, calidad de datos, cierres vencidos, próximas acciones, motivos de ganadas y perdidas, prospección y movimientos entre cortes. Para movimientos, selecciona otro corte accesible como referencia.
+
+#### Crear un corte manual
+
+Si tu cuenta muestra el formulario, escribe el motivo y pulsa **Crear corte manual**. Si necesitas documentar una revisión, selecciona opcionalmente el corte publicado al que se refiere. Espera el estado publicado antes de utilizarlo. En caso de fallo, la interfaz puede ofrecer **Reintentar** a los usuarios autorizados.
+
+La pantalla indica la programación semanal del viernes a las 18:00, hora de Madrid, y si el proceso automático está habilitado. Ver esa programación no confirma que se hayan ejecutado cortes: comprueba el estado y la fecha real de captura. El historial comienza con el primer corte realizado; no reconstruye automáticamente periodos anteriores.
+
+## 7. Rutinas, ayuda y referencias
+
+### 7.1 Rutinas recomendadas: diario y semanal
+
+
+#### Agenda semanal del Panel de Control Comercial
 
 La agenda permite localizar rápidamente qué ocurre cada día sin desplegar el contenido de todas las actividades. Cada tarjeta ocupa dos líneas, también cuando el asunto es largo.
 
@@ -849,7 +975,7 @@ La agenda permite localizar rápidamente qué ocurre cada día sin desplegar el 
 
 Los textos largos se recortan con puntos suspensivos para evitar que la tarjeta aumente de altura. Al pasar el cursor se muestra el asunto y contexto completos. Los colores siguen distinguiendo los tipos y las actividades pendientes de conclusiones.
 
-### Procedimiento: abrir un evento o un correo desde la agenda
+#### Procedimiento: abrir un evento o un correo desde la agenda
 
 1. Abre **Panel de Control Comercial** y localiza **Agenda Semanal CRM**.
 2. Utiliza los controles de semana para localizar el período adecuado.
@@ -863,14 +989,14 @@ Abrir esta ficha permite consultar el registro del CRM: no lanza Outlook ni desc
 La agenda semanal del panel comercial y la ventana inicial de resumen de jornada son elementos distintos. Los correos históricos se excluyen del resumen inicial y sus pendientes de cierre; eso no implica eliminar sus registros de otras consultas.
 
 
-### Al comenzar la jornada
+#### Al comenzar la jornada
 
 1. Revisa los Eventos pendientes y sus fechas.
 2. Antes de llamar, lee el Timeline del contacto.
 3. Prioriza citas vencidas y registros sin conclusiones.
 4. Confirma que estás conectado a Microsoft 365 si vas a utilizar calendario o correo integrado.
 
-### Después de cada interacción
+#### Después de cada interacción
 
 1. Registra llamada, visita, tarea o nota con un concepto concreto.
 2. Escribe qué se ha acordado, quién lo hará y cuándo.
@@ -878,7 +1004,7 @@ La agenda semanal del panel comercial y la ventana inicial de resumen de jornada
 4. Guarda los correos relevantes desde Outlook y vincúlalos a la oferta correcta cuando proceda.
 5. Actualiza el seguimiento de la oferta en el flujo que tengas habilitado.
 
-### Al terminar la semana
+#### Al terminar la semana
 
 1. Prepara el Informe Histórico de Eventos del período.
 2. Revisa actividades sin conclusiones y siguientes pasos sin fecha.
@@ -888,7 +1014,8 @@ La agenda semanal del panel comercial y la ventana inicial de resumen de jornada
 
 **Ejemplo didáctico completo:** buscas una empresa inactiva, localizas al responsable, lees su histórico, llamas, registras el resultado, planificas una visita y guardas el email de confirmación. El valor del CRM está en que el siguiente compañero puede entender esa secuencia sin preguntarte de nuevo.
 
-## 32. Incidencias: resolver lo habitual paso a paso
+### 7.2 Incidencias: resolver lo habitual paso a paso
+
 
 | Qué ocurre | Qué comprobar primero | Siguiente acción |
 | --- | --- | --- |
@@ -906,7 +1033,7 @@ La agenda semanal del panel comercial y la ventana inicial de resumen de jornada
 
 Al comunicar una incidencia, indica vista, acción, hora, cuenta usada, Classic o Web y mensaje visible. Incluye código de cliente u oferta si procede. Nunca envíes contraseñas, códigos de vinculación activos ni tokens.
 
-### Si una invitación no llega o Gmail ofrece traducirla
+#### Si una invitación no llega o Gmail ofrece traducirla
 
 1. Comprueba que el tipo es **Visita a Cliente** o **Videollamada**, no **Visita no programada**.
 2. Revisa la casilla de envío, los destinatarios, la fecha, la hora y la conexión de calendario.
@@ -914,7 +1041,8 @@ Al comunicar una incidencia, indica vista, acción, hora, cuenta usada, Classic 
 4. Si Gmail identifica inglés aunque el texto esté en español, distingue el idioma del texto del idioma declarado por el mensaje. En una invitación real se detectó la marca inglesa tanto en el correo como en el calendario.
 5. La corrección preparada el 22/10 declara español en las convocatorias y su HTML. Se debe desplegar y comprobar una invitación nueva en Gmail. Los mensajes ya enviados conservan sus marcas originales.
 
-## 33. Glosario y comprobación de aprendizaje
+### 7.3 Glosario y comprobación de aprendizaje
+
 
 | Término | Significado práctico |
 | --- | --- |
@@ -930,7 +1058,7 @@ Al comunicar una incidencia, indica vista, acción, hora, cuenta usada, Classic 
 | Vincular equipo | Autorizar el componente de ese usuario Windows para las solicitudes de Classic. |
 | Vincular prospecto | Asociar el historial de prospección con una empresa ya formalizada. |
 
-### Comprueba que ya puedes trabajar
+#### Comprueba que ya puedes trabajar
 
 - Puedo distinguir un cliente de un contacto y una actividad de una oferta.
 - Sé buscar, filtrar y restablecer el directorio sin crear duplicados.
@@ -942,9 +1070,10 @@ Al comunicar una incidencia, indica vista, acción, hora, cuenta usada, Classic 
 - Sé que los nombres de adjuntos no son enlaces de descarga.
 - Sé que eliminar un email del CRM conserva el original en Outlook.
 
-**Siguiente nivel:** utiliza las rutinas del capítulo 31 durante una semana y revisa el informe con tu responsable. La finalidad es que cualquier seguimiento termine con un siguiente paso claro.
+**Siguiente nivel:** utiliza las rutinas del apartado 7.1 durante una semana y revisa el informe con tu responsable. La finalidad es que cualquier seguimiento termine con un siguiente paso claro.
 
-## 34. Alcance, versión y referencias para mantenimiento
+### 7.4 Alcance, versión y referencias para mantenimiento
+
 
 Este manual se ha contrastado con el código del proyecto y con consultas de las vistas reales de producción el 19/10/2026. Se han abierto pantallas y formularios para documentarlos, sin guardar altas, enviar mensajes ni realizar cambios de clasificación durante la captura.
 
@@ -952,7 +1081,7 @@ Este manual se ha contrastado con el código del proyecto y con consultas de las
 
 **Disponibilidad:** la ficha lateral de cliente y Prospección dependen de acceso habilitado. La pestaña Ofertas conserva la convivencia entre el seguimiento anterior y el nuevo. Las instrucciones explican cómo reconocerlos; no se afirma que todas las cuentas utilicen ya el mismo flujo.
 
-### Revisión 1.1 - 22/10/2026
+#### Revisión 1.1 - 22/10/2026
 
 Esta edición incorpora el acceso al PDF desde el menú Ayuda, la búsqueda sin tildes en Contactos, el alcance de cartera acordado para cada rol, las invitaciones de visitas y videollamadas, el mensaje público en la primera columna al crear, las conclusiones a todo el ancho, la ubicación fija sala Teams y la agenda semanal de dos líneas con apertura del detalle.
 
@@ -962,21 +1091,21 @@ Esta edición incorpora el acceso al PDF desde el menú Ayuda, la búsqueda sin 
 
 Las capturas reales siguen fechadas el 19/10/2026. Los dos nuevos esquemas son ayudas explicativas, no capturas nuevas de producción. El manual contiene 34 capítulos; esta revisión amplía los procedimientos existentes.
 
-### Revisión 1.2 - 26/10/2026
+#### Revisión 1.2 - 26/10/2026
 
-Añadidos contactos compactos con navegación directa, tabla de segmentos, potencialidad anual en EUR, ejemplos, permisos y estado pendiente de Facturación. Se documenta la relación por **client_id**, código estable de BC, y la instalación o migración necesaria antes de usar la nueva tabla. Incluye una referencia separada a los filtros coordinados y totales de Ventas-Clientes; los cuatro indicadores de CRM-Clientes del capítulo 6 no se han eliminado por ese cambio.
+Añadidos contactos compactos con navegación directa, tabla de segmentos, potencialidad anual en EUR, ejemplos, permisos y estado pendiente de Facturación. Se documenta la relación por **client_id**, código estable de BC, y la instalación o migración necesaria antes de usar la nueva tabla. Incluye una referencia separada a los filtros coordinados y totales de Ventas-Clientes; los cuatro indicadores de CRM-Clientes del apartado 4.3 no se han eliminado por ese cambio.
 
 **Verificado automáticamente:** 24 pruebas backend de segmentos, controles de importes en frontend y compilación de ambos proyectos. El usuario confirma que la app local vuelve a abrir; eso no acredita el guardado real de segmentos ni la instalación del SQL. Persistencia, permisos y revisión visual de las nuevas funciones siguen pendientes de aceptación. La nueva edición del PDF se revisa y empaqueta para la descarga del menú Ayuda; no se declara publicación en producción.
 
-### Revisión 1.3 - 02/11/2026
+#### Revisión 1.3 - 02/11/2026
 
 La ficha muestra la facturación neta anual por segmento y avisa de líneas sin clasificar. Se añade Gauges y Process pasa a llamarse Process-Seiko. Las reglas ETM sin clasificación fija usan el modelo de negocio del cliente. El SQL se ha aplicado y sus 167 reglas se comprobaron; la prueba visual y funcional de la ficha sigue pendiente.
 
-### Revisión 1.4 - 03/11/2026
+#### Revisión 1.4 - 03/11/2026
 
 Añadida la consulta general por cliente y segmento, sus indicadores, filtros, detalle sin segmento, exportación Excel y acceso a la ficha. Actualizada la distribución compacta de contacto y localización. Comprobar en la aplicación la presentación y descarga correspondientes a la versión desplegada.
 
-### Referencias internas
+#### Referencias internas
 
 - [Guía funcional y técnica de CRM Clientes](../../vistas/03_crm/crm_clientes.md).
 - [Guía de CRM Contactos y Emails](../../vistas/03_crm/crm_contactos_mails.md).
@@ -987,11 +1116,12 @@ Añadida la consulta general por cliente y segmento, sus indicadores, filtros, d
 
 **Revisión recomendada:** actualizar esta guía cuando cambien pantallas, permisos o procedimientos. Mantener juntos el Markdown y sus imágenes; el PDF puede leerse por separado.
 
-## 35. Referencia: Ventas-Clientes y su mapa
+### 7.5 Referencia: Ventas-Clientes y su mapa
 
-**Esta es otra vista:** Ventas > Clientes, no CRM > Clientes. En Ventas se ha retirado la fila superior de cuatro KPI; los indicadores propios de CRM-Clientes descritos en el capítulo 6 permanecen.
 
-### Procedimiento: seleccionar una zona
+**Esta es otra vista:** Ventas > Clientes, no CRM > Clientes. En Ventas se ha retirado la fila superior de cuatro KPI; los indicadores propios de CRM-Clientes descritos en el apartado 4.3 permanecen.
+
+#### Procedimiento: seleccionar una zona
 
 1. Abre **Ventas > Clientes** y pulsa una provincia, por ejemplo **Vizcaya**.
 2. Comprueba que el selector **Territorio** y la etiqueta de zona muestran la misma selección. El ranking lateral y la tabla de abajo se filtran conjuntamente.
@@ -1000,8 +1130,24 @@ Añadida la consulta general por cliente y segmento, sus indicadores, filtros, d
 5. En el ranking, elige **Todos** para revisar la selección completa. Top 10 limita solo la lista lateral, no la tabla ni sus totales. La cartera ya no se corta a los primeros 600 clientes; el mapa mantiene un máximo visual de 100 marcadores.
 6. Quita la zona pulsándola de nuevo, quitando su etiqueta, eligiendo Todos en Territorio o restableciendo filtros.
 
-### Procedimiento: leer el pie de totales
+#### Procedimiento: leer el pie de totales
 
 El pie fijo muestra clientes filtrados, ventas de 2023, 2024, 2025 y 2026 (YTD), y acumulado de esos ejercicios. Incluye toda la selección, aunque no hayas cargado todas las filas al desplazar la tabla. Los importes negativos se conservan. No se suman margen, días de cobro ni campos descriptivos.
 
 Ocultar una columna oculta su celda del total y no cambia la cartera. **Calculando...** indica carga; un error de cálculo no significa que haya cero clientes. El acumulado de cuatro años no es toda la vida comercial ni debe confundirse con la métrica de ventas del mapa. La exportación contiene los registros filtrados, sin añadir la fila visual de totales.
+
+
+### 7.6 Pestañas del CRM y cambios recientes
+
+
+#### Clientes y potencial
+
+En CRM - Clientes, la ficha lateral reúne contacto y localización, personas de contacto y segmentos con potencial anual. La pestaña general de segmentos presenta una fila por cliente y segmento, indicadores, familias, búsqueda, filtros y descarga Excel. El filtro **Sin segmento** permite localizar ventas de productos sin clasificar. El indicador de facturación distingue el importe clasificado y el importe sin clasificar; consulta la información del indicador para conocer su alcance. El detalle de clasificación y sus limitaciones está en el apartado 4.7.
+
+#### Contactos y eventos
+
+En CRM - Contactos puedes consultar **Contactos BC** y, si tienes acceso, **Prospectos**. La ficha de una persona agrupa Información, Timeline, Ofertas, Eventos y Emails. En Eventos, las tarjetas completadas se distinguen visualmente sin tachar el título. Al abrir el formulario de creación se propone la próxima hora en punto; si corresponde a medianoche, propone el día siguiente. Revisa y cambia fecha y hora antes de guardar si necesitas otra cita.
+
+#### Complemento de Outlook
+
+Cuando se detectan automáticamente empresa y contacto, **Cambiar empresa o contacto** permite elegir otra asociación antes de registrar el mensaje. Al cambiar de empresa, selecciona de nuevo el contacto y la oferta que correspondan. El selector de ofertas depende de la empresa elegida; comprueba el resumen de destino antes de guardar. El correo ya registrado no se cambia automáticamente por modificar una selección posterior.

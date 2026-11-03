@@ -22,5 +22,5 @@ const pdf = fs.readFileSync(path.join(target, filename));
 if (!pdf.subarray(0, 5).equals(Buffer.from('%PDF-'))) throw new Error('El archivo del manual no es un PDF válido.');
 const sha256 = crypto.createHash('sha256').update(pdf).digest('hex');
 if (!edition && previous.sha256 !== sha256) throw new Error('El PDF empaquetado no coincide con su catálogo.');
-fs.writeFileSync(catalogPath, JSON.stringify({ title: 'Manual CRM — Clientes y Contactos', description: 'Guía paso a paso de clientes, contactos, actividades, agenda y correo de Outlook.', version, updatedAt, sha256 }, null, 2) + '\n');
+fs.writeFileSync(catalogPath, JSON.stringify({ title: 'Manual CRM — Clientes, Contactos y Oportunidades', description: 'Guía paso a paso de clientes, contactos, oportunidades, actividades y Outlook.', version, updatedAt, sha256 }, null, 2) + '\n');
 console.log(`Manual CRM ${version} (${updatedAt}) empaquetado para acceso autenticado.`);

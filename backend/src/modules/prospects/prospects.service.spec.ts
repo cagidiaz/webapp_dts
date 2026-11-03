@@ -15,6 +15,7 @@ describe('Permisos y convivencia del piloto de Prospección', () => {
     enabled = true; role = 'TESTER'; email = 'aciurans@dtsinstruments.com';
     db = {
       profiles: { findUnique: jest.fn().mockImplementation(() => ({ email, role_id: 'role', code: 'ACI', is_active: true, roles: { name: role } })) },
+      modules: { findFirst: jest.fn().mockResolvedValue({ id: 'pipeline' }) },
       role_modules: { findMany: jest.fn().mockResolvedValue(['/crm', '/crm/pipeline'].map(route_path => ({ can_view: true, module: { route_path } }))) },
       customers: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue({ id: 'client', client_id: 'CL001', name: 'Empresa Delta' }) },
       crm_prospects: { findFirst: jest.fn().mockResolvedValue(record), create: jest.fn().mockResolvedValue(record), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findUniqueOrThrow: jest.fn().mockResolvedValue(record) },
@@ -32,12 +33,20 @@ describe('Permisos y convivencia del piloto de Prospección', () => {
     expect(db.profiles.findUnique).toHaveBeenCalled();
   });
 
-  it('Antoni TESTER requiere los permisos de CRM y Oportunidades del panel', async () => {
+  it('el permiso individual de Antoni requiere CRM y el módulo activo', async () => {
     expect((await service.access('pilot')).canCreate).toBe(true);
     db.role_modules.findMany.mockResolvedValue([{ can_view: true, module: { route_path: '/crm' } }, { can_view: false, module: { route_path: '/crm/pipeline' } }]);
+    expect((await service.access('pilot')).enabled).toBe(true);
+    db.modules.findFirst.mockResolvedValue(null);
     expect((await service.access('pilot')).enabled).toBe(false);
     await expect(service.create('pilot', fields)).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.crm_prospects.create).not.toHaveBeenCalled();
+  });
+
+  it('otros usuarios dependen del permiso de su rol', async () => {
+    email = 'otro@example.com'; role = 'VENTAS';
+    db.role_modules.findMany.mockResolvedValue([{ can_view: true, module: { route_path: '/crm' } }, { can_view: false, module: { route_path: '/crm/pipeline' } }]);
+    expect((await service.access('other')).enabled).toBe(false);
   });
 
   it('deniega permisos ausentes y respeta la revocación también para Admin', async () => {

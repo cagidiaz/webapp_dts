@@ -1,7 +1,7 @@
 {
-  "title": "Manual CRM — Clientes y Contactos",
-  "description": "Guía paso a paso de clientes, contactos, actividades, agenda y correo de Outlook.",
-  "version": "1.4",
+  "title": "Manual CRM — Clientes, Contactos y Oportunidades",
+  "description": "Guía paso a paso de clientes, contactos, oportunidades, actividades y Outlook.",
+  "version": "1.6",
   "updatedAt": "2026-11-03",
-  "sha256": "15ab49c26fff994579ecd73dc520b3ba468aba8e24f796b9c899830e87e14998"
+  "sha256": "1636920f9fc993a915c1d914d796684f40acb7d78061ec10c4950ef5e5354e2d"
 }
