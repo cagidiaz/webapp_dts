@@ -36,6 +36,7 @@ export const InfoPopover: React.FC<InfoPopoverProps> = ({
     <>
       <button 
         type="button"
+        aria-label={`Información sobre ${title}`}
         onClick={() => setIsOpen(true)}
         className={`text-gray-400 hover:text-dts-primary dark:hover:text-white focus:outline-none transition-colors ${className}`}
       >

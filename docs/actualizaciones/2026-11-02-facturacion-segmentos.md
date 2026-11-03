@@ -1,0 +1,11 @@
+# Facturación anual por segmento de cliente
+
+El CSV de categorías suministrado contiene 167 correspondencias. El SQL propuesto crea una tabla propia `crm_segment_subcategories` con esas reglas y amplía el catálogo de `crm_customer_segments` para admitir `dtspres-gauges`, sin borrar potencialidades. El nombre visible de `dtsflow-process` pasa a Process-Seiko conservando su identificador. La tabla nueva no modifica las tablas importadas de BC.
+
+La ficha calcula las ventas del año en curso por fecha de contabilización, con líneas `Item`: suma `Factura` y resta `Abono`. Se excluyen las líneas de cuentas y el importe es sin IVA. Los segmentos con facturación aparecen junto a los introducidos manualmente, con potencialidad pendiente si no existe; los manuales sin ventas muestran cero. Las líneas no clasificadas aparecen en un aviso y no forman parte del total por segmento.
+
+Las subcategorías de ETM con segmento explícito en el CSV conservan ese segmento. Solo las once subcategorías ETM sin segmento se clasifican según `customers.business_model`: OEM en dTSTemp OEM, otro valor informado en dTSTemp Process y vacío pendiente. Una subcategoría ausente de la tabla de reglas queda sin clasificar. El cálculo consulta el modelo actual, según la indicación de que no cambia; si ese supuesto deja de cumplirse, deberá diseñarse un histórico antes de modificarlo. La clasificación por producto utiliza su subcategoría actual, por lo que un cambio posterior de subcategoría puede alterar resultados históricos.
+
+Para activar la funcionalidad se propone ejecutar una sola vez [el SQL de clasificación](../../backend/prisma/proposals/2026-11-02-clasificacion-segmentos.sql), después de disponer de una copia y antes de arrancar el código actualizado. El SQL requiere que exista `crm_customer_segments` con su restricción original; si no es así, se detiene y revierte. No ejecuta importaciones de BC. El backend debe tener acceso a la tabla nueva.
+
+En una consulta agregada de solo lectura del 02/11/2026 se encontraron 2.429 líneas de producto de 2026, con 51 pendientes de clasificar. El usuario ejecutó el SQL corregido y se verificaron las 167 reglas, las once ETM sin segmento fijo y Gauges. Las pruebas de usuario, la revisión de líneas pendientes y la conciliación de importes con facturas concretas siguen pendientes.

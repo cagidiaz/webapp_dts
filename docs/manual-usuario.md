@@ -723,10 +723,25 @@ La exportación Excel contiene los registros filtrados, pero no añade la fila v
 2. Pulsa **Añadir segmento** y busca por familia o subfamilia. Las opciones muestran ambos nombres; dTSTemp, dTSPres y dTSFlow requieren escoger una subfamilia. dTSCal, dTSLevel y dTSSens se seleccionan directamente.
 3. Introduce la estimación anual en euros (ejemplo: **12.500,00**) y guarda. Se puede dejar vacía si aún no la conoces; cero significa una estimación de cero euros.
 4. Repite para los demás segmentos del cliente. No se admite el mismo segmento dos veces.
-5. El lápiz permite editar el importe; la papelera permite quitar la fila con confirmación. El pie suma los importes conocidos y avisa si hay estimaciones pendientes. Facturación se muestra vacía y no se puede rellenar todavía.
+5. El lápiz permite editar el importe; la papelera permite quitar la fila con confirmación. El pie suma los importes conocidos y avisa si hay estimaciones pendientes. Facturación muestra las ventas netas del año, sin IVA ni líneas de cuentas, y no se edita manualmente. Los segmentos con ventas aparecen automáticamente; las líneas sin clasificar se avisan.
 
 El comercial edita sus clientes y Admin puede editar todos los autorizados. Si no ves controles, tu acceso a ese cliente es de consulta. Si aparece un aviso de tabla pendiente, Administración debe ejecutar el SQL de esta entrega. La funcionalidad no actualiza Business Central y requiere instalarse y probarse antes de utilizar datos reales.
 
-### Manual descargable actualizado - 26/10/2026
+### Manual descargable - revisión histórica del 26/10/2026
 
 El PDF de **Ayuda → Manuales de usuario** se actualiza a **edición 1.2, 26/10/2026**, con 35 capítulos y 43 páginas. Incluye contactos compactos con navegación directa, segmentos y potencialidad anual, referencia por `client_id` estable de BC y una sección diferenciada de Ventas-Clientes (mapa, filtros y pie de totales). Se conserva el estado pendiente de instalación/pruebas reales de segmentos. Markdown, PDF fuente y PDF/catálogo de `backend/assets/user-manuals` se mantienen coordinados y revisados visualmente. La copia local está preparada; la de producción requiere publicar estos archivos junto con la app.
+
+
+### Segmentos: facturación anual - 02/11/2026
+
+Consulta la ficha para ver la facturación por segmento y añade o edita su potencialidad con el lápiz. La cifra suma facturas y resta abonos de productos; las cuentas no se incluyen. Una fila automática continúa visible si tiene ventas aunque se quite su potencialidad. Se añade dTSPres → Gauges y Process se denomina Process-Seiko. La prueba de la ficha en la aplicación sigue pendiente.
+
+
+### Manual CRM descargable - 02/11/2026
+
+La edición 1.3 incorpora la facturación por segmento y los segmentos Gauges y Process-Seiko. El PDF disponible en Ayuda se actualiza junto a la aplicación. La instalación en producción y la aceptación funcional de esta funcionalidad siguen pendientes.
+
+
+### Actualización CRM - 03/11/2026
+
+La ficha compartida reúne contacto y localización en un bloque compacto. En CRM Clientes, **Segmentos y potencial** muestra tres KPI con explicación y fórmulas, tarjetas de familia y una tabla con filtros integrados, desplazamiento automático y totales. El filtro **Sin segmento** muestra productos pendientes por cliente; **Excel** exporta todas las filas filtradas. La facturación clasificada y el importe sin clasificar se presentan por separado; este último solo responde a vendedor y cliente. La potencialidad se edita desde la ficha. Verificar la vista y la descarga en la versión de aplicación utilizada.

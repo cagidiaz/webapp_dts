@@ -1,0 +1,837 @@
+[
+  {
+    "family": "AUT",
+    "subfamily": "OI1",
+    "segment": "dtssens"
+  },
+  {
+    "family": "AUT",
+    "subfamily": "SA1",
+    "segment": "dtssens"
+  },
+  {
+    "family": "AUT",
+    "subfamily": "SP8",
+    "segment": "dtssens"
+  },
+  {
+    "family": "AUT",
+    "subfamily": "PU1",
+    "segment": "dtssens"
+  },
+  {
+    "family": "AUT",
+    "subfamily": "VF1",
+    "segment": "dtssens"
+  },
+  {
+    "family": "AUT",
+    "subfamily": "RDA",
+    "segment": "dtssens"
+  },
+  {
+    "family": "AUT",
+    "subfamily": "RDS",
+    "segment": "dtssens"
+  },
+  {
+    "family": "AUT",
+    "subfamily": "EC1",
+    "segment": "dtssens"
+  },
+  {
+    "family": "AUT",
+    "subfamily": "CS1",
+    "segment": "dtssens"
+  },
+  {
+    "family": "AUT",
+    "subfamily": "AC8",
+    "segment": "dtssens"
+  },
+  {
+    "family": "CAL",
+    "subfamily": "CTM",
+    "segment": "dtscal"
+  },
+  {
+    "family": "CAL",
+    "subfamily": "AC9",
+    "segment": "dtscal"
+  },
+  {
+    "family": "CAL",
+    "subfamily": "CT2",
+    "segment": "dtscal"
+  },
+  {
+    "family": "CAL",
+    "subfamily": "CPM",
+    "segment": "dtscal"
+  },
+  {
+    "family": "CAL",
+    "subfamily": "CSM",
+    "segment": "dtscal"
+  },
+  {
+    "family": "CAL",
+    "subfamily": "SP9",
+    "segment": "dtscal"
+  },
+  {
+    "family": "CAL",
+    "subfamily": "REC",
+    "segment": "dtscal"
+  },
+  {
+    "family": "CAL",
+    "subfamily": "TC1",
+    "segment": "dtscal"
+  },
+  {
+    "family": "CAL",
+    "subfamily": "PC1",
+    "segment": "dtscal"
+  },
+  {
+    "family": "EPM",
+    "subfamily": "PT0",
+    "segment": "dtspres-process"
+  },
+  {
+    "family": "EPM",
+    "subfamily": "PT6",
+    "segment": "dtspres-process"
+  },
+  {
+    "family": "EPM",
+    "subfamily": "PT7",
+    "segment": "dtspres-process"
+  },
+  {
+    "family": "EPM",
+    "subfamily": "SP3",
+    "segment": "dtspres-process"
+  },
+  {
+    "family": "EPM",
+    "subfamily": "PT5",
+    "segment": "dtspres-oem"
+  },
+  {
+    "family": "EPM",
+    "subfamily": "PT1",
+    "segment": "dtspres-process"
+  },
+  {
+    "family": "EPM",
+    "subfamily": "PT2",
+    "segment": "dtspres-process"
+  },
+  {
+    "family": "EPM",
+    "subfamily": "AC3",
+    "segment": "dtspres-process"
+  },
+  {
+    "family": "EPM",
+    "subfamily": "PT4",
+    "segment": "dtspres-process"
+  },
+  {
+    "family": "EPM",
+    "subfamily": "PT3",
+    "segment": "dtspres-process"
+  },
+  {
+    "family": "ETM",
+    "subfamily": "SP5",
+    "segment": null
+  },
+  {
+    "family": "ETM",
+    "subfamily": "TS1",
+    "segment": null
+  },
+  {
+    "family": "ETM",
+    "subfamily": "ATEX",
+    "segment": "dtstemp-atex"
+  },
+  {
+    "family": "ETM",
+    "subfamily": "TIM",
+    "segment": null
+  },
+  {
+    "family": "ETM",
+    "subfamily": "AC5",
+    "segment": null
+  },
+  {
+    "family": "ETM",
+    "subfamily": "TT1",
+    "segment": null
+  },
+  {
+    "family": "ETM",
+    "subfamily": "TW2",
+    "segment": null
+  },
+  {
+    "family": "ETM",
+    "subfamily": "TW1",
+    "segment": null
+  },
+  {
+    "family": "ETM",
+    "subfamily": "RES",
+    "segment": null
+  },
+  {
+    "family": "ETM",
+    "subfamily": "TS2",
+    "segment": null
+  },
+  {
+    "family": "ETM",
+    "subfamily": "IRP",
+    "segment": null
+  },
+  {
+    "family": "ETM",
+    "subfamily": "TS3",
+    "segment": null
+  },
+  {
+    "family": "FLW",
+    "subfamily": "SP7",
+    "segment": "dtsflow-basics"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "FT2",
+    "segment": "dtsflow-tronic"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "FT3",
+    "segment": "dtsflow-tronic"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "PF5",
+    "segment": "dtsflow-process"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "PF1",
+    "segment": "dtsflow-basics"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "FT4",
+    "segment": "dtsflow-tronic"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "RO1",
+    "segment": "dtsflow-tronic"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "FT1",
+    "segment": "dtsflow-tronic"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "CSE",
+    "segment": "dtsflow-process"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "PF6",
+    "segment": "dtsflow-tronic"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "PF2",
+    "segment": "dtsflow-basics"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "REF",
+    "segment": "dtsflow-basics"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "PF4",
+    "segment": "dtsflow-process"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "AC7",
+    "segment": "dtsflow-basics"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "PF3",
+    "segment": "dtsflow-basics"
+  },
+  {
+    "family": "FLW",
+    "subfamily": "PF8",
+    "segment": "dtsflow-tronic"
+  },
+  {
+    "family": "LVL",
+    "subfamily": "SP6",
+    "segment": "dtslevel"
+  },
+  {
+    "family": "LVL",
+    "subfamily": "LV3",
+    "segment": "dtslevel"
+  },
+  {
+    "family": "LVL",
+    "subfamily": "LV2",
+    "segment": "dtslevel"
+  },
+  {
+    "family": "LVL",
+    "subfamily": "LV4",
+    "segment": "dtslevel"
+  },
+  {
+    "family": "LVL",
+    "subfamily": "LV6",
+    "segment": "dtslevel"
+  },
+  {
+    "family": "LVL",
+    "subfamily": "AC6",
+    "segment": "dtslevel"
+  },
+  {
+    "family": "LVL",
+    "subfamily": "LV5",
+    "segment": "dtslevel"
+  },
+  {
+    "family": "LVL",
+    "subfamily": "LV1",
+    "segment": "dtslevel"
+  },
+  {
+    "family": "MP-AC",
+    "subfamily": "MP-AC2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-AC",
+    "subfamily": "MP-AC7",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-AC",
+    "subfamily": "MP-AC3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-AC",
+    "subfamily": "MP-AC1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-AC",
+    "subfamily": "MP-AC5",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-AC",
+    "subfamily": "MP-AC4",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-AC",
+    "subfamily": "MP-AC6",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-BO",
+    "subfamily": "MP-BO1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-BO",
+    "subfamily": "MP-BO4",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-BO",
+    "subfamily": "MP-BO5",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-BO",
+    "subfamily": "MP-BO2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-BO",
+    "subfamily": "MP-BO3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CA",
+    "subfamily": "MP-CA5",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CA",
+    "subfamily": "MP-CA1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CA",
+    "subfamily": "MP-CA4",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CA",
+    "subfamily": "MP-CA2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CA",
+    "subfamily": "MP-CA3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CE",
+    "subfamily": "MP-CE1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CE",
+    "subfamily": "MP-CE2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CE",
+    "subfamily": "MP-CE3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CE",
+    "subfamily": "MP-CE4",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CO",
+    "subfamily": "MP-CO1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CO",
+    "subfamily": "MP-CO4",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CO",
+    "subfamily": "MP-CO2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CO",
+    "subfamily": "MP-CO5",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-CO",
+    "subfamily": "MP-CO3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EH",
+    "subfamily": "MP-EH1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EH",
+    "subfamily": "MP-EH2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EH",
+    "subfamily": "MP-EH3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EH",
+    "subfamily": "MP-EH5",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EH",
+    "subfamily": "MP-EH4",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EN",
+    "subfamily": "MP-EN4",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EN",
+    "subfamily": "MP-EN3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EN",
+    "subfamily": "MP-EN1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EN",
+    "subfamily": "MP-EN2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EN",
+    "subfamily": "MP-EN5",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EN",
+    "subfamily": "MP-EN7",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-EN",
+    "subfamily": "MP-EN6",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-OT",
+    "subfamily": "MP-OT3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-OT",
+    "subfamily": "MP-OT1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-OT",
+    "subfamily": "MP-OT2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-PR",
+    "subfamily": "MP-PR2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-PR",
+    "subfamily": "MP-PR5",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-PR",
+    "subfamily": "MP-PR8",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-PR",
+    "subfamily": "MP-PR1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-PR",
+    "subfamily": "MP-PR7",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-PR",
+    "subfamily": "MP-PR6",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-PR",
+    "subfamily": "MP-PR3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-PR",
+    "subfamily": "MP-PR4",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-RA",
+    "subfamily": "MP-RA6",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-RA",
+    "subfamily": "MP-RA4",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-RA",
+    "subfamily": "MP-RA5",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-RA",
+    "subfamily": "MP-RA2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-RA",
+    "subfamily": "MP-RA1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-RA",
+    "subfamily": "MP-RA7",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-RA",
+    "subfamily": "MP-RA3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-RA",
+    "subfamily": "MP-RA8",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-SE",
+    "subfamily": "MP-SE3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-SE",
+    "subfamily": "MP-SE2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-SE",
+    "subfamily": "MP-SE1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-TU",
+    "subfamily": "MP-TU5",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-TU",
+    "subfamily": "MP-TU2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-TU",
+    "subfamily": "MP-TU3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-TU",
+    "subfamily": "MP-TU1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-TU",
+    "subfamily": "MP-TU4",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-TU",
+    "subfamily": "MP-TU6",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-VA",
+    "subfamily": "MP-VA3",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-VA",
+    "subfamily": "MP-VA2",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "MP-VA",
+    "subfamily": "MP-VA1",
+    "segment": "dtstemp-varios"
+  },
+  {
+    "family": "SEN",
+    "subfamily": "SE1",
+    "segment": "dtssens"
+  },
+  {
+    "family": "SEN",
+    "subfamily": "WIF",
+    "segment": "dtssens"
+  },
+  {
+    "family": "SEN",
+    "subfamily": "SCV",
+    "segment": "dtssens"
+  },
+  {
+    "family": "SEN",
+    "subfamily": "AIS",
+    "segment": "dtssens"
+  },
+  {
+    "family": "SEN",
+    "subfamily": "THO",
+    "segment": "dtssens"
+  },
+  {
+    "family": "SEN",
+    "subfamily": "SV1",
+    "segment": "dtssens"
+  },
+  {
+    "family": "SEN",
+    "subfamily": "SVA",
+    "segment": "dtssens"
+  },
+  {
+    "family": "SEN",
+    "subfamily": "CO2",
+    "segment": "dtssens"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "VA1",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "PS1",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "SP1",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "DP1",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "PG1",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "DS3",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "DS1",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "AC4",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "DS2",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "LP1",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "PS2",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "PG2",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "ST1",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "AC1",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "SSG",
+    "subfamily": "DS4",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "UPG",
+    "subfamily": "AC2",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "UPG",
+    "subfamily": "SP2",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "UPG",
+    "subfamily": "UP3",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "UPG",
+    "subfamily": "UP4",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "UPG",
+    "subfamily": "UP5",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "UPG",
+    "subfamily": "UP1",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "UPG",
+    "subfamily": "UP2",
+    "segment": "dtspres-gauges"
+  },
+  {
+    "family": "VVV",
+    "subfamily": "EMB",
+    "segment": "dtssens"
+  },
+  {
+    "family": "VVV",
+    "subfamily": "FAB",
+    "segment": "dtssens"
+  },
+  {
+    "family": "VVV",
+    "subfamily": "DOC",
+    "segment": "dtssens"
+  }
+]

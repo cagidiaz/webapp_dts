@@ -183,12 +183,34 @@ El acceso al manual se mantiene únicamente en **Ayuda → Manuales de usuario**
 
 Cada persona de contacto ocupa una sola fila en la ficha compartida. El nombre y el cargo se recortan si no caben; el detalle completo puede consultarse pasando el cursor o abriendo la ficha. Al pulsar el nombre se navega a `/crm/contacts?contactId=…` y se abre ese contacto directamente. Los iconos de correo, teléfono, móvil y LinkedIn conservan sus acciones independientes, incluida la edición de LinkedIn. Se mantienen los estilos claro/oscuro y los permisos existentes de la vista Contactos. El cambio se aplica en CRM, Ventas y demás accesos a `CustomerDetailDrawer`; no modifica datos de Business Central. Pendiente de aceptación visual en la app.
 
-### Segmentos y potencialidad anual - 26/10/2026
+### Segmentos y potencialidad anual - 26/10/2026 (histórico)
 
-La ficha compartida incorpora una tabla con Segmento, Potencialidad €/año y Facturación pendiente. Selector con búsqueda entre doce opciones; las familias con hijos no se seleccionan directamente. Admite varios segmentos por cliente sin duplicados, edición de importes, eliminación confirmada y total conocido. Un importe vacío significa pendiente y es distinto de cero. Admin edita globalmente y el comercial solo su cliente; el backend comprueba permisos y cartera. Las escrituras van a la nueva tabla independiente `crm_customer_segments`, sin modificar BC. Se requiere ejecutar el SQL antes de probar persistencia. Véase [instalación, estructura y validación](../../actualizaciones/2026-10-26-segmentos-potencialidad-clientes.md).
+Estado inicial de la entrega del 26/10, sustituido por la actualización del 02/11: la ficha incorporó una tabla con Segmento, Potencialidad €/año y Facturación pendiente. Selector con búsqueda entre doce opciones; las familias con hijos no se seleccionan directamente. Admite varios segmentos por cliente sin duplicados, edición de importes, eliminación confirmada y total conocido. Un importe vacío significa pendiente y es distinto de cero. Admin edita globalmente y el comercial solo su cliente; el backend comprueba permisos y cartera. Las escrituras van a la nueva tabla independiente `crm_customer_segments`, sin modificar BC. Se requiere ejecutar el SQL antes de probar persistencia. Véase [instalación, estructura y validación](../../actualizaciones/2026-10-26-segmentos-potencialidad-clientes.md).
 
 **Relación de segmentos confirmada (26/10/2026):** `crm_customer_segments.client_id` (`varchar(50)`) referencia `customers.client_id`, código estable de BC. La app y el backend utilizan este código. Si se instaló la primera versión UUID, usar el SQL de migración descrito en la documentación de la entrega, sin borrar datos.
 
 ### Manual descargable actualizado - 26/10/2026
 
 El PDF de **Ayuda → Manuales de usuario** se actualiza a **edición 1.2, 26/10/2026**, con 35 capítulos y 43 páginas. Incluye contactos compactos con navegación directa, segmentos y potencialidad anual, referencia por `client_id` estable de BC y una sección diferenciada de Ventas-Clientes (mapa, filtros y pie de totales). Se conserva el estado pendiente de instalación/pruebas reales de segmentos. Markdown, PDF fuente y PDF/catálogo de `backend/assets/user-manuals` se mantienen coordinados y revisados visualmente. La copia local está preparada; la de producción requiere publicar estos archivos junto con la app.
+
+
+### Facturación por segmento - 02/11/2026
+
+La ficha muestra segmentos con ventas del año y potencialidades registradas. Facturación suma líneas de producto de facturas y resta abonos, sin IVA ni líneas de cuentas; los segmentos con ventas aparecen automáticamente y las líneas sin clasificar generan un aviso. Se añade dTSPres → Gauges y dTSFlow → Process-Seiko conserva el identificador previo. Las reglas de subcategoría se almacenan en `crm_segment_subcategories`; ETM con segmento explícito lo conserva y solo las once reglas ETM vacías dependen de `customers.business_model`. La potencialidad se sigue guardando en `crm_customer_segments`. El SQL fue aplicado y contrastado; la aceptación visual y funcional sigue pendiente. Véase [detalle técnico](../../actualizaciones/2026-11-02-facturacion-segmentos.md).
+
+
+### Manual CRM descargable - 02/11/2026
+
+La edición 1.3 incorpora la facturación por segmento y los segmentos Gauges y Process-Seiko. El PDF disponible en Ayuda se actualiza junto a la aplicación. La instalación en producción y la aceptación funcional de esta funcionalidad siguen pendientes.
+### Segmentos y potencial - 03/11/2026
+
+La pestaña presenta una fila por cliente y segmento con ventas históricas o potencialidad registrada. El gráfico compara facturación neta de productos del año en curso con potencialidad anual registrada; ambas responden a los filtros de vendedor, familia, segmento, estado de estimación y búsqueda de cliente. Las líneas de cuentas quedan excluidas y los abonos se restan. El aviso de líneas sin clasificar se acota por vendedor y cliente, ya que no se pueden atribuir a familia o segmento. Las cifras solo consideran clientes autorizados para el perfil, comprobados en backend. El nombre del cliente abre su ficha, desde donde se edita la potencialidad; la tabla general es de consulta. Una estimación vacía significa pendiente, no cero. La facturación anual acumulada y la potencialidad de todo el año no son periodos equivalentes.
+
+### Segmentos sin clasificar y exportación
+
+El filtro de segmento incluye **Sin segmento**, que muestra el detalle por cliente y producto de las líneas de producto sin clasificar del año en curso. En este modo se desactivan familia y estado de potencialidad; vendedor y búsqueda de cliente siguen disponibles. El botón Excel exporta todas las filas filtradas, incluidas las que aún no se han mostrado al desplazarse. El KPI de facturación muestra la suma de las filas seleccionadas y, por separado con un signo +, el importe sin clasificar según vendedor y cliente. Si está seleccionado Sin segmento, la cifra principal muestra ese detalle sin repetirlo. La exportación y el uso visual requieren prueba de usuario.
+
+
+### Actualización CRM - 03/11/2026
+
+La ficha compartida reúne contacto y localización en un bloque compacto. En CRM Clientes, **Segmentos y potencial** muestra tres KPI con explicación y fórmulas, tarjetas de familia y una tabla con filtros integrados, desplazamiento automático y totales. El filtro **Sin segmento** muestra productos pendientes por cliente; **Excel** exporta todas las filas filtradas. La facturación clasificada y el importe sin clasificar se presentan por separado; este último solo responde a vendedor y cliente. La potencialidad se edita desde la ficha. Verificar la vista y la descarga en la versión de aplicación utilizada.

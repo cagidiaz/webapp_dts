@@ -5,6 +5,7 @@ import { validate } from 'class-validator';
 import { CustomerSegmentsService } from './customer-segments.service';
 import { SaveCustomerSegmentDto } from './customer-segments.dto';
 import catalog from './customer-segments.catalog.json';
+import subcategories from './segment-subcategory-proposal.json';
 
 describe('Segmentos y potencialidad de clientes', () => {
   const profile = { is_active: true, role_id: 'role', code: 'ACI', roles: { name: 'VENTAS' } };
@@ -21,14 +22,25 @@ describe('Segmentos y potencialidad de clientes', () => {
     db.$queryRaw.mockResolvedValue([{ segment_code: 'dtstemp-atex', potential_amount: '12500.00', version: 1 }]);
   });
 
-  it('solo ofrece las doce hojas del catálogo, sin padres seleccionables', () => {
-    expect(catalog).toHaveLength(12);
-    expect(new Set(catalog.map(option => option.value)).size).toBe(12);
+  it('ofrece las trece hojas del catálogo, sin padres seleccionables', () => {
+    expect(catalog).toHaveLength(13);
+    expect(new Set(catalog.map(option => option.value)).size).toBe(13);
     for (const parent of ['dtstemp', 'dtspres', 'dtsflow']) expect(catalog.some(option => option.value === parent)).toBe(false);
     const sql = readFileSync(resolve(process.cwd(), 'prisma/proposals/2026-10-26-segmentos-potencialidad-clientes.sql'), 'utf8');
-    for (const option of catalog) expect(sql).toContain("'" + option.value + "'");
+    const migration = readFileSync(resolve(process.cwd(), 'prisma/proposals/2026-11-02-clasificacion-segmentos.sql'), 'utf8');
+    for (const option of catalog) expect(migration).toContain("'" + option.value + "'");
     expect(sql).toContain('PRIMARY KEY (client_id, segment_code)');
     expect(sql).toContain('CHECK (billing_amount IS NULL)');
+  });
+
+  it('conserva los segmentos explícitos de ETM y reserva la regla de cliente para once subcategorías vacías', () => {
+    expect(subcategories).toHaveLength(167);
+    expect(subcategories.filter(row => row.segment === null)).toHaveLength(11);
+    expect(subcategories.filter(row => row.segment === null).every(row => row.family === 'ETM')).toBe(true);
+    expect(subcategories).toContainEqual({ family: 'ETM', subfamily: 'ATEX', segment: 'dtstemp-atex' });
+    const migration = readFileSync(resolve(process.cwd(), 'prisma/proposals/2026-11-02-clasificacion-segmentos.sql'), 'utf8');
+    expect(migration).toContain("(segment_code IS NOT NULL OR family_code = 'ETM')");
+    expect(migration).toContain("('ETM', 'ATEX', 'dtstemp-atex')");
   });
 
   it('limita la lectura a la cartera autenticada y permite editar al comercial', async () => {
@@ -36,10 +48,38 @@ describe('Segmentos y potencialidad de clientes', () => {
     expect(db.customers.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { client_id: 'client', salesperson_code: 'ACI' } }));
   });
 
+  it('une ventas automáticas con potencialidades guardadas y conserva los importes pendientes', async () => {
+    db.$queryRaw.mockReset();
+    db.$queryRaw.mockResolvedValueOnce([{ segment_code: 'dtscal', potential_amount: '120.00', version: 1, updated_at: new Date() }]);
+    db.$queryRaw.mockResolvedValueOnce([{ segment_code: 'dtscal', amount: '50.00' }, { segment_code: 'dtstemp-oem', amount: '30.00' }, { segment_code: null, amount: '15.00' }]);
+    const result = await service.list('user', 'client');
+    expect(result.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ segment_code: 'dtscal', potential_amount: '120.00', billing_amount: '50.00', version: 1 }),
+      expect.objectContaining({ segment_code: 'dtstemp-oem', potential_amount: null, billing_amount: '30.00', version: 0 }),
+    ]));
+    expect(result.unclassified_amount).toBe('15.00');
+  });
+
   it('impide leer y escribir un cliente ajeno antes de consultar los segmentos', async () => {
     db.customers.findFirst.mockResolvedValue(null);
     await expect(service.list('user', 'foreign')).rejects.toThrow('Cliente no encontrado');
     await expect(service.save('user', 'foreign', 'dtscal', { potential_amount: '100', version: 0 })).rejects.toThrow('Cliente no encontrado');
+    expect(db.$queryRaw).not.toHaveBeenCalled();
+  });
+
+  it('limita el resumen global a la cartera del comercial autenticado', async () => {
+    db.$queryRaw.mockResolvedValueOnce([]);
+    await service.overview('user');
+    const query = db.$queryRaw.mock.calls[0][0];
+    expect(query.values).toEqual(['ACI', 'ACI']);
+    expect(query.sql).toContain('salesperson_code =');
+    expect(query.sql).toContain("lower(l.type) = 'item'");
+    expect(query.sql).toContain("d.document_type IN ('Factura', 'Abono')");
+  });
+
+  it('rechaza el resumen si se retira el permiso de CRM Clientes', async () => {
+    db.role_modules.findMany.mockResolvedValue([{ module: { route_path: '/crm' }, can_view: true }]);
+    await expect(service.overview('user')).rejects.toThrow('No tienes permiso');
     expect(db.$queryRaw).not.toHaveBeenCalled();
   });
 

@@ -236,7 +236,7 @@ export const CrmContacts: React.FC<CrmContactsProps> = ({ onSelectContact, onOpe
           <div className="text-center py-20 text-gray-400 italic text-sm">No se encontraron contactos que coincidan con la búsqueda.</div>
         ) : (
           <div className="overflow-y-auto flex-1 custom-scrollbar">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left text-sm border-separate border-spacing-0">
               <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
                 <tr>
                   <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Nombre</th>

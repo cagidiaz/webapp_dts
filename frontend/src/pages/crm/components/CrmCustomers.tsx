@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '../../../store/authStore';
 import { getCustomerSalespersons, CLIENT_TYPES, updateCustomerClientType } from '../../../api/customers';
 import { CustomerRelationshipMatrix } from './CustomerRelationshipMatrix';
+import { CustomerSegmentsOverview } from './CustomerSegmentsOverview';
 import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawer';
 import { getProspectAccess } from '../../../api/prospects';
 import type { CustomerDataRow } from '../../../api/customers';
@@ -18,7 +19,7 @@ interface CrmCustomersProps {}
 export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
   const queryClient = useQueryClient();
   const { profile } = useAuthStore();
-  const [activeSubTab, setActiveSubTab] = useState<'directory' | 'matrix'>('directory');
+  const [activeSubTab, setActiveSubTab] = useState<'directory' | 'matrix' | 'segments'>('directory');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [salespersonFilter, setSalespersonFilter] = useState('');
@@ -43,7 +44,7 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
   }, [searchTerm]);
 
   const userRole = (profile?.roles?.name || '').toUpperCase();
-  const isGlobalViewer = ['ADMIN', 'DIRECCION'].includes(userRole);
+  const isGlobalViewer = ['ADMIN', 'DIRECCION', 'TESTER', 'PRODUCCION'].includes(userRole);
   const isCommercial = !isGlobalViewer;
   const effectiveSalespersonFilter = isGlobalViewer ? salespersonFilter : (profile?.code || '');
   const canLoadScopedData = !!profile?.id && (isGlobalViewer || !!profile?.code);
@@ -142,14 +143,14 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
     <div className="space-y-3.5 animate-in fade-in duration-500 pb-10">
       
       {/* Selector de Sub-Pestañas */}
-      <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2">
         <button
           type="button"
           onClick={() => setActiveSubTab('directory')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${
             activeSubTab === 'directory'
               ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20'
-              : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/80 dark:border-gray-800'
+              : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'
           }`}
         >
           <Building2 size={16} className={activeSubTab === 'directory' ? 'text-dts-secondary' : 'text-gray-400'} />
@@ -159,14 +160,17 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
         <button
           type="button"
           onClick={() => setActiveSubTab('matrix')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${
             activeSubTab === 'matrix'
               ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20'
-              : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/80 dark:border-gray-800'
+              : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'
           }`}
         >
           <BarChart3 size={16} className={activeSubTab === 'matrix' ? 'text-dts-secondary' : 'text-gray-400'} />
           <span>Matriz de Relación / Análisis YTD</span>
+        </button>
+        <button type="button" onClick={() => setActiveSubTab('segments')} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${activeSubTab === 'segments' ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20' : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'}`}>
+          <BarChart3 size={16} className={activeSubTab === 'segments' ? 'text-dts-secondary' : 'text-gray-400'} /><span>Segmentos y potencial</span>
         </button>
       </div>
 
@@ -174,6 +178,8 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
         <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
           Tu usuario no tiene un código de vendedor asociado. Contacta con Administración para habilitar la cartera.
         </div>
+      ) : activeSubTab === 'segments' ? (
+        <CustomerSegmentsOverview key={profile?.id} profileId={profile?.id} />
       ) : activeSubTab === 'matrix' ? (
         <CustomerRelationshipMatrix
           key={profile?.id}

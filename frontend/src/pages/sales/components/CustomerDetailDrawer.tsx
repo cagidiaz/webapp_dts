@@ -87,11 +87,11 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
   const currentTypeDef = customer?.client_type ? CLIENT_TYPES[customer.client_type] : null;
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} title="Ficha del Cliente">
+    <Drawer isOpen={isOpen} onClose={onClose} title="Ficha del Cliente" size="lg">
       {isLoading ? (
         <div className="flex flex-col items-center justify-center h-64 gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-dts-secondary" />
-          <p className="text-xs text-gray-400 font-medium uppercase tracking-widest">Cargando detalles...</p>
+          <p className="text-xs text-gray-400 uppercase tracking-widest">Cargando detalles...</p>
         </div>
       ) : !customer ? (
         <div className="text-center py-20 text-gray-400 italic">No se pudo encontrar la información del cliente.</div>
@@ -99,16 +99,13 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
           {/* Header Summary */}
           <div className="flex flex-col items-center text-center pb-6 border-b border-gray-100 dark:border-white/5 space-y-2">
-            <div className="w-16 h-16 rounded-full bg-dts-secondary/10 flex items-center justify-center text-dts-secondary mb-1">
-              <User size={32} />
-            </div>
             <h2 className="text-xl font-bold text-dts-primary dark:text-white">{customer.name}</h2>
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className="text-xs font-mono text-dts-primary dark:text-dts-secondary font-bold bg-dts-secondary/5 px-2 py-0.5 rounded">
+              <span className="text-xs font-mono text-dts-primary dark:text-dts-secondary bg-dts-secondary/5 px-2 py-0.5 rounded">
                 {customer.client_id}
               </span>
               {customer.salesperson_code && (
-                <span className="text-xs font-medium text-gray-500 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded">
+                <span className="text-xs text-gray-500 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded">
                   Vendedor: {customer.salesperson_code}
                 </span>
               )}
@@ -122,7 +119,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                   value={customer.client_type || ''}
                   onChange={(e) => updateTypeMutation.mutate(e.target.value || null)}
                   disabled={updateTypeMutation.isPending}
-                  className={`text-xs font-black py-1.5 pl-3 pr-8 rounded-xl border appearance-none cursor-pointer transition-all outline-none focus:ring-2 focus:ring-dts-secondary/50 shadow-2xs ${
+                  className={`text-xs py-1.5 pl-3 pr-8 rounded-xl border appearance-none cursor-pointer transition-all outline-none focus:ring-2 focus:ring-dts-secondary/50 shadow-2xs ${
                     currentTypeDef 
                       ? `${currentTypeDef.badgeBg} ${currentTypeDef.badgeColor} ${currentTypeDef.badgeBorder}`
                       : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-300 dark:border-zinc-600'
@@ -130,7 +127,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                 >
                   <option value="" className="bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-200">Sin clasificar</option>
                   {Object.values(CLIENT_TYPES).map(t => (
-                    <option key={t.code} value={t.code} className="bg-white dark:bg-zinc-900 text-gray-900 dark:text-white font-medium">
+                    <option key={t.code} value={t.code} className="bg-white dark:bg-zinc-900 text-gray-900 dark:text-white ">
                       {t.code} · {t.name}
                     </option>
                   ))}
@@ -150,7 +147,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
             {customer.phone_no && (
               <a 
                 href={`tel:${customer.phone_no}`}
-                className="flex items-center justify-center gap-2 py-3 px-4 bg-dts-primary dark:bg-dts-secondary/20 text-white dark:text-dts-secondary rounded-xl font-bold text-sm transition-transform active:scale-95"
+                className="flex items-center justify-center gap-2 py-3 px-4 bg-dts-primary dark:bg-dts-secondary/20 text-white dark:text-dts-secondary rounded-xl text-sm transition-transform active:scale-95"
               >
                 <Phone size={16} /> Llamar
               </a>
@@ -160,40 +157,35 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                 href={whatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 py-3 px-4 bg-[#25D366] text-white rounded-xl font-bold text-sm transition-transform active:scale-95"
+                className="flex items-center justify-center gap-2 py-3 px-4 bg-[#25D366] text-white rounded-xl text-sm transition-transform active:scale-95"
               >
                 <MessageCircle size={16} /> WhatsApp
               </a>
             )}
           </div>
 
-          {/* Contact Information */}
-          <section className="space-y-4">
-            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Información de Contacto</h3>
-            <div className="space-y-3">
-              <ContactItem icon={Mail} label="Email" value={customer.email} isEmail />
-              <ContactItem icon={Phone} label="Teléfono Fijo" value={customer.phone_no} isTel />
-              <ContactItem icon={Smartphone} label="Móvil" value={customer.mobile_no} isTel />
-            </div>
-          </section>
-
-          {/* Address */}
-          <section className="space-y-4">
-            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Localización</h3>
-            <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
-              <div className="flex gap-3">
-                <MapPin className="text-dts-secondary shrink-0" size={18} />
-                <div className="text-sm">
-                  <p className="font-medium text-dts-primary dark:text-gray-200">{customer.address}</p>
+          {/* Contact and address */}
+          <section className="rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-4">
+            <div className="min-w-0 space-y-3">
+                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contacto y localización</h3>
+                <div className="space-y-2.5">
+                  <ContactItem icon={Mail} label="Email" value={customer.email} isEmail />
+                  <ContactItem icon={Phone} label="Teléfono Fijo" value={customer.phone_no} isTel />
+                  <ContactItem icon={Smartphone} label="Móvil" value={customer.mobile_no} isTel />
+                </div>
+              <div className="flex items-start gap-2">
+                <MapPin className="mt-0.5 text-dts-secondary shrink-0" size={15} />
+                <div className="min-w-0 text-xs leading-relaxed break-words">
+                  <p className="text-dts-primary dark:text-gray-200"><span className="mr-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">Dirección:</span>{customer.address || 'No disponible'}</p>
                   {customer.address_2 && <p className="text-gray-600 dark:text-gray-400">{customer.address_2}</p>}
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {customer.county && (
-                      <p className="text-gray-500 dark:text-gray-400 font-bold uppercase text-[10px] tracking-wider">
+                      <p className="text-gray-500 dark:text-gray-400 uppercase text-[10px] tracking-wider">
                         {customer.county}
                       </p>
                     )}
                     {customer.territory_code && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 uppercase" title="Código de Territorio">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 uppercase" title="Código de Territorio">
                         Territorio: {customer.territory_code}
                       </span>
                     )}
@@ -202,7 +194,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
               </div>
               <button 
                 onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${customer.name} ${customer.address} ${customer.city}`)}`, '_blank')}
-                className="w-full mt-4 flex items-center justify-center gap-2 py-2 text-xs font-bold text-dts-secondary hover:bg-dts-secondary/5 rounded-lg transition-colors border border-dts-secondary/20"
+                className="inline-flex items-center gap-1.5 text-xs text-dts-secondary hover:underline transition-colors"
               >
                 <ExternalLink size={14} /> Ver en Google Maps
               </button>
@@ -231,7 +223,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                       aria-label={'Abrir contacto: ' + contact.name}
                     >
                       <User size={14} className="text-dts-secondary shrink-0" />
-                      <span className="truncate font-bold">{contact.name || 'Sin nombre'}</span>
+                      <span className="truncate">{contact.name || 'Sin nombre'}</span>
                       {contact.job_title && <span className="truncate text-[10px] text-gray-500 dark:text-gray-400">{contact.job_title}</span>}
                       <ExternalLink size={12} className="shrink-0 text-gray-400" />
                     </Link>
@@ -316,7 +308,7 @@ export const CustomerDetailDrawer: React.FC<CustomerDetailDrawerProps> = ({
                 value={formatCurrency(customer.total_sales, 0)} 
               />
             </div>
-            <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+            <div className="flex items-center gap-2 text-[10px] text-gray-400 ">
                <Calendar size={12}/> Cliente desde: {customer.created_at ? new Date(customer.created_at).toLocaleDateString() : 'N/A'}
             </div>
           </section>
@@ -332,18 +324,16 @@ const ContactItem = ({ icon: Icon, label, value, isEmail, isTel }: any) => {
   const href = isEmail ? `mailto:${value}` : isTel ? `tel:${value}` : null;
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-400">
-        <Icon size={16} />
-      </div>
-      <div className="flex flex-col truncate">
-        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{label}</span>
+    <div className="flex items-start gap-2">
+      <Icon size={15} className="mt-0.5 shrink-0 text-dts-secondary" />
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+        <span className="shrink-0 text-[10px] font-bold text-gray-400 uppercase tracking-wide">{label}:</span>
         {href ? (
-          <a href={href} className="text-sm font-medium text-dts-primary dark:text-white hover:text-dts-secondary transition-colors truncate">
+          <a href={href} className="text-xs leading-relaxed text-dts-primary dark:text-white hover:text-dts-secondary transition-colors break-words [overflow-wrap:anywhere]">
             {value}
           </a>
         ) : (
-          <span className="text-sm font-medium text-dts-primary dark:text-white truncate">{value}</span>
+          <span className="text-xs leading-relaxed text-dts-primary dark:text-white break-words">{value}</span>
         )}
       </div>
     </div>
@@ -356,7 +346,7 @@ const FinancialBox = ({ icon: Icon, label, value, isWarning }: any) => (
       <Icon size={14} />
       <span className="text-[10px] font-bold uppercase tracking-tight">{label}</span>
     </div>
-    <div className={`text-lg font-black font-mono ${isWarning ? 'text-amber-500' : 'text-dts-primary dark:text-white'}`}>
+    <div className={`text-lg font-mono ${isWarning ? 'text-amber-500' : 'text-dts-primary dark:text-white'}`}>
       {value}
     </div>
   </div>

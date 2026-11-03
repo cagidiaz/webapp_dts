@@ -341,7 +341,7 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
             {renderSubtotal(block.subtotalOpportunity, 'bg-cyan-50/40 dark:bg-cyan-950/20 text-cyan-950 dark:text-cyan-200', 'bg-dts-secondary')}
 
             {/* Fila Total General */}
-            <tr className="bg-gray-100 dark:bg-[#002A38] text-gray-900 dark:text-white font-black text-xs border-t-2 border-[#003E51] dark:border-dts-secondary">
+            <tr className="bg-dts-primary text-white shadow-lg font-bold text-xs uppercase border-t-2 border-dts-secondary divide-x divide-white/10">
               <td className="py-3.5 px-4 tracking-wider">
                 {block.salespersonCode === 'TOTAL' ? (
                   <span className="font-black">TOTAL <span className="normal-case">dTS</span></span>
@@ -349,13 +349,13 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
                   <span className="font-black uppercase">TOTAL {block.salespersonName}</span>
                 )}
               </td>
-              <td className="py-3.5 px-4 text-right font-mono text-sm text-[#003E51] dark:text-dts-secondary">
+              <td className="py-3.5 px-4 text-right font-mono text-sm text-white">
                 {formatCurrency(block.total.facturacion, 0)}
               </td>
               <td className="py-3.5 px-4 text-right font-mono">
                 100.0%
               </td>
-              <td className="py-3.5 px-4 text-right font-mono text-gray-600 dark:text-gray-300">
+              <td className="py-3.5 px-4 text-right font-mono text-gray-200">
                 {formatCurrency(block.total.facturacionPrevYear, 0)}
               </td>
               <td className="py-3.5 px-4 text-right font-mono">

@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.2 · 26 de octubre de 2026 · Uso interno
+Edición 1.4 · 3 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -279,7 +279,7 @@ En las cuentas con acceso habilitado a la ficha, el nombre del cliente se puede 
 
 1. Localiza la cuenta y pulsa su nombre si está habilitado.
 2. Confirma razón social, código y vendedor.
-3. Revisa clasificación, información de contacto y localización.
+3. Revisa clasificación y el bloque compacto **Contacto y localización**, con etiquetas junto a los datos y acceso a Google Maps.
 4. Consulta las **Personas de Contacto** y su cargo.
 5. Revisa el resumen financiero disponible.
 6. Cierra el panel para volver al mismo directorio.
@@ -305,8 +305,8 @@ Esta tabla permite registrar en qué líneas de producto puede comprar una empre
 | Familia | Opciones que puedes elegir |
 | --- | --- |
 | dTSTemp | ATEX, OEM, Process, Varios |
-| dTSPres | OEM, Process |
-| dTSFlow | Basics, Process, Tronic |
+| dTSPres | OEM, Process, Gauges |
+| dTSFlow | Basics, Process-Seiko, Tronic |
 | dTSCal | dTSCal, sin subfamilia |
 | dTSLevel | dTSLevel, sin subfamilia |
 | dTSSens | dTSSens, sin subfamilia |
@@ -316,22 +316,34 @@ Las familias que tienen subfamilias no se seleccionan solas. El buscador muestra
 ### Procedimiento: añadir y revisar segmentos
 
 1. En la ficha de la empresa, busca **Segmentos y potencialidad**.
-2. Pulsa **Añadir segmento** y busca el nombre de la familia o subfamilia.
+2. Si el segmento ya aparece por sus ventas, pulsa el lápiz para introducir su potencialidad. Si no aparece, pulsa **Añadir segmento** y busca la familia o subfamilia.
 3. Selecciona la opción y escribe la **potencialidad anual en euros**, por ejemplo **12.500,00**.
 4. Pulsa **Guardar**. Repite si la empresa tiene potencial en otros segmentos. No se permite repetir el mismo segmento dentro del cliente.
-5. Comprueba las filas y el **Total estimado**. Solo suma importes completados; si hay filas pendientes, se avisa debajo.
-6. Usa el lápiz para cambiar el importe. Para quitar un segmento, pulsa su papelera y confirma. Para corregir la elección del segmento, quita esa fila y añade la correcta.
+5. Comprueba las filas y el **Total**. La potencialidad solo suma importes completados; si hay filas pendientes, se avisa debajo.
+6. Usa el lápiz para cambiar el importe. Para quitar una potencialidad guardada, pulsa su papelera y confirma. Si el segmento tiene ventas, seguirá apareciendo automáticamente con la potencialidad pendiente.
 7. Vuelve a abrir la ficha para comprobar que el dato se conserva.
 
-**Vacío no significa cero:** deja la potencialidad vacía si todavía no la conoces. Escribe 0 solo si tu estimación es cero euros. Se aceptan importes positivos o cero con dos decimales como máximo. La columna **Facturación** permanece vacía y no es editable; todavía no compara las ventas reales con la estimación.
+**Vacío no significa cero:** deja la potencialidad vacía si todavía no la conoces. Escribe 0 solo si tu estimación es cero euros. Se aceptan importes positivos o cero con dos decimales como máximo. La columna **Facturación** muestra automáticamente las ventas netas del año en curso en cada segmento: suma facturas y resta abonos, sin IVA y sin líneas de cuentas. No es editable. Los segmentos con ventas aparecen solos, con potencialidad pendiente hasta que la completes. Los segmentos manuales sin ventas muestran cero. Si hay líneas sin clasificar, aparece un aviso y su importe no forma parte del total por segmento.
 
-**Ejemplo didáctico, no datos reales:** dTSTemp > ATEX con 12.500,00 euros/año y dTSFlow > Process con 7.500,00 euros/año dan un total estimado de 20.000,00 euros/año. Añadir dTSCal sin importe no cambia ese total y deja un segmento pendiente.
+**Ejemplo didáctico, no datos reales:** dTSTemp > ATEX con 12.500,00 euros/año y dTSFlow > Process-Seiko con 7.500,00 euros/año dan un total estimado de 20.000,00 euros/año. Añadir dTSCal sin importe no cambia ese total y deja un segmento pendiente.
 
 ### Quién puede cambiar estos datos
 
 El comercial puede editar los segmentos de sus clientes y Admin los de todos los clientes autorizados. Los roles de consulta global no permiten por sí solos editar clientes ajenos. Los accesos de vista se siguen asignando desde Gestión de usuarios. No se habilita una edición general de los datos maestros de BC.
 
-**Instalación pendiente:** si aparece un aviso de tabla no preparada, Administración debe ejecutar el SQL de esta entrega y reiniciar la app. Si se instaló la primera versión que usaba UUID, debe ejecutar la migración a **client_id** conservando datos. El usuario comercial no debe ejecutar SQL. Ante un conflicto por cambios de otra sesión, recarga la ficha antes de volver a editar. La estimación anual es la vigente: aún no se conserva un histórico separado por ejercicios.
+**Si aparece un aviso de tabla no preparada:** contacta con Administración para que revise la instalación y reinicie la app. Si se instaló la primera versión que usaba UUID, debe ejecutar la migración a **client_id** conservando datos. El usuario comercial no debe ejecutar SQL. Ante un conflicto por cambios de otra sesión, recarga la ficha antes de volver a editar. La estimación anual es la vigente: aún no se conserva un histórico separado por ejercicios.
+
+### Consultar segmentos y potencial de toda la cartera
+
+1. En CRM > Clientes, pulsa **Segmentos y potencial**. Las pestañas superiores identifican la vista activa y resaltan al pasar el ratón.
+2. Consulta los tres indicadores: facturación clasificada y, aparte con un signo +, ventas sin clasificar; potencialidad anual registrada; y número e importe neto de líneas sin clasificar. Pulsa el icono de información de cada indicador para consultar su fórmula y filtros.
+3. Las tarjetas de familia muestran facturación y potencialidad; pulsa una familia con subcategorías para desplegar sus segmentos. Pulsa un segmento desplegado para filtrar la tabla.
+4. En la barra de la tabla, busca un cliente o filtra por vendedor, familia, segmento y estado de potencialidad. El comercial solo consulta su cartera; los perfiles con acceso global pueden filtrar por vendedor. Usa **Restablecer filtros** para recuperar la vista completa.
+5. Cada fila representa un cliente y segmento. Desplázate dentro de la tabla para mostrar más filas. Pulsa el cliente para abrir su ficha y editar allí la potencialidad.
+6. Para localizar productos pendientes, elige **Sin segmento** en el filtro de segmento. Aparece el detalle por cliente y producto del año en curso; los filtros de familia y potencialidad se desactivan en este modo.
+7. Pulsa **Excel** para descargar todas las filas filtradas, incluidas las que aún no aparecen en pantalla.
+
+La facturación suma facturas y resta abonos de productos, sin IVA ni cuentas. Las líneas sin clasificar se muestran aparte y solo responden a los filtros de vendedor y cliente. La potencialidad es una estimación anual; la facturación corresponde a lo acumulado en el año. Son periodos diferentes. Las facturas históricas pueden hacer que una fila permanezca visible aunque su facturación del año sea cero.
 
 ## 11. Contactos: localizar a la persona correcta
 
@@ -955,6 +967,14 @@ Las capturas reales siguen fechadas el 19/10/2026. Los dos nuevos esquemas son a
 Añadidos contactos compactos con navegación directa, tabla de segmentos, potencialidad anual en EUR, ejemplos, permisos y estado pendiente de Facturación. Se documenta la relación por **client_id**, código estable de BC, y la instalación o migración necesaria antes de usar la nueva tabla. Incluye una referencia separada a los filtros coordinados y totales de Ventas-Clientes; los cuatro indicadores de CRM-Clientes del capítulo 6 no se han eliminado por ese cambio.
 
 **Verificado automáticamente:** 24 pruebas backend de segmentos, controles de importes en frontend y compilación de ambos proyectos. El usuario confirma que la app local vuelve a abrir; eso no acredita el guardado real de segmentos ni la instalación del SQL. Persistencia, permisos y revisión visual de las nuevas funciones siguen pendientes de aceptación. La nueva edición del PDF se revisa y empaqueta para la descarga del menú Ayuda; no se declara publicación en producción.
+
+### Revisión 1.3 - 02/11/2026
+
+La ficha muestra la facturación neta anual por segmento y avisa de líneas sin clasificar. Se añade Gauges y Process pasa a llamarse Process-Seiko. Las reglas ETM sin clasificación fija usan el modelo de negocio del cliente. El SQL se ha aplicado y sus 167 reglas se comprobaron; la prueba visual y funcional de la ficha sigue pendiente.
+
+### Revisión 1.4 - 03/11/2026
+
+Añadida la consulta general por cliente y segmento, sus indicadores, filtros, detalle sin segmento, exportación Excel y acceso a la ficha. Actualizada la distribución compacta de contacto y localización. Comprobar en la aplicación la presentación y descarga correspondientes a la versión desplegada.
 
 ### Referencias internas
 

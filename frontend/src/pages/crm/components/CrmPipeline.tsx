@@ -728,7 +728,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
       ) : (
         <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-200/60 dark:border-white/5 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left text-sm border-separate border-spacing-0">
               <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
                 <tr className="text-[10px] font-bold uppercase tracking-wider">
                   <th className="px-4 py-3">Nº Oferta</th>
