@@ -47,6 +47,14 @@ const getContactById = async (id: string): Promise<any> => {
  * Limpia y normaliza la descripción de una actividad de CRM, eliminando
  * encabezados repetidos de Outlook, líneas divisorias de guiones bajos y saltos vacíos múltiples.
  */
+export const cleanActivityTitle = (title?: string | null): string => {
+  if (!title) return '';
+  let clean = title.trim();
+  clean = clean.replace(/^\[(?:✓\s*)?dTS CRM[^\]]*\]\s*/i, '');
+  clean = clean.replace(/^(?:Visita a Cliente|Visita de dTS Instruments|Videollamada de dTS Instruments)\s*[—-]?\s*/i, '');
+  return clean.trim() || title;
+};
+
 export const cleanActivityDescription = (desc?: string | null): string => {
   if (!desc) return '';
   let clean = desc;
@@ -2618,7 +2626,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                  act.type === 'note' ? 'Nota' :
                                  act.type === 'reunion' ? 'Reunión' :
                                  act.type === 'videollamada' ? 'Videollamada' :
-                                 act.type === 'visita' ? 'Visita' :
+                                 act.type === 'visita' ? 'Visita a Cliente' :
                                  act.type === 'call' ? 'Llamada' : 'Visita no programada'}
                               </span>
 
@@ -2627,9 +2635,16 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                 isDone 
                                   ? 'line-through text-gray-400 dark:text-gray-400' 
                                   : 'text-gray-900 dark:text-white'
-                              }`} title={act.title}>
-                                {act.title}
+                              }`} title={cleanActivityTitle(act.title)}>
+                                {cleanActivityTitle(act.title)}
                               </h4>
+
+                              {/* Nombre del contacto */}
+                              {contact?.name && (
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate max-w-[160px] shrink-0" title={contact.name}>
+                                  {contact.name}
+                                </span>
+                              )}
 
                               {/* Badge de estado: Letra SIN NEGRITA y tamaño aumentado un punto */}
                               {needsConclusions ? (

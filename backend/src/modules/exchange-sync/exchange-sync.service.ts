@@ -210,7 +210,7 @@ export class ExchangeSyncService {
 
       const clientSuffix = clientOrContactName ? ` (${clientOrContactName})` : '';
       const fullTitle = publicMeeting
-        ? `${activity.type === 'VISITA' ? 'Visita de dTS Instruments' : 'Videollamada de dTS Instruments'} — ${cleanTitle || 'Reunión comercial'}`
+        ? `${activity.type === 'VISITA' ? 'Visita a Cliente' : 'Videollamada de dTS Instruments'} — ${cleanTitle || 'Reunión comercial'}${clientSuffix}`
         : `${eventPrefix} ${cleanTitle || 'Actividad Comercial'}${clientSuffix}`;
 
       // Categoría oficial de Outlook para colorear el evento:
@@ -234,7 +234,21 @@ export class ExchangeSyncService {
         descriptionHtml += `<hr/><p><strong>Conclusiones:</strong> ${activity.conclusions.replace(/\n/g, '<br/>')}</p>`;
       }
 
-      if (publicMeeting) descriptionHtml = publicCalendarBody(invitation?.message || 'Le invitamos a la reunión programada con dTS Instruments.');
+      if (publicMeeting) {
+        const publicBody = publicCalendarBody(invitation?.message || 'Le invitamos a la reunión programada con dTS Instruments.');
+        if (activity.type === 'VISITA') {
+          let internalInfo = `<hr/><p><strong>Empresa:</strong> ${activity.customer?.name || 'No especificada'}</p>`;
+          if (activity.contact) {
+            internalInfo += `<p><strong>Contacto:</strong> ${activity.contact.name} (${activity.contact.email || ''} / ${activity.contact.phone_no || activity.contact.mobile_no || ''})</p>`;
+          }
+          if (locationDisplay) {
+            internalInfo += `<p><strong>Dirección:</strong> ${locationDisplay}</p>`;
+          }
+          descriptionHtml = publicBody + internalInfo;
+        } else {
+          descriptionHtml = publicBody;
+        }
+      }
       const time = activity.time_scheduled || '09:00';
       const start = `${dateStr}T${time}:00`;
       const end = new Date(`${start}.000Z`);
@@ -630,8 +644,11 @@ export class ExchangeSyncService {
               const categoryMismatch = crmManaged && !(ev.categories || []).includes(expectedCategory);
               // Limpiar prefijo dTS del título si viene modificado desde Outlook
               let cleanTitle = existingActivity.title;
-              if (ev.subject && !ev.subject.startsWith('[dTS CRM') && !ev.subject.startsWith('[✓ dTS CRM')) {
-                cleanTitle = ev.subject;
+              if (ev.subject) {
+                const isManagedTitle = /^(\[(?:✓\s*)?dTS CRM[^\]]*\]|(?:Visita a Cliente|Visita de dTS Instruments|Videollamada de dTS Instruments)\s*[—-]|Reunión)/i.test(ev.subject.trim());
+                if (!isManagedTitle) {
+                  cleanTitle = ev.subject;
+                }
               }
 
               // Limpiar bodyPreview de Outlook para evitar que inyecte el boilerplate del CRM o líneas divisorias
