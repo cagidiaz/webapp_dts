@@ -470,6 +470,11 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   };
 
   const handleOpenEventModal = () => {
+    const nextHour = new Date();
+    nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+    const localDate = `${nextHour.getFullYear()}-${String(nextHour.getMonth() + 1).padStart(2, '0')}-${String(nextHour.getDate()).padStart(2, '0')}`;
+    setNewDate(localDate);
+    setNewTime(`${String(nextHour.getHours()).padStart(2, '0')}:00`);
     setNewInvitation(newCalendarInvitation(contact?.email && /^[^\s@<>;,]+@[^\s@<>;,]+\.[^\s@<>;,]+$/.test(contact.email.trim()) ? contactId : undefined));
     if ((activityType === 'VISITA' || activityType === 'EVENT') && !newLocation.trim()) {
       const addr = getCompanyAddress();
@@ -2633,7 +2638,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               {/* Título de la actividad */}
                               <h4 className={`text-[13.5px] font-semibold leading-none truncate max-w-sm sm:max-w-md transition-colors ${
                                 isDone 
-                                  ? 'line-through text-gray-400 dark:text-gray-400' 
+                                  ? 'text-gray-400 dark:text-gray-400'
                                   : 'text-gray-900 dark:text-white'
                               }`} title={cleanActivityTitle(act.title)}>
                                 {cleanActivityTitle(act.title)}

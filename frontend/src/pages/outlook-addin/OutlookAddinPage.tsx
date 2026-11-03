@@ -63,6 +63,7 @@ const OutlookAddinContent: React.FC = () => {
   const [companySearchQuery, setCompanySearchQuery] = useState('');
   const [companyResults, setCompanyResults] = useState<CompanyCandidate[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<CompanyCandidate | null>(null);
+  const [manualAssociation, setManualAssociation] = useState(false);
 
   // Dynamic contacts & quotes state for selected/detected company
   const [availableContacts, setAvailableContacts] = useState<CompanyContactCandidate[]>([]);
@@ -227,6 +228,9 @@ const OutlookAddinContent: React.FC = () => {
     try {
       const data = await lookupEmailInAddin(params);
       setLookupData(data);
+      setManualAssociation(!data.matchedCustomer);
+      setSelectedCompany(null);
+      setSelectedManualContact(null);
       setSelectedQuoteDocNo('');
     } catch (err: any) {
       console.error('Error en lookupEmailInAddin:', err);
@@ -267,7 +271,7 @@ const OutlookAddinContent: React.FC = () => {
 
   // Efecto: cuando se selecciona una empresa manual o se detecta una empresa sin contacto emparejado, cargar sus contactos y ofertas
   useEffect(() => {
-    const activeClientId = selectedCompany?.client_id || (!lookupData?.matchedContact ? lookupData?.matchedCustomer?.clientId : null);
+    const activeClientId = manualAssociation ? selectedCompany?.client_id : (!lookupData?.matchedContact ? lookupData?.matchedCustomer?.clientId : null);
 
     if (!activeClientId) {
       setAvailableContacts([]);
@@ -280,6 +284,8 @@ const OutlookAddinContent: React.FC = () => {
 
     const fetchContactsAndQuotes = async () => {
       setIsLoadingContacts(true);
+      setAvailableContacts([]);
+      setManualQuotes([]);
       try {
         const [contactsRes, quotesRes] = await Promise.all([
           getCompanyContactsForAddin(activeClientId),
@@ -291,7 +297,11 @@ const OutlookAddinContent: React.FC = () => {
           setManualQuotes(quotesRes || []);
 
           // Auto-sugerencia inteligente: si algún contacto de la empresa coincide en nombre con fromName
-          if (fromName && contactsRes && contactsRes.length > 0) {
+          const detected = manualAssociation && selectedCompany?.client_id === lookupData?.matchedCustomer?.clientId
+            ? contactsRes.find(c => c.id === lookupData?.matchedContact?.id) : undefined;
+          if (detected) {
+            setSelectedManualContact(detected);
+          } else if (!manualAssociation && fromName && contactsRes && contactsRes.length > 0) {
             const cleanFrom = fromName.toLowerCase().trim();
             const autoMatch = contactsRes.find((c) => {
               const cName = (c.name || '').toLowerCase();
@@ -316,7 +326,7 @@ const OutlookAddinContent: React.FC = () => {
     return () => {
       isSubscribed = false;
     };
-  }, [selectedCompany?.client_id, lookupData?.matchedCustomer?.clientId, lookupData?.matchedContact, fromName]);
+  }, [manualAssociation, selectedCompany?.client_id, lookupData?.matchedCustomer?.clientId, lookupData?.matchedContact, fromName]);
 
   // Lista de contactos filtrada por el buscador
   const filteredContacts = useMemo(() => {
@@ -331,15 +341,13 @@ const OutlookAddinContent: React.FC = () => {
 
   // Ofertas consolidadas (las detectadas en el lookup inicial o las cargadas al seleccionar empresa manual)
   const effectiveOpenQuotes = useMemo(() => {
-    if (selectedCompany && manualQuotes.length > 0) {
-      return manualQuotes;
-    }
-    return lookupData?.openQuotes || manualQuotes || [];
-  }, [selectedCompany, manualQuotes, lookupData?.openQuotes]);
+    if (manualAssociation) return selectedCompany ? manualQuotes : [];
+    return lookupData?.matchedContact ? (lookupData.openQuotes || []) : manualQuotes;
+  }, [manualAssociation, selectedCompany, manualQuotes, lookupData?.openQuotes, lookupData?.matchedContact]);
 
   // Guardar correo en CRM
   const handleLogEmail = async () => {
-    if (!selectedCompany && !lookupData?.matchedCustomer) {
+    if (!(manualAssociation ? selectedCompany : lookupData?.matchedCustomer)) {
       setError('Debes seleccionar o asociar una empresa cliente antes de guardar.');
       return;
     }
@@ -347,9 +355,8 @@ const OutlookAddinContent: React.FC = () => {
     setIsSaving(true);
     setError(null);
 
-    const targetClientId = lookupData?.matchedCustomer?.clientId || selectedCompany?.client_id;
-    // Si ya venía un contacto emparejado en el lookup se usa ese; si no, se usa el contacto seleccionado manualmente
-    const targetContactId = lookupData?.matchedContact?.id || selectedManualContact?.id || undefined;
+    const targetClientId = manualAssociation ? selectedCompany?.client_id : lookupData?.matchedCustomer?.clientId;
+    const targetContactId = manualAssociation ? selectedManualContact?.id : (lookupData?.matchedContact?.id || selectedManualContact?.id);
     const interlocutor = isOutgoingEmail ? (toEmails[0] || fromEmail) : (fromEmail || toEmails[0]);
 
     // Asegurar que el cuerpo del correo está cargado antes de enviar
@@ -548,14 +555,14 @@ const OutlookAddinContent: React.FC = () => {
           <div className="bg-white dark:bg-[#00222C]/60 border border-gray-200 dark:border-white/10 rounded-xl p-3 shadow-2xs space-y-2.5">
             <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center justify-between">
               <span>Interlocutor en dTS CRM</span>
-              {lookupData?.matchedContact && (
+              {!manualAssociation && lookupData?.matchedContact && (
                 <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold">
                   <ShieldCheck size={11} /> Identificado
                 </span>
               )}
             </div>
 
-            {lookupData?.matchedContact ? (
+            {!manualAssociation && lookupData?.matchedContact ? (
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
                   <div className="w-7 h-7 rounded-full bg-dts-secondary/20 text-dts-secondary flex items-center justify-center font-bold">
@@ -581,7 +588,7 @@ const OutlookAddinContent: React.FC = () => {
                   </div>
                 )}
               </div>
-            ) : lookupData?.matchedCustomer ? (
+            ) : !manualAssociation && lookupData?.matchedCustomer ? (
               <div className="space-y-2">
                 <div className="p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 space-y-1.5">
                   <div className="text-blue-900 dark:text-blue-300 text-[11px] font-bold flex items-center justify-between">
@@ -681,7 +688,7 @@ const OutlookAddinContent: React.FC = () => {
               <div className="space-y-2">
                 <div className="p-2.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-dashed border-gray-300 dark:border-white/15 text-center">
                   <AlertCircle size={16} className="mx-auto text-amber-500 mb-1" />
-                  <p className="text-gray-700 dark:text-gray-200 font-bold text-[11px]">Remitente no registrado</p>
+                  <p className="text-gray-700 dark:text-gray-200 font-bold text-[11px]">{manualAssociation ? 'Asociación manual' : 'Remitente no registrado'}</p>
                   <p className="text-[10px] text-gray-400 mt-0.5">
                     Busca y asocia este correo a una empresa cliente y a un contacto en dTS CRM.
                   </p>
@@ -707,6 +714,8 @@ const OutlookAddinContent: React.FC = () => {
                             key={c.client_id}
                             onClick={() => {
                               setSelectedCompany(c);
+                              setSelectedQuoteDocNo('');
+                              setContactSearchFilter('');
                               setCompanyResults([]);
                               setCompanySearchQuery('');
                               setSelectedManualContact(null);
@@ -732,6 +741,8 @@ const OutlookAddinContent: React.FC = () => {
                         type="button"
                         onClick={() => {
                           setSelectedCompany(null);
+                          setSelectedQuoteDocNo('');
+                          setManualQuotes([]);
                           setSelectedManualContact(null);
                           setAvailableContacts([]);
                           setCompanySearchQuery('');
@@ -825,6 +836,15 @@ const OutlookAddinContent: React.FC = () => {
                 )}
               </div>
             )}
+            {!manualAssociation && lookupData?.matchedCustomer && !lookupData.isAlreadyLogged && (
+              <button type="button" onClick={() => {
+                const customer = lookupData.matchedCustomer!;
+                setSelectedCompany({ client_id: customer.clientId, name: customer.name, city: customer.city, salesperson_code: customer.salespersonCode });
+                setSelectedManualContact(null);
+                setSelectedQuoteDocNo('');
+                setManualAssociation(true);
+              }} className="text-xs font-semibold text-dts-secondary hover:underline cursor-pointer">Cambiar empresa o contacto</button>
+            )}
           </div>
 
           {/* Opciones de Registro */}
@@ -911,9 +931,9 @@ const OutlookAddinContent: React.FC = () => {
                 </div>
               </div>
 
-              {(lookupData.matchedContact || selectedManualContact) && (
+              {(manualAssociation ? selectedManualContact : lookupData.matchedContact || selectedManualContact) && (
                 <a
-                  href={`/crm/contacts/${lookupData.matchedContact?.id || selectedManualContact?.id}?tab=emails`}
+                  href={`/crm/contacts/${manualAssociation ? selectedManualContact?.id : (lookupData.matchedContact?.id || selectedManualContact?.id)}?tab=emails`}
                   target="_blank"
                   rel="noreferrer"
                   className="px-2 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold hover:bg-emerald-700 flex items-center gap-1"
@@ -925,18 +945,18 @@ const OutlookAddinContent: React.FC = () => {
           ) : (
             <div className="space-y-2 pt-1">
               {/* Resumen visual de vinculación */}
-              {(selectedCompany || lookupData?.matchedCustomer) && (
+              {(manualAssociation ? selectedCompany : lookupData?.matchedCustomer) && (
                 <div className="p-2 rounded-lg bg-gray-100/70 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[10px] space-y-1">
                   <div className="flex justify-between items-center text-gray-500 dark:text-gray-400">
                     <span className="font-semibold">Destino en CRM:</span>
                     <span className="font-bold text-gray-800 dark:text-gray-200 truncate ml-2">
-                      {selectedCompany?.name || lookupData?.matchedCustomer?.name}
+                      {manualAssociation ? selectedCompany?.name : lookupData?.matchedCustomer?.name}
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-gray-500 dark:text-gray-400">
                     <span className="font-semibold">Contacto vinculado:</span>
                     <span className="font-bold text-dts-primary dark:text-dts-secondary truncate ml-2">
-                      {lookupData?.matchedContact?.name || selectedManualContact?.name || '(General de Empresa)'}
+                      {(manualAssociation ? selectedManualContact?.name : (lookupData?.matchedContact?.name || selectedManualContact?.name)) || '(General de Empresa)'}
                     </span>
                   </div>
                 </div>
@@ -944,7 +964,7 @@ const OutlookAddinContent: React.FC = () => {
               <button
                 type="button"
                 onClick={handleLogEmail}
-                disabled={isSaving || (!lookupData?.matchedCustomer && !selectedCompany)}
+                disabled={isSaving || !(manualAssociation ? selectedCompany : lookupData?.matchedCustomer) || isLoadingContacts}
                 className="w-full py-2.5 px-4 bg-dts-primary hover:bg-dts-primary/90 dark:bg-dts-secondary dark:hover:brightness-110 text-white dark:text-[#071318] font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? (
