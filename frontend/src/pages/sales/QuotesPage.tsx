@@ -1440,6 +1440,7 @@ export const QuotesPage: React.FC = () => {
                   <div className="flex items-center gap-1.5">
                     <input 
                       type="date" 
+                      disabled
                       value={editingCierreDate}
                       onChange={(e) => setEditingCierreDate(e.target.value)}
                       className="w-full bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs rounded-lg p-1.5 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
@@ -1447,7 +1448,7 @@ export const QuotesPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleSaveCierreDate}
-                      disabled={isSavingCierre || editingCierreDate === (selectedQuote.cierreprev_date ? selectedQuote.cierreprev_date.split('T')[0] : '')}
+                      disabled
                       className="p-1.5 rounded-lg bg-dts-primary hover:bg-dts-primary/90 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                       title="Guardar Cierre Previsto"
                     >

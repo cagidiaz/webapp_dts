@@ -26,7 +26,7 @@ export class QuotesService {
     probabilidadExito?: string;
     cierrePrevYear?: number;
     cierrePrevMonths?: string;
-  } = {}, userId?: string) {
+  } = {}, userId?: string, useFollowups = false) {
     const { 
       skip, 
       take, 
@@ -44,8 +44,8 @@ export class QuotesService {
     } = params;
 
     const where: any = {};
-    const source = await this.followups.context();
-    if (source && userId) Object.assign(where, await this.followups.scope(userId));
+    const source = useFollowups ? await this.followups.context() : null;
+    if (userId) Object.assign(where, await this.followups.scope(userId));
     const and: any[] = [];
 
     if (year) {
@@ -621,11 +621,11 @@ export class QuotesService {
   /**
    * Obtiene una oferta por su ID (UUID) con sus relaciones completas.
    */
-  async getById(id: string, userId?: string) {
+  async getById(id: string, userId?: string, useFollowups = false) {
     try {
-      const source = await this.followups.context();
+      const source = useFollowups ? await this.followups.context() : null;
       const quote = await this.prisma.sales_quotes.findFirst({
-        where: { id, ...(source && userId ? await this.followups.scope(userId) : {}) },
+        where: { id, ...(userId ? await this.followups.scope(userId) : {}) },
         include: {
           customer: true,
           sales_rep: true,

@@ -47,7 +47,9 @@ export class OfferSourceContext {
         const managed = [...this.records.keys()];
         const contactReference = typeof condition === 'string' ? condition : condition?.equals;
         const uuidContactFilter = key === 'contacto_id' && typeof contactReference === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(contactReference);
-        const matching = [...this.records.values()].filter(row => matches(uuidContactFilter ? row.contacto_uuid : row[key], condition)).map(row => row.document_no);
+        const appCondition = key === 'estado_oferta' && typeof condition?.equals === 'string'
+          ? { ...condition, equals: pilotPhase(condition.equals) } : condition;
+        const matching = [...this.records.values()].filter(row => matches(uuidContactFilter ? row.contacto_uuid : row[key], appCondition)).map(row => row.document_no);
         // Los campos generales siguen en BC; los auxiliares siguen en el CRM anterior para no participantes.
         const bcCondition = BC_FIELDS.includes(key as any) ? { [key]: condition } : { sales_quotes_crm: { [key]: condition } };
         clauses.push({ OR: [{ document_no: { in: matching } }, { AND: [{ document_no: { notIn: managed } }, bcCondition] }] });
