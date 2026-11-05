@@ -8,7 +8,7 @@ import type { Prospect, ProspectAccess, ProspectFields } from '../../../api/pros
 import { ClientProspectActivities, ProspectActivities, ProspectTimeline } from './ProspectActivities';
 
 const emptyFields: ProspectFields = { company_name: '', contact_name: null, contact_job_title: null, email: null, phone: null, notes: null, phase: 0, owner_id: null };
-const inputClass = 'w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:ring-1 focus:ring-dts-secondary';
+const inputClass = 'w-full bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50';
 const labelClass = 'block text-xs font-bold text-gray-400 uppercase mb-1';
 function ProspectShell({ full, open, close, title, prospect, children }: { full: boolean; open: boolean; close: () => void; title: string; prospect: Prospect | null; children: ReactNode }) {
   if (!full) return <Drawer isOpen={open} onClose={close} title={title}>{children}</Drawer>;
@@ -37,6 +37,7 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
   const [detailTab, setDetailTab] = useState<'info' | 'timeline' | 'events'>('info');
   const [editingInfo, setEditingInfo] = useState(false);
   const [contactEditorOpen, setContactEditorOpen] = useState(false);
+  const [directEditor, setDirectEditor] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<ProspectFields>({ ...emptyFields });
   const [message, setMessage] = useState('');
@@ -78,6 +79,7 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
       });
       setError('');
       setContactEditorOpen(false);
+      if (directEditor) setIsOpen(false);
       setMessage('Prospecto guardado.');
     },
     onError: err => setError(errorText(err)),
@@ -101,6 +103,9 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
   const open = (prospect: Prospect | null) => {
     setDetailTab('info');
     setEditingInfo(!prospect);
+    const openEditor = initialView !== 'table' && !!prospect;
+    setDirectEditor(openEditor);
+    setContactEditorOpen(openEditor);
     setSelected(prospect);
     setShowClientActivities(false);
     setClientSearch('');
@@ -138,9 +143,11 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
       <div className="overflow-y-auto flex-1 custom-scrollbar"><table className="w-full text-left text-sm border-separate border-spacing-0"><thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg"><tr>{['Nombre','Cliente / Empresa','Cargo','Nivel Org.','LinkedIn','Email','Teléfono'].map(title=><th key={title} className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">{title}</th>)}</tr></thead><tbody className="divide-y divide-gray-100 dark:divide-white/5">{items.map(prospect=><tr key={prospect.id} onClick={()=>open(prospect)} className="hover:bg-gray-50/50 dark:hover:bg-white/2 transition-colors cursor-pointer"><td className="px-6 py-4 font-bold text-gray-900 dark:text-white"><div className="flex items-center gap-2"><User size={14} className="text-dts-secondary shrink-0"/>{prospect.contact_name || 'Sin contacto'}</div></td><td className="px-6 py-4 font-bold text-gray-800 dark:text-gray-200 text-xs">{prospect.company_name}</td><td className="px-6 py-4">{prospect.contact_job_title ? <span className="px-2 py-0.5 rounded bg-dts-secondary/10 text-dts-secondary font-semibold uppercase text-[9px] tracking-wider">{prospect.contact_job_title}</span> : <span className="text-gray-400 italic">No especificado</span>}</td><td className="px-6 py-4 text-gray-400">—</td><td className="px-6 py-4 text-gray-400">—</td><td className="px-6 py-4 text-gray-600 dark:text-gray-300">{prospect.email ? <span className="flex items-center gap-1"><Mail size={12}/>{prospect.email}</span> : <span className="text-gray-400 italic">No disponible</span>}</td><td className="px-6 py-4 text-gray-600 dark:text-gray-300">{prospect.phone ? <span className="flex items-center gap-1"><Phone size={12}/>{prospect.phone}</span> : <span className="text-gray-400 italic">No disponible</span>}</td></tr>)}</tbody></table>{!items.length && <div className="text-center py-20 text-gray-400 italic text-sm">No se encontraron contactos que coincidan con la búsqueda.</div>}</div>
     </div>}
     <div hidden={initialView === 'table'} className="bg-white dark:bg-surface-card-dark p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-wrap items-center justify-between gap-4">
-      <div className="relative w-full sm:max-w-xs"><Search className="absolute left-3 top-2 text-gray-400" size={16} /><input aria-label="Buscar prospectos" className={`${inputClass} pl-10`} value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar empresa, contacto, email…" /></div>
+      <div className="grid grid-cols-[minmax(0,20rem)_auto] justify-start items-center gap-3 min-w-0 flex-1">
+        <div className="relative min-w-0 sm:max-w-xs"><Search className="absolute left-3 top-2 text-gray-400" size={16} /><input aria-label="Buscar prospectos" className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar empresa, contacto, email…" /></div>
+        <select aria-label="Estado del prospecto" value={status} onChange={e => { setStatus(e.target.value); setPage(1); if (e.target.value !== 'active') setView('table'); }} className="block w-auto pl-2 pr-8 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"><option value="active">Activos</option><option value="archived">Archivados</option><option value="converted">Convertidos</option><option value="all">Todos</option></select>
+      </div>
       <div className="flex flex-wrap items-center gap-3">
-        {initialView !== 'table' && <select aria-label="Estado del prospecto" value={status} onChange={e => { setStatus(e.target.value); setPage(1); if (e.target.value !== 'active') setView('table'); }} className={`${inputClass} w-auto`}><option value="active">Activos</option><option value="archived">Archivados</option><option value="converted">Convertidos</option><option value="all">Todos</option></select>}
         <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-lg"><button aria-label="Vista Kanban" disabled={status !== 'active'} aria-pressed={view === 'kanban'} onClick={() => setView('kanban')} className={`p-2 rounded disabled:opacity-40 ${view === 'kanban' ? 'bg-white dark:bg-dts-primary text-dts-secondary shadow-sm' : 'text-gray-400'}`}><LayoutGrid size={16} /></button><button aria-label="Vista tabla" aria-pressed={view === 'table'} onClick={() => setView('table')} className={`p-2 rounded ${view === 'table' ? 'bg-white dark:bg-dts-primary text-dts-secondary shadow-sm' : 'text-gray-400'}`}><Table size={16} /></button></div>
         {access.canCreate && <button onClick={() => open(null)} className="flex items-center gap-2 bg-dts-secondary hover:bg-dts-secondary-dark text-white px-3 py-2 rounded-lg text-xs font-bold"><Plus size={16} />Crear prospecto</button>}
       </div>
@@ -166,7 +173,7 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
     )}
     {(list.data?.total || 0) > (list.data?.limit || 200) && <div className="flex gap-4 justify-end items-center text-xs text-gray-500"><button disabled={page === 1 || list.isFetching} onClick={() => setPage(page - 1)} className="disabled:opacity-50">Anterior</button><span>Página {page} de {Math.ceil((list.data?.total || 0) / (list.data?.limit || 200))}</span><button disabled={page * (list.data?.limit || 200) >= (list.data?.total || 0) || list.isFetching} onClick={() => setPage(page + 1)} className="disabled:opacity-50">Siguiente</button></div>}
     </div>
-    <ProspectShell full={initialView === 'table' && !!selected} open={isOpen} close={() => { if (!busy) setIsOpen(false); }} title={selected ? (selected.contact_name || selected.company_name) : 'Crear prospecto'} prospect={selected}>
+    <ProspectShell full={initialView === 'table' && !!selected} open={isOpen && !(directEditor && contactEditorOpen)} close={() => { if (!busy) setIsOpen(false); }} title={selected ? (selected.contact_name || selected.company_name) : 'Crear prospecto'} prospect={selected}>
       {selected && <div className="flex border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-zinc-800/20 p-1 shrink-0" role="tablist" aria-label="Ficha del prospecto">{([{key:'info',label:'Información',icon:User},{key:'timeline',label:'Timeline',icon:Activity},{key:'events',label:'Eventos',icon:Calendar}] as const).map(({key,label,icon:Icon}) => <button key={key} type="button" role="tab" aria-selected={detailTab === key} onClick={() => setDetailTab(key)} className={`flex-1 py-2 px-2 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${detailTab === key ? 'bg-dts-primary text-white dark:bg-dts-secondary shadow-xs' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}><Icon size={14}/>{label}</button>)}</div>}
       <div className="p-4 sm:p-5 overflow-y-auto flex-1">
       <div hidden={!!selected && detailTab !== 'info'}>
@@ -237,8 +244,10 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
       {isOpen && selected && detailTab === 'timeline' && <ProspectTimeline key={selected.id} prospect={selected} access={access} />}
       </div>
     </ProspectShell>
-    <Drawer isOpen={contactEditorOpen && isOpen && !!selected} onClose={() => { if (!save.isPending) setContactEditorOpen(false); }} title="Editar prospecto">
+    <Drawer isOpen={contactEditorOpen && isOpen && !!selected} onClose={() => { if (!save.isPending) { setContactEditorOpen(false); if (directEditor) setIsOpen(false); } }} title={canEdit ? 'Editar prospecto' : 'Consultar prospecto'}>
       <form className="space-y-4" onSubmit={e => { e.preventDefault(); if (canEdit && !save.isPending) save.mutate(); }}>
+        {!canEdit && <p className="text-xs text-gray-500">Consulta: no tienes permiso para modificar este prospecto.</p>}
+        <fieldset disabled={!canEdit || save.isPending} className="space-y-4">
         {access.canEditAll && <div><label htmlFor="edit-prospect-owner" className={labelClass}>Comercial asignado (Salesperson)</label><select id="edit-prospect-owner" className={inputClass} value={form.owner_id || ''} onChange={e=>setForm({...form,owner_id:e.target.value || null})}><option value="">Conservar propietario actual</option>{salespeople.data?.map(sp=><option key={sp.id} value={sp.id}>{`${sp.first_name || ''} ${sp.last_name || ''}`.trim() || sp.email} {sp.code ? `(${sp.code})` : ''} {sp.roles?.name ? `· ${sp.roles.name}` : ''}</option>)}</select></div>}
         <div><label htmlFor="edit-prospect-company" className={labelClass}>Nombre de empresa *</label><input id="edit-prospect-company" required maxLength={255} className={inputClass} value={form.company_name} onChange={e=>setForm({...form,company_name:e.target.value})}/></div>
         <div><label htmlFor="edit-prospect-name" className={labelClass}>Persona de contacto</label><input id="edit-prospect-name" maxLength={255} className={inputClass} value={form.contact_name || ''} onChange={e=>setForm({...form,contact_name:e.target.value})}/></div>
@@ -247,8 +256,10 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
         <div><label htmlFor="edit-prospect-phone" className={labelClass}>Teléfono</label><input id="edit-prospect-phone" maxLength={50} className={inputClass} value={form.phone || ''} onChange={e=>setForm({...form,phone:e.target.value})}/></div>
         <div><label htmlFor="edit-prospect-notes" className={labelClass}>Comentarios</label><textarea id="edit-prospect-notes" rows={3} maxLength={10000} className={inputClass} value={form.notes || ''} onChange={e=>setForm({...form,notes:e.target.value})}/></div>
         <div><label htmlFor="edit-prospect-phase" className={labelClass}>Fase</label><select id="edit-prospect-phase" disabled={!!selected?.converted_at || !!selected?.archived_at} className={inputClass} value={form.phase} onChange={e=>setForm({...form,phase:Number(e.target.value)})}><option value={0}>Fase 0 · Sin aproximación</option><option value={1}>Fase 1 · Interesado</option></select></div>
+        </fieldset>
         {error && <p role="alert" className="text-xs text-rose-500">{error}</p>}
-        <div className="flex justify-end gap-3"><button type="button" disabled={save.isPending} onClick={()=>setContactEditorOpen(false)} className="px-4 py-2 rounded-lg border text-xs font-bold">Cancelar</button><button type="submit" disabled={!canEdit || save.isPending} className="px-4 py-2 rounded-lg bg-dts-secondary text-white text-xs font-bold disabled:opacity-50">{save.isPending ? 'Guardando…' : 'Guardar'}</button></div>
+        {directEditor && <button type="button" disabled={save.isPending} onClick={() => { setContactEditorOpen(false); setDirectEditor(false); setEditingInfo(true); }} className="text-xs text-dts-secondary hover:underline">Ver vinculación e historial</button>}
+        <div className="flex justify-end gap-3"><button type="button" disabled={save.isPending} onClick={()=>{setContactEditorOpen(false); if (directEditor) setIsOpen(false);}} className="px-4 py-2 rounded-lg border text-xs font-bold">{canEdit ? 'Cancelar' : 'Cerrar'}</button>{canEdit && <button type="submit" disabled={save.isPending} className="px-4 py-2 rounded-lg bg-dts-secondary text-white text-xs font-bold disabled:opacity-50">{save.isPending ? 'Guardando…' : 'Guardar'}</button>}</div>
       </form>
     </Drawer>
   </div>;
