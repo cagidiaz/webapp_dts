@@ -48,7 +48,7 @@ export interface ProspectList {
 }
 export const getProspectAccess = async () => (await apiClient.get<ProspectAccess>('/crm-prospects/access')).data;
 export const getProspectSalespeople = async () => (await apiClient.get<ProspectSalesperson[]>('/crm-prospects/salespeople')).data;
-export const getProspects = async (status: string, search: string, page = 1) => (await apiClient.get<ProspectList>('/crm-prospects', { params: { status, search, page } })).data;
+export const getProspects = async (status: string, search: string, page = 1, ownerId?: string) => (await apiClient.get<ProspectList>('/crm-prospects', { params: { status, search, page, ownerId } })).data;
 export const getProspect = async (id: string) => (await apiClient.get<Prospect>(`/crm-prospects/${id}`)).data;
 export const createProspect = async (data: ProspectFields) => (await apiClient.post<Prospect>('/crm-prospects', data)).data;
 export const updateProspect = async (id: string, data: ProspectFields & { version: number }) => (await apiClient.patch<Prospect>(`/crm-prospects/${id}`, data)).data;

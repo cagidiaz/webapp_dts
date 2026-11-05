@@ -14,7 +14,7 @@ export class CustomerSegmentsService {
 
   async overview(userId: string) {
     const scope = await resolveCrmDataScope(this.prisma, userId);
-    const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, select: { role_id: true } });
+    const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, select: { role_id: true, roles: { select: { name: true } } } });
     if (!profile?.role_id) throw new ForbiddenException('No tienes permiso para consultar clientes.');
     const permissions = await this.prisma.role_modules.findMany({ where: { role_id: profile.role_id, can_view: true, module: { is_active: true, route_path: { in: ['/crm', '/crm/customers'] } } }, include: { module: true } });
     if (!['/crm', '/crm/customers'].every(route => permissions.some(p => p.module.route_path === route))) throw new ForbiddenException('No tienes permiso para consultar clientes.');
@@ -81,7 +81,7 @@ export class CustomerSegmentsService {
     if (!allowed('/sales/customers') && !(allowed('/crm') && allowed('/crm/customers'))) throw new ForbiddenException('No tienes permiso para consultar clientes.');
     const customer = await this.prisma.customers.findFirst({ where: { client_id: clientCode, ...(scope.salespersonCode ? { salesperson_code: scope.salespersonCode } : {}) }, select: { salesperson_code: true } });
     if (!customer) throw new NotFoundException('Cliente no encontrado.');
-    const isAdmin = profile.roles?.name?.trim().toUpperCase() === 'ADMIN';
+    const isAdmin = ['ADMIN', 'DIRECCION'].includes(profile.roles?.name?.trim().toUpperCase() || '');
     return { canEdit: isAdmin || !!profile.code?.trim() && profile.code.trim() === customer.salesperson_code?.trim() };
   }
 

@@ -49,6 +49,18 @@ describe('Permisos y convivencia del piloto de Prospección', () => {
     expect((await service.access('other')).enabled).toBe(false);
   });
 
+  it('permite filtrar la cartera a Dirección y rechaza filtros ajenos para comerciales', async () => {
+    const owner = '11111111-1111-4111-8111-111111111111';
+    role = 'DIRECCION'; email = 'direccion@example.com';
+    db.crm_prospects.findMany = jest.fn().mockResolvedValue([]);
+    db.crm_prospects.groupBy = jest.fn().mockResolvedValue([]);
+    db.crm_prospects.count = jest.fn().mockResolvedValue(0);
+    await service.list('direction', 'active', '', 1, owner);
+    expect(db.crm_prospects.findMany).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({owner_id:owner})}));
+    role = 'VENTAS'; email = 'otro@example.com';
+    await expect(service.list('other', 'active', '', 1, owner)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('deniega permisos ausentes y respeta la revocación también para Admin', async () => {
     role='ADMIN';email='admin@example.com';
     db.role_modules.findMany.mockResolvedValue([]);

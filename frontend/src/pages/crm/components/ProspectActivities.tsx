@@ -39,6 +39,14 @@ function ActivityCards({ items, edit, sync }: { items: ProspectActivity[]; edit?
   })}{!items.length && <p className="text-xs text-gray-500">Sin actividades para estos filtros.</p>}</div>;
 }
 
+export function ProspectTimeline({ prospect, access }: { prospect: Prospect; access: ProspectAccess }) {
+  const activities = useQuery({ queryKey: ['prospect-activities', access.userId, prospect.id], queryFn: () => getProspectActivities(prospect.id), retry: false });
+  const items = [...(activities.data || [])].sort((a, b) => new Date(b.due_date || b.created_at).getTime() - new Date(a.due_date || a.created_at).getTime());
+  if (activities.isLoading) return <p className="text-xs text-gray-500">Cargando Timeline…</p>;
+  if (activities.isError) return <p role="alert" className="text-xs text-rose-500">{messageOf(activities.error)}</p>;
+  return <ActivityCards items={items} />;
+}
+
 export function ClientProspectActivities({ clientId, enabled = true }: { clientId: string; enabled?: boolean }) {
   const { profile } = useAuthStore();
   const access = useQuery({ queryKey: ['prospect-access', profile?.id], queryFn: getProspectAccess, enabled: enabled && !!profile?.id, retry: false });

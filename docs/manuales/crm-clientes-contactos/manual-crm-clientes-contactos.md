@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.6 · 3 de noviembre de 2026 · Uso interno
+Edición 1.9 · 5 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -21,6 +21,7 @@ Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Es
   - [4.5. leer la matriz de relación](#45-leer-la-matriz-de-relación)
   - [4.6. actuar desde la matriz y exportar](#46-actuar-desde-la-matriz-y-exportar)
   - [4.7. la ficha lateral, cuando está disponible](#47-la-ficha-lateral-cuando-está-disponible)
+  - [4.8. Clasificación de segmentos](#48-clasificación-de-segmentos)
 - [5. CRM - Contactos](#5-crm-contactos)
   - [5.1. localizar a la persona correcta](#51-localizar-a-la-persona-correcta)
   - [5.2. acciones rápidas y LinkedIn](#52-acciones-rápidas-y-linkedin)
@@ -366,6 +367,51 @@ El comercial puede editar los segmentos de sus clientes y Admin los de todos los
 7. Pulsa **Excel** para descargar todas las filas filtradas, incluidas las que aún no aparecen en pantalla.
 
 La facturación suma facturas y resta abonos de productos, sin IVA ni cuentas. Las líneas sin clasificar se muestran aparte y solo responden a los filtros de vendedor y cliente. La potencialidad es una estimación anual; la facturación corresponde a lo acumulado en el año. Son periodos diferentes. Las facturas históricas pueden hacer que una fila permanezca visible aunque su facturación del año sea cero.
+
+### 4.8 Clasificación de segmentos
+
+La aplicación asigna la venta de cada producto mediante su familia y subfamilia. La siguiente tabla muestra las reglas configuradas inicialmente. Las reglas pueden cambiar: consulta con Administración si una categoría nueva no aparece.
+
+| Familia BC | Subfamilidades BC | Segmento |
+| --- | --- | --- |
+| AUT | AC8, CS1, EC1, OI1, PU1, RDA, RDS, SA1, SP8, VF1 | dTSSens |
+| CAL | AC9, CPM, CSM, CT2, CTM, PC1, REC, SP9, TC1 | dTSCal |
+| EPM | PT5 | dTSPres → OEM |
+| EPM | AC3, PT0, PT1, PT2, PT3, PT4, PT6, PT7, SP3 | dTSPres → Process |
+| ETM | AC5, IRP, RES, SP5, TIM, TS1, TS2, TS3, TT1, TW1, TW2 | Según modelo de negocio del cliente |
+| ETM | ATEX | dTSTemp → ATEX |
+| FLW | AC7, PF1, PF2, PF3, REF, SP7 | dTSFlow → Basics |
+| FLW | CSE, PF4, PF5 | dTSFlow → Process-Seiko |
+| FLW | FT1, FT2, FT3, FT4, PF6, PF8, RO1 | dTSFlow → Tronic |
+| LVL | AC6, LV1, LV2, LV3, LV4, LV5, LV6, SP6 | dTSLevel |
+| MP-AC | MP-AC1, MP-AC2, MP-AC3, MP-AC4, MP-AC5, MP-AC6, MP-AC7 | dTSTemp → Varios |
+| MP-BO | MP-BO1, MP-BO2, MP-BO3, MP-BO4, MP-BO5 | dTSTemp → Varios |
+| MP-CA | MP-CA1, MP-CA2, MP-CA3, MP-CA4, MP-CA5 | dTSTemp → Varios |
+| MP-CE | MP-CE1, MP-CE2, MP-CE3, MP-CE4 | dTSTemp → Varios |
+| MP-CO | MP-CO1, MP-CO2, MP-CO3, MP-CO4, MP-CO5 | dTSTemp → Varios |
+| MP-EH | MP-EH1, MP-EH2, MP-EH3, MP-EH4, MP-EH5 | dTSTemp → Varios |
+| MP-EN | MP-EN1, MP-EN2, MP-EN3, MP-EN4, MP-EN5, MP-EN6, MP-EN7 | dTSTemp → Varios |
+| MP-OT | MP-OT1, MP-OT2, MP-OT3 | dTSTemp → Varios |
+| MP-PR | MP-PR1, MP-PR2, MP-PR3, MP-PR4, MP-PR5, MP-PR6, MP-PR7, MP-PR8 | dTSTemp → Varios |
+| MP-RA | MP-RA1, MP-RA2, MP-RA3, MP-RA4, MP-RA5, MP-RA6, MP-RA7, MP-RA8 | dTSTemp → Varios |
+| MP-SE | MP-SE1, MP-SE2, MP-SE3 | dTSTemp → Varios |
+| MP-TU | MP-TU1, MP-TU2, MP-TU3, MP-TU4, MP-TU5, MP-TU6 | dTSTemp → Varios |
+| MP-VA | MP-VA1, MP-VA2, MP-VA3 | dTSTemp → Varios |
+| SEN | AIS, CO2, SCV, SE1, SV1, SVA, THO, WIF | dTSSens |
+| SSG | AC1, AC4, DP1, DS1, DS2, DS3, DS4, LP1, PG1, PG2, PS1, PS2, SP1, ST1, VA1 | dTSPres → Gauges |
+| UPG | AC2, SP2, UP1, UP2, UP3, UP4, UP5 | dTSPres → Gauges |
+| VVV | DOC, EMB, FAB | dTSSens |
+
+#### Regla especial de ETM
+
+Para las subfamilias ETM indicadas como «Según modelo de negocio del cliente», la aplicación consulta el campo modelo de negocio del cliente: OEM corresponde a dTSTemp → OEM y cualquier otro valor informado a dTSTemp → Process. Si está vacío, la venta aparece como Sin segmento. ETM / ATEX tiene una regla fija y no depende de ese campo.
+
+#### Cómo resolver productos sin segmento
+
+1. En CRM - Clientes, abre Segmentos y potencial y selecciona Sin segmento.
+2. Comprueba el producto, cliente y subfamilia. Si pertenece a las subfamilias ETM de la regla especial, revisa el modelo de negocio del cliente en Business Central.
+3. Si falta la subfamilia del producto, corrígela en Business Central. Si la familia y subfamilia son nuevas o no tienen regla, informa a Administración para revisar la correspondencia del CRM.
+4. Espera la sincronización de los datos y vuelve a consultar la vista. Las facturas y abonos se consideran sin IVA.
 
 ## 5. CRM - Contactos
 
@@ -857,7 +903,7 @@ La vista global Oportunidades y sus cortes históricos se explican en los aparta
 ### 6.3 Prospectos: solo si la pestaña está habilitada
 
 
-Algunos usuarios ven **Contactos BC** y **Prospectos**. Si tu directorio no muestra estas pestañas, continúa con el funcionamiento habitual: no tienes que crear contactos ficticios ni pedir que se modifiquen tus permisos para seguir este manual.
+Algunos usuarios ven **Contactos BC** y **Contactos Prospectos**. Si tu directorio no muestra estas pestañas, continúa con el funcionamiento habitual: no tienes que crear contactos ficticios ni pedir que se modifiquen tus permisos para seguir este manual.
 
 #### Crear y desarrollar un prospecto
 
@@ -872,7 +918,7 @@ Se contempla una persona de contacto por empresa prospecto. El control de duplic
 
 #### Editar, archivar y recuperar
 
-El propietario y Admin pueden editar los prospectos autorizados; Dirección consulta. El archivo, la restauración y la vinculación se muestran al propietario en la interfaz actual. Cambia el filtro a **Archivados** para localizar y restaurar una ficha. Archivar conserva la información; no equivale a eliminarla.
+El propietario, Admin y Dirección pueden editar prospectos según sus permisos. Admin y Dirección pueden trabajar prospectos de cualquier comercial, archivarlos, restaurarlos y vincularlos. En Oportunidades, cambia el filtro a **Archivados** para localizar y restaurar una ficha. Archivar conserva la información; no equivale a eliminarla.
 
 #### Vincular con un cliente formalizado
 
@@ -937,7 +983,7 @@ La pestaña **Prospección** presenta Fase 0 (sin aproximación comercial) y Fas
 
 Abre el prospecto y busca el cliente sincronizado desde Business Central. Comprueba nombre y código y confirma la vinculación; no es necesario esperar a tener una oferta. El prospecto pasa a **Convertidos** y se conserva su historial. Si la asociación es incorrecta, el propietario puede usar **Deshacer vinculación** y confirmar. Los eventos permanecen en el prospecto.
 
-El propietario y Administración pueden editar dentro de los permisos disponibles. El archivo, la restauración y la vinculación se presentan según la autorización; archivar no borra el historial.
+El propietario, Admin y Dirección pueden editar dentro de los permisos disponibles. Admin y Dirección tienen alcance global. El archivo, la restauración y la vinculación se presentan según la autorización; archivar no borra el historial.
 
 ### 6.7 cortes e informes
 
@@ -953,7 +999,7 @@ Un corte es una fotografía de la cartera en un momento concreto. Permite compar
 
 #### Crear un corte manual
 
-Si tu cuenta muestra el formulario, escribe el motivo y pulsa **Crear corte manual**. Si necesitas documentar una revisión, selecciona opcionalmente el corte publicado al que se refiere. Espera el estado publicado antes de utilizarlo. En caso de fallo, la interfaz puede ofrecer **Reintentar** a los usuarios autorizados.
+Si tu cuenta muestra el formulario, escribe el motivo y pulsa **Crear corte manual**. El botón permanece deshabilitado hasta que se indica un motivo. Si necesitas documentar una revisión, selecciona opcionalmente el corte publicado al que se refiere. Espera el estado publicado antes de utilizarlo. En caso de fallo, la interfaz puede ofrecer **Reintentar** a los usuarios autorizados.
 
 La pantalla indica la programación semanal del viernes a las 18:00, hora de Madrid, y si el proceso automático está habilitado. Ver esa programación no confirma que se hayan ejecutado cortes: comprueba el estado y la fecha real de captura. El historial comienza con el primer corte realizado; no reconstruye automáticamente periodos anteriores.
 
@@ -1151,3 +1197,22 @@ En CRM - Contactos puedes consultar **Contactos BC** y, si tienes acceso, **Pros
 #### Complemento de Outlook
 
 Cuando se detectan automáticamente empresa y contacto, **Cambiar empresa o contacto** permite elegir otra asociación antes de registrar el mensaje. Al cambiar de empresa, selecciona de nuevo el contacto y la oferta que correspondan. El selector de ofertas depende de la empresa elegida; comprueba el resumen de destino antes de guardar. El correo ya registrado no se cambia automáticamente por modificar una selección posterior.
+
+
+#### Permisos del CRM: actualización del 5 de noviembre de 2026
+
+El acceso a cada vista se asigna desde Gestión de Usuarios por rol. Dentro de las vistas autorizadas, Admin y Dirección trabajan con todas las carteras y pueden editar las funciones habilitadas, incluidos prospectos y potencialidad. El permiso individual anterior de Oportunidades se ha retirado: el acceso de Antoni depende del permiso de su rol. La regla `source = APP` sigue siendo necesaria para editar el seguimiento de una oferta desde la aplicación.
+
+La ficha de Contactos Prospectos presenta Información, Timeline y Eventos; el registro de emails de prospectos queda pendiente. Las tablas sincronizadas desde Business Central permanecen como fuente de lectura.
+
+
+#### Contactos Prospectos: filtrar y editar
+
+En CRM - Contactos, selecciona **Contactos Prospectos**. La tabla muestra los datos disponibles de cada persona y su empresa. En esta vista se consultan los prospectos activos; los archivados o convertidos se consultan desde Prospección en Oportunidades.
+
+1. Busca por nombre, empresa, cargo o email. Admin y Dirección pueden seleccionar un comercial en **Todos los vendedores**; el filtro se aplica a toda la cartera y vuelve a la primera página.
+2. Pulsa la fila de un contacto para abrir su ficha. En Información se muestran los datos disponibles; los campos sin información quedan vacíos.
+3. Pulsa **Editar** para abrir el formulario lateral con los datos del prospecto. Modifica los campos necesarios y pulsa **Guardar** o **Cancelar**.
+4. Consulta **Timeline** para ver las actividades y **Eventos** para crearlas, editarlas o completarlas según tus permisos.
+
+Las actividades de prospectos tienen su propio seguimiento y su formulario puede diferir del de los contactos de BC. Emails para prospectos sigue pendiente y no aparece como función operativa.

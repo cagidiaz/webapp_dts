@@ -24,7 +24,7 @@ export class CrmActivitiesService {
     if (!global && !profile.code) throw new ForbiddenException('Código comercial no configurado.');
     const customer = await this.prisma.customers.findFirst({ where: { client_id: clientId, ...(global ? {} : { salesperson_code: profile.code! }) }, select: { client_id: true } });
     if (!customer) throw new ForbiddenException('La empresa no pertenece a tu cartera.');
-    return { canEditAll: profile.roles?.name?.toUpperCase() === 'ADMIN' };
+    return { canEditAll: ['ADMIN', 'DIRECCION'].includes(profile.roles?.name?.toUpperCase() || '') };
   }
 
   async invitationContacts(userId: string, clientId: string) {

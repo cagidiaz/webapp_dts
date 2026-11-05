@@ -226,3 +226,17 @@ En Oportunidades y en la ficha del contacto, la fecha de finalización se muestr
 ### Embudo de seis columnas ajustado al ancho (20/10/2026)
 
 Las seis fases abiertas se presentan en una sola fila de columnas iguales, sin separación entre columnas ni ancho mínimo que fuerce desplazamiento horizontal. El margen lateral interior se reduce a 4 px y las cabeceras pueden repartir su contenido en varias líneas. Se mantienen los tamaños de letra, los filtros, el arrastre, la vista tabla y los modos claro y oscuro. La altura y el desplazamiento vertical de cada columna se conservan.
+
+
+## Actualización de permisos CRM - 5 de noviembre de 2026
+
+El acceso a cada vista se gestiona mediante permisos de rol. Admin y Dirección tienen ámbito global en las vistas autorizadas y pueden editar los datos habilitados, crear y editar prospectos, registrar actividades y gestionar potencialidad. Pueden crear cortes manuales indicando el motivo obligatorio. El acceso individual anterior de Antoni a Oportunidades se ha retirado y depende del rol. Los seguimientos de ofertas solo se editan desde la app con fuente APP; las tablas sincronizadas desde Business Central siguen siendo de lectura. Los 11 casos funcionales fueron confirmados por el usuario; la actualización y ejecución de las pruebas automatizadas sigue pendiente.
+
+En Contactos Prospectos la ficha muestra Información, Timeline y Eventos. El registro de emails para prospectos queda pendiente. Las indicaciones anteriores de esta documentación que limiten Dirección a consulta quedan sustituidas por esta actualización.
+
+
+## Contactos Prospectos: ficha, edición y filtro por vendedor - 5 de noviembre de 2026
+
+CRM - Contactos incluye Contactos Prospectos con tabla de contactos activos y acceso a la ficha completa. Admin y Dirección disponen de un filtro por comercial; el backend lo aplica antes de paginar y protege las carteras de otros roles. La ficha presenta Información, Timeline y Eventos. El botón Editar abre el formulario lateral con los datos existentes del prospecto y permite guardar con control de versión. Se conservan las acciones de vinculación y seguimiento existentes. El registro de emails para prospectos queda pendiente.
+
+La compilación y la prueba específica del filtro se completaron; la validación visual y funcional del formulario lateral queda pendiente. Las pruebas automatizadas anteriores de permisos necesitan actualización y ejecución.

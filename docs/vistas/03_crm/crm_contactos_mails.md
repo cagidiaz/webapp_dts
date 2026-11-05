@@ -362,3 +362,17 @@ Pruebas: compilaciones frontend/backend correctas; suite de invitaciones con 19 
 ### Acceso al manual dentro de la app - 22/10/2026
 
 El acceso al manual se mantiene únicamente en **Ayuda → Manuales de usuario** (`/help/manuals`); no se muestran enlaces adicionales en Clientes, Contactos ni en la ficha del contacto. La sección **Ayuda → Manuales de usuario** ofrece el mismo PDF con versión, fecha y tamaño, y acciones de visualización y descarga. Requiere sesión activa y permisos de CRM y Clientes o Contactos; el backend los vuelve a comprobar al entregar el archivo. Véase [Ayuda y manuales](../06_administracion_configuracion/ayuda_manuales_usuario.md).
+
+
+## Actualización de permisos CRM - 5 de noviembre de 2026
+
+El acceso a cada vista se gestiona mediante permisos de rol. Admin y Dirección tienen ámbito global en las vistas autorizadas y pueden editar los datos habilitados, crear y editar prospectos, registrar actividades y gestionar potencialidad. Pueden crear cortes manuales indicando el motivo obligatorio. El acceso individual anterior de Antoni a Oportunidades se ha retirado y depende del rol. Los seguimientos de ofertas solo se editan desde la app con fuente APP; las tablas sincronizadas desde Business Central siguen siendo de lectura. Los 11 casos funcionales fueron confirmados por el usuario; la actualización y ejecución de las pruebas automatizadas sigue pendiente.
+
+En Contactos Prospectos la ficha muestra Información, Timeline y Eventos. El registro de emails para prospectos queda pendiente. Las indicaciones anteriores de esta documentación que limiten Dirección a consulta quedan sustituidas por esta actualización.
+
+
+## Contactos Prospectos: ficha, edición y filtro por vendedor - 5 de noviembre de 2026
+
+CRM - Contactos incluye Contactos Prospectos con tabla de contactos activos y acceso a la ficha completa. Admin y Dirección disponen de un filtro por comercial; el backend lo aplica antes de paginar y protege las carteras de otros roles. La ficha presenta Información, Timeline y Eventos. El botón Editar abre el formulario lateral con los datos existentes del prospecto y permite guardar con control de versión. Se conservan las acciones de vinculación y seguimiento existentes. El registro de emails para prospectos queda pendiente.
+
+La compilación y la prueba específica del filtro se completaron; la validación visual y funcional del formulario lateral queda pendiente. Las pruebas automatizadas anteriores de permisos necesitan actualización y ejecución.

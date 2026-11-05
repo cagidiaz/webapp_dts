@@ -12,7 +12,7 @@ export function CrmContactsView(props: { onSelectContact?: (id: string) => void;
   if (!access?.enabled) return <CrmContacts {...props} />;
   return <div className="space-y-6">
     <div className="flex gap-2 border-b border-gray-200 dark:border-white/10 pb-3" role="tablist" aria-label="Contactos">
-      {([['bc', 'Contactos BC'], ['prospects', 'Prospectos']] as const).map(([key, label]) => <button key={key} id={`contact-view-${key}`} role="tab" aria-controls="contact-view-content" aria-selected={tab === key} onClick={() => setTab(key)} className={`px-4 py-2 text-xs font-bold rounded-lg border ${tab === key ? 'bg-dts-primary text-white border-dts-primary' : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10'}`}>{label}</button>)}
+      {([['bc', 'Contactos BC'], ['prospects', 'Contactos Prospectos']] as const).map(([key, label]) => <button key={key} id={`contact-view-${key}`} role="tab" aria-controls="contact-view-content" aria-selected={tab === key} onClick={() => setTab(key)} className={`px-4 py-2 text-xs font-bold rounded-lg border ${tab === key ? 'bg-dts-primary text-white border-dts-primary' : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10'}`}>{label}</button>)}
     </div>
     <div id="contact-view-content" role="tabpanel" aria-labelledby={`contact-view-${tab}`}>
       {tab === 'prospects' ? <CrmProspects access={access} initialView="table" /> : <CrmContacts {...props} />}

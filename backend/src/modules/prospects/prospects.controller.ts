@@ -16,8 +16,8 @@ export class ProspectsController {
   salespeople(@Req() req: any) { return this.service.salespeople(req.user.userId); }
 
   @Get()
-  list(@Req() req: any, @Query('status') status?: string, @Query('search') search?: string, @Query('page') page?: string) {
-    return this.service.list(req.user.userId, status, search, page === undefined ? 1 : Number(page));
+  list(@Req() req: any, @Query('status') status?: string, @Query('search') search?: string, @Query('page') page?: string, @Query('ownerId') ownerId?: string) {
+    return this.service.list(req.user.userId, status, search, page === undefined ? 1 : Number(page), ownerId);
   }
 
   @Get(':id')

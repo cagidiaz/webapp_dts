@@ -16,7 +16,7 @@ export class ProspectOutlookService {
 
   private async ownerAllowed(userId: string) {
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } });
-    if (!profile?.is_active || !profile.role_id || profile.roles?.name?.toUpperCase() === 'DIRECCION') return false;
+    if (!profile?.is_active || !profile.role_id) return false;
     const permissions = await this.prisma.role_modules.findMany({ where: { role_id: profile.role_id, module: { is_active: true, route_path: { in: ['/crm', '/crm/pipeline'] } } }, include: { module: true } });
     return hasOpportunitiesAccess(this.prisma, permissions, profile.email);
   }

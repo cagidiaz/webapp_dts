@@ -214,3 +214,10 @@ El filtro de segmento incluye **Sin segmento**, que muestra el detalle por clien
 ### Actualización CRM - 03/11/2026
 
 La ficha compartida reúne contacto y localización en un bloque compacto. En CRM Clientes, **Segmentos y potencial** muestra tres KPI con explicación y fórmulas, tarjetas de familia y una tabla con filtros integrados, desplazamiento automático y totales. El filtro **Sin segmento** muestra productos pendientes por cliente; **Excel** exporta todas las filas filtradas. La facturación clasificada y el importe sin clasificar se presentan por separado; este último solo responde a vendedor y cliente. La potencialidad se edita desde la ficha. Verificar la vista y la descarga en la versión de aplicación utilizada.
+
+
+## Actualización de permisos CRM - 5 de noviembre de 2026
+
+El acceso a cada vista se gestiona mediante permisos de rol. Admin y Dirección tienen ámbito global en las vistas autorizadas y pueden editar los datos habilitados, crear y editar prospectos, registrar actividades y gestionar potencialidad. Pueden crear cortes manuales indicando el motivo obligatorio. El acceso individual anterior de Antoni a Oportunidades se ha retirado y depende del rol. Los seguimientos de ofertas solo se editan desde la app con fuente APP; las tablas sincronizadas desde Business Central siguen siendo de lectura. Los 11 casos funcionales fueron confirmados por el usuario; la actualización y ejecución de las pruebas automatizadas sigue pendiente.
+
+En Contactos Prospectos la ficha muestra Información, Timeline y Eventos. El registro de emails para prospectos queda pendiente. Las indicaciones anteriores de esta documentación que limiten Dirección a consulta quedan sustituidas por esta actualización.

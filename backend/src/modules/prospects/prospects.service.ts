@@ -18,11 +18,11 @@ export class ProspectsService {
     if (!profile || profile.is_active !== true) return disabled;
     if (!profile.role_id) return disabled;
     const permissions = await this.prisma.role_modules.findMany({ where: { role_id: profile.role_id, module: { is_active: true, route_path: { in: ['/crm', '/crm/pipeline'] } } }, include: { module: true } });
-    if (!await hasOpportunitiesAccess(this.prisma, permissions, profile.email)) return disabled;
     const role = profile.roles?.name?.toUpperCase();
-    const isAdmin = role === 'ADMIN';
-    const canViewAll = isAdmin || role === 'DIRECCION';
-    const canCreate = isAdmin || !canViewAll;
+    const isAdmin = role === 'ADMIN' || role === 'DIRECCION';
+    if (!await hasOpportunitiesAccess(this.prisma, permissions, profile.email)) return disabled;
+    const canViewAll = isAdmin;
+    const canCreate = true;
     return { enabled: true, canCreate, canEditAll: isAdmin, canViewAll, userId, canSyncOutlook: this.outlook.enabled() && canCreate };
   }
 
@@ -32,11 +32,13 @@ export class ProspectsService {
     return access;
   }
 
-  async list(userId: string, status = 'active', search = '', page = 1) {
+  async list(userId: string, status = 'active', search = '', page = 1, ownerId?: string) {
     const access = await this.authorize(userId);
     if (!['active', 'archived', 'converted', 'all'].includes(status)) throw new BadRequestException('Estado de prospección no válido.');
     if (!Number.isSafeInteger(page) || page < 1 || page > 100000) throw new BadRequestException('Página no válida.');
-    const scope = access.canViewAll ? {} : { owner_id: userId };
+    if (ownerId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ownerId)) throw new BadRequestException('Vendedor no válido.');
+    if (ownerId && !access.canViewAll && ownerId !== userId) throw new ForbiddenException('No tienes acceso a otra cartera.');
+    const scope = access.canViewAll ? (ownerId ? { owner_id: ownerId } : {}) : { owner_id: userId };
     const where: Prisma.crm_prospectsWhereInput = {
       ...scope,
       ...(status === 'active' ? { archived_at: null, converted_at: null } : status === 'archived' ? { archived_at: { not: null } } : status === 'converted' ? { converted_at: { not: null } } : {}),
@@ -146,7 +148,7 @@ export class ProspectsService {
   async archive(userId: string, id: string, archived: boolean, version: number) {
     const access = await this.authorize(userId);
     const current = await this.detail(userId, id);
-    if (current.owner_id !== userId || !access.canCreate) throw new ForbiddenException('Solo el propietario puede archivar o restaurar este prospecto.');
+    if (!access.canEditAll && (current.owner_id !== userId || !access.canCreate)) throw new ForbiddenException('Solo el propietario o administración puede archivar o restaurar este prospecto.');
     if (current.converted_at) throw new BadRequestException('Desvincula el cliente antes de archivar o restaurar.');
     return this.prisma.$transaction(async tx => {
       const result = await tx.crm_prospects.updateMany({ where: { id, version }, data: { archived_at: archived ? new Date() : null, updated_at: new Date(), version: { increment: 1 } } });
@@ -159,8 +161,9 @@ export class ProspectsService {
   private async ownerCode(userId: string, id: string) {
     const access = await this.authorize(userId);
     const prospect = await this.detail(userId, id);
-    if (!access.canCreate || prospect.owner_id !== userId) throw new ForbiddenException('Solo el propietario puede confirmar o corregir una vinculación.');
-    const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, select: { code: true } });
+    if (!access.canEditAll && (!access.canCreate || prospect.owner_id !== userId)) throw new ForbiddenException('Solo el propietario o administración puede confirmar o corregir una vinculación.');
+    if (access.canEditAll) return { prospect, code: null };
+    const profile = await this.prisma.profiles.findUnique({ where: { id: prospect.owner_id }, select: { code: true } });
     if (!profile?.code) throw new ForbiddenException('El propietario no tiene código comercial configurado.');
     return { prospect, code: profile.code };
   }
@@ -277,7 +280,7 @@ export class ProspectsService {
       : [ { name: { equals: prospect.company_name.trim(), mode: 'insensitive' } },
           ...(prospect.email ? [{ email: { equals: prospect.email, mode: 'insensitive' as const } }] : []),
           ...(prospect.phone ? [{ phone_no: prospect.phone }] : []) ];
-    return this.prisma.customers.findMany({ where: { salesperson_code: code, OR: conditions }, select, orderBy: [{ name: 'asc' }, { id: 'asc' }], take: 50 });
+    return this.prisma.customers.findMany({ where: { ...(code ? { salesperson_code: code } : {}), OR: conditions }, select, orderBy: [{ name: 'asc' }, { id: 'asc' }], take: 50 });
   }
 
   async link(userId: string, id: string, version: number, clientId: string | null) {
@@ -287,9 +290,9 @@ export class ProspectsService {
     if (clientId && prospect.converted_at) throw new BadRequestException('Desvincula primero el cliente actual.');
     if (!clientId && !prospect.converted_at) throw new BadRequestException('El prospecto no tiene un cliente vinculado.');
     return this.prisma.$transaction(async tx => {
-      const customer = clientId ? await tx.customers.findFirst({ where: { id: clientId, salesperson_code: code }, select: { id: true, client_id: true, name: true } }) : null;
+      const customer = clientId ? await tx.customers.findFirst({ where: { id: clientId, ...(code ? { salesperson_code: code } : {}) }, select: { id: true, client_id: true, name: true } }) : null;
       if (clientId && !customer) throw new NotFoundException('Cliente no encontrado en tu cartera. Espera a que se sincronice desde BC.');
-      const result = await tx.crm_prospects.updateMany({ where: { id, owner_id: userId, version }, data: {
+      const result = await tx.crm_prospects.updateMany({ where: { id, owner_id: prospect.owner_id, version }, data: {
         linked_client_id: clientId, converted_at: clientId ? new Date() : null,
         updated_at: new Date(), version: { increment: 1 },
       } });
