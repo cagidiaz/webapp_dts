@@ -221,3 +221,7 @@ La ficha compartida reúne contacto y localización en un bloque compacto. En CR
 El acceso a cada vista se gestiona mediante permisos de rol. Admin y Dirección tienen ámbito global en las vistas autorizadas y pueden editar los datos habilitados, crear y editar prospectos, registrar actividades y gestionar potencialidad. Pueden crear cortes manuales indicando el motivo obligatorio. El acceso individual anterior de Antoni a Oportunidades se ha retirado y depende del rol. Los seguimientos de ofertas solo se editan desde la app con fuente APP; las tablas sincronizadas desde Business Central siguen siendo de lectura. Los 11 casos funcionales fueron confirmados por el usuario; la actualización y ejecución de las pruebas automatizadas sigue pendiente.
 
 En Contactos Prospectos la ficha muestra Información, Timeline y Eventos. El registro de emails para prospectos queda pendiente. Las indicaciones anteriores de esta documentación que limiten Dirección a consulta quedan sustituidas por esta actualización.
+
+## Actualización: orden de familias (6 de noviembre de 2026)
+
+En Segmentos y Potencial, los indicadores de familias visibles se ordenan: dTSTemp, dTSFlow, dTSPres, dTSLevel, dTSCal y dTSSens. El orden no altera importes ni filtros.

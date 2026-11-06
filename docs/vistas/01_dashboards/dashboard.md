@@ -126,3 +126,11 @@ Al pulsar se abre `AgendaActivityDetail.tsx`, que reutiliza `Drawer`. Muestra fe
 EMAIL es de solo lectura en la agenda: el detalle no renderiza el botón de editar y el callback del dashboard rechaza su entrada al editor, incluso si `can_edit` está permitido. Los demás tipos conservan su edición. EMAIL no se marca vencido ni pendiente de conclusiones. Los eventos conservan el aviso de conclusiones y su estado. Se mantienen navegación de semanas, contadores, sincronización y consultas de datos; este cambio no amplía la cartera ni modifica el backend. El panel de detalle permite consulta del registro CRM y no abre por sí mismo el original en Outlook.
 
 El estado guardado determina el estado del detalle; un evento vencido por fecha puede seguir pendiente de completar. La confirmación visual del usuario de la agenda compacta está recogida; compilación frontend correcta. Procedimiento para usuarios: manual CRM, capítulo 31.
+
+## Actualización: panel ejecutivo y agenda diaria (6 de noviembre de 2026)
+
+El panel ejecutivo muestra la agenda diaria junto a Evolución de Ventas, debajo de los indicadores. El selector comercial de Facturación y Presupuestos filtra también la agenda. La navegación muestra de lunes a viernes; al abrir en fin de semana se presenta el lunes siguiente. La agenda incluye llamadas, reuniones, videollamadas y visitas del CRM, incluidos prospectos, y excluye correos, notas y tareas. Una tarjeta permite consultar el detalle; el nombre destacado es el creador de la actividad, que puede ser distinto del comercial del cliente.
+
+Para actividades de clientes, el filtro incluye registros creados por un perfil con el código seleccionado o asociados a un cliente con ese código. Para prospectos utiliza el propietario. Sin filtro se muestran todas las actividades accesibles. El botón de consulta no permite editar desde este panel. La sección Estado y Alertas se ha eliminado; se conserva Previsión Cierre.
+
+Validación: compilación frontend y tipos backend comprobados; las comprobaciones visuales y por usuario deben realizarse en la aplicación local.

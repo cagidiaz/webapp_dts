@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.9 · 5 de noviembre de 2026 · Uso interno
+Edición 1.10 · 6 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -1216,3 +1216,17 @@ En CRM - Contactos, selecciona **Contactos Prospectos**. La tabla muestra los da
 4. Consulta **Timeline** para ver las actividades y **Eventos** para crearlas, editarlas o completarlas según tus permisos.
 
 Las actividades de prospectos tienen su propio seguimiento y su formulario puede diferir del de los contactos de BC. Emails para prospectos sigue pendiente y no aparece como función operativa.
+
+#### Prospección: filtro y eliminación
+
+En Oportunidades > Prospección, Admin y Dirección pueden elegir un vendedor para filtrar el Kanban y la tabla. El selector no incluye perfiles de Administración; Todos muestra la cartera completa. Pulsa una tarjeta para abrir el formulario lateral y consultar o editar sus datos.
+
+Solo Admin puede seleccionar **Eliminar prospecto**. Antes de confirmar, revisa el aviso: el borrado es definitivo e incluye las actividades y el historial del prospecto en el CRM. No se elimina el cliente de Business Central ni los eventos ya creados en Outlook. Si otra persona ha modificado el prospecto, recarga la ficha antes de volver a intentarlo.
+
+#### Panel ejecutivo: agenda diaria
+
+Debajo de Facturación y Presupuestos aparece la agenda diaria junto al gráfico de evolución. El filtro de vendedor se comparte con los indicadores. Usa las flechas para pasar entre días de lunes a viernes; en fin de semana se abre el lunes siguiente. La agenda muestra llamadas, reuniones, videollamadas y visitas, incluidos eventos de prospectos; no incluye correos, notas ni tareas. Pulsa una tarjeta para consultar su detalle. El nombre en color señala al creador del evento, que puede ser distinto del comercial del cliente.
+
+#### Orden de segmentos
+
+En Clientes > Segmentos y Potencial, las familias se muestran en este orden: dTSTemp, dTSFlow, dTSPres, dTSLevel, dTSCal y dTSSens.

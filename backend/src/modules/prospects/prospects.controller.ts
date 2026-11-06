@@ -76,6 +76,11 @@ export class ProspectsController {
     return this.service.archive(req.user.userId, id, true, data.version);
   }
 
+  @Post(':id/delete')
+  deleteProspect(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() data: ProspectVersionDto) {
+    return this.service.deleteProspect(req.user.userId, id, data.version);
+  }
+
   @Post(':id/restore')
   restore(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() data: ProspectVersionDto) {
     return this.service.archive(req.user.userId, id, false, data.version);

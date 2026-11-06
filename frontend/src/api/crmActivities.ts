@@ -91,6 +91,7 @@ export const getCrmActivitiesAgenda = async (params: {
   startDate?: string;
   endDate?: string;
   salespersonId?: string;
+  salespersonCode?: string;
   types?: string[];
 }): Promise<CrmActivity[]> => {
   const { data } = await apiClient.get('/crm-activities', {
@@ -98,6 +99,7 @@ export const getCrmActivitiesAgenda = async (params: {
       startDate: params.startDate,
       endDate: params.endDate,
       salespersonId: params.salespersonId,
+      salespersonCode: params.salespersonCode,
       types: params.types?.join(','),
     },
   });

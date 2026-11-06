@@ -11,6 +11,7 @@ interface SegmentRow { client_id: string; client_name: string; salesperson_code:
 interface SegmentResponse { rows: SegmentRow[]; unclassified: {client_id:string; client_name:string; salesperson_code:string | null; product_no:string | null; product_name:string | null; family_code:string | null; subfamily_code:string | null; line_count:number; amount:string}[]; catalog: {value:string; label:string}[]; global:boolean }
 const currency = (value: number) => formatCurrency(value, 2);
 const selectClass = 'rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark px-3 py-2 text-xs text-gray-700 dark:text-gray-200';
+const familyOrder = ['dTSTemp', 'dTSFlow', 'dTSPres', 'dTSLevel', 'dTSCal', 'dTSSens'];
 
 export function CustomerSegmentsOverview({ profileId }: {profileId?: string}) {
   const [salesperson, setSalesperson] = useState('');
@@ -47,7 +48,11 @@ export function CustomerSegmentsOverview({ profileId }: {profileId?: string}) {
   const familySummary = useMemo(() => {
     const groups = new Map<string, typeof summary>();
     for (const item of summary) groups.set(item.family, [...(groups.get(item.family) || []), item]);
-    return [...groups.entries()];
+    return [...groups.entries()].sort(([a], [b]) => {
+      const aIndex = familyOrder.indexOf(a);
+      const bIndex = familyOrder.indexOf(b);
+      return (aIndex < 0 ? familyOrder.length : aIndex) - (bIndex < 0 ? familyOrder.length : bIndex) || a.localeCompare(b);
+    });
   },[summary]);
   const chooseSegment = (code:string) => {setSegment(current=>current===code?'':code);setLimit(100)};
   const unresolved = (data?.unclassified || []).filter(row => (!salesperson || row.salesperson_code === salesperson) && (!search.trim() || `${row.client_name} ${row.client_id}`.toLocaleLowerCase('es').includes(search.trim().toLocaleLowerCase('es'))));

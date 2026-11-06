@@ -3,7 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { isAxiosError } from 'axios';
 import { Archive, LayoutGrid, Plus, RotateCcw, Search, Table, Users, User, Mail, Phone, ArrowLeft, Activity, Calendar } from 'lucide-react';
 import { Drawer } from '../../../components/shared/Drawer';
-import { archiveProspect, createProspect, getProspect, getProspects, updateProspect, getProspectClients, linkProspect, getProspectSalespeople } from '../../../api/prospects';
+import { archiveProspect, createProspect, deleteProspect, getProspect, getProspects, updateProspect, getProspectClients, linkProspect, getProspectSalespeople } from '../../../api/prospects';
 import type { Prospect, ProspectAccess, ProspectFields } from '../../../api/prospects';
 import { ClientProspectActivities, ProspectActivities, ProspectTimeline } from './ProspectActivities';
 
@@ -94,12 +94,20 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
     onSuccess: () => { refresh(); setIsOpen(false); setError(''); setMessage(selected?.archived_at ? 'Prospecto restaurado.' : 'Prospecto archivado.'); },
     onError: err => setError(errorText(err)),
   });
+  const remove = useMutation({
+    mutationFn: () => deleteProspect(selected!.id, selected!.version),
+    onSuccess: () => { refresh(); setContactEditorOpen(false); setIsOpen(false); setSelected(null); setError(''); setMessage('Prospecto eliminado.'); },
+    onError: err => setError(errorText(err)),
+  });
   const link = useMutation({
     mutationFn: (target: string | null) => linkProspect(selected!.id, selected!.version, target),
     onSuccess: prospect => { refresh(); setSelected(prospect); setClientId(''); setConfirmUnlink(false); setError(''); setMessage(prospect.converted_at ? 'Cliente vinculado. Prospecto conservado como convertido.' : 'Vinculación deshecha. Prospecto devuelto a su fase anterior.'); },
     onError: err => setError(errorText(err)),
   });
-  const busy = save.isPending || archive.isPending || move.isPending || link.isPending;
+  const busy = save.isPending || archive.isPending || move.isPending || link.isPending || remove.isPending;
+  const confirmDelete = () => {
+    if (selected && !busy && window.confirm(`¿Eliminar definitivamente el prospecto de ${selected.company_name}? Se borrarán también sus actividades e historial en el CRM. Los eventos ya creados en Outlook y el cliente de Business Central no se eliminarán. Esta acción no se puede deshacer.`)) remove.mutate();
+  };
   const open = (prospect: Prospect | null) => {
     setDetailTab('info');
     setEditingInfo(!prospect);
@@ -148,6 +156,7 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
         <select aria-label="Estado del prospecto" value={status} onChange={e => { setStatus(e.target.value); setPage(1); if (e.target.value !== 'active') setView('table'); }} className="block w-auto pl-2 pr-8 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"><option value="active">Activos</option><option value="archived">Archivados</option><option value="converted">Convertidos</option><option value="all">Todos</option></select>
       </div>
       <div className="flex flex-wrap items-center gap-3">
+        {access.canViewAll && <select aria-label="Filtrar prospección por vendedor" value={ownerFilter} onChange={e => { setOwnerFilter(e.target.value); setPage(1); }} className="block pl-2 pr-8 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-dts-secondary/50"><option value="">Todos los vendedores</option>{salespeople.data?.filter(sp => !['ADMIN', 'ADMINISTRACION', 'ADMINISTRACIÓN'].includes((sp.roles?.name || '').trim().toUpperCase())).map(sp => <option key={sp.id} value={sp.id}>{`${sp.first_name || ''} ${sp.last_name || ''}`.trim() || sp.email}{sp.code ? ` (${sp.code})` : ''}</option>)}</select>}
         <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-lg"><button aria-label="Vista Kanban" disabled={status !== 'active'} aria-pressed={view === 'kanban'} onClick={() => setView('kanban')} className={`p-2 rounded disabled:opacity-40 ${view === 'kanban' ? 'bg-white dark:bg-dts-primary text-dts-secondary shadow-sm' : 'text-gray-400'}`}><LayoutGrid size={16} /></button><button aria-label="Vista tabla" aria-pressed={view === 'table'} onClick={() => setView('table')} className={`p-2 rounded ${view === 'table' ? 'bg-white dark:bg-dts-primary text-dts-secondary shadow-sm' : 'text-gray-400'}`}><Table size={16} /></button></div>
         {access.canCreate && <button onClick={() => open(null)} className="flex items-center gap-2 bg-dts-secondary hover:bg-dts-secondary-dark text-white px-3 py-2 rounded-lg text-xs font-bold"><Plus size={16} />Crear prospecto</button>}
       </div>
@@ -176,6 +185,8 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
     <ProspectShell full={initialView === 'table' && !!selected} open={isOpen && !(directEditor && contactEditorOpen)} close={() => { if (!busy) setIsOpen(false); }} title={selected ? (selected.contact_name || selected.company_name) : 'Crear prospecto'} prospect={selected}>
       {selected && <div className="flex border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-zinc-800/20 p-1 shrink-0" role="tablist" aria-label="Ficha del prospecto">{([{key:'info',label:'Información',icon:User},{key:'timeline',label:'Timeline',icon:Activity},{key:'events',label:'Eventos',icon:Calendar}] as const).map(({key,label,icon:Icon}) => <button key={key} type="button" role="tab" aria-selected={detailTab === key} onClick={() => setDetailTab(key)} className={`flex-1 py-2 px-2 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${detailTab === key ? 'bg-dts-primary text-white dark:bg-dts-secondary shadow-xs' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}><Icon size={14}/>{label}</button>)}</div>}
       <div className="p-4 sm:p-5 overflow-y-auto flex-1">
+      {selected && access.canDelete && <div className="flex justify-end mb-3"><button type="button" disabled={busy} onClick={confirmDelete} className="text-xs font-bold text-rose-600 hover:underline disabled:opacity-50">{remove.isPending ? 'Eliminando…' : 'Eliminar prospecto'}</button></div>}
+      {selected && error && <p role="alert" className="text-xs text-rose-500 mb-3">{error}</p>}
       <div hidden={!!selected && detailTab !== 'info'}>
       {selected && !editingInfo && <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full"><div className="space-y-3.5"><div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1.5"><h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider flex items-center gap-2"><User size={14} className="text-dts-secondary"/>Datos del Contacto</h3>{canEdit && <button type="button" onClick={()=>{setForm({company_name:selected.company_name,contact_name:selected.contact_name,contact_job_title:selected.contact_job_title || null,email:selected.email,phone:selected.phone,notes:selected.notes || null,phase:selected.phase,owner_id:selected.owner_id});setError('');setContactEditorOpen(true);}} className="text-xs font-semibold text-dts-secondary hover:underline">Editar</button>}</div><div className="grid grid-cols-2 gap-4 text-xs">{[['Nombre Completo', selected.contact_name],['Cargo',selected.contact_job_title],['Email',selected.email],['Teléfono / Móvil',selected.phone],['Nivel Organizacional',null],['Relación Comercial',null]].map(([label,value])=><div key={label || ''}><span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">{label}</span><span className="block font-semibold text-gray-900 dark:text-white mt-0.5 break-words">{value || ''}</span></div>)}<div className="col-span-2 pt-3 mt-1 border-t border-gray-100 dark:border-white/5"><span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Ubicación del Contacto / Centro de Trabajo</span></div></div></div><div className="space-y-3.5"><h3 className="text-xs font-bold text-dts-primary dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-white/5 pb-1.5">Datos de Empresa</h3><div className="grid grid-cols-2 gap-4 text-xs">{[['Razón Social',selected.company_name],['Código ERP',selected.linked_client?.client_id],['Segmento de Mercado',null],['Modelo de Negocio',null],['Fase',`Fase ${selected.phase}`]].map(([label,value])=><div key={label || ''}><span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">{label}</span><span className="block font-semibold text-gray-900 dark:text-white mt-0.5">{value || ''}</span></div>)}</div><button type="button" onClick={()=>setEditingInfo(true)} className="text-xs text-dts-secondary hover:underline">Ver vinculación e historial</button></div></div>}
       <div hidden={!!selected && !editingInfo} className={selected ? 'grid grid-cols-1 lg:grid-cols-2 gap-8' : 'space-y-4'}>
@@ -258,6 +269,7 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
         <div><label htmlFor="edit-prospect-phase" className={labelClass}>Fase</label><select id="edit-prospect-phase" disabled={!!selected?.converted_at || !!selected?.archived_at} className={inputClass} value={form.phase} onChange={e=>setForm({...form,phase:Number(e.target.value)})}><option value={0}>Fase 0 · Sin aproximación</option><option value={1}>Fase 1 · Interesado</option></select></div>
         </fieldset>
         {error && <p role="alert" className="text-xs text-rose-500">{error}</p>}
+        {access.canDelete && <button type="button" disabled={busy} onClick={confirmDelete} className="text-xs font-bold text-rose-600 hover:underline disabled:opacity-50">{remove.isPending ? 'Eliminando…' : 'Eliminar prospecto'}</button>}
         {directEditor && <button type="button" disabled={save.isPending} onClick={() => { setContactEditorOpen(false); setDirectEditor(false); setEditingInfo(true); }} className="text-xs text-dts-secondary hover:underline">Ver vinculación e historial</button>}
         <div className="flex justify-end gap-3"><button type="button" disabled={save.isPending} onClick={()=>{setContactEditorOpen(false); if (directEditor) setIsOpen(false);}} className="px-4 py-2 rounded-lg border text-xs font-bold">{canEdit ? 'Cancelar' : 'Cerrar'}</button>{canEdit && <button type="submit" disabled={save.isPending} className="px-4 py-2 rounded-lg bg-dts-secondary text-white text-xs font-bold disabled:opacity-50">{save.isPending ? 'Guardando…' : 'Guardar'}</button>}</div>
       </form>

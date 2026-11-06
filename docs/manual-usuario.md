@@ -759,3 +759,9 @@ En Contactos Prospectos la ficha muestra Información, Timeline y Eventos. El re
 CRM - Contactos incluye Contactos Prospectos con tabla de contactos activos y acceso a la ficha completa. Admin y Dirección disponen de un filtro por comercial; el backend lo aplica antes de paginar y protege las carteras de otros roles. La ficha presenta Información, Timeline y Eventos. El botón Editar abre el formulario lateral con los datos existentes del prospecto y permite guardar con control de versión. Se conservan las acciones de vinculación y seguimiento existentes. El registro de emails para prospectos queda pendiente.
 
 La compilación y la prueba específica del filtro se completaron; la validación visual y funcional del formulario lateral queda pendiente. Las pruebas automatizadas anteriores de permisos necesitan actualización y ejecución.
+
+## Actualización del panel y Prospección - 6 de noviembre de 2026
+
+El panel ejecutivo incorpora una agenda diaria de eventos, sincronizada con el selector de vendedor de Facturación y Presupuestos. Muestra días laborables de lunes a viernes y permite consultar eventos, incluidos los de prospectos. No muestra correos, tareas ni notas. El nombre destacado indica el creador y puede no coincidir con el comercial asignado al cliente.
+
+En Oportunidades > Prospección, Admin y Dirección disponen de un filtro de vendedor en Kanban y tabla. Solo Admin puede eliminar un prospecto tras confirmar la eliminación definitiva de su historial y actividades en el CRM. El cliente de BC y los eventos ya creados en Outlook se conservan. En Clientes > Segmentos y Potencial, los indicadores siguen el orden dTSTemp, dTSFlow, dTSPres, dTSLevel, dTSCal y dTSSens.

@@ -18,6 +18,7 @@ export class CrmActivitiesController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('salespersonId') salespersonId?: string,
+    @Query('salespersonCode') salespersonCode?: string,
     @Query('types') types?: string,
   ) {
     const userId = req.user?.userId;
@@ -29,6 +30,7 @@ export class CrmActivitiesController {
     return this.crmActivitiesService.getAgenda({
       requestingUserId: userId,
       salespersonId,
+      salespersonCode,
       startDate,
       endDate,
       types: parsedTypes,

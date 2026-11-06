@@ -13,7 +13,7 @@ export class ProspectsService {
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly outlook: ProspectOutlookService) {}
 
   async access(userId: string) {
-    const disabled = { enabled: false, canCreate: false, canEditAll: false, canViewAll: false, userId };
+    const disabled = { enabled: false, canCreate: false, canEditAll: false, canViewAll: false, canDelete: false, userId };
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } });
     if (!profile || profile.is_active !== true) return disabled;
     if (!profile.role_id) return disabled;
@@ -23,13 +23,29 @@ export class ProspectsService {
     if (!await hasOpportunitiesAccess(this.prisma, permissions, profile.email)) return disabled;
     const canViewAll = isAdmin;
     const canCreate = true;
-    return { enabled: true, canCreate, canEditAll: isAdmin, canViewAll, userId, canSyncOutlook: this.outlook.enabled() && canCreate };
+    return { enabled: true, canCreate, canEditAll: isAdmin, canViewAll, canDelete: role === 'ADMIN', userId, canSyncOutlook: this.outlook.enabled() && canCreate };
   }
 
   private async authorize(userId: string) {
     const access = await this.access(userId);
     if (!access.enabled) throw new ForbiddenException('No tienes permiso de CRM/Oportunidades.');
     return access;
+  }
+
+  async deleteProspect(userId: string, id: string, version: number) {
+    const access = await this.authorize(userId);
+    if (!access.canDelete) throw new ForbiddenException('Solo Admin puede eliminar prospectos.');
+    return this.prisma.$transaction(async tx => {
+      const prospect = await tx.crm_prospects.findUnique({ where: { id } });
+      if (!prospect) throw new NotFoundException('Prospecto no encontrado.');
+      if (prospect.version !== version) throw new ConflictException('El prospecto ha cambiado. Recarga la ficha antes de eliminarlo.');
+      const lock = await tx.crm_prospects.updateMany({ where: { id, version }, data: { version: { increment: 1 } } });
+      if (lock.count !== 1) throw new ConflictException('El prospecto ha cambiado. Recarga la ficha antes de eliminarlo.');
+      await tx.crm_prospect_activities.deleteMany({ where: { prospect_id: id } });
+      await tx.crm_prospect_events.deleteMany({ where: { prospect_id: id } });
+      await tx.crm_prospects.delete({ where: { id } });
+      return { deleted: true };
+    });
   }
 
   async list(userId: string, status = 'active', search = '', page = 1, ownerId?: string) {

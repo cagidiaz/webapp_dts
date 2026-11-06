@@ -131,11 +131,12 @@ export class CrmActivitiesService {
   async getAgenda(params: {
     requestingUserId: string;
     salespersonId?: string;
+    salespersonCode?: string;
     startDate?: string;
     endDate?: string;
     types?: CrmActivityType[];
   }) {
-    const { requestingUserId, salespersonId, startDate, endDate, types } = params;
+    const { requestingUserId, salespersonId, salespersonCode, startDate, endDate, types } = params;
     const whereClause: any = {};
 
     // 1. Obtener el rol del usuario que realiza la petición desde la base de datos
@@ -200,7 +201,15 @@ export class CrmActivitiesService {
 
 
       const prospects = await this.prospectsService.agenda(requestingUserId, { salespersonId, startDate, endDate, types });
-      return [...activities, ...prospects].sort((a, b) =>
+      let results = [...activities, ...prospects];
+      if (salespersonCode && isAdminOrDireccion) {
+        const profiles = await this.prisma.profiles.findMany({ where: { code: salespersonCode }, select: { id: true } });
+        const ids = new Set(profiles.map(profile => profile.id));
+        results = results.filter(activity => 'source' in activity && activity.source === 'PROSPECT'
+          ? ids.has(activity.owner_id)
+          : ids.has(activity.created_by) || !!activity.customer && 'salesperson_code' in activity.customer && activity.customer.salesperson_code === salespersonCode);
+      }
+      return results.sort((a, b) =>
         String(a.due_date?.toISOString() || '').localeCompare(String(b.due_date?.toISOString() || '')) ||
         String(a.time_scheduled || '').localeCompare(String(b.time_scheduled || '')) || a.id.localeCompare(b.id));
     } catch (error) {

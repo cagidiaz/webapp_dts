@@ -6,6 +6,7 @@ export interface ProspectAccess {
   canCreate: boolean;
   canEditAll: boolean;
   canViewAll: boolean;
+  canDelete?: boolean;
   userId: string;
 }
 export interface ProspectSalesperson {
@@ -53,6 +54,7 @@ export const getProspect = async (id: string) => (await apiClient.get<Prospect>(
 export const createProspect = async (data: ProspectFields) => (await apiClient.post<Prospect>('/crm-prospects', data)).data;
 export const updateProspect = async (id: string, data: ProspectFields & { version: number }) => (await apiClient.patch<Prospect>(`/crm-prospects/${id}`, data)).data;
 export const archiveProspect = async (id: string, version: number, restore: boolean) => (await apiClient.post<Prospect>(`/crm-prospects/${id}/${restore ? 'restore' : 'archive'}`, { version })).data;
+export const deleteProspect = async (id: string, version: number) => (await apiClient.post(`/crm-prospects/${id}/delete`, { version })).data;
 export interface ProspectClient { id: string; client_id: string; name: string; email: string | null; phone_no: string | null }
 export const getProspectClients = async (id: string, search: string) => (await apiClient.get<ProspectClient[]>(`/crm-prospects/${id}/clients`, { params: { search } })).data;
 export const linkProspect = async (id: string, version: number, clientId: string | null) => (await apiClient.post<Prospect>(`/crm-prospects/${id}/${clientId ? 'link' : 'unlink'}`, { version, ...(clientId ? { client_id: clientId } : {}) })).data;

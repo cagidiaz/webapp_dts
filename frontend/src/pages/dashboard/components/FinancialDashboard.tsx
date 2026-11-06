@@ -9,9 +9,10 @@ import {
 import { formatCurrency } from '../../../api/formatters';
 import { 
   TrendingUp, TrendingDown, BarChart2,
-  Package, Euro, AlertCircle, CheckCircle2, UserPlus
+  Package, Euro, UserPlus
 } from 'lucide-react';
 import { InfoPopover } from '../../../components/ui/InfoPopover';
+import { ExecutiveDailyAgenda } from './ExecutiveDailyAgenda';
 import { useUIStore } from '../../../store/uiStore';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 
@@ -321,9 +322,10 @@ export const FinancialDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 gap-6 items-stretch">
+        <div className="min-w-0 xl:col-span-2"><ExecutiveDailyAgenda salespersonCode={selectedSalesperson} /></div>
         {/* Main Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
+        <div className="min-w-0 lg:col-span-2 xl:col-span-3 bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h3 className="text-lg font-bold text-dts-primary dark:text-white">Evolución de Ventas vs Presupuesto</h3>
@@ -408,34 +410,10 @@ export const FinancialDashboard: React.FC = () => {
           </div>
         </div>
 
+      </div>
+      <div className="grid grid-cols-1 gap-6">
         {/* Executive Insights & Status */}
         <div className="space-y-6">
-          <div className="bg-white dark:bg-surface-card-dark p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-            <h3 className="text-md font-bold text-dts-primary dark:text-white mb-6 flex items-center gap-2">
-              <AlertCircle size={18} className="text-dts-secondary" />
-              Estado y Alertas
-            </h3>
-            <div className="space-y-5">
-              <InsightItem 
-                title="Cumplimiento de Ventas" 
-                status={activeKPIs?.desviacionPct && activeKPIs.desviacionPct >= 0 ? 'success' : 'warning'}
-                message={activeKPIs?.desviacionPct && activeKPIs.desviacionPct >= 0 
-                  ? `Estamos superando el presupuesto anual en un ${activeKPIs.desviacionPct.toFixed(1)}%.`
-                  : `Existe una desviación negativa del ${Math.abs(activeKPIs?.desviacionPct || 0).toFixed(1)}% respecto al objetivo.`}
-              />
-              <InsightItem 
-                title="Cartera de Pedidos" 
-                status="info"
-                message={`Disponemos de ${formatCurrency(activeKPIs?.carteraVentas || 0)} en cartera pendientes de procesar.`}
-              />
-              <InsightItem 
-                title="Nuevos Clientes" 
-                status="info"
-                message={`Se han incorporado ${activeKPIs?.countNuevos || 0} clientes nuevos este año, aportando ${formatCurrency(activeKPIs?.facturacionNuevos || 0)}.`}
-              />
-            </div>
-          </div>
-
           <div className="bg-dts-primary dark:bg-dts-primary-dark p-6 rounded-2xl text-white shadow-xl relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-1">
@@ -677,25 +655,6 @@ const GaugeChart = ({ value }: { value: number }) => {
       
       {/* Center dot */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-4 h-4 bg-dts-primary dark:bg-white rounded-full border-2 border-white dark:border-surface-dark shadow-lg z-10" />
-    </div>
-  );
-};
-
-const InsightItem = ({ title, message, status }: { title: string, message: string, status: 'success' | 'warning' | 'danger' | 'info' }) => {
-  const iconMap = {
-    success: <CheckCircle2 size={16} className="text-emerald-500" />,
-    warning: <AlertCircle size={16} className="text-amber-500" />,
-    danger: <AlertCircle size={16} className="text-red-500" />,
-    info: <BarChart2 size={16} className="text-blue-500" />
-  };
-
-  return (
-    <div className="flex gap-3">
-      <div className="shrink-0 mt-0.5">{iconMap[status]}</div>
-      <div>
-        <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-0.5">{title}</h4>
-        <p className="text-[11px] text-gray-400 leading-normal">{message}</p>
-      </div>
     </div>
   );
 };

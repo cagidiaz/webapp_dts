@@ -240,3 +240,9 @@ En Contactos Prospectos la ficha muestra Información, Timeline y Eventos. El re
 CRM - Contactos incluye Contactos Prospectos con tabla de contactos activos y acceso a la ficha completa. Admin y Dirección disponen de un filtro por comercial; el backend lo aplica antes de paginar y protege las carteras de otros roles. La ficha presenta Información, Timeline y Eventos. El botón Editar abre el formulario lateral con los datos existentes del prospecto y permite guardar con control de versión. Se conservan las acciones de vinculación y seguimiento existentes. El registro de emails para prospectos queda pendiente.
 
 La compilación y la prueba específica del filtro se completaron; la validación visual y funcional del formulario lateral queda pendiente. Las pruebas automatizadas anteriores de permisos necesitan actualización y ejecución.
+
+## Actualización: Prospección en Oportunidades (6 de noviembre de 2026)
+
+Admin y Dirección pueden filtrar el Kanban y la tabla por propietario; el filtro se aplica en el servidor y reinicia la página. El desplegable excluye perfiles de Administración. La opción Todos incluye la cartera completa accesible, incluidos prospectos de Administración. Al seleccionar una tarjeta o fila se abre el formulario lateral de edición o consulta; desde él se puede acceder a vinculación e historial.
+
+Solo Admin dispone de Eliminar prospecto. La confirmación advierte de que se borran de forma definitiva el prospecto, sus actividades e historial del CRM. Los eventos ya creados en Outlook y los clientes de Business Central no se eliminan. La operación requiere la versión actual y se realiza en una transacción; no modifica tablas sincronizadas de BC.
