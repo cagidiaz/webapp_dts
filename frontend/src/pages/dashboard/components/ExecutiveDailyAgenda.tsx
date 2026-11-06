@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getCrmActivitiesAgenda, type CrmActivity } from '../../../api/crmActivities';
 import { AgendaActivityDetail } from './AgendaActivityDetail';
@@ -8,6 +9,7 @@ const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() 
 const currentWorkday = () => { const date = new Date(); const weekday = date.getDay(); if (weekday === 6) date.setDate(date.getDate() + 2); else if (weekday === 0) date.setDate(date.getDate() + 1); return date; };
 
 export function ExecutiveDailyAgenda({ salespersonCode }: { salespersonCode: string | null }) {
+  const navigate = useNavigate();
   const [date, setDate] = useState(currentWorkday);
   const [activity, setActivity] = useState<CrmActivity | null>(null);
   const day = dateKey(date);
@@ -26,7 +28,7 @@ export function ExecutiveDailyAgenda({ salespersonCode }: { salespersonCode: str
       const title = item.title;
       const owner = item.creator ? `${item.creator.first_name || ''} ${item.creator.last_name || ''}`.trim() || item.creator.email : '';
       const company = item.prospect?.company_name || item.customer?.company_name || item.customer?.name || '';
-      return <button key={`${item.source || 'CRM'}-${item.id}`} type="button" onClick={() => setActivity(item)} className="block w-full min-w-0 rounded-xl border border-gray-200/50 dark:border-white/10 bg-gray-50/50 dark:bg-white/2 px-3 py-2 text-left hover:border-dts-secondary/50"><span className="flex gap-2 items-center text-[12px] min-w-0"><span className="shrink-0 font-bold text-dts-secondary">{item.time_scheduled?.slice(0, 5) || 'Sin hora'}</span><span className="shrink-0 text-gray-500">{labels[item.type] || item.type}</span><span className="font-bold truncate text-gray-900 dark:text-white">{title || 'Sin título'}</span></span><span className="block truncate text-[11px] text-gray-500">{owner && <><span className="font-bold text-blue-700 dark:text-blue-300">{owner}</span><span> · </span></>}{[company, item.contact?.name || item.prospect?.contact_name, item.is_completed ? 'Finalizado' : 'Pendiente'].filter(Boolean).join(' · ')}</span></button>;
+      return <button key={`${item.source || 'CRM'}-${item.id}`} type="button" onClick={() => item.contact_id ? navigate(`/crm/contacts?contactId=${encodeURIComponent(item.contact_id)}&tab=eventos`) : setActivity(item)} className="block w-full min-w-0 rounded-xl border border-gray-200/50 dark:border-white/10 bg-gray-50/50 dark:bg-white/2 px-3 py-2 text-left hover:border-dts-secondary/50"><span className="flex gap-2 items-center text-[12px] min-w-0"><span className="shrink-0 font-bold text-dts-secondary">{item.time_scheduled?.slice(0, 5) || 'Sin hora'}</span><span className="shrink-0 text-gray-500">{labels[item.type] || item.type}</span><span className="font-bold truncate text-gray-900 dark:text-white">{title || 'Sin título'}</span></span><span className="block truncate text-[11px] text-gray-500">{owner && <><span className="font-bold text-blue-700 dark:text-blue-300">{owner}</span><span> · </span></>}{[company, item.contact?.name || item.prospect?.contact_name, item.is_completed ? 'Finalizado' : 'Pendiente'].filter(Boolean).join(' · ')}</span></button>;
     })}</div>}
     {activity && <AgendaActivityDetail activity={{ ...activity, can_edit: false }} onClose={() => setActivity(null)} onEdit={() => {}} />}
   </section>;

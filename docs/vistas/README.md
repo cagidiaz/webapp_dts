@@ -276,3 +276,7 @@ El PDF de **Ayuda → Manuales de usuario** se actualiza a **edición 1.2, 26/10
 ### Backend: certificados HTTPS verificados (26/10/2026)
 
 Retirada la excepción global TLS del servicio de usuarios. Se mantiene la gestión de cuentas y permisos, con comprobaciones de lectura en Supabase y conexión a Microsoft. Sin cambios en BC ni en la base de datos. [Detalle y procedimiento de aplicación](../actualizaciones/2026-10-26-validacion-certificados-backend.md).
+
+### Agenda diaria y ofertas - 6/11/2026
+
+Actualizadas las vistas de [Dashboard](01_dashboards/dashboard.md) y [Oportunidades](03_crm/crm_pipeline.md), el manual general y el manual de CRM: acceso desde la agenda a Eventos del contacto, totales ofertado y ponderado por fase, y tabla de ofertas con desplazamiento propio y presentación progresiva. Cambios locales; despliegue y validación visual pendientes.

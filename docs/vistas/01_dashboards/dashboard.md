@@ -129,7 +129,7 @@ El estado guardado determina el estado del detalle; un evento vencido por fecha 
 
 ## Actualización: panel ejecutivo y agenda diaria (6 de noviembre de 2026)
 
-El panel ejecutivo muestra la agenda diaria junto a Evolución de Ventas, debajo de los indicadores. El selector comercial de Facturación y Presupuestos filtra también la agenda. La navegación muestra de lunes a viernes; al abrir en fin de semana se presenta el lunes siguiente. La agenda incluye llamadas, reuniones, videollamadas y visitas del CRM, incluidos prospectos, y excluye correos, notas y tareas. Una tarjeta permite consultar el detalle; el nombre destacado es el creador de la actividad, que puede ser distinto del comercial del cliente.
+El panel ejecutivo muestra la agenda diaria junto a Evolución de Ventas, debajo de los indicadores. El selector comercial de Facturación y Presupuestos filtra también la agenda. La navegación muestra de lunes a viernes; al abrir en fin de semana se presenta el lunes siguiente. La agenda incluye llamadas, reuniones, videollamadas y visitas del CRM, incluidos prospectos, y excluye correos, notas y tareas. Al pulsar una tarjeta con contacto asociado se abre su ficha en Eventos. Si no tiene contacto asociado, incluidos los eventos de prospectos, se abre el detalle de la actividad. El nombre destacado es el creador de la actividad, que puede ser distinto del comercial del cliente.
 
 Para actividades de clientes, el filtro incluye registros creados por un perfil con el código seleccionado o asociados a un cliente con ese código. Para prospectos utiliza el propietario. Sin filtro se muestran todas las actividades accesibles. El botón de consulta no permite editar desde este panel. La sección Estado y Alertas se ha eliminado; se conserva Previsión Cierre.
 

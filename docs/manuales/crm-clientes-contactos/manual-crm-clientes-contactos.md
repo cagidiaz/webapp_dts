@@ -1225,7 +1225,7 @@ Solo Admin puede seleccionar **Eliminar prospecto**. Antes de confirmar, revisa 
 
 #### Panel ejecutivo: agenda diaria
 
-Debajo de Facturación y Presupuestos aparece la agenda diaria junto al gráfico de evolución. El filtro de vendedor se comparte con los indicadores. Usa las flechas para pasar entre días de lunes a viernes; en fin de semana se abre el lunes siguiente. La agenda muestra llamadas, reuniones, videollamadas y visitas, incluidos eventos de prospectos; no incluye correos, notas ni tareas. Pulsa una tarjeta para consultar su detalle. El nombre en color señala al creador del evento, que puede ser distinto del comercial del cliente.
+Debajo de Facturación y Presupuestos aparece la agenda diaria junto al gráfico de evolución. El filtro de vendedor se comparte con los indicadores. Usa las flechas para pasar entre días de lunes a viernes; en fin de semana se abre el lunes siguiente. La agenda muestra llamadas, reuniones, videollamadas y visitas, incluidos eventos de prospectos; no incluye correos, notas ni tareas. Pulsa una tarjeta con contacto asociado para abrir su ficha en Eventos. Si no hay contacto asociado, incluidos los prospectos, se abre el detalle de la actividad. El nombre en color señala al creador del evento, que puede ser distinto del comercial del cliente.
 
 #### Orden de segmentos
 
@@ -1235,4 +1235,6 @@ En Clientes > Segmentos y Potencial, las familias se muestran en este orden: dTS
 
 En Oportunidades > Ofertas, cada tarjeta muestra el número y tipo de oferta, el cliente y el nombre del contacto. Pulsa la tarjeta para consultar el resto de la información. Si no se dispone del contacto se indica «Sin contacto asignado».
 
-En la parte superior de cada fase aparecen el número de ofertas y el **Total ofertado**, que suma sus importes sin IVA según los filtros seleccionados. El texto adopta el color de la fase y el importe se muestra redondeado a euros enteros. Para cambiar una oferta gestionada desde la aplicación, arrástrala o abre su ficha; el sistema solicita los datos necesarios para confirmar el cambio.
+En la parte superior de cada fase aparecen el número de ofertas y **Ofertado: importe (Pond: importe)**. Son el total sin IVA y el valor ponderado total de las ofertas de la fase según los filtros seleccionados. El texto adopta el color de la fase; los importes se redondean a euros enteros y muestran € junto a la cifra. Para cambiar una oferta gestionada desde la aplicación, arrástrala o abre su ficha; el sistema solicita los datos necesarios para confirmar el cambio.
+
+En la vista de tabla, desplázate dentro del listado para ver más filas: se muestran en bloques de 50 y la cabecera permanece visible. Usa el desplazamiento horizontal cuando no quepan todas las columnas. Pulsa una fila para abrir la oferta. Los indicadores y el Kanban se calculan con todas las ofertas cargadas, no solo con las filas visibles.

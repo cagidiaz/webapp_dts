@@ -111,6 +111,11 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
   // View Mode & Year Filter States
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
   const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
+  const [visibleTableRows, setVisibleTableRows] = useState(50);
+
+  useEffect(() => {
+    setVisibleTableRows(50);
+  }, [debouncedSearch, salespersonFilter, typeFilter, yearFilter, contactId, closedFilter, viewMode]);
 
   const currentYear = new Date().getFullYear();
   const availableYears = useMemo(() => {
@@ -264,6 +269,11 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
     });
     return groups;
   }, [quotes, pilotMode]);
+
+  const tableQuotes = useMemo(
+    () => quotes.filter(q => !pilotMode || !closedFilter || q.estado_oferta === closedFilter),
+    [quotes, pilotMode, closedFilter],
+  );
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData('text/plain', id);
@@ -648,7 +658,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-300">
                     {stageQuotes.length}
                   </span>
-                  {pilotMode && <span className={`basis-full text-xs font-bold ${PILOT_TOTAL_COLOR[stage.id] || ''}`} title="Importe total de las ofertas de esta fase, sin IVA">Total ofertado: <span className="font-mono">{formatCurrency(stageQuotes.reduce((total, quote) => total + (Number(quote.amount) || 0), 0), 0)}</span></span>}
+                  {pilotMode && <span className={`basis-full text-xs font-bold ${PILOT_TOTAL_COLOR[stage.id] || ''}`} title="Importe total y valor ponderado de las ofertas de esta fase, sin IVA">Ofertado: <span className="font-mono">{formatNumber(stageQuotes.reduce((total, quote) => total + (Number(quote.amount) || 0), 0), 0)}€</span> (Pond: <span className="font-mono">{formatNumber(stageQuotes.reduce((total, quote) => total + (Number(quote.valor_oferta_ponderado) || 0), 0), 0)}€</span>)</span>}
                 </div>
 
                 <div className={`flex-1 min-w-0 ${pilotMode ? 'px-1 py-3' : 'p-3'} overflow-y-auto custom-scrollbar space-y-3`}>
@@ -729,9 +739,17 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
           })}
         </div>
       ) : (
-        <div className="bg-white dark:bg-surface-card-dark rounded-xl border border-gray-200/60 dark:border-white/5 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-separate border-spacing-0">
+        <div className="min-w-0 bg-white dark:bg-surface-card-dark rounded-xl border border-gray-200/60 dark:border-white/5 shadow-sm overflow-hidden">
+          <div
+            className="max-h-[calc(100vh-390px)] min-h-[300px] overflow-auto custom-scrollbar"
+            onScroll={event => {
+              const container = event.currentTarget;
+              if (container.scrollHeight - container.scrollTop - container.clientHeight < 200) {
+                setVisibleTableRows(current => Math.min(current + 50, tableQuotes.length));
+              }
+            }}
+          >
+            <table className="w-full min-w-max text-left border-separate border-spacing-0">
               <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
                 <tr className="text-[10px] font-bold uppercase tracking-wider">
                   <th className="px-4 py-3">Nº Oferta</th>
@@ -747,14 +765,14 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                {quotes.length === 0 ? (
+                {tableQuotes.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="px-4 py-8 text-center text-xs text-gray-400 font-medium">
                       No se encontraron ofertas para los filtros seleccionados.
                     </td>
                   </tr>
                 ) : (
-                  quotes.filter(q => !pilotMode || !closedFilter || q.estado_oferta === closedFilter).map(quote => {
+                  tableQuotes.slice(0, visibleTableRows).map(quote => {
                     const isTaskOverdue = isOverdue(quote.fecha_proxima_accion);
                     const stateLower = (quote.estado_oferta || '').toLowerCase();
                     let stageBadgeColor = 'bg-slate-50 text-slate-700 dark:bg-slate-950/30 dark:text-slate-400 border border-slate-100 dark:border-slate-900/30';
@@ -827,6 +845,9 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                       </tr>
                     );
                   })
+                )}
+                {visibleTableRows < tableQuotes.length && (
+                  <tr><td colSpan={10} className="py-6 text-center text-xs text-gray-400">Baja para cargar más ofertas</td></tr>
                 )}
               </tbody>
             </table>

@@ -762,10 +762,12 @@ La compilación y la prueba específica del filtro se completaron; la validació
 
 ## Actualización del panel y Prospección - 6 de noviembre de 2026
 
-El panel ejecutivo incorpora una agenda diaria de eventos, sincronizada con el selector de vendedor de Facturación y Presupuestos. Muestra días laborables de lunes a viernes y permite consultar eventos, incluidos los de prospectos. No muestra correos, tareas ni notas. El nombre destacado indica el creador y puede no coincidir con el comercial asignado al cliente.
+El panel ejecutivo incorpora una agenda diaria de eventos, sincronizada con el selector de vendedor de Facturación y Presupuestos. Muestra días laborables de lunes a viernes y permite consultar eventos, incluidos los de prospectos. No muestra correos, tareas ni notas. Al pulsar un evento con contacto asociado se abre la ficha de ese contacto en Eventos; cuando no hay contacto asociado, incluidos los prospectos, se abre el detalle de la actividad. El nombre destacado indica el creador y puede no coincidir con el comercial asignado al cliente.
 
 En Oportunidades > Prospección, Admin y Dirección disponen de un filtro de vendedor en Kanban y tabla. Solo Admin puede eliminar un prospecto tras confirmar la eliminación definitiva de su historial y actividades en el CRM. El cliente de BC y los eventos ya creados en Outlook se conservan. En Clientes > Segmentos y Potencial, los indicadores siguen el orden dTSTemp, dTSFlow, dTSPres, dTSLevel, dTSCal y dTSSens.
 
 ## Oportunidades: Kanban de ofertas - 6 de noviembre de 2026
 
-En cada tarjeta se muestran número y tipo de oferta, cliente y contacto. El detalle completo se abre al seleccionar la tarjeta. El encabezado de cada fase muestra el número de ofertas y el total ofertado sin IVA, según los filtros aplicados; el color del total identifica la fase. La cantidad se presenta redondeada a euros enteros.
+En cada tarjeta se muestran número y tipo de oferta, cliente y contacto. El detalle completo se abre al seleccionar la tarjeta. Cada fase muestra el número de ofertas y «Ofertado: importe (Pond: importe)»: el total sin IVA y el valor ponderado total según los filtros aplicados. Se redondean a euros enteros y se muestran con el símbolo € junto a la cifra; el color identifica la fase.
+
+En la vista de tabla, la cabecera permanece visible y el desplazamiento vertical y horizontal se realiza dentro de la tabla. Al bajar se muestran más ofertas en bloques de 50; los datos ya están cargados para conservar los cálculos completos de los indicadores y del Kanban. Pulsa una fila para abrir la oferta.
