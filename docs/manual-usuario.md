@@ -765,3 +765,7 @@ La compilación y la prueba específica del filtro se completaron; la validació
 El panel ejecutivo incorpora una agenda diaria de eventos, sincronizada con el selector de vendedor de Facturación y Presupuestos. Muestra días laborables de lunes a viernes y permite consultar eventos, incluidos los de prospectos. No muestra correos, tareas ni notas. El nombre destacado indica el creador y puede no coincidir con el comercial asignado al cliente.
 
 En Oportunidades > Prospección, Admin y Dirección disponen de un filtro de vendedor en Kanban y tabla. Solo Admin puede eliminar un prospecto tras confirmar la eliminación definitiva de su historial y actividades en el CRM. El cliente de BC y los eventos ya creados en Outlook se conservan. En Clientes > Segmentos y Potencial, los indicadores siguen el orden dTSTemp, dTSFlow, dTSPres, dTSLevel, dTSCal y dTSSens.
+
+## Oportunidades: Kanban de ofertas - 6 de noviembre de 2026
+
+En cada tarjeta se muestran número y tipo de oferta, cliente y contacto. El detalle completo se abre al seleccionar la tarjeta. El encabezado de cada fase muestra el número de ofertas y el total ofertado sin IVA, según los filtros aplicados; el color del total identifica la fase. La cantidad se presenta redondeada a euros enteros.

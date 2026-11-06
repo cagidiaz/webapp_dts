@@ -40,6 +40,7 @@ const PILOT_STAGES = [
   { id: 'aceptada', label: 'Aceptada', color: 'border-t-emerald-400 bg-emerald-500/5' },
 ];
 const PILOT_PROB: Record<string, number> = { preliminar: 5, presentada: 20, evaluación: 35, negociación: 55, aprobación: 75, aceptada: 90, ganada: 100, perdida: 0 };
+const PILOT_TOTAL_COLOR: Record<string, string> = { preliminar: 'text-slate-600 dark:text-white', presentada: 'text-blue-700 dark:text-blue-400', evaluación: 'text-cyan-700 dark:text-cyan-400', negociación: 'text-amber-700 dark:text-amber-400', aprobación: 'text-violet-700 dark:text-violet-400', aceptada: 'text-emerald-700 dark:text-emerald-400' };
 const PILOT_STAGE_DESC: Record<string, string> = {
   preliminar: 'Oferta en elaboración inicial o alcance exploratorio. Probabilidad baja de cierre.',
   presentada: 'Oferta enviada formalmente al cliente para su estudio y consideración.',
@@ -647,6 +648,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-300">
                     {stageQuotes.length}
                   </span>
+                  {pilotMode && <span className={`basis-full text-xs font-bold ${PILOT_TOTAL_COLOR[stage.id] || ''}`} title="Importe total de las ofertas de esta fase, sin IVA">Total ofertado: <span className="font-mono">{formatCurrency(stageQuotes.reduce((total, quote) => total + (Number(quote.amount) || 0), 0), 0)}</span></span>}
                 </div>
 
                 <div className={`flex-1 min-w-0 ${pilotMode ? 'px-1 py-3' : 'p-3'} overflow-y-auto custom-scrollbar space-y-3`}>
@@ -672,18 +674,19 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                           <div className="flex justify-between items-start mb-2">
                             <span className="text-[10px] font-bold font-mono text-dts-primary dark:text-dts-secondary">
                               <span className="whitespace-nowrap">{quote.document_no}</span>
-                              {quote.followup_source && <span className="block text-[9px] font-normal text-gray-400">Seguimiento {quote.followup_source === 'APP' ? 'app' : 'BC'}</span>}
+                              {!pilotMode && quote.followup_source && <span className="block text-[9px] font-normal text-gray-400">Seguimiento {quote.followup_source === 'APP' ? 'app' : 'BC'}</span>}
                             </span>
                             <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 font-bold">
                               {quote.oferta_type}
                             </span>
                           </div>
 
-                          <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate mb-4">
+                          <h4 className={`text-xs font-bold text-gray-900 dark:text-white truncate ${pilotMode ? '' : 'mb-4'}`}>
                             {quote.customer_name}
                           </h4>
+                          {pilotMode && <p className="mt-1 text-[10px] text-gray-500 dark:text-gray-400 truncate">{quote.contacto_nombre || 'Sin contacto asignado'}</p>}
 
-                          <div className="flex justify-between items-end border-t border-gray-50 dark:border-white/5 pt-3">
+                          {!pilotMode && <><div className="flex justify-between items-end border-t border-gray-50 dark:border-white/5 pt-3">
                             <div>
                               <span className="text-[9px] text-gray-400 font-medium block">Importe</span>
                               <span className="text-xs font-mono font-black text-gray-900 dark:text-white">
@@ -715,7 +718,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                             ) : (
                               <span className="text-gray-400 dark:text-gray-600">Sin seguimiento</span>
                             )}
-                          </div>
+                          </div></>}
                         </div>
                       );
                     })

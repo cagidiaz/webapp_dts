@@ -246,3 +246,9 @@ La compilación y la prueba específica del filtro se completaron; la validació
 Admin y Dirección pueden filtrar el Kanban y la tabla por propietario; el filtro se aplica en el servidor y reinicia la página. El desplegable excluye perfiles de Administración. La opción Todos incluye la cartera completa accesible, incluidos prospectos de Administración. Al seleccionar una tarjeta o fila se abre el formulario lateral de edición o consulta; desde él se puede acceder a vinculación e historial.
 
 Solo Admin dispone de Eliminar prospecto. La confirmación advierte de que se borran de forma definitiva el prospecto, sus actividades e historial del CRM. Los eventos ya creados en Outlook y los clientes de Business Central no se eliminan. La operación requiere la versión actual y se realiza en una transacción; no modifica tablas sincronizadas de BC.
+
+## Kanban de ofertas: tarjetas y totales por fase (6 de noviembre de 2026)
+
+En Oportunidades > Ofertas, cada tarjeta del Kanban muestra el número y tipo de oferta, el cliente y, debajo, el contacto. Si no existe un nombre disponible se muestra «Sin contacto asignado». Al abrir la tarjeta se consulta el resto de datos. Cada una de las seis columnas muestra el número de ofertas y «Total ofertado», suma de los importes sin IVA de las ofertas mostradas según los filtros activos; el texto utiliza el color de la fase. El total mostrado se redondea a euros enteros y no es un importe ponderado.
+
+El seguimiento de cada oferta se resuelve según su campo `source`: APP usa `crm_offer_followups`, mientras BC conserva los datos de Business Central. Las ofertas APP se editan en el CRM según los permisos y la cartera; n8n no debe sobrescribir los campos gestionados en APP. El diseño y los totales requieren validación visual en la aplicación local.
