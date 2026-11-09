@@ -771,3 +771,9 @@ En Oportunidades > Prospección, Admin y Dirección disponen de un filtro de ven
 En cada tarjeta se muestran número y tipo de oferta, cliente y contacto. El detalle completo se abre al seleccionar la tarjeta. Cada fase muestra el número de ofertas y «Ofertado: importe (Pond: importe)»: el total sin IVA y el valor ponderado total según los filtros aplicados. Se redondean a euros enteros y se muestran con el símbolo € junto a la cifra; el color identifica la fase.
 
 En la vista de tabla, la cabecera permanece visible y el desplazamiento vertical y horizontal se realiza dentro de la tabla. Al bajar se muestran más ofertas en bloques de 50; los datos ya están cargados para conservar los cálculos completos de los indicadores y del Kanban. Pulsa una fila para abrir la oferta.
+
+## Eventos CRM: descripción y editor de conclusiones - 9 de noviembre de 2026
+
+En las visitas a cliente y videollamadas, la sincronización desde Outlook conserva la descripción interna del CRM y no la sustituye por el texto público de la convocatoria. Las conclusiones de estas convocatorias permanecen privadas en el CRM. La corrección no recupera textos sobrescritos anteriormente.
+
+Para escribir con más espacio, pulsa **Ampliar** junto a Conclusiones. Edita el texto y pulsa **Aplicar** para devolverlo al formulario; después guarda o completa el evento. **Cancelar** cierra la ventana sin aplicar sus cambios. La función también está en las actividades de prospectos y en el editor de eventos de la agenda comercial.

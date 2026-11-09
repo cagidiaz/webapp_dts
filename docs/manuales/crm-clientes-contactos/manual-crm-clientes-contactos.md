@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.11 · 6 de noviembre de 2026 · Uso interno
+Edición 1.12 · 9 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -1238,3 +1238,9 @@ En Oportunidades > Ofertas, cada tarjeta muestra el número y tipo de oferta, el
 En la parte superior de cada fase aparecen el número de ofertas y **Ofertado: importe (Pond: importe)**. Son el total sin IVA y el valor ponderado total de las ofertas de la fase según los filtros seleccionados. El texto adopta el color de la fase; los importes se redondean a euros enteros y muestran € junto a la cifra. Para cambiar una oferta gestionada desde la aplicación, arrástrala o abre su ficha; el sistema solicita los datos necesarios para confirmar el cambio.
 
 En la vista de tabla, desplázate dentro del listado para ver más filas: se muestran en bloques de 50 y la cabecera permanece visible. Usa el desplazamiento horizontal cuando no quepan todas las columnas. Pulsa una fila para abrir la oferta. Los indicadores y el Kanban se calculan con todas las ofertas cargadas, no solo con las filas visibles.
+
+#### Escribir conclusiones en una ventana ampliada
+
+En el formulario de un evento, pulsa **Ampliar** junto a las conclusiones. Se abrirá una ventana grande con el texto que ya habías escrito. Modifícalo y pulsa **Aplicar** para devolverlo al formulario; después pulsa **Guardar** o completa el evento para conservarlo. Si eliges **Cancelar**, se descartan los cambios realizados en la ventana y se mantiene el texto previo del formulario.
+
+Esta opción también está disponible al crear o editar actividades de prospectos y al editar eventos desde la agenda comercial. En visitas a cliente y videollamadas, la descripción y las conclusiones internas permanecen en el CRM y no se añaden al mensaje dirigido a los invitados. Las descripciones sobrescritas antes de la corrección no se recuperan automáticamente.

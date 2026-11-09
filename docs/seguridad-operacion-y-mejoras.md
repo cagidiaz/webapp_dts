@@ -49,7 +49,9 @@ Se retiró el acceso efectivo de `anon` al esquema `public` y se mantuvo el uso 
 
 El 02/11/2026 se descargaron una copia lógica de PostgreSQL con roles y una copia del volumen de n8n que incluye la base SQLite y su configuración de cifrado. Se comprobaron las sumas SHA-256 de los archivos descargados y se retiraron las copias temporales del VPS. Las copias contienen información sensible y deben guardarse con acceso restringido y fuera del servidor.
 
-**Las sumas verifican integridad de los archivos, no su capacidad de recuperación:** queda pendiente una restauración de prueba en un entorno aislado. Las copias reflejan el momento en que se generaron; restaurarlas sobre producción puede revertir cambios posteriores. Incluir en el plan de recuperación los datos y la configuración de Supabase, n8n, claves, versiones y almacenamiento de archivos si se empieza a utilizar. Un snapshot del VPS es un complemento, no sustituye una copia verificable ni una prueba de restauración.
+**Las sumas verifican integridad de los archivos, no su capacidad de recuperación:** queda pendiente comprobar una recuperación integral del conjunto, incluida la copia de n8n. Las copias reflejan el momento en que se generaron; restaurarlas sobre producción puede revertir cambios posteriores. Incluir en el plan de recuperación los datos y la configuración de Supabase, n8n, claves, versiones y almacenamiento de archivos si se empieza a utilizar. Un snapshot del VPS es un complemento, no sustituye una copia verificable ni una prueba de restauración.
+
+**Actualización del 05–06/11/2026:** se restauró un volcado de `postgres` en una base de prueba de una instancia Supabase nueva y se comprobaron tablas, recuentos, migraciones y parte de los permisos. El ensayo no cubre aún una recuperación integral ni la validación funcional de la app y n8n. El volcado diario observado excluye propietarios y concesiones y no incluye la base interna `_supabase`; consultar [el registro del ensayo](actualizaciones/2026-11-05-ensayo-migracion-supabase-vps.md) antes de utilizarlo como procedimiento de recuperación.
 
 ## 6. Procedimiento para cambios de seguridad
 
@@ -73,6 +75,7 @@ El 02/11/2026 se descargaron una copia lógica de PostgreSQL con roles y una cop
 
 ## 8. Referencias internas
 
+- [Ensayo de recuperación y actualización de Supabase en el VPS](actualizaciones/2026-11-05-ensayo-migracion-supabase-vps.md).
 - [Validación de certificados HTTPS del backend](actualizaciones/2026-10-26-validacion-certificados-backend.md).
 - [Identidad de correos y seguridad del complemento Outlook](actualizaciones/2026-10-15-identidad-estable-correos-y-seguridad-addin-outlook.md). Confirmar que la descripción coincide con la versión desplegada antes de usarla como evidencia actual.
 - Chat **Seguridad de la app**: seguimiento de seguridad y decisiones posteriores.

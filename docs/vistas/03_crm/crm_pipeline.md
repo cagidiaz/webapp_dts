@@ -254,3 +254,7 @@ En Oportunidades > Ofertas, cada tarjeta del Kanban muestra el número y tipo de
 La vista de tabla conserva los filtros y abre la ficha al pulsar una fila. Tiene cabecera fija, desplazamiento vertical y horizontal dentro del área de la tabla y muestra las filas en bloques de 50 al bajar. La consulta inicial sigue recuperando todas las ofertas para calcular los indicadores y el Kanban; los bloques limitan las filas representadas, no las descargadas. Cambiar los filtros reinicia la cantidad visible.
 
 El seguimiento de cada oferta se resuelve según su campo `source`: APP usa `crm_offer_followups`, mientras BC conserva los datos de Business Central. Las ofertas APP se editan en el CRM según los permisos y la cartera; n8n no debe sobrescribir los campos gestionados en APP. El diseño y los totales requieren validación visual en la aplicación local.
+
+## Actualización: conclusiones ampliadas en prospectos (9 de noviembre de 2026)
+
+Al crear, editar o completar una actividad de prospecto, **Ampliar** abre un editor grande de conclusiones. Aplicar devuelve el texto al formulario; Cancelar descarta los cambios de la ventana. El evento se guarda con su botón habitual. Se conserva el límite de 10.000 caracteres y los permisos existentes. La validación visual y funcional en la aplicación queda pendiente.

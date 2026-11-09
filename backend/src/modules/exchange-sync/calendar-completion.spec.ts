@@ -64,6 +64,23 @@ describe('Conclusiones y categoría verde del calendario', () => {
     expect(graph.updateCalendarEvent).not.toHaveBeenCalled();
   });
 
+  it.each(['VISITA', 'VIDEOLLAMADA'])('conserva la descripción interna de %s al importar la convocatoria pública', async type => {
+    const { sync, db, graph, read, set } = fixture();
+    set({ type, description: 'Notas internas privadas', conclusions: 'Conclusiones privadas' });
+    graph.getCalendarEventsDelta.mockResolvedValue({ events: [{ id: 'event', subject: 'Visita a Cliente — Reunión', bodyPreview: 'Dirección: Calle Mayor 1', categories: ['dTS CRM - Completado'], start: { dateTime: '2026-10-22T12:30:00' }, location: { displayName: 'Calle Mayor 1' } }] });
+    await sync.syncOutlookToCrm('user');
+    expect(read()).toMatchObject({ description: 'Notas internas privadas', conclusions: 'Conclusiones privadas', time_scheduled: '12:30', location: 'Calle Mayor 1' });
+    expect(db.crm_activities.update.mock.calls[0][0].data).not.toHaveProperty('description');
+  });
+
+  it('mantiene la sincronización de descripción en actividades que no son convocatorias públicas', async () => {
+    const { sync, graph, read, set } = fixture();
+    set({ type: 'CALL', description: 'Anterior' });
+    graph.getCalendarEventsDelta.mockResolvedValue({ events: [{ id: 'event', bodyPreview: 'Nueva descripción', categories: ['dTS CRM'] }] });
+    await sync.syncOutlookToCrm('user');
+    expect(read().description).toBe('Nueva descripción');
+  });
+
   it('reintenta cambios pendientes de eventos vinculados sin crear otra convocatoria', async () => {
     const { sync, db, graph, read, set } = fixture();
     set({ is_completed: true, conclusions: 'Finalizada', exchange_sync_status: 'failed' });

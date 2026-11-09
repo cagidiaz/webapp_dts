@@ -380,3 +380,11 @@ La compilación y la prueba específica del filtro se completaron; la validació
 ## Actualización: eliminación de Contactos Prospectos (6 de noviembre de 2026)
 
 Solo Admin puede eliminar un prospecto desde su ficha o formulario lateral. Tras confirmar, se borran definitivamente el prospecto y sus actividades e historial locales. La vinculación y el historial del prospecto desaparecen del CRM; los clientes de BC y los eventos que ya existan en Outlook no se eliminan. Dirección y comerciales no disponen de esta acción. Una ficha desactualizada debe recargarse antes de eliminar.
+
+## Actualización: descripción privada y conclusiones ampliadas (9 de noviembre de 2026)
+
+En visitas a cliente y videollamadas, la descripción interna de `crm_activities` se conserva al importar cambios desde el calendario de Outlook; el cuerpo público de la convocatoria no sustituye las notas internas. La sincronización sigue pudiendo actualizar fecha, hora y ubicación. Los textos ya sobrescritos no se recuperan automáticamente. Las conclusiones de estas convocatorias se conservan en el CRM y no se incorporan al mensaje de los invitados.
+
+Los formularios de creación, edición y cierre de eventos de contactos ofrecen **Ampliar** junto al campo de conclusiones, también al editar desde la agenda comercial. La ventana abre una copia del texto: **Aplicar** lo devuelve al formulario y **Cancelar** lo descarta. Es necesario guardar o completar el evento después; aplicar por sí solo no guarda en la base de datos. El comportamiento de marcado como completado no cambia.
+
+Validación técnica: 16 pruebas de sincronización aprobadas, comprobación de tipos del backend y compilación del frontend correctas. La prueba visual y funcional con el usuario sigue pendiente.

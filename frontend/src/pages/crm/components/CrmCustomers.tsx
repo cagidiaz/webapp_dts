@@ -1,3 +1,4 @@
+import { appTabClass, appTabIconClass, appTabListClass } from '../../../components/shared/appTabs';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllCustomers } from '../../../api';
@@ -143,34 +144,26 @@ export const CrmCustomers: React.FC<CrmCustomersProps> = () => {
     <div className="space-y-3.5 animate-in fade-in duration-500 pb-10">
       
       {/* Selector de Sub-Pestañas */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2">
+      <div className={appTabListClass} role="tablist" aria-label="Clientes">
         <button
           type="button"
           onClick={() => setActiveSubTab('directory')}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${
-            activeSubTab === 'directory'
-              ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20'
-              : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'
-          }`}
+          role="tab" aria-selected={activeSubTab === 'directory'} className={appTabClass(activeSubTab === 'directory')}
         >
-          <Building2 size={16} className={activeSubTab === 'directory' ? 'text-dts-secondary' : 'text-gray-400'} />
+          <Building2 size={16} className={appTabIconClass(activeSubTab === 'directory')} />
           <span>Directorio de Clientes</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveSubTab('matrix')}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${
-            activeSubTab === 'matrix'
-              ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20'
-              : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'
-          }`}
+          role="tab" aria-selected={activeSubTab === 'matrix'} className={appTabClass(activeSubTab === 'matrix')}
         >
-          <BarChart3 size={16} className={activeSubTab === 'matrix' ? 'text-dts-secondary' : 'text-gray-400'} />
+          <BarChart3 size={16} className={appTabIconClass(activeSubTab === 'matrix')} />
           <span>Matriz de Relación / Análisis YTD</span>
         </button>
-        <button type="button" onClick={() => setActiveSubTab('segments')} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${activeSubTab === 'segments' ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20' : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'}`}>
-          <BarChart3 size={16} className={activeSubTab === 'segments' ? 'text-dts-secondary' : 'text-gray-400'} /><span>Segmentos y potencial</span>
+        <button type="button" onClick={() => setActiveSubTab('segments')} role="tab" aria-selected={activeSubTab === 'segments'} className={appTabClass(activeSubTab === 'segments')}>
+          <BarChart3 size={16} className={appTabIconClass(activeSubTab === 'segments')} /><span>Segmentos y potencial</span>
         </button>
       </div>
 

@@ -8,6 +8,8 @@ La vista de **Administración de Usuarios y Permisos RBAC** es el centro de segu
 
 4. **Vinculaciones Outlook:** supervisar conexiones registradas y equipos de todos los usuarios, consultar sus estados y revocar vínculos Classic.
 
+**Operación de infraestructura:** el ensayo de actualización de Supabase y sus comprobaciones pendientes se registran en [Ensayo de recuperación y actualización de Supabase en el VPS](../../actualizaciones/2026-11-05-ensayo-migracion-supabase-vps.md). La nueva instancia es una copia de prueba; las pruebas de inicio de sesión y administración en ella siguen pendientes.
+
 ---
 
 ## 2. Ficheros y Rutas del Código

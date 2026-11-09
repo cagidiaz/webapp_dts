@@ -134,3 +134,7 @@ El panel ejecutivo muestra la agenda diaria junto a Evolución de Ventas, debajo
 Para actividades de clientes, el filtro incluye registros creados por un perfil con el código seleccionado o asociados a un cliente con ese código. Para prospectos utiliza el propietario. Sin filtro se muestran todas las actividades accesibles. El botón de consulta no permite editar desde este panel. La sección Estado y Alertas se ha eliminado; se conserva Previsión Cierre.
 
 Validación: compilación frontend y tipos backend comprobados; las comprobaciones visuales y por usuario deben realizarse en la aplicación local.
+
+## Actualización: editor ampliado de conclusiones (9 de noviembre de 2026)
+
+El editor de eventos accesible desde la agenda comercial incorpora **Ampliar** en las conclusiones. Aplicar devuelve el texto al formulario y es preciso guardar el evento; Cancelar descarta solo los cambios de la ventana. La agenda ejecutiva mantiene su detalle de consulta sin edición.

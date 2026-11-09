@@ -651,14 +651,16 @@ export class ExchangeSyncService {
                 }
               }
 
-              // Limpiar bodyPreview de Outlook para evitar que inyecte el boilerplate del CRM o líneas divisorias
-              const cleanDesc = this.cleanOutlookBody(ev.bodyPreview, existingActivity.description);
+              // Las visitas y videollamadas publican una convocatoria distinta de la descripción
+              // interna. No importar su bodyPreview: reemplazaría notas privadas por texto público.
+              const preservePrivateDescription = ['VISITA', 'VIDEOLLAMADA'].includes(existingActivity.type);
+              const cleanDesc = preservePrivateDescription ? undefined : this.cleanOutlookBody(ev.bodyPreview, existingActivity.description);
 
               await this.prisma.crm_activities.update({
                 where: { id: existingActivity.id },
                 data: {
                   title: cleanTitle,
-                  description: cleanDesc,
+                  ...(!preservePrivateDescription ? { description: cleanDesc } : {}),
                   due_date: dueDate || existingActivity.due_date,
                   time_scheduled: timeScheduled !== null ? timeScheduled : existingActivity.time_scheduled,
                   location: ev.location?.displayName || existingActivity.location,

@@ -1,3 +1,5 @@
+import { ExpandConclusionsButton } from './ExpandConclusionsButton';
+import { appTabClass, appTabIconClass, appTabListClass } from '../../../components/shared/appTabs';
 import { CalendarInvitationFields, CalendarInvitationMessage, newCalendarInvitation } from './CalendarInvitationFields';
 import { filterEmailCategories } from '../../../utils/emailCategoryFilters';
 import { EmailAttachments } from './EmailAttachments';
@@ -1655,7 +1657,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       {/* Unified Tabbed Panel */}
       <div className="bg-white dark:bg-surface-card-dark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-340px)] min-h-112.5">
         {/* Navigation Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-zinc-800/20 p-1 shrink-0">
+        <div className={`${appTabListClass} px-4 pt-3 shrink-0`} role="tablist" aria-label="Ficha del contacto">
           {[
             { id: 'info', label: 'Información', icon: User },
             { id: 'timeline', label: 'Timeline', icon: Activity },
@@ -1666,14 +1668,10 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id as any)}
-              className={`flex-1 py-2 px-2 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === tab.id 
-                  ? 'bg-dts-primary text-white dark:bg-dts-secondary shadow-xs' 
-                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'
-              }`}
+              type="button" role="tab" aria-selected={activeTab === tab.id} className={appTabClass(activeTab === tab.id)}
             >
-              <tab.icon size={14} />
-              <span className="hidden lg:inline">{tab.label}</span>
+              <tab.icon size={16} className={appTabIconClass(activeTab === tab.id)} />
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
@@ -1779,29 +1777,21 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                         Datos de Empresa
                       </h3>
                       {/* Sub-pestañas Empresa */}
-                      <div className="flex bg-gray-100 dark:bg-zinc-800 p-0.5 rounded-lg text-xs">
+                      <div className={appTabListClass} role="tablist" aria-label="Datos de empresa">
                         <button
                           type="button"
                           onClick={() => setCompanyTab('general')}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer text-[11px] ${
-                            companyTab === 'general'
-                              ? 'bg-white dark:bg-zinc-700 text-dts-primary dark:text-white shadow-xs'
-                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
-                          }`}
+                          role="tab" aria-selected={companyTab === 'general'} className={appTabClass(companyTab === 'general')}
                         >
-                          <Building2 size={12} />
+                          <Building2 size={16} className={appTabIconClass(companyTab === 'general')} />
                           General
                         </button>
                         <button
                           type="button"
                           onClick={() => setCompanyTab('comunicacion')}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer text-[11px] ${
-                            companyTab === 'comunicacion'
-                              ? 'bg-white dark:bg-zinc-700 text-dts-primary dark:text-white shadow-xs'
-                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
-                          }`}
+                          role="tab" aria-selected={companyTab === 'comunicacion'} className={appTabClass(companyTab === 'comunicacion')}
                         >
-                          <PhoneCall size={12} />
+                          <PhoneCall size={16} className={appTabIconClass(companyTab === 'comunicacion')} />
                           Comunicación
                         </button>
                       </div>
@@ -3411,6 +3401,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               onChange={(e) => setNewConclusions(e.target.value)}
                               className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none font-medium leading-relaxed"
                             />
+                            <ExpandConclusionsButton value={newConclusions} onApply={setNewConclusions} />
                           </div>
                         </div>
                       ) : (
@@ -3508,6 +3499,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                               onChange={(e) => setNewConclusions(e.target.value)}
                               className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none"
                             />
+                            <ExpandConclusionsButton value={newConclusions} onApply={setNewConclusions} />
                           </div>
 
                           {activityType !== 'NOTE' && (
@@ -3851,9 +3843,10 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   placeholder="Describe brevemente qué se trató, acuerdos con el cliente o siguientes pasos comerciales..."
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-900/60 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                 />
+                <ExpandConclusionsButton value={closingConclusions} onApply={setClosingConclusions} />
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <Info size={11} className="text-emerald-500 shrink-0" />
-                  Las conclusiones se guardarán en la ficha del contacto y se sincronizarán en el cuerpo del evento en Outlook.
+                  {['visita', 'videollamada'].includes(completingActivity.type) ? 'Las conclusiones se guardarán de forma privada en el CRM.' : 'Las conclusiones se guardarán en el CRM y se sincronizarán con el evento en Outlook.'}
                 </p>
               </div>
             </div>

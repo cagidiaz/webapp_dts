@@ -1,3 +1,4 @@
+import { appTabClass } from '../../../components/shared/appTabs';
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
@@ -581,11 +582,7 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
                   <button
                     key="TOTAL"
                     onClick={() => setActiveCommercialTab('TOTAL')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      activeCommercialTab === 'TOTAL'
-                        ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20 border border-[#003E51]'
-                        : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
-                    }`}
+                    className={appTabClass(activeCommercialTab === 'TOTAL')}
                   >
                     Total Empresa
                   </button>
@@ -596,11 +593,7 @@ export const CustomerRelationshipMatrix: React.FC<CustomerRelationshipMatrixProp
                   <button
                     key={c.salespersonCode}
                     onClick={() => setActiveCommercialTab(c.salespersonCode)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      activeCommercialTab === c.salespersonCode
-                        ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20 border border-[#003E51]'
-                        : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
-                    }`}
+                    className={appTabClass(activeCommercialTab === c.salespersonCode)}
                   >
                     {c.salespersonName}
                   </button>

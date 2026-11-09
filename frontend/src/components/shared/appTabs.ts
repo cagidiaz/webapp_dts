@@ -1,0 +1,4 @@
+/** Patrón visual de pestañas de la aplicación, basado en el Directorio de Empresas del CRM. */
+export const appTabListClass = 'flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2';
+export const appTabClass = (active: boolean) => `flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${active ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20' : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'}`;
+export const appTabIconClass = (active: boolean) => active ? 'text-dts-secondary' : 'text-gray-400';

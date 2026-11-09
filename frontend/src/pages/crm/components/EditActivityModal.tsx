@@ -1,3 +1,4 @@
+import { ExpandConclusionsButton } from './ExpandConclusionsButton';
 import { CalendarInvitationFields, newCalendarInvitation } from './CalendarInvitationFields';
 import React, { useState, useEffect } from 'react';
 import { isAxiosError } from 'axios';
@@ -412,6 +413,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
                           placeholder="Resultado de la reunión, acuerdos alcanzados..."
                           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none font-medium leading-relaxed"
                         />
+                        <ExpandConclusionsButton value={conclusions} onApply={value => { setConclusions(value); if (value.trim() && !isCompleted) setIsCompleted(true); }} />
                       </div>
 
                       {/* Checkbox de Estado Completado */}
@@ -557,6 +559,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
                           placeholder="Resultado de la reunión, próximos pasos acordados..."
                           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-dts-secondary/50 resize-none font-medium leading-relaxed"
                         />
+                        <ExpandConclusionsButton value={conclusions} onApply={value => { setConclusions(value); if (value.trim() && !isCompleted) setIsCompleted(true); }} />
                       </div>
                     )}
 
