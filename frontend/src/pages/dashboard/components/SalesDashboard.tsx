@@ -21,6 +21,7 @@ import { CustomerDetailDrawer } from '../../sales/components/CustomerDetailDrawe
 import { CrmActivityReportModal } from '../../crm/components/CrmActivityReportModal';
 import { EditActivityModal } from '../../crm/components/EditActivityModal';
 import { AgendaActivityDetail } from './AgendaActivityDetail';
+import { ProspectAssignmentNotices } from '../../crm/components/ProspectAssignmentNotices';
 import { parseEmailActivity } from '../../crm/utils/emailTipologia';
 import { useUIStore } from '../../../store/uiStore';
 import { 
@@ -605,7 +606,7 @@ export const SalesDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Agenda Semanal CRM (Timeline Style) */}
-        <div className="bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex flex-col lg:h-142.5 lg:max-h-142.5 h-142.5">
+        <div id="agenda-crm" className="scroll-mt-24 bg-white dark:bg-surface-card-dark rounded-xl shadow-card border border-gray-100 dark:border-gray-800 p-6 flex flex-col lg:h-142.5 lg:max-h-142.5 h-142.5">
           <div className="flex flex-wrap items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3 mb-4 shrink-0 gap-2.5">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-dts-primary dark:text-white">
@@ -693,6 +694,7 @@ export const SalesDashboard: React.FC = () => {
             </div>
           </div>
 
+          <ProspectAssignmentNotices />
           {isLoadingAgenda ? (
             <div className="space-y-4 flex-1">
               {Array.from({ length: 3 }).map((_, idx) => (

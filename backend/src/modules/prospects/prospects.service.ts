@@ -79,6 +79,30 @@ export class ProspectsService {
     return prospect;
   }
 
+  async assignmentNotices(userId: string, salespersonCode?: string, onlyOwn = false) {
+    const access = await this.authorize(userId);
+    const events = await this.prisma.crm_prospect_events.findMany({
+      where: { type: 'ASIGNACION_PENDIENTE', prospect: { archived_at: null, converted_at: null, ...(access.canViewAll && !onlyOwn ? {} : { owner_id: userId }), ...(access.canViewAll && !onlyOwn && salespersonCode ? { owner: { code: salespersonCode } } : {}) } },
+      include: { prospect: { select: { id: true, company_name: true, contact_name: true, owner_id: true, owner: { select: { first_name: true, last_name: true, email: true } } } }, author: { select: { first_name: true, last_name: true, email: true } } },
+      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    });
+    return events.filter(event => {
+      try { return JSON.parse(event.description || '{}').recipient_id === event.prospect.owner_id; } catch { return false; }
+    }).map(event => ({ id: event.id, prospect_id: event.prospect.id, company_name: event.prospect.company_name, contact_name: event.prospect.contact_name, recipient: event.prospect.owner, author: event.author, created_at: event.created_at }));
+  }
+
+  async acknowledgeAssignments(userId: string, id: string) {
+    const prospect = await this.detail(userId, id);
+    if (prospect.owner_id !== userId) return { acknowledged: 0 };
+    const ids = prospect.events.filter(event => {
+      if (event.type !== 'ASIGNACION_PENDIENTE') return false;
+      try { return JSON.parse(event.description || '{}').recipient_id === userId; } catch { return false; }
+    }).map(event => event.id);
+    if (!ids.length) return { acknowledged: 0 };
+    const result = await this.prisma.crm_prospect_events.updateMany({ where: { id: { in: ids }, type: 'ASIGNACION_PENDIENTE', prospect: { owner_id: userId } }, data: { type: 'ASIGNACION_LEIDA' } });
+    return { acknowledged: result.count };
+  }
+
   private fields(data: CreateProspectDto) {
     return {
       company_name: data.company_name.trim(),
@@ -111,7 +135,7 @@ export class ProspectsService {
     try {
       return await this.prisma.crm_prospects.create({ data: {
         ...this.fields(data), owner_id: targetOwnerId,
-        events: { create: { created_by: userId, type: 'AUDIT', title: 'Prospecto creado' } },
+        events: { create: { created_by: userId, type: targetOwnerId !== userId ? 'ASIGNACION_PENDIENTE' : 'AUDIT', title: 'Prospecto creado', ...(targetOwnerId !== userId ? { description: JSON.stringify({ recipient_id: targetOwnerId }) } : {}) } },
       } });
     } catch (error) { this.rethrow(error); }
   }
@@ -145,6 +169,7 @@ export class ProspectsService {
           data: updateData,
         });
         if (result.count !== 1) throw new ConflictException('El prospecto cambió desde que abriste la ficha. Recárgala antes de guardar.');
+        if (targetOwnerId !== current.owner_id) await tx.crm_prospect_events.updateMany({ where: { prospect_id: id, type: 'ASIGNACION_PENDIENTE' }, data: { type: 'ASIGNACION_CANCELADA' } });
         await tx.crm_prospect_events.create({
           data: {
             prospect_id: id,
@@ -156,6 +181,9 @@ export class ProspectsService {
             description: JSON.stringify({ before: { ...this.fields(current), owner_id: current.owner_id }, after: { ...this.fields(data), owner_id: targetOwnerId } }),
           },
         });
+        if (targetOwnerId !== current.owner_id && targetOwnerId !== userId) {
+          await tx.crm_prospect_events.create({ data: { prospect_id: id, created_by: userId, type: 'ASIGNACION_PENDIENTE', title: 'Prospecto asignado', description: JSON.stringify({ recipient_id: targetOwnerId }) } });
+        }
         return tx.crm_prospects.findUniqueOrThrow({ where: { id }, include: { linked_client: { select: { id: true, client_id: true, name: true } } } });
       });
     } catch (error) { this.rethrow(error); }

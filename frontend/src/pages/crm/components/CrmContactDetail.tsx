@@ -1,3 +1,4 @@
+import { EVENT_FILTER_CHIPS } from './eventFilterChips';
 import { ExpandConclusionsButton } from './ExpandConclusionsButton';
 import { appTabClass, appTabIconClass, appTabListClass } from '../../../components/shared/appTabs';
 import { CalendarInvitationFields, CalendarInvitationMessage, newCalendarInvitation } from './CalendarInvitationFields';
@@ -79,64 +80,6 @@ const STAGES = [
   { id: 'en negociación', label: 'En Negociación', color: 'border-t-amber-400 bg-amber-500/5' },
   { id: 'ganada', label: 'Ganada', color: 'border-t-emerald-400 bg-emerald-500/5' },
   { id: 'perdida', label: 'Perdida', color: 'border-t-rose-400 bg-rose-500/5' }
-];
-
-const EVENT_FILTER_CHIPS: {
-  id: string;
-  label: string;
-  icon: any;
-  color: string;
-  pillActiveBg: string;
-}[] = [
-  {
-    id: 'TASK',
-    label: 'Tareas',
-    icon: CheckSquare,
-    color: 'text-blue-600 dark:text-blue-400',
-    pillActiveBg: 'bg-blue-600 text-white',
-  },
-  {
-    id: 'NOTE',
-    label: 'Notas',
-    icon: FileText,
-    color: 'text-amber-600 dark:text-amber-400',
-    pillActiveBg: 'bg-amber-600 text-white',
-  },
-  {
-    id: 'VISITA',
-    label: 'Visitas Cliente',
-    icon: MapPin,
-    color: 'text-orange-600 dark:text-orange-400',
-    pillActiveBg: 'bg-orange-600 text-white',
-  },
-  {
-    id: 'EVENT',
-    label: 'Visitas no prog.',
-    icon: Calendar,
-    color: 'text-amber-600 dark:text-amber-400',
-    pillActiveBg: 'bg-amber-600 text-white',
-  },
-  {
-    id: 'VIDEO',
-    label: 'Videollamadas',
-    icon: Video,
-    color: 'text-violet-600 dark:text-violet-400',
-    pillActiveBg: 'bg-violet-600 text-white',
-  },
-  {
-    id: 'CALL',
-    label: 'Llamadas',
-    icon: Phone,
-    color: 'text-cyan-600 dark:text-cyan-400',
-    pillActiveBg: 'bg-cyan-600 text-white',
-  },
-  {
-    id: 'REUNION',
-    label: 'Reuniones Internas',
-    icon: Users,
-    color: 'text-teal-600 dark:text-teal-400',
-    pillActiveBg: 'bg-teal-600 text-white',
-  },
 ];
 
 const EMAIL_TEMPLATES = [

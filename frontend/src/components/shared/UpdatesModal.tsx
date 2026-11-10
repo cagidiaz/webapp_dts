@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUpdatesStore } from '../../store/updatesStore';
 import { useAuthStore } from '../../store/authStore';
+import { ProspectAssignmentNotices } from '../../pages/crm/components/ProspectAssignmentNotices';
 import { 
   X, Sparkles, Github, ExternalLink, Calendar, CheckSquare, 
   Clock, Building2, User, Phone, Video, MapPin, AlertTriangle, 
@@ -92,7 +93,7 @@ export const UpdatesModal: React.FC = () => {
 
   const handleNavigateToAgenda = () => {
     closeModal();
-    navigate('/sales');
+    navigate('/dashboard#agenda-crm');
   };
 
   return (
@@ -193,6 +194,7 @@ export const UpdatesModal: React.FC = () => {
 
         {/* Contenido Dinámico por Pestaña (Scrollable) */}
         <div className="p-5 sm:p-6 overflow-y-auto flex-1 bg-gray-50/40 dark:bg-surface-dark space-y-3">
+          <ProspectAssignmentNotices onNavigate={closeModal} />
           {/* 1. PESTAÑA: AGENDA DE HOY */}
           {activeTab === 'today' && (
             <div className="space-y-3 animate-in fade-in duration-200">
@@ -465,7 +467,7 @@ export const UpdatesModal: React.FC = () => {
             onClick={handleNavigateToAgenda}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-dts-primary dark:text-dts-secondary hover:underline cursor-pointer"
           >
-            <span>Ir a Agenda Comercial Completa</span>
+            <span>Ir a la agenda</span>
             <ArrowRight size={13} />
           </button>
 

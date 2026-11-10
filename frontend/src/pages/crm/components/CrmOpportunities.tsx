@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getProspectAccess } from '../../../api/prospects';
 import { useAuthStore } from '../../../store/authStore';
@@ -8,9 +8,12 @@ import { getCutAccess } from '../../../api/pipelineCuts';
 import { PipelineCuts } from './PipelineCuts';
 import { Briefcase, Camera, Users } from 'lucide-react';
 import { appTabClass, appTabIconClass, appTabListClass } from '../../../components/shared/appTabs';
+import { useSearchParams } from 'react-router-dom';
 export function CrmOpportunities() {
   const profile = useAuthStore(state => state.profile);
-  const [tab, setTab] = useState<'prospects' | 'offers' | 'cuts'>('offers');
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<'prospects' | 'offers' | 'cuts'>(() => searchParams.has('prospectId') ? 'prospects' : 'offers');
+  useEffect(() => { if (searchParams.has('prospectId')) setTab('prospects'); }, [searchParams]);
   const { data: access, isPending: accessPending, isError: accessError, refetch: reloadAccess } = useQuery({ queryKey: ['prospect-access', profile?.id], queryFn: getProspectAccess, enabled: !!profile?.id, retry: false });
   const { data: cutAccess, isError: cutsError } = useQuery({queryKey:['cut-access',profile?.id],queryFn:getCutAccess,enabled:!!profile?.id,retry:false});
   if (!profile || accessPending) return <p role="status" className="text-xs text-gray-500">Comprobando permisos de Oportunidades…</p>;

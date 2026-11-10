@@ -63,16 +63,6 @@ export const useUpdatesStore = create<UpdatesState>()(
           const sessionKey = 'dts_daily_briefing_shown_session';
           const alreadyShownThisSession = sessionStorage.getItem(sessionKey) === 'true';
 
-          // Determinar pestaña recomendada según relevancia
-          let recommendedTab: NotificationTab = 'today';
-          if (data.todayActivities && data.todayActivities.length > 0) {
-            recommendedTab = 'today';
-          } else if (data.pendingActivities && data.pendingActivities.length > 0) {
-            recommendedTab = 'pending';
-          } else {
-            recommendedTab = 'updates';
-          }
-
           // Auto-apertura si es una nueva sesión en el navegador
           let shouldAutoOpen = false;
           if (!alreadyShownThisSession) {
@@ -84,7 +74,7 @@ export const useUpdatesStore = create<UpdatesState>()(
           set(state => ({
             briefing: data,
             isBriefingLoading: false,
-            activeTab: state.isModalOpen ? state.activeTab : recommendedTab,
+            activeTab: state.isModalOpen ? state.activeTab : 'today',
             isModalOpen: shouldAutoOpen ? true : state.isModalOpen,
           }));
         } catch (err: any) {
@@ -234,7 +224,7 @@ export const useUpdatesStore = create<UpdatesState>()(
               isLoading: false, 
               lastFetchedAt: Date.now(),
               isModalOpen: shouldOpen ? true : state.isModalOpen,
-              activeTab: shouldOpen ? 'updates' : state.activeTab,
+              activeTab: shouldOpen && !state.isModalOpen ? 'today' : state.activeTab,
             }));
           } else {
             set({ commits: [], isLoading: false, lastFetchedAt: Date.now() });
@@ -269,10 +259,10 @@ export const useUpdatesStore = create<UpdatesState>()(
       setActiveTab: (tab: NotificationTab) => set({ activeTab: tab }),
 
       openModal: (tab?: NotificationTab) => {
-        set(state => ({
+        set({
           isModalOpen: true,
-          activeTab: tab || state.activeTab,
-        }));
+          activeTab: tab || 'today',
+        });
       },
       
       closeModal: () => {

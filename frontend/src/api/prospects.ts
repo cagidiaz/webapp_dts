@@ -51,6 +51,9 @@ export const getProspectAccess = async () => (await apiClient.get<ProspectAccess
 export const getProspectSalespeople = async () => (await apiClient.get<ProspectSalesperson[]>('/crm-prospects/salespeople')).data;
 export const getProspects = async (status: string, search: string, page = 1, ownerId?: string) => (await apiClient.get<ProspectList>('/crm-prospects', { params: { status, search, page, ownerId } })).data;
 export const getProspect = async (id: string) => (await apiClient.get<Prospect>(`/crm-prospects/${id}`)).data;
+export interface ProspectAssignmentNotice { id: string; prospect_id: string; company_name: string; contact_name: string | null; created_at: string; recipient: { first_name: string | null; last_name: string | null; email: string }; author: { first_name: string | null; last_name: string | null; email: string } }
+export const getProspectAssignmentNotices = async (salespersonCode?: string, own = false) => (await apiClient.get<ProspectAssignmentNotice[]>('/crm-prospects/assignment-notices', { params: { salespersonCode, own } })).data;
+export const acknowledgeProspectAssignments = async (id: string) => (await apiClient.post(`/crm-prospects/${id}/assignment-notices/read`)).data;
 export const createProspect = async (data: ProspectFields) => (await apiClient.post<Prospect>('/crm-prospects', data)).data;
 export const updateProspect = async (id: string, data: ProspectFields & { version: number }) => (await apiClient.patch<Prospect>(`/crm-prospects/${id}`, data)).data;
 export const archiveProspect = async (id: string, version: number, restore: boolean) => (await apiClient.post<Prospect>(`/crm-prospects/${id}/${restore ? 'restore' : 'archive'}`, { version })).data;

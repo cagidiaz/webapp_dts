@@ -15,6 +15,12 @@ export class ProspectsController {
   @Get('salespeople')
   salespeople(@Req() req: any) { return this.service.salespeople(req.user.userId); }
 
+  @Get('assignment-notices')
+  assignmentNotices(@Req() req: any, @Query('salespersonCode') salespersonCode?: string, @Query('own') own?: string) { return this.service.assignmentNotices(req.user.userId, salespersonCode, own === 'true'); }
+
+  @Post(':id/assignment-notices/read')
+  acknowledgeAssignments(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) { return this.service.acknowledgeAssignments(req.user.userId, id); }
+
   @Get()
   list(@Req() req: any, @Query('status') status?: string, @Query('search') search?: string, @Query('page') page?: string, @Query('ownerId') ownerId?: string) {
     return this.service.list(req.user.userId, status, search, page === undefined ? 1 : Number(page), ownerId);

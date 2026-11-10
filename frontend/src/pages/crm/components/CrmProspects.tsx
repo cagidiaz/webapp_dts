@@ -4,7 +4,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { isAxiosError } from 'axios';
 import { Archive, LayoutGrid, Plus, RotateCcw, Search, Table, Users, User, Mail, Phone, ArrowLeft, Activity, Calendar } from 'lucide-react';
 import { Drawer } from '../../../components/shared/Drawer';
-import { archiveProspect, createProspect, deleteProspect, getProspect, getProspects, updateProspect, getProspectClients, linkProspect, getProspectSalespeople } from '../../../api/prospects';
+import { acknowledgeProspectAssignments, archiveProspect, createProspect, deleteProspect, getProspect, getProspects, updateProspect, getProspectClients, linkProspect, getProspectSalespeople } from '../../../api/prospects';
+import { useSearchParams } from 'react-router-dom';
 import type { Prospect, ProspectAccess, ProspectFields } from '../../../api/prospects';
 import { ClientProspectActivities, ProspectActivities, ProspectTimeline } from './ProspectActivities';
 
@@ -28,6 +29,8 @@ const dateText = (value: string) => new Intl.DateTimeFormat('es-ES', { dateStyle
 
 export function CrmProspects({ access, initialView = 'kanban' }: { access: ProspectAccess; initialView?: 'kanban' | 'table' }) {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedProspectId = initialView === 'kanban' ? searchParams.get('prospectId') : null;
   const [view, setView] = useState(initialView);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -133,7 +136,14 @@ export function CrmProspects({ access, initialView = 'kanban' }: { access: Prosp
     } : { ...emptyFields, owner_id: access.canEditAll ? '' : access.userId });
     setError('');
     setIsOpen(true);
+    if (prospect && prospect.owner_id === access.userId) void acknowledgeProspectAssignments(prospect.id).then(() => queryClient.invalidateQueries({ queryKey: ['prospect-assignment-notices'] })).catch(() => setMessage('No se ha podido marcar el aviso como leído.'));
   };
+  useEffect(() => {
+    if (!requestedProspectId) return;
+    let cancelled = false;
+    getProspect(requestedProspectId).then(prospect => { if (!cancelled) open(prospect); }).catch(err => { if (!cancelled) setError(errorText(err)); }).finally(() => { if (!cancelled) { const next = new URLSearchParams(searchParams); next.delete('prospectId'); setSearchParams(next, { replace: true }); } });
+    return () => { cancelled = true; };
+  }, [requestedProspectId]);
   const items = list.data?.items || [];
   const counts = list.data?.counts || { phase0: 0, phase1: 0, converted: 0 };
   return <div className="space-y-6">

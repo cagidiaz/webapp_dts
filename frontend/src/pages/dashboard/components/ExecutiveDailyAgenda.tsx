@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getCrmActivitiesAgenda, type CrmActivity } from '../../../api/crmActivities';
 import { AgendaActivityDetail } from './AgendaActivityDetail';
+import { ProspectAssignmentNotices } from '../../crm/components/ProspectAssignmentNotices';
 
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const currentWorkday = () => { const date = new Date(); const weekday = date.getDay(); if (weekday === 6) date.setDate(date.getDate() + 2); else if (weekday === 0) date.setDate(date.getDate() + 1); return date; };
@@ -19,11 +20,12 @@ export function ExecutiveDailyAgenda({ salespersonCode }: { salespersonCode: str
   });
   const move = (days: number) => setDate(current => { const next = new Date(current); do { next.setDate(next.getDate() + days); } while (next.getDay() === 0 || next.getDay() === 6); return next; });
   const labels: Record<string, string> = { NOTE: 'Nota', TASK: 'Tarea', EMAIL: 'Email', EVENT: 'Visita no programada', CALL: 'Llamada', REUNION: 'Reunión', VIDEOLLAMADA: 'Videollamada', VISITA: 'Visita a cliente' };
-  return <section className="min-w-0 h-full bg-white dark:bg-surface-card-dark border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4">
+  return <section id="agenda-crm" className="min-w-0 h-full scroll-mt-24 bg-white dark:bg-surface-card-dark border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-white/10 pb-3">
       <h3 className="text-md font-bold text-dts-primary dark:text-white flex items-center gap-2"><Calendar size={18} className="text-dts-secondary" />Agenda diaria CRM</h3>
       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300"><button type="button" aria-label="Día anterior" onClick={() => move(-1)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-white/10"><ChevronLeft size={16} /></button><span className="capitalize">{date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span><button type="button" aria-label="Día siguiente" onClick={() => move(1)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-white/10"><ChevronRight size={16} /></button><button type="button" onClick={() => setDate(currentWorkday())} className="text-dts-secondary font-semibold hover:underline">{[0, 6].includes(new Date().getDay()) ? 'Próximo lunes' : 'Hoy'}</button></div>
     </div>
+    <ProspectAssignmentNotices executive salespersonCode={salespersonCode} />
     {isLoading ? <p className="text-xs text-gray-400">Cargando agenda…</p> : isError ? <p role="alert" className="text-xs text-rose-500">No se ha podido cargar la agenda. <button onClick={() => refetch()} className="underline">Reintentar</button></p> : data.length === 0 ? <p className="text-xs text-gray-400 italic py-4 text-center">No hay eventos para este día y comercial.</p> : <div className="space-y-1.5 max-h-96 overflow-y-auto custom-scrollbar">{data.map(item => {
       const title = item.title;
       const owner = item.creator ? `${item.creator.first_name || ''} ${item.creator.last_name || ''}`.trim() || item.creator.email : '';
