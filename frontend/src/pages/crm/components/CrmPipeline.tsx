@@ -16,9 +16,10 @@ import { formatCurrency, formatNumber, offerDateInputValue } from '../../../api/
 import { 
   Briefcase, Euro, Percent, Sparkles, AlertTriangle, 
   Search, Calendar, User, Mail, Phone, Plus, Trash2,
-  Table, LayoutGrid, ArrowRight, X, Info
+  Table, LayoutGrid, ArrowRight, X, Info, Download, CheckCircle2, XCircle
 } from 'lucide-react';
-import { KPISkeleton, InfoPopover } from '../../../components/ui';
+import { KPISkeleton, InfoPopover, ExportButton } from '../../../components/ui';
+import { exportMultiSheetToXlsx, exportToXlsx, type ExportColumn } from '../../../utils/exportToXlsx';
 import { Drawer } from '../../../components/shared';
 import { Dialog, Transition, TransitionChild, DialogPanel, DialogTitle } from '@headlessui/react';
 import { useAuthStore } from '../../../store/authStore';
@@ -113,9 +114,86 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
   const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
   const [visibleTableRows, setVisibleTableRows] = useState(50);
 
+  // Column filter state for table view (empty string = all phases matching closedFilter/scope)
+  const [columnFilter, setColumnFilter] = useState('');
+
   useEffect(() => {
     setVisibleTableRows(50);
-  }, [debouncedSearch, salespersonFilter, typeFilter, yearFilter, contactId, closedFilter, viewMode]);
+  }, [debouncedSearch, salespersonFilter, typeFilter, yearFilter, contactId, closedFilter, columnFilter, viewMode]);
+
+  // Export functions
+  const quoteColumns: ExportColumn[] = [
+    { key: 'document_no', label: 'Nº Oferta' },
+    { key: 'document_date', label: 'Fecha Oferta', format: (v: any) => v ? new Date(v).toLocaleDateString('es-ES') : '' },
+    { key: 'customer_no', label: 'Cód. Cliente' },
+    { key: 'customer_name', label: 'Cliente' },
+    { key: 'salesperson_name', label: 'Comercial' },
+    { key: 'oferta_type', label: 'Tipo' },
+    { key: 'amount', label: 'Importe (€)', format: (v: any) => Number(Number(v || 0).toFixed(2)), numFmt: '#,##0.00 €' },
+    { key: 'probabilidad_exito', label: 'Probabilidad (%)', format: (v: any) => v !== null && v !== undefined ? `${v}%` : '', numFmt: '0"%"' },
+    { key: 'valor_oferta_ponderado', label: 'Valor Ponderado (€)', format: (v: any) => Number(Number(v || 0).toFixed(2)), numFmt: '#,##0.00 €' },
+    { key: 'estado_oferta', label: 'Estado / Fase' },
+    { key: 'cierreprev_date', label: 'Cierre Previsto', format: (v: any) => v ? new Date(v).toLocaleDateString('es-ES') : '' },
+    { key: 'fecha_proxima_accion', label: 'Fecha Próxima Acción', format: (v: any) => v ? new Date(v).toLocaleDateString('es-ES') : '' },
+    { key: 'proxima_accion', label: 'Próxima Acción' },
+    { key: 'contacto_nombre', label: 'Contacto' },
+    { key: 'contacto_email', label: 'Email Contacto' },
+    { key: 'contacto_telefono', label: 'Teléfono Contacto' },
+    { key: 'motivo_ganada', label: 'Motivo Ganada' },
+    { key: 'motivo_perdida', label: 'Motivo Perdida' },
+    { key: 'observaciones', label: 'Observaciones' },
+  ];
+
+  const buildQuoteSheet = (sheetName: string, items: CRMQuote[]) => {
+    const totalAmount = items.reduce((acc, q) => acc + (Number(q.amount) || 0), 0);
+    const totalWeighted = items.reduce((acc, q) => acc + (Number(q.valor_oferta_ponderado) || 0), 0);
+    return {
+      sheetName: sheetName.substring(0, 30),
+      rows: items,
+      columns: quoteColumns,
+      totalsRow: {
+        document_no: 'TOTALES',
+        amount: totalAmount,
+        valor_oferta_ponderado: totalWeighted,
+      }
+    };
+  };
+
+  const handleExportKanban = async () => {
+    const sheets = STAGES.map(stage => buildQuoteSheet(stage.label, groupedQuotes[stage.id] || []));
+
+    if (!STAGES.some(s => s.id === 'ganada')) {
+      const wonQuotes = quotes.filter(q => (q.estado_oferta || '').toLowerCase().trim() === 'ganada');
+      sheets.push(buildQuoteSheet('Ganadas', wonQuotes));
+    }
+    if (!STAGES.some(s => s.id === 'perdida')) {
+      const lostQuotes = quotes.filter(q => (q.estado_oferta || '').toLowerCase().trim() === 'perdida');
+      sheets.push(buildQuoteSheet('Perdidas', lostQuotes));
+    }
+
+    exportMultiSheetToXlsx(sheets, `pipeline_ofertas_kanban_${yearFilter || 'todos'}`);
+  };
+
+  const handleExportStage = (stageId: string, _stageLabel?: string) => {
+    const items = groupedQuotes[stageId] || [];
+    const { totalsRow } = buildQuoteSheet(stageId, items);
+    exportToXlsx(
+      items,
+      quoteColumns,
+      `ofertas_${stageId}_${yearFilter || 'todos'}`,
+      totalsRow
+    );
+  };
+
+  const handleExportTable = async () => {
+    const { totalsRow } = buildQuoteSheet('Tabla', tableQuotes);
+    exportToXlsx(
+      tableQuotes,
+      quoteColumns,
+      `listado_ofertas_${closedFilter || columnFilter || 'todas'}_${yearFilter || 'todos'}`,
+      totalsRow
+    );
+  };
 
   const currentYear = new Date().getFullYear();
   const availableYears = useMemo(() => {
@@ -270,10 +348,20 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
     return groups;
   }, [quotes, pilotMode]);
 
-  const tableQuotes = useMemo(
-    () => quotes.filter(q => !pilotMode || !closedFilter || q.estado_oferta === closedFilter),
-    [quotes, pilotMode, closedFilter],
-  );
+  const tableQuotes = useMemo(() => {
+    return quotes.filter(q => {
+      // 1. Filtro superior de cerradas (ganadas / perdidas / todas)
+      if (pilotMode && closedFilter) {
+        if (q.estado_oferta !== closedFilter) return false;
+      }
+      // 2. Filtro por fase / columna del kanban
+      if (columnFilter) {
+        const stage = pilotMode ? displayPhase(q.estado_oferta) : (q.estado_oferta || 'borrador').toLowerCase().trim();
+        if (stage !== columnFilter) return false;
+      }
+      return true;
+    });
+  }, [quotes, pilotMode, closedFilter, columnFilter]);
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData('text/plain', id);
@@ -615,12 +703,100 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
         </div>
       </div>
 
-      {pilotMode && <div className="flex gap-2 text-xs">
-        <button onClick={() => {setClosedFilter(''); setViewMode('kanban');}} className="px-3 py-2 rounded-lg border dark:border-white/10">Ofertas abiertas</button>
-        <button onClick={() => {setClosedFilter('ganada'); setViewMode('table');}} className="px-3 py-2 rounded-lg border dark:border-white/10">Ganadas · {formatCurrency(kpis.wonAmount)}</button>
-        <button onClick={() => {setClosedFilter('perdida'); setViewMode('table');}} className="px-3 py-2 rounded-lg border dark:border-white/10">Perdidas · {formatCurrency(kpis.lostAmount)}</button>
-        <button onClick={() => {setClosedFilter(''); setViewMode('table');}} className="px-3 py-2 rounded-lg border dark:border-white/10">Todas en tabla</button>
-      </div>}
+      {/* Top Filter Buttons & Export Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {pilotMode ? (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setClosedFilter('');
+                setColumnFilter('');
+                setViewMode('kanban');
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${
+                closedFilter === '' && viewMode === 'kanban'
+                  ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20'
+                  : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'
+              }`}
+            >
+              <LayoutGrid size={14} className={closedFilter === '' && viewMode === 'kanban' ? 'text-dts-secondary' : 'text-gray-400'} />
+              <span>Ofertas abiertas</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setClosedFilter('ganada');
+                setColumnFilter('');
+                setViewMode('table');
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${
+                closedFilter === 'ganada' && viewMode === 'table'
+                  ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20'
+                  : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'
+              }`}
+            >
+              <CheckCircle2 size={14} className={closedFilter === 'ganada' && viewMode === 'table' ? 'text-emerald-400' : 'text-emerald-500'} />
+              <span>Ganadas</span>
+              <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                · {formatCurrency(kpis.wonAmount)}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setClosedFilter('perdida');
+                setColumnFilter('');
+                setViewMode('table');
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${
+                closedFilter === 'perdida' && viewMode === 'table'
+                  ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20'
+                  : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'
+              }`}
+            >
+              <XCircle size={14} className={closedFilter === 'perdida' && viewMode === 'table' ? 'text-rose-400' : 'text-rose-500'} />
+              <span>Perdidas</span>
+              <span className="font-mono text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                · {formatCurrency(kpis.lostAmount)}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setClosedFilter('');
+                setViewMode('table');
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer hover:-translate-y-px hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dts-secondary ${
+                closedFilter === '' && viewMode === 'table'
+                  ? 'bg-[#003E51] text-white shadow-sm shadow-[#003E51]/20'
+                  : 'bg-white dark:bg-surface-card-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-dts-secondary hover:text-dts-secondary border border-gray-200/80 dark:border-gray-800'
+              }`}
+            >
+              <Table size={14} className={closedFilter === '' && viewMode === 'table' ? 'text-dts-secondary' : 'text-gray-400'} />
+              <span>Todas en tabla</span>
+            </button>
+          </div>
+        ) : <div />}
+
+        {/* Global / Table Export Button */}
+        <div className="flex items-center gap-2">
+          {viewMode === 'kanban' ? (
+            <ExportButton
+              onExport={handleExportKanban}
+              label="Exportar Pipeline (XLSX)"
+            />
+          ) : (
+            <ExportButton
+              onExport={handleExportTable}
+              label="Exportar Tabla (XLSX)"
+            />
+          )}
+        </div>
+      </div>
       {/* Kanban / Table View Conditional Rendering */}
       {viewMode === 'kanban' ? (
         <div className={pilotMode ? "grid grid-cols-6 gap-0 min-w-0 h-[calc(100vh-390px)] min-h-[450px] pb-3" : "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-[calc(100vh-390px)] min-h-[450px]"}>
@@ -655,9 +831,23 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                       </div>
                     )}
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-300">
-                    {stageQuotes.length}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-300">
+                      {stageQuotes.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleExportStage(stage.id, stage.label);
+                      }}
+                      disabled={stageQuotes.length === 0}
+                      title={`Exportar ofertas de ${stage.label} a Excel (.xlsx)`}
+                      className="p-1 rounded text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                    >
+                      <Download size={13} />
+                    </button>
+                  </div>
                   {pilotMode && <span className={`basis-full text-xs font-bold ${PILOT_TOTAL_COLOR[stage.id] || ''}`} title="Importe total y valor ponderado de las ofertas de esta fase, sin IVA">Ofertado: <span className="font-mono">{formatNumber(stageQuotes.reduce((total, quote) => total + (Number(quote.amount) || 0), 0), 0)}€</span> (Pond: <span className="font-mono">{formatNumber(stageQuotes.reduce((total, quote) => total + (Number(quote.valor_oferta_ponderado) || 0), 0), 0)}€</span>)</span>}
                 </div>
 
@@ -740,6 +930,53 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
         </div>
       ) : (
         <div className="min-w-0 bg-white dark:bg-surface-card-dark rounded-xl border border-gray-200/60 dark:border-white/5 shadow-sm overflow-hidden">
+          {/* Subfiltro de Fases / Columnas Kanban integrado dentro de la tabla */}
+          <div className="px-4 py-2.5 border-b border-gray-200/60 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.02] flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mr-1">
+                Fase / Columna:
+              </span>
+              <button
+                type="button"
+                onClick={() => setColumnFilter('')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  columnFilter === ''
+                    ? 'bg-dts-primary text-white shadow-xs'
+                    : 'bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10'
+                }`}
+              >
+                Todas las fases
+              </button>
+              {STAGES.map(stage => {
+                const count = (groupedQuotes[stage.id] || []).length;
+                const isSelected = columnFilter === stage.id;
+                return (
+                  <button
+                    key={stage.id}
+                    type="button"
+                    onClick={() => setColumnFilter(isSelected ? '' : stage.id)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-dts-secondary text-white shadow-xs'
+                        : 'bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10'
+                    }`}
+                  >
+                    <span>{stage.label}</span>
+                    <span className={`text-[10px] font-mono px-1 rounded-full ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-xs text-gray-500 font-medium">
+              Mostrando <span className="font-bold font-mono text-dts-primary dark:text-dts-secondary">{tableQuotes.length}</span> ofertas
+            </div>
+          </div>
+
           <div
             className="max-h-[calc(100vh-390px)] min-h-[300px] overflow-auto custom-scrollbar"
             onScroll={event => {
@@ -776,11 +1013,15 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                     const isTaskOverdue = isOverdue(quote.fecha_proxima_accion);
                     const stateLower = (quote.estado_oferta || '').toLowerCase();
                     let stageBadgeColor = 'bg-slate-50 text-slate-700 dark:bg-slate-950/30 dark:text-slate-400 border border-slate-100 dark:border-slate-900/30';
-                    if (stateLower === 'enviada') {
+                    if (stateLower === 'enviada' || stateLower === 'presentada') {
                       stageBadgeColor = 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30';
-                    } else if (stateLower === 'en negociación') {
+                    } else if (stateLower === 'en negociación' || stateLower === 'negociación') {
                       stageBadgeColor = 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30';
-                    } else if (stateLower === 'ganada') {
+                    } else if (stateLower === 'evaluación') {
+                      stageBadgeColor = 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/30 dark:text-cyan-400 border border-cyan-100 dark:border-cyan-900/30';
+                    } else if (stateLower === 'aprobación') {
+                      stageBadgeColor = 'bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400 border border-violet-100 dark:border-violet-900/30';
+                    } else if (stateLower === 'ganada' || stateLower === 'aceptada') {
                       stageBadgeColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30';
                     } else if (stateLower === 'perdida') {
                       stageBadgeColor = 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30';

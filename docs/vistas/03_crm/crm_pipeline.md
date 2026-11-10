@@ -255,6 +255,18 @@ La vista de tabla conserva los filtros y abre la ficha al pulsar una fila. Tiene
 
 El seguimiento de cada oferta se resuelve según su campo `source`: APP usa `crm_offer_followups`, mientras BC conserva los datos de Business Central. Las ofertas APP se editan en el CRM según los permisos y la cartera; n8n no debe sobrescribir los campos gestionados en APP. El diseño y los totales requieren validación visual en la aplicación local.
 
+## Actualización: Exportación XLSX y mejoras en filtros de Ofertas (10 de noviembre de 2026)
+
+En **CRM → Oportunidades (Pestaña Ofertas)** se incorporan las siguientes mejoras funcionales y de diseño:
+
+1. **Diseño y Estados de Botones de Filtro:**
+   - Los botones de navegación y filtro superior (*Ofertas abiertas*, *Ganadas*, *Perdidas* y *Todas en tabla*) ahora utilizan el diseño oficial de la aplicación (`#003E51` primario en estado activo, bordes sutiles, efecto hover con desplazamiento `-translate-y-px`, sombra e iconos identificativos).
+2. **Exportación XLSX:**
+   - **Tablero Kanban:** Botón de exportación global (*Exportar Pipeline (XLSX)*) que genera un archivo multi-hoja con una pestaña por cada fase abierta del embudo y dos pestañas adicionales (*Ganadas* y *Perdidas*), cada una con fila de totales con sumas de importe y valor ponderado. Cada columna individual del Kanban cuenta además con un botón de descarga directa para exportar solo las ofertas de esa fase.
+   - **Modo Tabla:** Botón *Exportar Tabla (XLSX)* para descargar el conjunto filtrado visible.
+3. **Filtro por Columnas / Fases en Modo Tabla:**
+   - Integrado en la cabecera de la propia tabla, se añade una barra de botones para filtrar rápidamente por fase individual (*Preliminar*, *Presentada*, *Evaluación*, *Negociación*, *Aprobación*, *Aceptada*, etc.) con contador de ofertas en cada botón o ver *Todas las fases*.
+
 ## Actualización: conclusiones ampliadas en prospectos (9 de noviembre de 2026)
 
 Al crear, editar o completar una actividad de prospecto, **Ampliar** abre un editor grande de conclusiones. Aplicar devuelve el texto al formulario; Cancelar descarta los cambios de la ventana. El evento se guarda con su botón habitual. Se conserva el límite de 10.000 caracteres y los permisos existentes. La validación visual y funcional en la aplicación queda pendiente.
