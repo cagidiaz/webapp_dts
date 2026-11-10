@@ -270,3 +270,9 @@ En **CRM → Oportunidades (Pestaña Ofertas)** se incorporan las siguientes mej
 ## Actualización: conclusiones ampliadas en prospectos (9 de noviembre de 2026)
 
 Al crear, editar o completar una actividad de prospecto, **Ampliar** abre un editor grande de conclusiones. Aplicar devuelve el texto al formulario; Cancelar descarta los cambios de la ventana. El evento se guarda con su botón habitual. Se conserva el límite de 10.000 caracteres y los permisos existentes. La validación visual y funcional en la aplicación queda pendiente.
+
+## Eventos de contactos prospectos y avisos de asignación (10 de noviembre de 2026)
+
+En la ficha de Contactos Prospectos, Eventos utiliza los mismos filtros por tipología y estado, contadores y colores que la ficha de contacto BC. Los filtros incluyen reuniones internas, aunque todavía no se pueden crear actividades de ese tipo en prospectos. Las tarjetas distinguen pendientes, realizados y eventos vencidos o terminados que necesitan conclusiones. El historial y las actividades siguen en las tablas de prospectos; la eliminación individual de actividades de prospectos todavía no está disponible. La validación visual y funcional en la aplicación sigue pendiente.
+
+Cuando una persona crea o reasigna un prospecto a otro usuario, el historial CRM registra un aviso pendiente para el destinatario, incluso si ambos comparten rol. Al abrir el prospecto, solo el propietario destinatario marca el aviso como leído; que lo consulte Administración no lo hace por él. Una reasignación cancela el aviso anterior. Los avisos solo se muestran para prospectos activos no convertidos y no se crean retroactivamente. El flujo utiliza `crm_prospect_events`, sin crear una tabla ni modificar datos de BC.

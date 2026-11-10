@@ -388,3 +388,7 @@ En visitas a cliente y videollamadas, la descripción interna de `crm_activities
 Los formularios de creación, edición y cierre de eventos de contactos ofrecen **Ampliar** junto al campo de conclusiones, también al editar desde la agenda comercial. La ventana abre una copia del texto: **Aplicar** lo devuelve al formulario y **Cancelar** lo descarta. Es necesario guardar o completar el evento después; aplicar por sí solo no guarda en la base de datos. El comportamiento de marcado como completado no cambia.
 
 Validación técnica: 16 pruebas de sincronización aprobadas, comprobación de tipos del backend y compilación del frontend correctas. La prueba visual y funcional con el usuario sigue pendiente.
+
+## Eventos de prospectos: filtros y tarjetas (10 de noviembre de 2026)
+
+La pestaña Eventos de Contactos Prospectos presenta las mismas tipologías y filtros de estado con contadores que Contactos BC, junto con el mismo esquema de colores para pendientes, realizados y conclusiones pendientes. Reuniones internas aparece en el filtro, pero su creación en prospectos permanece deshabilitada; tampoco existe aún eliminación individual de actividades. La interfaz de prospectos conserva su propia fuente de datos y permisos. Prueba visual y funcional pendiente.

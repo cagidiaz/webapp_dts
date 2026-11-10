@@ -138,3 +138,9 @@ Validación: compilación frontend y tipos backend comprobados; las comprobacion
 ## Actualización: editor ampliado de conclusiones (9 de noviembre de 2026)
 
 El editor de eventos accesible desde la agenda comercial incorpora **Ampliar** en las conclusiones. Aplicar devuelve el texto al formulario y es preciso guardar el evento; Cancelar descarta solo los cambios de la ventana. La agenda ejecutiva mantiene su detalle de consulta sin edición.
+
+## Avisos de prospectos y bienvenida (10 de noviembre de 2026)
+
+Los avisos de prospectos asignados y no abiertos se muestran en un bloque separado de los eventos, tanto en la agenda semanal comercial como en la diaria ejecutiva. El panel ejecutivo permite filtrar los avisos por el vendedor seleccionado. La ventana de bienvenida muestra los avisos propios y abre por defecto Agenda de hoy; el enlace Ir a la agenda se dirige al panel y enfoca la agenda correspondiente al rol.
+
+Los avisos se actualizan periódicamente y desaparecen cuando el propietario abre el prospecto. Consultarlo como Admin o Dirección no lo marca como leído para el vendedor. Si se reasigna antes de abrirse, el aviso anterior deja de estar vigente. Las pruebas automatizadas y la compilación pasaron; la validación con cuentas reales sigue pendiente.

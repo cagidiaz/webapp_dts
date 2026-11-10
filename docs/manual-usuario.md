@@ -777,3 +777,9 @@ En la vista de tabla, la cabecera permanece visible y el desplazamiento vertical
 En las visitas a cliente y videollamadas, la sincronización desde Outlook conserva la descripción interna del CRM y no la sustituye por el texto público de la convocatoria. Las conclusiones de estas convocatorias permanecen privadas en el CRM. La corrección no recupera textos sobrescritos anteriormente.
 
 Para escribir con más espacio, pulsa **Ampliar** junto a Conclusiones. Edita el texto y pulsa **Aplicar** para devolverlo al formulario; después guarda o completa el evento. **Cancelar** cierra la ventana sin aplicar sus cambios. La función también está en las actividades de prospectos y en el editor de eventos de la agenda comercial.
+
+## Avisos de asignación y eventos de prospectos - 10 de noviembre de 2026
+
+Al crear o reasignar un prospecto para otra persona, el vendedor recibe un aviso hasta que abre el prospecto. Se muestra en la bienvenida y en la agenda comercial; Dirección y Admin lo ven en la agenda ejecutiva y pueden filtrar por vendedor. Abrirlo con una cuenta distinta a la destinataria no lo marca como leído. La bienvenida abre por defecto Agenda de hoy y su enlace lleva a la agenda del panel.
+
+La pestaña Eventos de Contactos Prospectos usa los filtros, contadores y colores de Contactos BC. La creación de reuniones internas y la eliminación individual de actividades de prospectos siguen pendientes. Los cambios requieren comprobación visual y funcional con usuarios reales.

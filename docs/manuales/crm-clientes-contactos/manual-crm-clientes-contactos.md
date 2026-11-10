@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.12 · 9 de noviembre de 2026 · Uso interno
+Edición 1.13 · 10 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -1244,3 +1244,13 @@ En la vista de tabla, desplázate dentro del listado para ver más filas: se mue
 En el formulario de un evento, pulsa **Ampliar** junto a las conclusiones. Se abrirá una ventana grande con el texto que ya habías escrito. Modifícalo y pulsa **Aplicar** para devolverlo al formulario; después pulsa **Guardar** o completa el evento para conservarlo. Si eliges **Cancelar**, se descartan los cambios realizados en la ventana y se mantiene el texto previo del formulario.
 
 Esta opción también está disponible al crear o editar actividades de prospectos y al editar eventos desde la agenda comercial. En visitas a cliente y videollamadas, la descripción y las conclusiones internas permanecen en el CRM y no se añaden al mensaje dirigido a los invitados. Las descripciones sobrescritas antes de la corrección no se recuperan automáticamente.
+
+#### Avisos de prospectos asignados
+
+Cuando otra persona te asigna un prospecto, aparece un aviso en la ventana de bienvenida y en la agenda comercial. Pulsa el aviso para abrir el prospecto: al abrirlo con tu cuenta, el aviso se retira. Si Dirección o Admin lo abre, seguirá pendiente para ti. Si el prospecto se reasigna antes de que lo abras, el aviso anterior deja de estar vigente.
+
+En el panel ejecutivo, la agenda diaria muestra los avisos pendientes del equipo y permite filtrarlos con el selector de vendedor. La bienvenida abre por defecto en **Agenda de hoy** y el enlace **Ir a la agenda** lleva al panel correspondiente a tu rol.
+
+#### Eventos de Contactos Prospectos
+
+Abre la ficha de un prospecto y selecciona **Eventos**. Usa las píldoras de tipología y estado para filtrar las tarjetas; los números muestran los totales de cada categoría. Los colores ayudan a distinguir pendientes, realizados y actividades que necesitan conclusiones. Pulsa el lápiz para editar o la casilla para completar o reabrir una actividad, si tienes permiso. La creación de reuniones internas y el borrado individual de actividades de prospectos todavía no están disponibles.
