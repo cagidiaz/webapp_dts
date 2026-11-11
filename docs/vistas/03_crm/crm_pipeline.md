@@ -249,7 +249,7 @@ Solo Admin dispone de Eliminar prospecto. La confirmación advierte de que se bo
 
 ## Kanban de ofertas: tarjetas y totales por fase (6 de noviembre de 2026)
 
-En Oportunidades > Ofertas, cada tarjeta del Kanban muestra el número y tipo de oferta, el cliente y, debajo, el contacto. Si no existe un nombre disponible se muestra «Sin contacto asignado». Al abrir la tarjeta se consulta el resto de datos. Cada una de las seis columnas muestra el número de ofertas y «Ofertado: importe (Pond: importe)»: respectivamente, la suma sin IVA y la suma de los valores ponderados de las ofertas de la fase según los filtros activos. Los importes se redondean a euros enteros y el símbolo € va junto a la cifra; el texto utiliza el color de la fase.
+En Oportunidades > Ofertas, cada tarjeta del Kanban muestra el número de oferta y la fecha de cierre prevista, el cliente y, debajo, el contacto. Si no existe un nombre disponible se muestra «Sin contacto asignado». Al abrir la tarjeta se consulta el resto de datos. Cada una de las seis columnas muestra el número de ofertas y «Ofertado: importe (Pond: importe)»: respectivamente, la suma sin IVA y la suma de los valores ponderados de las ofertas de la fase según los filtros activos. Los importes se redondean a euros enteros y el símbolo € va junto a la cifra; el texto utiliza el color de la fase.
 
 La vista de tabla conserva los filtros y abre la ficha al pulsar una fila. Tiene cabecera fija, desplazamiento vertical y horizontal dentro del área de la tabla y muestra las filas en bloques de 50 al bajar. La consulta inicial sigue recuperando todas las ofertas para calcular los indicadores y el Kanban; los bloques limitan las filas representadas, no las descargadas. Cambiar los filtros reinicia la cantidad visible.
 

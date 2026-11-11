@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.13 · 10 de noviembre de 2026 · Uso interno
+Edición 1.14 · 11 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -1233,7 +1233,7 @@ En Clientes > Segmentos y Potencial, las familias se muestran en este orden: dTS
 
 #### Kanban de ofertas: tarjetas y totales
 
-En Oportunidades > Ofertas, cada tarjeta muestra el número y tipo de oferta, el cliente y el nombre del contacto. Pulsa la tarjeta para consultar el resto de la información. Si no se dispone del contacto se indica «Sin contacto asignado».
+En Oportunidades > Ofertas, cada tarjeta muestra el número de oferta, la fecha de cierre prevista, el cliente y el nombre del contacto. Las ofertas se ordenan por fecha de cierre ascendente en cada fase; las que no tienen fecha válida aparecen al final. Pulsa la tarjeta para consultar el resto de la información. Si no se dispone del contacto se indica «Sin contacto asignado».
 
 En la parte superior de cada fase aparecen el número de ofertas y **Ofertado: importe (Pond: importe)**. Son el total sin IVA y el valor ponderado total de las ofertas de la fase según los filtros seleccionados. El texto adopta el color de la fase; los importes se redondean a euros enteros y muestran € junto a la cifra. Para cambiar una oferta gestionada desde la aplicación, arrástrala o abre su ficha; el sistema solicita los datos necesarios para confirmar el cambio.
 
