@@ -51,6 +51,12 @@ const PILOT_STAGE_DESC: Record<string, string> = {
   aceptada: 'Conformidad verbal o pre-adjudicación recibida. La oferta permanece viva en el embudo hasta formalización.',
 };
 const displayPhase = (phase: string | null | undefined) => ({borrador:'preliminar', enviada:'presentada', 'en negociación':'negociación'}[phase?.toLowerCase().trim() || ''] || phase?.toLowerCase().trim() || 'preliminar');
+const closingDay = (value: string | null | undefined): string => {
+  const day = offerDateInputValue(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return '';
+  const parsed = new Date(`${day}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === day ? day : '';
+};
 export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean; contactId?: string }> = ({ pilotMode = false, canEditPilot = false, contactId }) => {
   const STAGES = pilotMode ? PILOT_STAGES : LEGACY_STAGES;
   const [closedFilter, setClosedFilter] = useState('');
@@ -801,7 +807,10 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
       {viewMode === 'kanban' ? (
         <div className={pilotMode ? "grid grid-cols-6 gap-0 min-w-0 h-[calc(100vh-390px)] min-h-[450px] pb-3" : "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-[calc(100vh-390px)] min-h-[450px]"}>
           {STAGES.map(stage => {
-            const stageQuotes = groupedQuotes[stage.id] || [];
+            const stageQuotes = pilotMode ? [...(groupedQuotes[stage.id] || [])].sort((a, b) => {
+              const aDay = closingDay(a.cierreprev_date), bDay = closingDay(b.cierreprev_date);
+              return aDay && bDay ? aDay.localeCompare(bDay) : aDay ? -1 : bDay ? 1 : 0;
+            }) : groupedQuotes[stage.id] || [];
             
             return (
               <div 
@@ -876,8 +885,8 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                               <span className="whitespace-nowrap">{quote.document_no}</span>
                               {!pilotMode && quote.followup_source && <span className="block text-[9px] font-normal text-gray-400">Seguimiento {quote.followup_source === 'APP' ? 'app' : 'BC'}</span>}
                             </span>
-                            <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 font-bold">
-                              {quote.oferta_type}
+                            <span title={pilotMode ? 'Fecha de cierre prevista' : 'Tipo de oferta'} className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 font-bold">
+                              {pilotMode ? (closingDay(quote.cierreprev_date) ? closingDay(quote.cierreprev_date).split('-').reverse().join('/') : 'Sin fecha') : quote.oferta_type}
                             </span>
                           </div>
 
