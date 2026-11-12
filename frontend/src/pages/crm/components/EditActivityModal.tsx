@@ -1,4 +1,5 @@
 import { ExpandConclusionsButton } from './ExpandConclusionsButton';
+import { EventOfferSelector } from './EventOfferSelector';
 import { CalendarInvitationFields, newCalendarInvitation } from './CalendarInvitationFields';
 import React, { useState, useEffect } from 'react';
 import { isAxiosError } from 'axios';
@@ -18,6 +19,7 @@ export interface EditableActivityData {
   source?: 'PROSPECT';
   client_id?: string;
   contact_id?: string | null;
+  oferta_vinculada?: string | null;
   contact?: { id: string };
   attendees?: any;
   prospect_id?: string;
@@ -89,6 +91,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
   const queryClient = useQueryClient();
 
   const [title, setTitle] = useState('');
+  const [offer, setOffer] = useState('');
   const [activityType, setActivityType] = useState<CrmActivityType>('EVENT');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('10:00');
@@ -102,6 +105,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
   useEffect(() => {
     if (activity) {
       setTitle(activity.title || '');
+      setOffer(activity.oferta_vinculada || '');
       const normType = normalizeType(activity.type);
       setActivityType(normType);
       const initial = newCalendarInvitation(activity.contact_id || activity.contact?.id || contactId);
@@ -178,6 +182,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
     if (isEmail) {
       payload.categoryTag = selectedCategory;
     }
+    if (!isEmail && activity.source !== 'PROSPECT' && offer !== (activity.oferta_vinculada || '')) payload.ofertaVinculada = offer || null;
 
     if (activityType !== 'NOTE') {
       payload.dueDate = date ? new Date(date).toISOString() : null;
@@ -228,6 +233,7 @@ export const EditActivityModal: React.FC<EditActivityModalProps> = ({
             {/* Contenido del formulario con scroll y pie fijo */}
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 text-xs">
               <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                {activity.source !== 'PROSPECT' && activityType !== 'EMAIL' && <EventOfferSelector clientId={activity.client_id || activity.customer?.client_id} contactId={activity.contact_id || activity.contact?.id || contactId} value={offer} onChange={setOffer} title={title} />}
                 {updateMutation.isError && <p role="alert" className="text-xs text-rose-500 font-semibold p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800">{isAxiosError(updateMutation.error) && typeof updateMutation.error.response?.data?.message === 'string' ? updateMutation.error.response.data.message : 'No se pudieron guardar los cambios. Recarga la actividad antes de intentarlo de nuevo.'}</p>}
                 {activity.source === 'PROSPECT' && <p className="text-[11px] text-gray-500 dark:text-gray-400">Actividad de prospección · Modo local</p>}
 

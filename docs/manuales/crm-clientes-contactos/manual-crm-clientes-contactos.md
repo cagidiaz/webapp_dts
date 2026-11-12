@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.14 · 11 de noviembre de 2026 · Uso interno
+Edición 1.17 · 12 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -1236,6 +1236,28 @@ En Clientes > Segmentos y Potencial, las familias se muestran en este orden: dTS
 En Oportunidades > Ofertas, cada tarjeta muestra el número de oferta, la fecha de cierre prevista, el cliente y el nombre del contacto. Las ofertas se ordenan por fecha de cierre ascendente en cada fase; las que no tienen fecha válida aparecen al final. Pulsa la tarjeta para consultar el resto de la información. Si no se dispone del contacto se indica «Sin contacto asignado».
 
 En la parte superior de cada fase aparecen el número de ofertas y **Ofertado: importe (Pond: importe)**. Son el total sin IVA y el valor ponderado total de las ofertas de la fase según los filtros seleccionados. El texto adopta el color de la fase; los importes se redondean a euros enteros y muestran € junto a la cifra. Para cambiar una oferta gestionada desde la aplicación, arrástrala o abre su ficha; el sistema solicita los datos necesarios para confirmar el cambio.
+
+#### Correos e historial de ofertas
+
+Al registrar un correo desde el complemento de Outlook, selecciona la empresa, el contacto y, si corresponde, la oferta. Revisa la selección y registra el mensaje. En la ficha del contacto, abre Emails y utiliza el filtro de oferta para localizarlo. Los correos con una oferta guardada también se incorporan al historial CRM de esa oferta, respetando la cartera y los permisos de acceso.
+
+Las ofertas gestionadas desde la app permiten editar su seguimiento con los permisos correspondientes; las gestionadas desde Business Central mantienen su seguimiento en solo lectura. Las notas de cambio de fase y la auditoría se conservan protegidas. Los registros que solo existan en el historial anterior se conservan en la base de datos, pero no se han incorporado automáticamente al historial nuevo. Si falta un correo, comunica el caso al administrador antes de volver a vincularlo.
+
+La vinculación de eventos con oportunidades está implementada para pruebas locales. El SQL de la columna y el índice se ha ejecutado y comprobado en la base compartida; las ofertas vuelven a aparecer según confirmó el usuario. Las pruebas funcionales de la vinculación siguen pendientes antes de comunicar su disponibilidad en producción.
+
+#### Vincular eventos con ofertas
+
+Desde la ficha de un contacto, abre Eventos y crea una actividad. En **Oferta vinculada (opcional)** selecciona una oferta abierta de la empresa del contacto, o deja **Sin oferta vinculada**. El evento necesita un contacto para poder asociarlo. Si el título contiene el número de una oferta disponible, puede aparecer una sugerencia que debes confirmar pulsándola; no se vincula automáticamente. Si no hay ofertas abiertas, el formulario lo indica y permite guardar el evento sin asociación.
+
+Para vincular o corregir un evento existente, abre su formulario de edición, cambia la oferta seleccionada y guarda. Para quitar la relación, selecciona **Sin oferta vinculada**; el evento se conserva. El propietario, Admin o Dirección pueden cambiar el vínculo conforme a los permisos y el ámbito de datos. Una oferta ya cerrada conserva los eventos vinculados previamente, pero no se ofrece para nuevas vinculaciones.
+
+En la ficha de la oferta, **Historial de eventos** reúne en una lista cronológica los eventos vinculados, los cambios de fase y los correos disponibles en el historial CRM. Cada tarjeta muestra el tipo al principio y ocupa una línea. Pulsa un evento para abrir su formulario; pulsa un cambio o correo histórico para consultar su detalle. La **próxima acción** se calcula con el evento pendiente que tenga la fecha más próxima. Los eventos sin fecha no determinan esa acción; si no hay ninguno pendiente con fecha, aparece **Sin próxima acción programada**. Al completar un evento se recalcula el siguiente. Las ofertas de fuente BC mantienen sus campos de seguimiento en solo lectura.
+
+El botón **Crear evento** está en la misma línea del título del historial. Si abres la oferta desde Oportunidades, elige un contacto de la empresa y continúa: se abre el formulario de actividad con la oferta preseleccionada. Si abres la oferta desde la ficha de un contacto, se utiliza ese contacto directamente. No se ofrecen nuevas vinculaciones en una oferta cerrada. Al guardar, revisa que el evento aparezca en el historial.
+
+El formulario presenta el importe original, la previsión ponderada y la probabilidad de éxito de solo lectura en la cabecera. Los parámetros comerciales ocupan dos columnas. En **Información del comprador**, el contacto se muestra en una sola línea con iconos para los datos disponibles; pulsa la línea para abrir su ficha. El apartado de observaciones se ha retirado de este formulario y sus datos anteriores no se han borrado.
+
+La antigua entrada manual de planificación se ha ocultado en las fichas adaptadas. Los registros antiguos no se han borrado automáticamente y su limpieza definitiva sigue pendiente de revisión. Los cortes históricos publicados no se modifican; los nuevos cortes incorporan la próxima acción calculada a partir de eventos.
 
 En la vista de tabla, desplázate dentro del listado para ver más filas: se muestran en bloques de 50 y la cabecera permanece visible. Usa el desplazamiento horizontal cuando no quepan todas las columnas. Pulsa una fila para abrir la oferta. Los indicadores y el Kanban se calculan con todas las ofertas cargadas, no solo con las filas visibles.
 

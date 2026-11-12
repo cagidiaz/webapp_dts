@@ -129,7 +129,8 @@ export class PipelineCutsService implements OnModuleInit, OnModuleDestroy {
         if(locked.count!==1)throw new Error('Ejecución sustituida');
         const [clock]=await tx.$queryRaw<Array<{instant:Date}>>`SELECT transaction_timestamp() AS instant`;
         const local=await tx.crm_offer_followups.findMany();
-        const source=new OfferSourceContext(await loadOfferContacts(tx,local));
+        const events=await tx.crm_activities.findMany({where:{oferta_vinculada:{not:null},type:{not:'EMAIL'},is_completed:false,due_date:{not:null}},select:{oferta_vinculada:true,title:true,due_date:true,time_scheduled:true},orderBy:[{due_date:'asc'},{time_scheduled:'asc'},{id:'asc'}]});
+        const source=new OfferSourceContext(await loadOfferContacts(tx,local),events);
         const offers=await tx.sales_quotes.findMany({include:{customer:{select:{name:true}},sales_quotes_crm:true}});
         const prospects=await tx.crm_prospects.findMany({include:{linked_client:{select:{client_id:true,name:true}}}});
         const json=(value:any)=>JSON.parse(JSON.stringify(value));

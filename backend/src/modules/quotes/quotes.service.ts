@@ -984,115 +984,24 @@ function normalizeQuoteStatus(status?: string | null): string {
     }
   }
 
-  /**
-   * Obtiene las actividades de una oferta.
-   */
+  /** Obtiene el historial CRM sin consultar la tabla antigua. */
   async getActivities(quoteId: string, userId?: string) {
-    if (this.followups.enabled() && userId) { const rows = await this.followups.activities(userId, quoteId); if (rows !== null) return rows; }
-    try {
-      const quote = await this.prisma.sales_quotes.findUnique({
-        where: { id: quoteId }
-      });
-      if (!quote) return [];
-
-      const crm = await this.prisma.sales_quotes_crm.findUnique({
-        where: { document_no: quote.document_no }
-      });
-      if (!crm) return [];
-
-      return await this.prisma.sales_quote_activities.findMany({
-        where: { crm_quote_id: crm.id },
-        orderBy: { fecha: 'desc' }
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(error.message);
-    }
+    if (!userId) throw new ForbiddenException('Identidad requerida.');
+    return this.followups.activities(userId, quoteId);
   }
 
-  /**
-   * Crea una actividad para una oferta.
-   */
   async addActivity(quoteId: string, payload: CreateActivityDto, userId?: string) {
-    if (await this.followups.isManagedQuote(quoteId)) {
-      if (!userId) throw new ForbiddenException('Identidad requerida.');
-      const activity = await this.followups.activities(userId, quoteId, payload);
-      if (!activity) throw new ConflictException('Inicializa el seguimiento de la oferta antes de registrar actividades.');
-      return activity;
-    }
-    try {
-      const quote = await this.prisma.sales_quotes.findUnique({
-        where: { id: quoteId }
-      });
-      if (!quote) throw new NotFoundException('Oferta no encontrada');
-
-      let crm = await this.prisma.sales_quotes_crm.findUnique({
-        where: { document_no: quote.document_no }
-      });
-
-      // Si no existe, creamos el metadato CRM
-      if (!crm) {
-        await this.updateCrm(quoteId, {}, userId);
-        crm = await this.prisma.sales_quotes_crm.findUnique({ where: { document_no: quote.document_no } });
-        if (!crm) throw new NotFoundException('No se pudo inicializar el seguimiento de la oferta.');
-      }
-
-      return await this.prisma.sales_quote_activities.create({
-        data: {
-          crm_quote_id: crm.id,
-          tipo: payload.tipo,
-          notas: payload.notas,
-          fecha: new Date(payload.fecha),
-          hecho: payload.hecho || false
-        }
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(error.message);
-    }
+    if (!userId) throw new ForbiddenException('Identidad requerida.');
+    return this.followups.activities(userId, quoteId, payload);
   }
 
-  /**
-   * Actualiza una actividad de seguimiento.
-   */
   async updateActivity(activityId: string, payload: UpdateActivityDto, userId?: string) {
-    if (userId) { const result = await this.followups.editActivity(userId, activityId, payload); if (result) return result; }
-    try {
-      const act = await this.prisma.sales_quote_activities.findUnique({
-        where: { id: activityId }
-      });
-      if (!act) throw new NotFoundException('Actividad no encontrada');
-
-      return await this.prisma.sales_quote_activities.update({
-        where: { id: activityId },
-        data: {
-          tipo: payload.tipo || undefined,
-          notas: payload.notas || undefined,
-          fecha: payload.fecha ? new Date(payload.fecha) : undefined,
-          hecho: payload.hecho !== undefined ? payload.hecho : undefined
-        }
-      });
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(error.message);
-    }
+    if (!userId) throw new ForbiddenException('Identidad requerida.');
+    return this.followups.editActivity(userId, activityId, payload);
   }
 
-  /**
-   * Elimina una actividad de seguimiento.
-   */
   async deleteActivity(activityId: string, userId?: string) {
-    if (userId) await this.followups.editActivity(userId, activityId, null);
-    try {
-      const act = await this.prisma.sales_quote_activities.findUnique({
-        where: { id: activityId }
-      });
-      if (!act) throw new NotFoundException('Actividad no encontrada');
-
-      return await this.prisma.sales_quote_activities.delete({
-        where: { id: activityId }
-      });
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(error.message);
-    }
+    if (!userId) throw new ForbiddenException('Identidad requerida.');
+    return this.followups.editActivity(userId, activityId, null);
   }
 }

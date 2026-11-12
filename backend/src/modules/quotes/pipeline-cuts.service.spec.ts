@@ -19,6 +19,7 @@ describe('Captura y permisos de cortes',()=>{
   db={profiles:{findUnique:jest.fn().mockImplementation(()=>profile())},role_modules:{findMany:jest.fn().mockResolvedValue(['/crm','/crm/pipeline'].map(route_path=>({can_view:true,module:{route_path}})))},
    crm_pipeline_cuts:{findFirst:jest.fn().mockResolvedValue({...run,captured_at:new Date('2026-07-01')}),findMany:jest.fn().mockResolvedValue([{...run,row_count:999,reason:'Privado',request_key:'clave'}]),findUnique:jest.fn().mockImplementation(({where}:any)=>where.request_key?null:{...run,attempts:1}),findUniqueOrThrow:jest.fn().mockResolvedValue(run),create:jest.fn().mockResolvedValue(run),updateMany:jest.fn().mockResolvedValue({count:1}),update:jest.fn()},
    crm_offer_followups:{findMany:jest.fn().mockResolvedValue([{document_no:'OF1',owner_id:'viewer',estado_oferta:'aceptada',probabilidad_exito:100,version:2,cierreprev_date:null}])},
+   crm_activities:{findMany:jest.fn().mockResolvedValue([])},
    sales_quotes:{findMany:jest.fn().mockResolvedValue([{document_no:'OF1',amount:1200,salesperson_code:'ACI',estado_oferta:'ganada',cierreprev_date:new Date('2026-08-01'),customer:{name:'Empresa'}}])},
    crm_prospects:{findMany:jest.fn().mockResolvedValue([{id:'p1',owner_id:'viewer',company_name:'Prospecto',phase:1,archived_at:new Date('2026-06-01'),converted_at:null}])},
    crm_pipeline_cut_rows:{createMany:jest.fn(),count:jest.fn().mockResolvedValue(2),findMany:jest.fn().mockResolvedValue([])},crm_pipeline_cut_events:{create:jest.fn()},

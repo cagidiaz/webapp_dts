@@ -783,3 +783,17 @@ Para escribir con más espacio, pulsa **Ampliar** junto a Conclusiones. Edita el
 Al crear o reasignar un prospecto para otra persona, el vendedor recibe un aviso hasta que abre el prospecto. Se muestra en la bienvenida y en la agenda comercial; Dirección y Admin lo ven en la agenda ejecutiva y pueden filtrar por vendedor. Abrirlo con una cuenta distinta a la destinataria no lo marca como leído. La bienvenida abre por defecto Agenda de hoy y su enlace lleva a la agenda del panel.
 
 La pestaña Eventos de Contactos Prospectos usa los filtros, contadores y colores de Contactos BC. La creación de reuniones internas y la eliminación individual de actividades de prospectos siguen pendientes. Los cambios requieren comprobación visual y funcional con usuarios reales.
+
+### Actualización del historial de ofertas 12 de noviembre de 2026
+
+El backend consulta las actividades de oferta en `crm_offer_activities` y los correos con oferta guardada en `crm_activities`. El complemento registra la asociación en el correo y, cuando existe seguimiento, también en el historial CRM. Ya no se consulta ni escribe `sales_quote_activities` desde estos flujos: la tabla y sus datos restantes se conservan, pero las entradas que solo existan allí no se migran ni aparecen automáticamente en el historial nuevo. La auditoría y las notas de cambio de fase se conservan y protegen; el seguimiento de fuente BC continúa en solo lectura.
+
+Comprobación automática inicial: compilación backend y 40 pruebas. La vinculación de eventos con oportunidades se implementó posteriormente para pruebas locales; su aplicación y validación funcional siguen pendientes y no se ha desplegado a producción.
+
+### Vinculación de eventos con ofertas 12 de noviembre de 2026
+
+En la ficha del contacto, crea o edita un evento y selecciona una oferta abierta de la misma empresa en **Oferta vinculada (opcional)**. La relación requiere contacto y admite una sola oferta. Para corregirla selecciona otra oferta o **Sin oferta vinculada** y guarda. Las sugerencias por título requieren confirmación. La ficha de oferta muestra los eventos vinculados y la próxima acción pendiente con fecha más cercana. Las ofertas de BC conservan el seguimiento en solo lectura; los eventos ya vinculados se mantienen al cerrar la oferta.
+
+Implementación preparada en la carpeta local. El usuario ejecutó el SQL `backend/prisma/proposals/2026-11-12-vinculo-eventos-ofertas.sql`; se comprobó que existen la columna y el índice y el usuario confirmó que las ofertas vuelven a cargar. Compilaciones de frontend y backend y 59 pruebas específicas superadas. La base es compartida con producción. Las pruebas funcionales de la vinculación y la limpieza definitiva de la planificación manual antigua siguen pendientes. No se ha desplegado a producción.
+
+El formulario de oferta muestra el importe, la previsión y la probabilidad de solo lectura en la cabecera; los parámetros se distribuyen en dos columnas y el comprador ocupa una línea con acceso a su contacto. **Historial de eventos** reúne eventos, cambios y correos disponibles en una lista compacta. El botón **Crear evento** está junto al título y abre el formulario de contacto con la oferta preseleccionada; desde el embudo debe seleccionarse primero el contacto. Las tarjetas abren el evento o el detalle histórico. Se retiró del formulario el apartado de observaciones, conservando los datos existentes.

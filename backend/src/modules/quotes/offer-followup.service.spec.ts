@@ -33,7 +33,8 @@ describe('Seguimiento APP independiente de BC', () => {
     db={contacts:{findFirst:jest.fn().mockResolvedValue({id:'contact-uuid'}),findMany:jest.fn().mockResolvedValue([])},profiles:{findUnique:jest.fn().mockResolvedValue(pilot)},role_modules:{findMany:jest.fn().mockResolvedValue(['/crm','/crm/pipeline'].map(route_path=>({can_view:true,module:{route_path}})))},
       sales_quotes:{findFirst:jest.fn().mockResolvedValue(imported),findUnique:jest.fn().mockResolvedValue(imported),findMany:jest.fn().mockResolvedValue([imported])},
       crm_offer_followups:{findUnique:jest.fn().mockResolvedValue(local),findMany:jest.fn().mockResolvedValue([local]),upsert:jest.fn().mockResolvedValue(local),updateMany:jest.fn().mockResolvedValue({count:1}),findUniqueOrThrow:jest.fn().mockResolvedValue(local),count:jest.fn().mockResolvedValue(1)},
-      crm_offer_activities:{create:jest.fn(),upsert:jest.fn()},$transaction:jest.fn()};
+      crm_offer_activities:{create:jest.fn(),upsert:jest.fn(),findMany:jest.fn().mockResolvedValue([])},
+      crm_activities:{findMany:jest.fn().mockResolvedValue([])},$transaction:jest.fn()};
     db.$transaction.mockImplementation(callback=>callback(db));
     service=new OfferFollowupService(db,{get:(key:string)=>key==='CRM_PROSPECTS_PILOT_ENABLED'?String(enabled):undefined} as any,{access:jest.fn().mockImplementation(()=>access)} as any);
   });
@@ -64,6 +65,12 @@ describe('Seguimiento APP independiente de BC', () => {
     for(const quote of [imported,{...imported,id:'bc-recreated',amount:2000,estado_oferta:'perdida',probabilidad_exito:0}]){
       const effective=source.overlay(quote);expect(effective.estado_oferta).toBe('negociación');expect(effective.probabilidad_exito).toBe(55);expect(effective.cierreprev_date).toBeNull();expect(effective.observaciones).toBe('');expect(effective.amount).toBe(quote.amount);expect(effective.followup_source).toBe('APP');
     }
+  });
+  it('deriva la próxima acción de los eventos vinculados y no de la planificación antigua', () => {
+    const due = new Date('2026-12-01');
+    const source = new OfferSourceContext([local], [{ oferta_vinculada: 'OF1', title: 'Llamar', due_date: due }]);
+    expect(source.overlay(imported)).toEqual(expect.objectContaining({ proxima_accion: 'Llamar', fecha_proxima_accion: due }));
+    expect(new OfferSourceContext([local]).overlay(imported).proxima_accion).toBeNull();
   });
   it('la fuente depende de la oferta y los demás comerciales siguen leyendo BC',()=>{
     const source=new OfferSourceContext([local]);const other=source.overlay({...imported,document_no:'OF2',estado_oferta:'enviada'});
@@ -118,7 +125,7 @@ describe('Seguimiento APP independiente de BC', () => {
   it('si falta seguimiento APP, registrar una actividad del piloto no cae en la escritura heredada', async () => {
     for (const record of [null, { ...local, source: 'BC' }]) {
       db.crm_offer_followups.findUnique.mockResolvedValue(record);
-      await expect(service.activities('pilot', 'bc1', { tipo: 'Nota', notas: 'Prueba', fecha: '2026-10-14' })).rejects.toThrow('aún no está disponible desde n8n');
+      await expect(service.activities('pilot', 'bc1', { tipo: 'Nota', notas: 'Prueba', fecha: '2026-10-14' })).rejects.toThrow(record ? 'solo lectura' : 'aún no está disponible desde n8n');
     }
     expect(db.crm_offer_activities.create).not.toHaveBeenCalled();
     expect(db.crm_offer_followups.upsert).not.toHaveBeenCalled();
@@ -191,10 +198,24 @@ describe('Seguimiento APP independiente de BC', () => {
     expect(db.crm_offer_activities.update).not.toHaveBeenCalled();
   });
 
-  it('una copia BC de la sincronización global conserva el flujo de actividades anterior', async () => {
+  it('una copia BC consulta el historial CRM sin permitir editar el seguimiento', async () => {
     db.crm_offer_followups.findUnique.mockResolvedValue({ ...local, source: 'BC' });
-    expect(await service.activities('pilot', 'bc1')).toBeNull();
+    expect(await service.activities('pilot', 'bc1')).toEqual([]);
+    expect(db.crm_offer_activities.findMany).toHaveBeenCalled();
     expect(db.crm_offer_activities.create).not.toHaveBeenCalled();
+  });
+  it('muestra correos vinculados desde CRM y no duplica un correo ya registrado en el historial', async () => {
+    const fecha = new Date('2026-10-01T10:00:00Z');
+    db.crm_offer_activities.findMany.mockResolvedValue([{ id: 'mismo', tipo: 'Email', notas: 'Historial', fecha, hecho: true }]);
+    db.crm_activities.findMany.mockResolvedValue([{ id: 'mismo', title: 'Repetido', description: '', created_at: fecha }, { id: 'nuevo', title: 'Correo', description: 'Texto', created_at: fecha }]);
+    const result = await service.activities('pilot', 'bc1');
+    expect(result).toHaveLength(2);
+    expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'nuevo', tipo: 'Email' })]));
+    expect(db.crm_activities.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ type: 'EMAIL', OR: expect.any(Array) }) }));
+  });
+  it('conserva los cambios de fase aunque se solicite editarlos', async () => {
+    db.crm_offer_activities.findUnique = jest.fn().mockResolvedValue({ id: 'fase', tipo: 'Nota', notas: 'Cambio de fase [preliminar -> enviada]. Nota', followup: local });
+    await expect(service.editActivity('pilot', 'fase', { notas: 'Cambio' })).rejects.toBeInstanceOf(ForbiddenException);
   });
   it('no permite vaciar la fase mediante null',async()=>{
     await expect(service.save('pilot','bc1',{followup_version:1,estado_oferta:null} as any)).rejects.toThrow('no puede quedar vacía');

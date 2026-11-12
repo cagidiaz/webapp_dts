@@ -7,7 +7,7 @@ interface DrawerProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'offer';
 }
 
 export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
@@ -44,6 +44,7 @@ export const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children
     '2xl': 'max-w-2xl',
     '3xl': 'max-w-3xl',
     '4xl': 'max-w-4xl',
+    offer: 'max-w-[calc(42rem-50px)]',
   };
 
   return createPortal(

@@ -338,7 +338,7 @@ export class OutlookAddinService {
   }
 
   /**
-   * Registra el correo en dTS CRM (crm_activities y opcionalmente en sales_quote_activities).
+   * Registra el correo en dTS CRM y, cuando existe seguimiento, en su historial.
    */
   async logEmail(params: LogEmailDto, userId: string) {
     const {
@@ -475,31 +475,14 @@ export class OutlookAddinService {
       },
     });
 
-    // 7. Si se especificó una oferta comercial, vincularla también en sales_quote_activities
-    let quoteLinked = false;
+    // 7. Si existe seguimiento CRM, registrar también la entrada en su historial.
+    let quoteLinked = Boolean(quoteDocumentNo);
     if (quoteDocumentNo) {
       try {
         const pilot = await this.prisma.crm_offer_followups.findUnique({ where: { document_no: quoteDocumentNo } });
         if (pilot) {
           await this.prisma.crm_offer_activities.upsert({ where: { id: createdActivity.id }, update: {}, create: { id: createdActivity.id, followup_id: pilot.id, tipo: 'Email', notas: `${formattedTitle}\n\n${processedBody ? processedBody.substring(0, 500) : ''}`, fecha: activityDate, hecho: true } });
           quoteLinked = true;
-        } else {
-        const quoteCrm = await this.prisma.sales_quotes_crm.findUnique({
-          where: { document_no: quoteDocumentNo },
-        });
-
-        if (quoteCrm) {
-          await this.prisma.sales_quote_activities.create({
-            data: {
-              crm_quote_id: quoteCrm.id,
-              tipo: 'email',
-              notas: `${formattedTitle}\n\n${processedBody ? processedBody.substring(0, 500) : ''}`,
-              fecha: activityDate,
-              hecho: true,
-            },
-          });
-          quoteLinked = true;
-        }
         }
       } catch (quoteErr) {
         this.logger.warn(`No se pudo vincular la actividad a la oferta ${quoteDocumentNo}:`, quoteErr);

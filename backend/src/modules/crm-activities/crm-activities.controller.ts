@@ -61,6 +61,16 @@ export class CrmActivitiesController {
     return this.crmActivitiesService.invitationContacts(req.user?.userId, clientId);
   }
 
+  @Get('event-offers/:clientId')
+  async eventOffers(@Param('clientId') clientId: string, @Req() req: any) {
+    return this.crmActivitiesService.eventOffers(req.user?.userId, clientId);
+  }
+
+  @Get('offer-events/:documentNo')
+  async offerEvents(@Param('documentNo') documentNo: string, @Req() req: any) {
+    return this.crmActivitiesService.eventsForOffer(req.user?.userId, documentNo);
+  }
+
   @Get(':clientId')
   @ApiOperation({ summary: 'Obtener todas las actividades comerciales de un cliente' })
   async getByClient(@Param('clientId') clientId: string, @Req() req: any) {
@@ -84,6 +94,7 @@ export class CrmActivitiesController {
     @Body('location') location?: string,
     @Body('emailAttachments') emailAttachments?: unknown,
     @Body('calendarInvitation') calendarInvitation?: unknown,
+    @Body('ofertaVinculada') ofertaVinculada?: string | null,
   ) {
     const userId = req.user?.userId;
     return this.crmActivitiesService.create({
@@ -101,6 +112,7 @@ export class CrmActivitiesController {
       location,
       emailAttachments,
       calendarInvitation,
+      ofertaVinculada,
     });
   }
 
@@ -118,6 +130,7 @@ export class CrmActivitiesController {
     @Body('categoryTag') categoryTag?: string,
     @Body('quoteDocumentNo') quoteDocumentNo?: string,
     @Body('calendarInvitation') calendarInvitation?: unknown,
+    @Body('ofertaVinculada') ofertaVinculada?: string | null,
     @Req() req?: any,
   ) {
     return this.crmActivitiesService.update(id, {
@@ -131,6 +144,7 @@ export class CrmActivitiesController {
       categoryTag,
       quoteDocumentNo,
       calendarInvitation,
+      ofertaVinculada,
     }, req?.user?.userId);
   }
 

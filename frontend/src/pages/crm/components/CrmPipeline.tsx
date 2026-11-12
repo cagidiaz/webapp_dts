@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { OfferLinkedEvents } from './OfferLinkedEvents';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { 
   getAllCrmQuotes, 
   getOfferCloseReasons,
   updateCrmQuote, 
   getQuoteActivities, 
-  addQuoteActivity, 
-  updateQuoteActivity, 
-  deleteQuoteActivity, 
+  addQuoteActivity,
   type CRMQuote
 } from '../../../api/quotes';
 import { getContacts } from '../../../api/contacts';
@@ -15,7 +15,7 @@ import { getCustomerSalespersons } from '../../../api/customers';
 import { formatCurrency, formatNumber, offerDateInputValue } from '../../../api/formatters';
 import { 
   Briefcase, Euro, Percent, Sparkles, AlertTriangle, 
-  Search, Calendar, User, Mail, Phone, Plus, Trash2,
+  Search, Calendar, User, Mail, Phone,
   Table, LayoutGrid, ArrowRight, X, Info, Download, CheckCircle2, XCircle
 } from 'lucide-react';
 import { KPISkeleton, InfoPopover, ExportButton } from '../../../components/ui';
@@ -58,6 +58,7 @@ const closingDay = (value: string | null | undefined): string => {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === day ? day : '';
 };
 export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean; contactId?: string }> = ({ pilotMode = false, canEditPilot = false, contactId }) => {
+  const navigate = useNavigate();
   const STAGES = pilotMode ? PILOT_STAGES : LEGACY_STAGES;
   const [closedFilter, setClosedFilter] = useState('');
   const [transitionReason, setTransitionReason] = useState('');
@@ -88,9 +89,6 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
   });
 
   // Activity Form State
-  const [newActivityType, setNewActivityType] = useState('Llamada');
-  const [newActivityNotes, setNewActivityNotes] = useState('');
-  const [newActivityDate, setNewActivityDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Debounce search
   useEffect(() => {
@@ -225,7 +223,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
   });
 
   // Fetch Activities
-  const { data: activities = [], refetch: refetchActivities } = useQuery({
+  const { data: activities = [] } = useQuery({
     queryKey: ['crm-quote-activities', selectedQuote?.id],
     queryFn: () => getQuoteActivities(selectedQuote!.id),
     enabled: !!selectedQuote,
@@ -240,10 +238,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
 
   const assignedContact = useMemo(() => {
     if (!selectedQuote || !contacts || contacts.length === 0) return null;
-    return contacts.find(c => c.contact_no === selectedQuote.contacto_id) || 
-           contacts.find(c => c.id === selectedQuote.contacto_id) || 
-           contacts.find(c => c.name === selectedQuote.contacto_nombre) || 
-           contacts[0];
+    return contacts.find(c => !!selectedQuote.contacto_id && (c.contact_no === selectedQuote.contacto_id || c.id === selectedQuote.contacto_id)) || null;
   }, [contacts, selectedQuote]);
 
   // Mutación: Actualizar metadatos de oferta
@@ -259,32 +254,6 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
       if (selectedQuote && selectedQuote.id === variables.id) {
         setSelectedQuote(prev => prev ? { ...prev, ...variables.data, ...(saved.source === 'APP' ? { followup_version: saved.version, valor_oferta_ponderado: prev.amount * Number(saved.probabilidad_exito ?? prev.probabilidad_exito) / 100 } : {}) } : null);
       }
-    }
-  });
-
-  // Mutaciones de Actividades
-  const addActivityMutation = useMutation({
-    mutationFn: (actData: any) => addQuoteActivity(selectedQuote!.id, actData),
-    onSuccess: () => {
-      setNewActivityNotes('');
-      refetchActivities();
-      queryClient.invalidateQueries({ queryKey: ['crm-quotes'] });
-      refetch();
-    }
-  });
-
-  const toggleActivityMutation = useMutation({
-    mutationFn: ({ actId, hecho }: { actId: string, hecho: boolean }) => 
-      updateQuoteActivity(actId, { hecho }),
-    onSuccess: () => {
-      refetchActivities();
-    }
-  });
-
-  const deleteActivityMutation = useMutation({
-    mutationFn: (actId: string) => deleteQuoteActivity(actId),
-    onSuccess: () => {
-      refetchActivities();
     }
   });
 
@@ -519,17 +488,6 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
 
   const handleFieldChange = (fieldName: string, value: any) => {
     handleFieldsChange({ [fieldName]: value });
-  };
-
-  const handleAddActivity = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newActivityNotes.trim() || !selectedQuote || !canEdit(selectedQuote)) return;
-
-    addActivityMutation.mutate({
-      tipo: newActivityType,
-      notas: newActivityNotes,
-      fecha: new Date(newActivityDate).toISOString()
-    });
   };
 
   const isOverdue = (dateStr: string | null) => {
@@ -1110,19 +1068,19 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         title={`Oportunidad: ${selectedQuote?.document_no || ''}`}
-        size="2xl"
+        size="offer"
       >
         {selectedQuote && (
-          <fieldset disabled={pilotMode && !canEdit(selectedQuote)} className="space-y-6 pb-12 min-w-0">
+          <><fieldset disabled={pilotMode && !canEdit(selectedQuote)} className="space-y-3 pb-2 min-w-0">
             {updateQuoteMutation.isError && <p role="alert" className="text-xs text-rose-500">No se pudo guardar. Revisa los datos y recarga la oferta si su versión ha cambiado.</p>}
-            <div className="bg-slate-50 dark:bg-white/2 p-4 rounded-xl border border-slate-100 dark:border-white/5 space-y-4">
+            <div className="bg-slate-50 dark:bg-white/2 p-3 rounded-xl border border-slate-100 dark:border-white/5 space-y-3">
               <div>
                 <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Cliente</span>
                 <span className="text-sm font-normal text-gray-900 dark:text-white block mt-0.5">{selectedQuote.customer_name}</span>
                 <span className="text-xs text-gray-500 font-mono mt-0.5 block">{selectedQuote.customer_no}</span>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-white/5 pt-4">
+              <div className="grid grid-cols-3 gap-3 border-t border-slate-100 dark:border-white/5 pt-2">
                 <div>
                   <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Importe Original</span>
                   <span className="text-base font-black text-gray-900 dark:text-white font-mono block mt-0.5">
@@ -1135,14 +1093,18 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                     {formatCurrency(selectedQuote.valor_oferta_ponderado, 2)}
                   </span>
                 </div>
+                <div className="min-w-0">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Probabilidad de éxito</span>
+                  <span className="text-base font-black text-gray-900 dark:text-white font-mono block mt-0.5">{selectedQuote.probabilidad_exito == null ? '—' : selectedQuote.probabilidad_exito + '%'}</span>
+                </div>
               </div>
             </div>
 
             {/* Editable Fields Form */}
-            <div className="space-y-4">
+            <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Parámetros Comerciales</h4>
               
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Estado de la Oferta</label>
                   <select 
@@ -1154,23 +1116,6 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                     {(pilotMode ? [...STAGES, ...LEGACY_STAGES.filter(s => ['ganada','perdida'].includes(s.id))] : STAGES).map(s => (
                       <option key={s.id} value={s.id}>{s.label}</option>
                     ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Probabilidad de Éxito</label>
-                  <select 
-                    disabled={pilotMode}
-                    value={selectedQuote.probabilidad_exito} 
-                    onChange={(e) => handleFieldChange('probabilidad_exito', Number(e.target.value))}
-                    className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-                  >
-                    {pilotMode && <option value={selectedQuote.probabilidad_exito}>{selectedQuote.probabilidad_exito}% · según fase</option>}
-                    <option value={10}>10% - Inicial</option>
-                    <option value={25}>25% - Revisiones</option>
-                    <option value={50}>50% - Entregada Pesimista</option>
-                    <option value={75}>75% - Entregada Optimista</option>
-                    <option value={100}>100% - Pedido Confirmado</option>
                   </select>
                 </div>
 
@@ -1187,7 +1132,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="contents">
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Cierre Previsto</label>
                     <input 
@@ -1209,7 +1154,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                 </div>
 
                 {selectedQuote.estado_oferta?.toLowerCase().trim() === 'ganada' && (
-                  <div className="animate-in slide-in-from-top-2 duration-200">
+                  <div className="col-span-2 animate-in slide-in-from-top-2 duration-200">
                     <label className="block text-xs font-bold text-emerald-500 uppercase mb-1">Motivo de Ganada</label>
                     {selectedQuote.followup_source === 'APP' ? <select
                       value={selectedQuote.motivo_ganada || ''}
@@ -1229,7 +1174,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                 )}
 
                 {selectedQuote.estado_oferta?.toLowerCase().trim() === 'perdida' && (
-                  <div className="animate-in slide-in-from-top-2 duration-200">
+                  <div className="col-span-2 animate-in slide-in-from-top-2 duration-200">
                     <label className="block text-xs font-bold text-rose-500 uppercase mb-1">Motivo de Perdida</label>
                     {selectedQuote.followup_source === 'APP' ? <select
                       value={selectedQuote.motivo_perdida || ''}
@@ -1250,186 +1195,13 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex justify-between items-center border-b border-gray-100 dark:border-white/10 pb-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary">Información del Comprador</h4>
-                {assignedContact && (
-                  <span className="text-[9px] bg-emerald-100 dark:bg-emerald-955/35 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
-                    Contacto vinculado
-                  </span>
-                )}
-              </div>
-              <div className="space-y-3">
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <User size={14} />
-                  </span>
-                  <input 
-                    type="text" 
-                    placeholder="Nombre del contacto"
-                    value={assignedContact?.name || selectedQuote.contacto_nombre || 'Sin contacto asignado'}
-                    readOnly
-                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none opacity-80 cursor-not-allowed select-none"
-                  />
-                </div>
-
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Mail size={14} />
-                  </span>
-                  <input 
-                    type="email" 
-                    placeholder="Email del contacto"
-                    value={assignedContact?.email || selectedQuote.contacto_email || ''}
-                    readOnly
-                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none opacity-80 cursor-not-allowed select-none"
-                  />
-                </div>
-                
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Phone size={14} />
-                  </span>
-                  <input 
-                    type="text" 
-                    placeholder="Teléfono del contacto"
-                    value={assignedContact?.phone_no || assignedContact?.mobile_no || selectedQuote.contacto_telefono || ''}
-                    readOnly
-                    className="block w-full pl-10 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none opacity-80 cursor-not-allowed select-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Planificación de Seguimiento</h4>
-              <div className="space-y-3 bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Próxima Acción Pendiente</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ej. Llamar para negociar plazos de entrega..."
-                    value={selectedQuote.proxima_accion || ''}
-                    onChange={(e) => handleFieldChange('proxima_accion', e.target.value)}
-                    className="block w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Fecha Límite</label>
-                  <input 
-                    type="date" 
-                    value={selectedQuote.fecha_proxima_accion ? selectedQuote.fecha_proxima_accion.split('T')[0] : ''}
-                    onChange={(e) => handleFieldChange('fecha_proxima_accion', e.target.value || null)}
-                    className="block w-full px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Observaciones del Comercial</label>
-              <textarea 
-                placeholder="Escribe comentarios generales o notas adicionales sobre la negociación..."
-                value={selectedQuote.observaciones || ''}
-                onChange={(e) => handleFieldChange('observaciones', e.target.value)}
-                rows={3}
-                className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-              />
-            </div>
-
-            <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-white/10">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Historial de Interacciones</h4>
-              
-              <form onSubmit={handleAddActivity} className="space-y-3 bg-slate-50 dark:bg-white/1 p-3 rounded-lg border border-gray-200/50 dark:border-white/5">
-                <div className="grid grid-cols-2 gap-2">
-                  <select 
-                    value={newActivityType} 
-                    onChange={(e) => setNewActivityType(e.target.value)}
-                    className="bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-[11px] rounded p-1.5 focus:outline-none"
-                  >
-                    <option value="Llamada">📞 Llamada</option>
-                    <option value="Email">📧 Email</option>
-                    <option value="Reunión">🤝 Reunión</option>
-                    <option value="Nota">📝 Nota</option>
-                    <option value="Tarea">✅ Tarea</option>
-                  </select>
-                  <input 
-                    type="date" 
-                    value={newActivityDate}
-                    onChange={(e) => setNewActivityDate(e.target.value)}
-                    className="bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-[11px] rounded p-1.5 focus:outline-none"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Detalles de la interacción..."
-                    value={newActivityNotes}
-                    onChange={(e) => setNewActivityNotes(e.target.value)}
-                    className="flex-1 bg-white dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-[11px] rounded p-1.5 focus:outline-none"
-                  />
-                  <button 
-                    type="submit" 
-                    className="bg-dts-secondary hover:bg-dts-secondary-dark text-white p-1.5 rounded transition-colors"
-                  >
-                    <Plus size={14} />
-                  </button>
-                </div>
-              </form>
-
-              <div className="space-y-4 mt-4 relative pl-4 border-l border-gray-100 dark:border-white/10">
-                {activities.length === 0 ? (
-                  <span className="text-[10px] text-gray-400 italic block py-2">No se han registrado interacciones aún.</span>
-                ) : (
-                  activities.map((act) => (
-                    <div key={act.id} className="relative group/act text-xs">
-                      <span className="absolute -left-[21px] top-1 bg-white dark:bg-dts-primary-dark border border-dts-secondary p-0.5 rounded-full z-10">
-                        <span className="block w-1.5 h-1.5 bg-dts-secondary rounded-full" />
-                      </span>
-                      
-                      <div className="flex justify-between items-start">
-                        <span className="font-bold text-gray-800 dark:text-gray-200">
-                          {act.tipo === 'Llamada' ? '📞' : act.tipo === 'Email' ? '📧' : act.tipo === 'Reunión' ? '🤝' : act.tipo === 'Tarea' ? '✅' : '📝'} {act.tipo}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-gray-400 font-mono">
-                            {new Date(act.fecha).toLocaleDateString()}
-                          </span>
-                          <button 
-                            hidden={selectedQuote.followup_source === 'APP' || !canEdit(selectedQuote)}
-                            onClick={() => deleteActivityMutation.mutate(act.id)}
-                            className="text-gray-400 hover:text-rose-500 opacity-0 group-hover/act:opacity-100 transition-opacity"
-                            title="Eliminar interacción"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <p className="text-gray-600 dark:text-gray-400 mt-1 leading-relaxed whitespace-pre-wrap pr-4">
-                        {act.notas}
-                      </p>
-
-                      {act.tipo === 'Tarea' && (
-                        <label className="flex items-center gap-1.5 mt-1.5 cursor-pointer select-none">
-                          <input 
-                            type="checkbox" 
-                            checked={act.hecho} 
-                            onChange={(e) => toggleActivityMutation.mutate({ actId: act.id, hecho: e.target.checked })}
-                            className="rounded border-gray-300 text-dts-secondary focus:ring-dts-secondary/50 w-3 h-3" 
-                          />
-                          <span className={`text-[10px] ${act.hecho ? 'line-through text-gray-400' : 'text-gray-500 font-medium'}`}>
-                            Completada
-                          </span>
-                        </label>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
           </fieldset>
+            <div className="space-y-2 mt-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary">Información del comprador</h4>
+              {assignedContact ? <button type="button" onClick={() => navigate('/crm/contacts?contactId=' + encodeURIComponent(assignedContact.id))} className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-gray-200 bg-slate-50 px-3 py-2 text-left text-xs text-gray-900 hover:border-dts-secondary dark:border-gray-800 dark:bg-dts-primary-dark dark:text-white" title="Abrir ficha del contacto"><User size={14} className="shrink-0 text-gray-400" /><span className="truncate font-semibold">{assignedContact.name}</span>{assignedContact.email && <span className="flex min-w-0 items-center gap-1 text-gray-500"><Mail size={14} className="shrink-0 text-gray-400" /><span className="truncate">{assignedContact.email}</span></span>}{(assignedContact.phone_no || assignedContact.mobile_no) && <span className="flex min-w-0 items-center gap-1 text-gray-500"><Phone size={14} className="shrink-0 text-gray-400" /><span className="truncate">{assignedContact.phone_no || assignedContact.mobile_no}</span></span>}</button> : <p className="text-xs text-gray-500">{selectedQuote.contacto_nombre || 'Sin contacto asignado'}</p>}
+            </div>
+
+          <OfferLinkedEvents documentNo={selectedQuote.document_no} clientId={selectedQuote.customer_no} contactId={contacts.find(c => !!selectedQuote.contacto_id && (c.contact_no === selectedQuote.contacto_id || c.id === selectedQuote.contacto_id))?.id} closed={['ganada', 'ganado', 'perdida', 'perdido'].includes((selectedQuote.estado_oferta || '').toLowerCase().trim())} activities={activities} /></>
         )}
       </Drawer>
 

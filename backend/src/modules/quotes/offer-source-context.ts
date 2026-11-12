@@ -32,7 +32,8 @@ function matches(value: any, condition: any): boolean {
 /** Una misma resolución de fuente para las consultas paginadas, KPIs y CRM. */
 export class OfferSourceContext {
   readonly records: Map<string, any>;
-  constructor(rows: any[]) { this.records = new Map(rows.filter(row => row.source !== 'BC').map(row => {
+  readonly nextEvents: Map<string, any>;
+  constructor(rows: any[], events: any[] = []) { this.nextEvents = new Map(); for (const event of events) if (event.oferta_vinculada && !this.nextEvents.has(event.oferta_vinculada)) this.nextEvents.set(event.oferta_vinculada, event); this.records = new Map(rows.filter(row => row.source !== 'BC').map(row => {
     const phase = pilotPhase(row.estado_oferta);
     return [row.document_no, { ...row, estado_oferta: phase, probabilidad_exito: phase && OFFER_PROBABILITIES[phase] !== undefined ? OFFER_PROBABILITIES[phase] : row.probabilidad_exito }];
   })); }
@@ -42,6 +43,12 @@ export class OfferSourceContext {
     for (const [key, value] of Object.entries(node)) {
       if (['AND', 'OR', 'NOT'].includes(key)) { clauses.push({ [key]: Array.isArray(value) ? value.map(item => this.where(item, crmScope)) : this.where(value, crmScope) }); continue; }
       if (key === 'sales_quotes_crm') { clauses.push(value === null ? { document_no: { in: [] } } : this.where(value, true)); continue; }
+      if (crmScope && ['proxima_accion', 'fecha_proxima_accion'].includes(key)) {
+        const entries = [...this.nextEvents.entries()];
+        const matching = entries.filter(([, event]) => matches(key === 'proxima_accion' ? event.title : event.due_date, value)).map(([document]) => document);
+        clauses.push({ OR: [{ document_no: { in: matching } }, ...(matches(null, value) ? [{ document_no: { notIn: entries.map(([document]) => document) } }] : [])] });
+        continue;
+      }
       if (BC_FIELDS.includes(key as any) || crmScope && READ_FIELDS.includes(key as any)) {
         const condition: any = ['estado_oferta', 'oferta_type'].includes(key) && typeof value === 'string' ? { equals: value, mode: 'insensitive' } : value;
         const managed = [...this.records.keys()];
@@ -61,9 +68,11 @@ export class OfferSourceContext {
     const local = this.records.get(quote.document_no);
     const fields = local ? Object.fromEntries(READ_FIELDS.map(field => [field, local[field] ?? null])) : Object.fromEntries(BC_FIELDS.map(field => [field, quote[field] ?? null]));
     // Duplicar el valor efectivo en ambas entradas evita que los OR antiguos recuperen valores BC vacíos.
-    return { ...quote, ...fields, followup_source: local ? 'APP' : 'BC', followup_version: local?.version || null,
+    const next = this.nextEvents.get(quote.document_no);
+    const nextFields = { proxima_accion: next?.title || null, fecha_proxima_accion: next?.due_date || null };
+    return { ...quote, ...fields, ...nextFields, followup_source: local ? 'APP' : 'BC', followup_version: local?.version || null,
       followup_owner_id: null,
-      sales_quotes_crm: { ...(quote.sales_quotes_crm || {}), ...fields, ...(local ? { id: local.id, activities: local.activities || [] } : {}) },
+      sales_quotes_crm: { ...(quote.sales_quotes_crm || {}), ...fields, ...nextFields, ...(local ? { id: local.id, activities: local.activities || [] } : {}) },
     };
   }
 }

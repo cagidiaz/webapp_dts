@@ -1,4 +1,6 @@
 import { EVENT_FILTER_CHIPS } from './eventFilterChips';
+import { EventOfferSelector } from './EventOfferSelector';
+import { OfferLinkedEvents } from './OfferLinkedEvents';
 import { ExpandConclusionsButton } from './ExpandConclusionsButton';
 import { appTabClass, appTabIconClass, appTabListClass } from '../../../components/shared/appTabs';
 import { CalendarInvitationFields, CalendarInvitationMessage, newCalendarInvitation } from './CalendarInvitationFields';
@@ -18,7 +20,7 @@ import {
   updateContactLinkedin, updateContactLocation,
   getCrmActivitiesByContact, createCrmActivity, updateCrmActivity, deleteCrmActivity,
   getAllCrmQuotes, updateCrmQuote, addQuoteActivity, type CRMQuote,
-  getQuoteActivities, updateQuoteActivity, deleteQuoteActivity,
+  getQuoteActivities,
   createExchangeDraft, openInOutlook, getExchangeStatus, syncExchangeNow,
   getPreferredOutlookClient, setPreferredOutlookClient, openVerifiedEmailInWeb,
   searchConversationInOutlook, copyEmailSearchToClipboard
@@ -112,9 +114,10 @@ const EMAIL_TEMPLATES = [
 interface CrmContactDetailProps {
   contactId: string;
   onBack: () => void;
+  initialEventOffer?: string;
 }
 
-export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, onBack }) => {
+export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, onBack, initialEventOffer }) => {
   const queryClient = useQueryClient();
   const { profile } = useAuthStore();
   const roleName = (profile?.roles?.name || '').toUpperCase();
@@ -178,6 +181,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   // Form states (Unified Event Modal)
   const [activityType, setActivityType] = useState<'TASK' | 'NOTE' | 'REUNION' | 'VIDEOLLAMADA' | 'VISITA' | 'CALL' | 'EVENT'>('TASK');
   const [newTitle, setNewTitle] = useState('');
+  const [newOffer, setNewOffer] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newInvitation, setNewInvitation] = useState(newCalendarInvitation());
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
@@ -414,7 +418,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     }
   };
 
-  const handleOpenEventModal = () => {
+  const handleOpenEventModal = (offer = '') => {
+    setNewOffer(offer);
     const nextHour = new Date();
     nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
     const localDate = `${nextHour.getFullYear()}-${String(nextHour.getMonth() + 1).padStart(2, '0')}-${String(nextHour.getDate()).padStart(2, '0')}`;
@@ -428,11 +433,25 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     setShowEventModal(true);
   };
 
+  const openedFromOffer = useRef(false);
+  useEffect(() => {
+    if (initialEventOffer && contact && !openedFromOffer.current) {
+      openedFromOffer.current = true;
+      handleOpenEventModal(initialEventOffer);
+    }
+  }, [initialEventOffer, contact]);
+
+  const closeNewEvent = () => {
+    setShowEventModal(false);
+    if (initialEventOffer) onBack();
+  };
+
   // Mutations
   const createActivityMutation = useMutation({
     mutationFn: createCrmActivity,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['offer-events'] });
       queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
     }
   });
@@ -504,6 +523,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crmActivitiesByContact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['offer-events'] });
       queryClient.invalidateQueries({ queryKey: ['exchangeStatus'] });
       setNewEmailSubject('');
       setNewEmailBody('');
@@ -743,97 +763,14 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
   // Drawer detail CRM Quote
   const [selectedQuote, setSelectedQuote] = useState<CRMQuote | null>(null);
   const [isQuoteDrawerOpen, setIsQuoteDrawerOpen] = useState(false);
-  const [formProximaAccion, setFormProximaAccion] = useState('');
-  const [formFechaProximaAccion, setFormFechaProximaAccion] = useState('');
-  const [formObservaciones, setFormObservaciones] = useState('');
-  const [isSavingPlanning, setIsSavingPlanning] = useState(false);
-
-  const [newQuoteActivityType, setNewQuoteActivityType] = useState('Llamada');
-  const [newQuoteActivityDate, setNewQuoteActivityDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newQuoteActivityNotes, setNewQuoteActivityNotes] = useState('');
-
   const { data: quoteActivities = [] } = useQuery({
     queryKey: ['crm-quote-activities', selectedQuote?.id, profile?.id],
     queryFn: () => getQuoteActivities(selectedQuote!.id),
     enabled: !!selectedQuote,
   });
 
-  const updateFieldMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => updateCrmQuote(id, { ...data, ...(crmQuotes.find(quote => quote.id === id)?.followup_version ? { followup_version: crmQuotes.find(quote => quote.id === id)!.followup_version } : {}) }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contactCrmQuotes', contactId] });
-    }
-  });
-
-  const addQuoteActivityMutation = useMutation({
-    mutationFn: (actData: any) => addQuoteActivity(selectedQuote!.id, actData),
-    onSuccess: (newAct) => {
-      queryClient.invalidateQueries({ queryKey: ['crm-quote-activities', selectedQuote?.id] });
-      queryClient.invalidateQueries({ queryKey: ['contactCrmQuotes', contactId] });
-
-      if (selectedQuote && newAct.tipo === 'Tarea' && !newAct.hecho) {
-        const currentNextDate = selectedQuote.fecha_proxima_accion;
-        if (!selectedQuote.proxima_accion || !currentNextDate || new Date(newAct.fecha) < new Date(currentNextDate)) {
-          updateFieldMutation.mutate({
-            id: selectedQuote.id,
-            data: {
-              proxima_accion: newAct.notas,
-              fecha_proxima_accion: newAct.fecha
-            }
-          }, {
-            onSuccess: () => {
-              setSelectedQuote(prev => prev ? {
-                ...prev,
-                proxima_accion: newAct.notas,
-                fecha_proxima_accion: newAct.fecha
-              } : null);
-            }
-          });
-        }
-      }
-    }
-  });
-
-  const deleteQuoteActivityMutation = useMutation({
-    mutationFn: deleteQuoteActivity,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crm-quote-activities', selectedQuote?.id] });
-      queryClient.invalidateQueries({ queryKey: ['contactCrmQuotes', contactId] });
-    }
-  });
-
-  const updateQuoteActivityMutation = useMutation({
-    mutationFn: ({ activityId, data }: { activityId: string; data: any }) => updateQuoteActivity(activityId, data),
-    onSuccess: (updatedAct) => {
-      queryClient.invalidateQueries({ queryKey: ['crm-quote-activities', selectedQuote?.id] });
-      queryClient.invalidateQueries({ queryKey: ['contactCrmQuotes', contactId] });
-      
-      if (selectedQuote && updatedAct.tipo === 'Tarea' && updatedAct.hecho) {
-        const remainingPending = quoteActivities.find((act: any) => act.tipo === 'Tarea' && !act.hecho && act.id !== updatedAct.id);
-        updateFieldMutation.mutate({
-          id: selectedQuote.id,
-          data: {
-            proxima_accion: remainingPending ? remainingPending.notas : null,
-            fecha_proxima_accion: remainingPending ? remainingPending.fecha : null
-          }
-        }, {
-          onSuccess: () => {
-            setSelectedQuote(prev => prev ? {
-              ...prev,
-              proxima_accion: remainingPending ? remainingPending.notas : null,
-              fecha_proxima_accion: remainingPending ? remainingPending.fecha : null
-            } : null);
-          }
-        });
-      }
-    }
-  });
-
   const openQuoteDrawer = (quote: CRMQuote) => {
     setSelectedQuote(quote);
-    setFormProximaAccion(quote.proxima_accion || '');
-    setFormFechaProximaAccion(quote.fecha_proxima_accion ? quote.fecha_proxima_accion.split('T')[0] : '');
-    setFormObservaciones(quote.observaciones || '');
     setIsQuoteDrawerOpen(true);
   };
 
@@ -894,47 +831,6 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
           [fieldName]: value,
           valor_oferta_ponderado: newWeighted
         } : null);
-      }
-    });
-  };
-
-  const handleSavePlanning = () => {
-    if (!selectedQuote) return;
-    setIsSavingPlanning(true);
-    updateFieldMutation.mutate({
-      id: selectedQuote.id,
-      data: {
-        proxima_accion: formProximaAccion || null,
-        fecha_proxima_accion: formFechaProximaAccion ? new Date(formFechaProximaAccion).toISOString() : null,
-        observaciones: formObservaciones || null
-      }
-    }, {
-      onSuccess: () => {
-        setSelectedQuote(prev => prev ? {
-          ...prev,
-          proxima_accion: formProximaAccion || null,
-          fecha_proxima_accion: formFechaProximaAccion ? new Date(formFechaProximaAccion).toISOString() : null,
-          observaciones: formObservaciones || null
-        } : null);
-        setIsSavingPlanning(false);
-      },
-      onError: () => {
-        setIsSavingPlanning(false);
-      }
-    });
-  };
-
-  const handleAddQuoteActivity = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newQuoteActivityNotes.trim() || !selectedQuote) return;
-    addQuoteActivityMutation.mutate({
-      tipo: newQuoteActivityType,
-      notas: newQuoteActivityNotes,
-      fecha: new Date(newQuoteActivityDate).toISOString(),
-      hecho: newQuoteActivityType === 'Tarea' ? false : true
-    }, {
-      onSuccess: () => {
-        setNewQuoteActivityNotes('');
       }
     });
   };
@@ -1371,6 +1267,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       description: newDescription || undefined,
       dueDate: activityType !== 'NOTE' ? newDate : undefined,
       location: activityType === 'VIDEOLLAMADA' ? 'sala Teams' : newLocation || undefined,
+      ofertaVinculada: newOffer || null,
     };
 
     if (activityType !== 'NOTE') {
@@ -1393,7 +1290,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
     setNewTime('10:00');
     setNewConclusions('');
     setNewLocation('');
-    setShowEventModal(false);
+    closeNewEvent();
   };
 
 
@@ -2500,7 +2397,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     </button>
                   )}
                   <button
-                    onClick={handleOpenEventModal}
+                    onClick={() => handleOpenEventModal()}
                     className="px-3 py-1.5 bg-dts-secondary hover:brightness-110 text-white font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer shrink-0"
                   >
                     <Plus size={14} /> Nueva Actividad
@@ -3138,7 +3035,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   <Calendar size={16} className="text-dts-secondary" />
                   <h3 className="text-sm font-black uppercase tracking-wider text-dts-primary dark:text-white">Nueva Actividad</h3>
                 </div>
-                <button onClick={() => setShowEventModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"><X size={16} /></button>
+                <button onClick={closeNewEvent} className="text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"><X size={16} /></button>
               </div>
 
               {/* Formulario con cuerpo scrolleable y pie fijo */}
@@ -3169,6 +3066,8 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     </select>
                   </div>
 
+                  {activityType !== 'REUNION' && <EventOfferSelector clientId={contact?.client_id} contactId={contactId} value={newOffer} onChange={setNewOffer} title={newTitle} />}
+
                   {activityType === 'REUNION' ? (
                     <div className="py-8 px-4 text-center rounded-2xl bg-gray-50/70 dark:bg-white/5 border border-dashed border-gray-200 dark:border-gray-700 space-y-3">
                       <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center mx-auto">
@@ -3185,7 +3084,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                       <div className="pt-2">
                         <button
                           type="button"
-                          onClick={() => setShowEventModal(false)}
+                          onClick={closeNewEvent}
                           className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 font-bold text-xs cursor-pointer"
                         >
                           Cerrar
@@ -3471,7 +3370,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   <div className="px-6 py-3.5 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3 shrink-0 bg-gray-50/50 dark:bg-white/2 rounded-b-2xl">
                     <button
                       type="button"
-                      onClick={() => setShowEventModal(false)}
+                      onClick={closeNewEvent}
                       className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 font-bold cursor-pointer transition-colors"
                     >
                       Cancelar
@@ -3837,19 +3736,19 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
       )}
 
       {/* DRAWER: Detalle de Oferta CRM */}
-      <Drawer isOpen={isQuoteDrawerOpen} onClose={() => setIsQuoteDrawerOpen(false)} title={`Oportunidad: ${selectedQuote?.document_no || ''}`} size="2xl">
+      <Drawer isOpen={isQuoteDrawerOpen} onClose={() => setIsQuoteDrawerOpen(false)} title={`Oportunidad: ${selectedQuote?.document_no || ''}`} size="offer">
         {selectedQuote && (
-          <div className="space-y-6 text-xs max-h-[calc(100vh-140px)] overflow-y-auto pr-1">
+          <div className="space-y-3 text-xs max-h-[calc(100vh-140px)] overflow-y-auto pr-1">
             
             {/* Cabecera del Drawer */}
-            <div className="bg-slate-50 dark:bg-white/2 p-4 rounded-xl border border-slate-100 dark:border-white/5 space-y-4">
+            <div className="bg-slate-50 dark:bg-white/2 p-3 rounded-xl border border-slate-100 dark:border-white/5 space-y-3">
               <div>
                 <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Cliente</span>
                 <span className="text-sm font-normal text-gray-900 dark:text-white block mt-0.5">{selectedQuote.customer_name}</span>
                 <span className="text-xs text-gray-500 font-mono mt-0.5 block">{selectedQuote.customer_no}</span>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-white/5 pt-4">
+              <div className="grid grid-cols-3 gap-3 border-t border-slate-100 dark:border-white/5 pt-2">
                 <div>
                   <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Importe Original</span>
                   <span className="text-base font-black text-gray-900 dark:text-white font-mono block mt-0.5">
@@ -3862,14 +3761,18 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     {formatCurrency(selectedQuote.valor_oferta_ponderado, 2)}
                   </span>
                 </div>
+                <div className="min-w-0">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Probabilidad de éxito</span>
+                  <span className="text-base font-black text-gray-900 dark:text-white font-mono block mt-0.5">{selectedQuote.probabilidad_exito == null ? '—' : selectedQuote.probabilidad_exito + '%'}</span>
+                </div>
               </div>
             </div>
 
             {/* Parámetros Comerciales */}
-            <div className="space-y-4">
+            <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-dts-primary dark:text-dts-secondary border-b border-gray-100 dark:border-white/10 pb-2">Parámetros Comerciales</h4>
               
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Estado de la Oferta</label>
                   <select 
@@ -3880,22 +3783,6 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                     {STAGES.map(s => (
                       <option key={s.id} value={s.id}>{s.label}</option>
                     ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Probabilidad de Éxito</label>
-                  <select 
-                    value={selectedQuote.probabilidad_exito} 
-                    onChange={(e) => handleFieldChange('probabilidad_exito', Number(e.target.value))}
-                    className="w-full bg-slate-50 dark:bg-dts-primary-dark border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-dts-secondary"
-                  >
-                    <option value={0}>0% - Descartada / Perdida</option>
-                    <option value={10}>10% - Inicial</option>
-                    <option value={25}>25% - Revisiones</option>
-                    <option value={50}>50% - Entregada Pesimista</option>
-                    <option value={75}>75% - Entregada Optimista</option>
-                    <option value={100}>100% - Pedido Confirmado</option>
                   </select>
                 </div>
 
@@ -3912,7 +3799,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="contents">
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Cierre Previsto</label>
                     <input 
@@ -3934,7 +3821,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 </div>
 
                 {selectedQuote.estado_oferta?.toLowerCase().trim() === 'ganada' && (
-                  <div className="animate-in slide-in-from-top-2 duration-200">
+                  <div className="col-span-2 animate-in slide-in-from-top-2 duration-200">
                     <label className="block text-xs font-bold text-emerald-500 uppercase mb-1">Motivo de Ganada</label>
                     <textarea 
                       placeholder="Indica las razones del éxito..."
@@ -3947,7 +3834,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 )}
 
                 {selectedQuote.estado_oferta?.toLowerCase().trim() === 'perdida' && (
-                  <div className="animate-in slide-in-from-top-2 duration-200">
+                  <div className="col-span-2 animate-in slide-in-from-top-2 duration-200">
                     <label className="block text-xs font-bold text-rose-500 uppercase mb-1">Motivo de Perdida</label>
                     <textarea 
                       placeholder="¿Por qué se ha descartado la oferta? (Precio, Competencia, Plazo...)"
@@ -3961,178 +3848,12 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
               </div>
             </div>
 
-            {/* Información del Comprador */}
-            <div className="space-y-3 border-t border-gray-100 dark:border-white/5 pt-4">
-              <div className="flex justify-between items-center pb-1">
-                <h5 className="font-bold text-dts-primary dark:text-white uppercase tracking-wider">Información del Comprador</h5>
-                <span className="text-[9px] bg-emerald-100 dark:bg-emerald-955/35 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
-                  Contacto vinculado
-                </span>
-              </div>
-              <div className="space-y-2">
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <User size={14} />
-                  </span>
-                  <input 
-                    type="text" 
-                    placeholder="Nombre del contacto"
-                    value={contact.name || ''}
-                    readOnly
-                    className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none opacity-80 cursor-not-allowed select-none"
-                  />
-                </div>
-
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Mail size={14} />
-                  </span>
-                  <input 
-                    type="email" 
-                    placeholder="Email del contacto"
-                    value={contact.email || ''}
-                    readOnly
-                    className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none opacity-80 cursor-not-allowed select-none"
-                  />
-                </div>
-                
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Phone size={14} />
-                  </span>
-                  <input 
-                    type="text" 
-                    placeholder="Teléfono del contacto"
-                    value={contact.phone_no || contact.mobile_no || ''}
-                    readOnly
-                    className="block w-full pl-10 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-slate-50 dark:bg-dts-primary-dark text-gray-900 dark:text-white focus:outline-none opacity-80 cursor-not-allowed select-none"
-                  />
-                </div>
-              </div>
+            <div className="space-y-2 border-t border-gray-100 pt-2 dark:border-white/5">
+              <h5 className="font-bold uppercase tracking-wider text-dts-primary dark:text-white">Información del comprador</h5>
+              <button type="button" onClick={() => { setIsQuoteDrawerOpen(false); handleTabChange('info'); }} className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-gray-200 bg-slate-50 px-3 py-2 text-left text-xs text-gray-900 hover:border-dts-secondary dark:border-gray-700 dark:bg-dts-primary-dark dark:text-white" title="Abrir ficha del contacto"><User size={14} className="shrink-0 text-gray-400" /><span className="truncate font-semibold">{contact.name}</span>{contact.email && <span className="flex min-w-0 items-center gap-1 text-gray-500"><Mail size={14} className="shrink-0 text-gray-400" /><span className="truncate">{contact.email}</span></span>}{(contact.phone_no || contact.mobile_no) && <span className="flex min-w-0 items-center gap-1 text-gray-500"><Phone size={14} className="shrink-0 text-gray-400" /><span className="truncate">{contact.phone_no || contact.mobile_no}</span></span>}</button>
             </div>
 
-            {/* Planificación / Seguimiento */}
-            <div className="space-y-3 border-t border-gray-100 dark:border-white/5 pt-4">
-              <h5 className="font-bold text-dts-primary dark:text-white uppercase tracking-wider">Planificación de Seguimiento</h5>
-              
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Próxima Acción</label>
-                    <input
-                      type="text"
-                      placeholder="Llamar, enviar demo, etc..."
-                      value={formProximaAccion}
-                      onChange={(e) => setFormProximaAccion(e.target.value)}
-                      className="w-full px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fecha Planificada</label>
-                    <input
-                      type="date"
-                      value={formFechaProximaAccion}
-                      onChange={(e) => setFormFechaProximaAccion(e.target.value)}
-                      className="w-full px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Observaciones internas</label>
-                  <textarea
-                    placeholder="Añade observaciones generales..."
-                    rows={3}
-                    value={formObservaciones}
-                    onChange={(e) => setFormObservaciones(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white outline-none resize-none"
-                  />
-                </div>
-
-                <button
-                  onClick={handleSavePlanning}
-                  disabled={isSavingPlanning}
-                  className="w-full py-2 bg-dts-secondary text-white font-bold rounded-lg hover:brightness-110 transition-all cursor-pointer text-xs"
-                >
-                  {isSavingPlanning ? 'Guardando...' : 'Guardar Planificación'}
-                </button>
-              </div>
-            </div>
-
-            {/* Listado de interacciones de la oferta */}
-            <div className="space-y-3 border-t border-gray-100 dark:border-white/5 pt-4">
-              <h5 className="font-bold text-dts-primary dark:text-white uppercase tracking-wider">Historial de la Oferta</h5>
-              
-              <form onSubmit={handleAddQuoteActivity} className="space-y-2 bg-gray-50/50 dark:bg-zinc-800/10 p-3 rounded-lg border border-gray-100 dark:border-white/5">
-                <div className="grid grid-cols-2 gap-3">
-                  <select
-                    value={newQuoteActivityType}
-                    onChange={(e) => setNewQuoteActivityType(e.target.value)}
-                    className="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white"
-                  >
-                    <option value="Llamada">Llamada</option>
-                    <option value="Reunión">Reunión</option>
-                    <option value="Nota">Nota</option>
-                    <option value="Email">Email</option>
-                    <option value="Tarea">Tarea</option>
-                  </select>
-                  <input
-                    type="date"
-                    value={newQuoteActivityDate}
-                    onChange={(e) => setNewQuoteActivityDate(e.target.value)}
-                    className="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white"
-                  />
-                </div>
-                <input
-                  type="text"
-                  required
-                  placeholder="Notas de la interacción..."
-                  value={newQuoteActivityNotes}
-                  onChange={(e) => setNewQuoteActivityNotes(e.target.value)}
-                  className="w-full px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white"
-                />
-                <button type="submit" className="w-full py-1 bg-dts-primary text-white font-bold rounded-lg hover:brightness-110 text-[10px]">
-                  Registrar Interacción
-                </button>
-              </form>
-
-              <div className="space-y-2 max-h-50 overflow-y-auto">
-                {quoteActivities.length === 0 ? (
-                  <p className="text-[10px] text-gray-400 italic">Sin interacciones registradas.</p>
-                ) : (
-                  quoteActivities.map((act: any) => (
-                    <div key={act.id} className="p-2 rounded-lg border border-gray-50 dark:border-white/2 bg-white/40 dark:bg-black/5 flex gap-2 items-start">
-                      {act.tipo === 'Tarea' && (
-                        <input
-                          type="checkbox"
-                          checked={act.hecho}
-                          onChange={() => updateQuoteActivityMutation.mutate({ activityId: act.id, data: { hecho: !act.hecho } })}
-                          className="mt-0.5"
-                        />
-                      )}
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-dts-secondary text-[9px] uppercase">{act.tipo}</span>
-                          <span className="text-[8px] text-gray-400 font-mono">{new Date(act.fecha).toLocaleDateString('es-ES')}</span>
-                        </div>
-                        <p className={`text-[10px] mt-0.5 ${act.hecho && act.tipo === 'Tarea' ? 'line-through text-gray-400' : 'text-gray-600 dark:text-gray-300'}`}>{act.notes || act.notas}</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (confirm('¿Eliminar interacción?')) {
-                            deleteQuoteActivityMutation.mutate(act.id);
-                          }
-                        }}
-                        className="text-gray-400 hover:text-rose-500 cursor-pointer"
-                      >
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
+            <OfferLinkedEvents activities={quoteActivities} documentNo={selectedQuote.document_no} clientId={selectedQuote.customer_no} contactId={contactId} closed={['ganada', 'ganado', 'perdida', 'perdido'].includes((selectedQuote.estado_oferta || '').toLowerCase().trim())} onCreateEvent={() => handleOpenEventModal(selectedQuote.document_no)} />
           </div>
         )}
       </Drawer>

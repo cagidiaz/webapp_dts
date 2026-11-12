@@ -1028,6 +1028,7 @@ model crm_activities {
   id                      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   client_id               String          @db.VarChar(50)
   contact_id              String?         @db.Uuid
+  oferta_vinculada        String?         @db.VarChar(50)
   created_by              String          @db.Uuid
   type                    CrmActivityType
   title                   String          @db.VarChar(255)

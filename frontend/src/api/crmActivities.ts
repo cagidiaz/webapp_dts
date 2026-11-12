@@ -40,6 +40,7 @@ export interface CrmActivity {
   exchange_web_link?: string | null;
   exchange_sync_status?: string | null;
   quote_document_no?: string | null;
+  oferta_vinculada?: string | null;
   attendees?: any;
   created_at: string;
   updated_at: string;
@@ -75,6 +76,11 @@ export const getCrmActivities = async (clientId: string): Promise<CrmActivity[]>
   const { data } = await apiClient.get(`/crm-activities/${clientId}`);
   return data;
 };
+
+export const getEventOffers = async (clientId: string): Promise<{ document_no: string; estado_oferta: string | null }[]> =>
+  (await apiClient.get(`/crm-activities/event-offers/${encodeURIComponent(clientId)}`)).data;
+export const getOfferEvents = async (documentNo: string): Promise<CrmActivity[]> =>
+  (await apiClient.get(`/crm-activities/offer-events/${encodeURIComponent(documentNo)}`)).data;
 
 /**
  * Obtiene todas las actividades de un contacto
@@ -165,6 +171,7 @@ export const createCrmActivity = async (payload: {
   email?: string;
   conclusions?: string;
   location?: string;
+  ofertaVinculada?: string | null;
   isCompleted?: boolean;
 }): Promise<CrmActivity> => {
   const { data } = await apiClient.post('/crm-activities', payload);
@@ -187,6 +194,7 @@ export const updateCrmActivity = async (
     location?: string | null;
     categoryTag?: string;
     quoteDocumentNo?: string;
+    ofertaVinculada?: string | null;
   }
 ): Promise<CrmActivity> => {
   const { data } = await apiClient.patch(`/crm-activities/${id}`, payload);

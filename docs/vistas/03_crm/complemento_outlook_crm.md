@@ -90,6 +90,8 @@ Al pulsar **"Registrar en dTS CRM"**:
 4. **Control de Duplicados en Cartera:** La comprobación de duplicados evalúa `exchange_immutable_id` junto con el creador, cliente y contacto, evitando falsos duplicados cruzados entre diferentes comerciales o asociaciones comerciales independientes del mismo correo.
 5. **Convivencia con Piloto de Ofertas:** Si la oferta pertenece al seguimiento local de ofertas, el correo se vincula como actividad local en `crm_offer_activities` sin alterar automáticamente la fase de la cotización ni su estado de cierre.
 
+**Actualización 12/11/2026, pendiente de validación funcional:** la oferta seleccionada se guarda en los metadatos de `crm_activities`. Si existe seguimiento en `crm_offer_followups`, se registra además en `crm_offer_activities`. El complemento ya no escribe en `sales_quote_activities`; el correo sigue vinculado aunque no exista fila de seguimiento. No se modifica la fase de la oferta.
+
 ## 7. Relación con el componente Windows de apertura (15/10/2026)
 
 El Add-in de Office registra el correo en el CRM; el componente Windows abre desde el CRM un mensaje ya registrado en Outlook Classic. Son instalaciones y permisos distintos: el ZIP de Classic no instala el Add-in, no cambia su manifiesto de Microsoft 365 y no necesita un certificado de firma de código.

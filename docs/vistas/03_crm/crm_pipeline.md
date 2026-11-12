@@ -19,7 +19,7 @@
 > - `backend/src/modules/quotes/offer-close-reasons.ts`  
 > **Tablas de Base de Datos:**  
 > - *Prospección:* `crm_prospects`, `crm_prospect_activities`, `crm_prospect_events`  
-> - *Seguimiento Ofertas:* `crm_offer_followups`, `crm_offer_activities`, `sales_quotes_crm`, `sales_quote_activities`, `sales_quotes` (BC, solo lectura)  
+> - *Seguimiento Ofertas:* `crm_offer_followups`, `crm_offer_activities`, `crm_activities` (correos), `sales_quotes_crm`, `sales_quotes` (BC, solo lectura). `sales_quote_activities` se conserva como histórico y ya no se consulta ni escribe desde estos flujos.  
 > - *Cortes Históricos:* `crm_pipeline_cuts`, `crm_pipeline_cut_rows`, `crm_pipeline_cut_events`  
 > - *Entidades Relacionadas:* `customers` (BC), `contacts` (BC)  
 > **Última actualización:** Octubre 2026
@@ -280,3 +280,20 @@ Cuando una persona crea o reasigna un prospecto a otro usuario, el historial CRM
 ## Ordenación y fecha de cierre prevista en tarjetas del Kanban (11 de noviembre de 2026)
 
 En **CRM → Oportunidades (Pestaña Ofertas)** en modo piloto, cada columna del Kanban ordena sus tarjetas de forma ascendente por **fecha de cierre prevista** (`cierreprev_date`), dejando al final aquellas que no tienen una fecha válida asignada. Además, la etiqueta superior derecha de cada tarjeta pasa a mostrar la fecha de cierre prevista (`DD/MM/YYYY` o `Sin fecha`).
+
+### Actualización del historial de ofertas 12 de noviembre de 2026
+
+El backend consulta las actividades de oferta en `crm_offer_activities` y los correos con oferta guardada en `crm_activities`. El complemento registra la asociación en el correo y, cuando existe seguimiento, también en el historial CRM. Ya no se consulta ni escribe `sales_quote_activities` desde estos flujos: la tabla y sus datos restantes se conservan, pero las entradas que solo existan allí no se migran ni aparecen automáticamente en el historial nuevo. La auditoría y las notas de cambio de fase se conservan y protegen; el seguimiento de fuente BC continúa en solo lectura.
+
+Comprobación automática inicial: compilación backend y 40 pruebas. La vinculación de eventos se implementó posteriormente para pruebas locales; su validación funcional y despliegue siguen pendientes.
+
+### Eventos vinculados a ofertas 12 de noviembre de 2026
+
+El formulario de creación y edición de actividades del contacto muestra **Oferta vinculada (opcional)** y consulta las ofertas abiertas de la empresa. Se requiere contacto para asociar una oferta y se permite elegir una sola. Una coincidencia con el título solo propone la oferta y exige confirmación. Se puede corregir o quitar el vínculo sin borrar el evento; la relación se conserva si la oferta se cierra posteriormente.
+
+La ficha de oferta incorpora **Historial de eventos**, que reúne cronológicamente los eventos vinculados y los cambios y correos disponibles en el historial CRM. Cada registro muestra su tipo en una línea compacta; pulsar un evento abre el formulario compartido y pulsar un registro histórico muestra su detalle. El botón **Crear evento**, junto al título, abre el formulario con la oferta preseleccionada: desde Oportunidades se selecciona antes un contacto de la empresa; desde la ficha de contacto se utiliza ese contacto. La próxima acción corresponde al primer evento pendiente con fecha. Los cortes nuevos usan esa acción y los ya publicados se conservan.
+
+Técnicamente la relación se guarda en `crm_activities.oferta_vinculada`, identifica la oferta por número y no modifica tablas sincronizadas con Business Central. Los campos de seguimiento de ofertas BC siguen siendo de solo lectura. El propietario del evento, Admin y Dirección pueden cambiar la relación dentro de su ámbito. El selector y los endpoints verifican empresa, contacto, cartera y estado de la oferta.
+
+Estado: código trasladado a la carpeta local, compilaciones frontend/backend y 59 pruebas específicas superadas. El usuario ejecutó el SQL y se verificaron la columna y el índice en la base compartida; confirmó que las ofertas vuelven a cargar. Quedan pendientes las pruebas funcionales de la vinculación y de permisos antes de producción y la revisión de la limpieza definitiva de datos antiguos.
+El formulario de oferta se ha estrechado 50 píxeles respecto al tamaño anterior. La cabecera reúne importe original, previsión ponderada y probabilidad de éxito en solo lectura; los parámetros comerciales usan dos columnas. El contacto del comprador ocupa una línea con iconos de correo y teléfono cuando existen y permite abrir su ficha. Se retiró el campo de observaciones del formulario sin eliminar sus datos. Los formularios ocultos de planificación y de creación manual antigua se han retirado del código de estas fichas.

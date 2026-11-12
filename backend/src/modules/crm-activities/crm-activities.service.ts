@@ -6,6 +6,7 @@ import { resolveCrmDataScope } from '../../common/crm-data-scope';
 import { CrmActivityType } from '@prisma/client';
 import { ExchangeSyncService } from '../exchange-sync/exchange-sync.service';
 import { ProspectsService } from '../prospects/prospects.service';
+import { pilotPhase } from '../quotes/offer-pilot-rules';
 
 @Injectable()
 export class CrmActivitiesService {
@@ -15,6 +16,21 @@ export class CrmActivitiesService {
     private readonly exchangeSyncService: ExchangeSyncService,
     private readonly prospectsService: ProspectsService,
   ) {}
+
+  private async validateEventOffer(userId: string | undefined, clientId: string, contactId: string | null | undefined, type: CrmActivityType, documentNo: string | null) {
+    if (!userId) throw new ForbiddenException('Sesión no disponible.');
+    if (type === 'EMAIL') throw new BadRequestException('Los correos usan su vinculación propia.');
+    const scope = await resolveCrmDataScope(this.prisma, userId);
+    const customer = await this.prisma.customers.findFirst({ where: { client_id: clientId, ...(scope.salespersonCode ? { salesperson_code: scope.salespersonCode } : {}) }, select: { client_id: true } });
+    if (!customer) throw new ForbiddenException('La empresa no pertenece a tu cartera.');
+    if (!documentNo) return;
+    if (!contactId || !await this.prisma.contacts.findFirst({ where: { id: contactId, client_id: clientId }, select: { id: true } })) throw new BadRequestException('La vinculación requiere un contacto de la empresa.');
+    const quote = await this.prisma.sales_quotes.findFirst({ where: { document_no: documentNo, customer_no: clientId }, select: { document_no: true, estado_oferta: true } });
+    if (!quote) throw new BadRequestException('La oferta no pertenece a la empresa.');
+    const followup = await this.prisma.crm_offer_followups.findUnique({ where: { document_no: documentNo }, select: { source: true, estado_oferta: true } });
+    const phase = pilotPhase(followup?.source === 'APP' ? followup.estado_oferta : quote.estado_oferta);
+    if (phase === 'ganada' || phase === 'perdida') throw new BadRequestException('Solo se pueden vincular ofertas abiertas.');
+  }
 
   private async authorizeInvitationCompany(userId: string | undefined, clientId: string) {
     if (!userId) throw new ForbiddenException('Sesión no disponible.');
@@ -30,6 +46,22 @@ export class CrmActivitiesService {
   async invitationContacts(userId: string, clientId: string) {
     await this.authorizeInvitationCompany(userId, clientId);
     return this.prisma.contacts.findMany({ where: { client_id: clientId }, select: { id: true, name: true, email: true }, orderBy: { name: 'asc' } });
+  }
+
+  async eventOffers(userId: string, clientId: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
+    if (!await this.prisma.customers.findFirst({ where: { client_id: clientId, ...(scope.salespersonCode ? { salesperson_code: scope.salespersonCode } : {}) }, select: { client_id: true } })) throw new ForbiddenException('La empresa no pertenece a tu cartera.');
+    const quotes = await this.prisma.sales_quotes.findMany({ where: { customer_no: clientId }, select: { document_no: true, estado_oferta: true }, orderBy: { document_no: 'desc' } });
+    const followups = await this.prisma.crm_offer_followups.findMany({ where: { document_no: { in: quotes.map(q => q.document_no) } }, select: { document_no: true, source: true, estado_oferta: true } });
+    const byDocument = new Map(followups.map(q => [q.document_no, q]));
+    return quotes.filter(q => { const local = byDocument.get(q.document_no); return !['ganada', 'perdida'].includes(pilotPhase(local?.source === 'APP' ? local.estado_oferta : q.estado_oferta) || ''); });
+  }
+
+  async eventsForOffer(userId: string, documentNo: string) {
+    const scope = await resolveCrmDataScope(this.prisma, userId);
+    const quote = await this.prisma.sales_quotes.findFirst({ where: { document_no: documentNo, ...(scope.salespersonCode ? { customer: { is: { salesperson_code: scope.salespersonCode } } } : {}) }, select: { customer_no: true } });
+    if (!quote) throw new NotFoundException('Oferta no disponible en tu cartera.');
+    return this.prisma.crm_activities.findMany({ where: { oferta_vinculada: documentNo, client_id: quote.customer_no, type: { not: 'EMAIL' } }, include: { contact: true }, orderBy: [{ due_date: 'asc' }, { created_at: 'desc' }] });
   }
 
   /**
@@ -93,6 +125,9 @@ export class CrmActivitiesService {
     if (!activities || activities.length === 0) return [];
 
     return activities.map((act) => {
+      // En eventos solo un vínculo confirmado cuenta como asociación; los
+      // números detectados en el título son sugerencias para el formulario.
+      if (act.type !== 'EMAIL') return { ...act, quote_document_no: act.oferta_vinculada || null };
       let quoteDocNo: string | null = null;
 
       // 1. Extraer desde attendees JSON si se guardó estructurado
@@ -357,6 +392,7 @@ export class CrmActivitiesService {
     createdAt?: string;
     conclusions?: string;
     location?: string;
+    ofertaVinculada?: string | null;
   }) {
     const { clientId, contactId, userId, type, title, description, dueDate, timeScheduled, email, createdAt, conclusions, location } = data;
     
@@ -385,6 +421,8 @@ export class CrmActivitiesService {
       throw new NotFoundException(`El cliente con código "${resolvedClientId}" no existe en la ficha de clientes`);
     }
 
+    if (data.ofertaVinculada) await this.validateEventOffer(userId, resolvedClientId, contactId, type, data.ofertaVinculada.trim());
+
     let invitation: any;
     if (data.calendarInvitation !== undefined) {
       await this.authorizeInvitationCompany(userId, resolvedClientId);
@@ -400,6 +438,7 @@ export class CrmActivitiesService {
           ...(invitation ? { attendees: { calendarInvitation: invitation } } : {}),
           client_id: resolvedClientId,
           contact_id: contactId || null,
+          oferta_vinculada: data.ofertaVinculada?.trim() || null,
           created_by: userId,
           type,
           title,
@@ -440,6 +479,7 @@ export class CrmActivitiesService {
     categoryTag?: string;
     quoteDocumentNo?: string;
     calendarInvitation?: unknown;
+    ofertaVinculada?: string | null;
   }, userId?: string) {
     try {
       // Verificar existencia
@@ -448,7 +488,14 @@ export class CrmActivitiesService {
         throw new NotFoundException('Actividad no encontrada');
       }
 
+      if (data.ofertaVinculada !== undefined && (data.ofertaVinculada?.trim() || null) !== existing.oferta_vinculada) {
+        const profile = userId ? await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } }) : null;
+        if (!profile?.is_active || (existing.created_by !== userId && !['ADMIN', 'DIRECCION'].includes(profile.roles?.name?.toUpperCase() || ''))) throw new ForbiddenException('Solo el propietario, Admin o Dirección puede cambiar la oferta.');
+        await this.validateEventOffer(userId, existing.client_id, existing.contact_id, existing.type, data.ofertaVinculada?.trim() || null);
+      }
+
       const prismaData: any = {};
+      if (data.ofertaVinculada !== undefined) prismaData.oferta_vinculada = data.ofertaVinculada?.trim() || null;
       if (data.title !== undefined) prismaData.title = data.title;
       if (data.description !== undefined) prismaData.description = data.description;
       if (data.isCompleted !== undefined) prismaData.is_completed = data.isCompleted;

@@ -87,9 +87,10 @@ describe('new email persistence', () => {
     const identities: any = { prepare: jest.fn().mockResolvedValue({ enabled: false, patch: {} }) };
     const service = new OutlookAddinService(db, { get: () => undefined } as any, identities, access);
     const payload: any = { userEmail: 'user@test.invalid', exchangeItemId: 'exact', clientId: 'client', contactId: 'contact', subject: 'Test', body: 'Body', categoryTag: 'NEGOCIACION', quoteDocumentNo: 'OF1', sentDate: '2026-10-16T12:00:00Z', emailAttachments: metadata };
-    await service.logEmail(payload, 'user');
+    expect((await service.logEmail(payload, 'user')).quoteLinked).toBe(true);
     const saved = db.crm_activities.create.mock.calls[0][0].data.attendees;
     expect(saved).toMatchObject({ categoryTag: 'NEGOCIACION', quoteDocumentNo: 'OF1', sentDate: '2026-10-16T12:00:00.000Z', emailAttachments: { files: [{ name: 'Presupuesto.pdf' }] } });
+    expect(db.sales_quote_activities.create).not.toHaveBeenCalled();
     db.crm_activities.findFirst.mockResolvedValue({ id: 'old', attendees: { legacy: true } });
     expect((await service.logEmail(payload, 'user')).alreadyExisted).toBe(true);
     expect(db.crm_activities.create).toHaveBeenCalledTimes(1);

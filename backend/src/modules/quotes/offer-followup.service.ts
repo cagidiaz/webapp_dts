@@ -9,6 +9,7 @@ import { OFFER_CLOSE_REASONS } from './offer-close-reasons';
 import { pilotPhase, OFFER_PROBABILITIES } from './offer-pilot-rules';
 import { loadOfferContacts } from './offer-contacts';
 import { hasOpportunitiesAccess } from '../prospects/opportunities-individual-access';
+import { resolveCrmDataScope } from '../../common/crm-data-scope';
 export { BC_FIELDS, LOCAL_FIELDS, OfferSourceContext } from './offer-source-context';
 const dates = new Set(['cierreprev_date', 'confirmacion_date', 'fecha_proxima_accion']);
 
@@ -19,7 +20,8 @@ export class OfferFollowupService {
   async context() {
     if (!this.enabled()) return null;
     const rows = await this.prisma.crm_offer_followups.findMany({ where: { source: 'APP' }, include: { activities: { where: { tipo: { not: 'Auditoría' } }, orderBy: { fecha: 'desc' } } } });
-    return new OfferSourceContext(await loadOfferContacts(this.prisma, rows));
+    const events = await this.prisma.crm_activities.findMany({ where: { oferta_vinculada: { not: null }, type: { not: 'EMAIL' }, is_completed: false, due_date: { not: null } }, select: { oferta_vinculada: true, title: true, due_date: true, time_scheduled: true }, orderBy: [{ due_date: 'asc' }, { time_scheduled: 'asc' }, { id: 'asc' }] });
+    return new OfferSourceContext(await loadOfferContacts(this.prisma, rows), events);
   }
   async scope(userId: string, requiredPath?: '/crm/pipeline' | '/crm/contacts') {
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } });
@@ -113,16 +115,22 @@ export class OfferFollowupService {
     const quote = await this.prisma.sales_quotes.findFirst({ where: { id: quoteId, ...await this.scope(userId) } });
     if (!quote) throw new NotFoundException('Oferta fuera de tu cartera.');
     const row = await this.prisma.crm_offer_followups.findUnique({ where: { document_no: quote.document_no } });
-    if (!row || row.source === 'BC') {
-      if (data && await this.isManagedQuote(quoteId)) throw new ConflictException('El seguimiento APP de esta oferta aún no está disponible desde n8n.');
-      return null;
-    }
+    if (!row && data) throw new ConflictException('El seguimiento APP de esta oferta aún no está disponible desde n8n.');
+    if (data && row?.source !== 'APP') throw new ConflictException('Esta oferta sigue gestionada desde BC y su seguimiento es de solo lectura.');
     if (data) {
       const scope = access?.canEditAll ? {} : await this.scope(userId);
       if ('salesperson_code' in scope && quote.salesperson_code !== scope.salesperson_code) throw new ForbiddenException('La actividad pertenece a otra cartera.');
     }
-    if (data) return this.prisma.crm_offer_activities.create({ data: { followup_id: row.id, author_id: userId, tipo: data.tipo, notas: data.notas, fecha: new Date(data.fecha), hecho: data.hecho || false } });
-    return this.prisma.crm_offer_activities.findMany({ where: { followup_id: row.id, tipo: { not: 'Auditoría' } }, orderBy: { fecha: 'desc' } });
+    if (data && row) return this.prisma.crm_offer_activities.create({ data: { followup_id: row.id, author_id: userId, tipo: data.tipo, notas: data.notas, fecha: new Date(data.fecha), hecho: data.hecho || false } });
+    const activities = row ? await this.prisma.crm_offer_activities.findMany({ where: { followup_id: row.id, tipo: { not: 'Auditoría' } }, orderBy: { fecha: 'desc' } }) : [];
+    const scope = await resolveCrmDataScope(this.prisma, userId);
+    const emails = await this.prisma.crm_activities.findMany({ where: {
+      type: 'EMAIL', client_id: quote.customer_no,
+      ...(scope.salespersonCode ? { customer: { is: { salesperson_code: scope.salespersonCode } } } : {}),
+      OR: [{ attendees: { path: ['quoteDocumentNo'], equals: quote.document_no } }, { attendees: { path: ['quote_document_no'], equals: quote.document_no } }],
+    }, select: { id: true, title: true, description: true, created_at: true, due_date: true } });
+    const existing = new Set(activities.map(activity => activity.id));
+    return [...activities, ...emails.filter(email => !existing.has(email.id)).map(email => ({ id: email.id, tipo: 'Email', notas: `${email.title}\n\n${email.description?.substring(0, 500) || ''}`, fecha: email.created_at || email.due_date || new Date(0), hecho: true }))].sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
   }
   async editActivity(userId: string, id: string, data: any) {
     if (!this.enabled()) return null;
@@ -133,7 +141,7 @@ export class OfferFollowupService {
     const quote = await this.prisma.sales_quotes.findFirst({ where: { document_no: row.followup.document_no, ...scope } });
     if (!quote || 'salesperson_code' in scope && quote.salesperson_code !== scope.salesperson_code) throw new ForbiddenException('Actividad ajena.');
     if (row.followup.source !== 'APP') throw new ConflictException('Esta oferta sigue gestionada desde BC.');
-    if (row.tipo === 'Auditoría') throw new ForbiddenException('El historial de cambios es inmutable.');
+    if (row.tipo === 'Auditoría' || row.notas?.startsWith('Cambio de fase [') || row.tipo.toLowerCase() === 'email') throw new ForbiddenException('La auditoría, los cambios de fase y los correos se conservan sin cambios.');
     if (data === null) throw new BadRequestException('Las actividades de seguimiento se conservan. Marca la actividad como realizada o corrige sus notas.');
     return this.prisma.crm_offer_activities.update({ where: { id }, data: { ...(data.tipo !== undefined ? {tipo:data.tipo}:{}), ...(data.notas !== undefined ? {notas:data.notas}:{}), ...(data.fecha ? {fecha:new Date(data.fecha)}:{}), ...(data.hecho !== undefined ? {hecho:data.hecho}:{}) } });
   }
