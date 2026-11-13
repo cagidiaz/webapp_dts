@@ -36,7 +36,7 @@ Ubicado a la izquierda para permitir una segmentación rápida y reactiva:
 
 | Filtro | Tipo de Control | Descripción y Funcionamiento | Utilidad de Negocio |
 | :--- | :--- | :--- | :--- |
-| **Ejercicio** | Selector desplegable | Años fiscales disponibles (2024, 2025, 2026). Cambia el año base de análisis. | Permite auditar años cerrados o analizar el ejercicio en curso. |
+| **Ejercicio** | Selector desplegable | Años fiscales disponibles (2024, 2025, 2026, 2027). Cambia el año base de análisis. | Permite auditar años cerrados, analizar el ejercicio en curso o revisar la planificación presupuestaria de 2027. |
 | **Meses** | Botonera interactiva (1 al 12) | Permite seleccionar meses individuales o rangos acumulados (por defecto carga YTD, desde enero hasta el mes en curso). | Comparar periodos equivalentes (ej. primer trimestre Q1, semestre o YTD). |
 | **Vendedor** | Selector con búsqueda (`SearchableSelect`) | Filtra las ventas y presupuestos asignados al código de vendedor (ej. `ACI`, `JKU`, `JMO`, `JPG`). Cuenta con botón individual "Limpiar" y opción en el desplegable. | **Control de Acceso (RBAC):** Si el usuario conectado es un comercial, este filtro queda fijado a su propio código y no puede ver a otros comerciales. Los administradores y dirección pueden seleccionar cualquier vendedor o ver "Todos". |
 | **Familia** | Selector con búsqueda (`SearchableSelect`) | Filtra por código de familia de producto de Business Central (ej. `EQUIPOS`, `CONSUMIBLES`, `SERVICIOS`). Dispone de botón individual "Limpiar" en cabecera. | Analizar el cumplimiento por grandes líneas de producto. |

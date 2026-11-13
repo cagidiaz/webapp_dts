@@ -138,7 +138,7 @@ export const BudgetFiltersSidebar: React.FC<BudgetFiltersSidebarProps> = ({
           onChange={(e) => onYearChange(Number(e.target.value))}
           className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-dts-primary-dark text-dts-primary dark:text-white font-bold rounded-md px-3 py-2 text-xs outline-none font-mono shadow-sm"
         >
-          {[2024, 2025, 2026].map(y => (
+          {[2024, 2025, 2026, 2027].map(y => (
             <option key={y} value={y}>{y}</option>
           ))}
         </select>

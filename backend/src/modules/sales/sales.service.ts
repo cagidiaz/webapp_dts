@@ -84,6 +84,43 @@ export class SalesService {
   }
 
   /**
+   * Resuelve las subfamilias que coinciden con los filtros de PM, familia y subfamilia.
+   */
+  private async resolveSubfamilyCodes(filters: {
+    pmCode?: string;
+    familyCode?: string;
+    subfamilyCode?: string | string[];
+  }): Promise<string[] | null> {
+    const { pmCode, familyCode, subfamilyCode } = filters;
+    const cleanPm = pmCode && String(pmCode).trim() !== '' ? String(pmCode).trim() : undefined;
+    const cleanFamily = familyCode && String(familyCode).trim() !== '' ? String(familyCode).trim() : undefined;
+
+    let cleanSubfamilies: string[] = [];
+    if (Array.isArray(subfamilyCode)) {
+      cleanSubfamilies = subfamilyCode.map(s => String(s).trim()).filter(Boolean);
+    } else if (subfamilyCode && String(subfamilyCode).trim() !== '') {
+      cleanSubfamilies = String(subfamilyCode).split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    if (!cleanPm && !cleanFamily && cleanSubfamilies.length === 0) return null;
+
+    const catWhere: any = {};
+    if (cleanPm) catWhere.pm_code = cleanPm;
+    if (cleanFamily) catWhere.family_code = cleanFamily;
+    if (cleanSubfamilies.length === 1) {
+      catWhere.subfamily_code = cleanSubfamilies[0];
+    } else if (cleanSubfamilies.length > 1) {
+      catWhere.subfamily_code = { in: cleanSubfamilies };
+    }
+
+    const matchingCategories = await this.prisma.product_categories.findMany({
+      where: catWhere,
+      select: { subfamily_code: true },
+    });
+    return matchingCategories.map((c) => c.subfamily_code).filter(Boolean) as string[];
+  }
+
+  /**
    * Resuelve de forma unificada la lista de item_no según los filtros de PM, familia, subfamilia y código de producto.
    * Retorna:
    * - null: si ningún filtro de producto está activo (sin restricción).
@@ -120,28 +157,10 @@ export class SalesService {
       return cached.data;
     }
 
-    let matchingSubfamilies: string[] | null = null;
-    if (cleanPm || cleanFamily || cleanSubfamilies.length > 0) {
-      const catWhere: any = {};
-      if (cleanPm) catWhere.pm_code = cleanPm;
-      if (cleanFamily) catWhere.family_code = cleanFamily;
-      if (cleanSubfamilies.length === 1) {
-        catWhere.subfamily_code = cleanSubfamilies[0];
-      } else if (cleanSubfamilies.length > 1) {
-        catWhere.subfamily_code = { in: cleanSubfamilies };
-      }
-
-      const matchingCategories = await this.prisma.product_categories.findMany({
-        where: catWhere,
-        select: { subfamily_code: true },
-      });
-      matchingSubfamilies = matchingCategories.map((c) => c.subfamily_code).filter(Boolean) as string[];
-
-      // Si se filtró por categoría y no hay ninguna que coincida, no hay productos posibles
-      if (matchingSubfamilies.length === 0) {
-        this.itemNosCache.set(cacheKey, { data: [], expiresAt: now + 10 * 60 * 1000 });
-        return [];
-      }
+    const matchingSubfamilies = await this.resolveSubfamilyCodes({ pmCode, familyCode, subfamilyCode });
+    if (matchingSubfamilies !== null && matchingSubfamilies.length === 0) {
+      this.itemNosCache.set(cacheKey, { data: [], expiresAt: now + 10 * 60 * 1000 });
+      return [];
     }
 
     const prodWhere: any = {};
@@ -286,7 +305,10 @@ export class SalesService {
       docsWhere.customer = { salesperson_code: salespersonCode };
     }
 
-    const itemNos = await this.resolveItemNos({ familyCode, subfamilyCode });
+    const [itemNos, subfamilies] = await Promise.all([
+      this.resolveItemNos({ familyCode, subfamilyCode }),
+      this.resolveSubfamilyCodes({ familyCode, subfamilyCode }),
+    ]);
     const hasCategoryFilter = itemNos !== null;
 
     if (hasCategoryFilter) {
@@ -306,7 +328,9 @@ export class SalesService {
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
     if (customerCode) budgetWhere.customer_code = customerCode;
     if (hasCategoryFilter) {
-      budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
+      budgetWhere.subfamily_code = subfamilies && subfamilies.length > 0
+        ? { in: subfamilies }
+        : { in: ['NO_SUBFAMILIES_FOUND'] };
     }
 
     // 3. Fechas del año anterior (LYTD)
@@ -1089,19 +1113,23 @@ export class SalesService {
       budgetWhere.customer_code = { in: customerIds };
     }
 
-    const itemNos = await this.resolveItemNos({ familyCode, subfamilyCode });
+    const [itemNos, subfamilies] = await Promise.all([
+      this.resolveItemNos({ familyCode, subfamilyCode }),
+      this.resolveSubfamilyCodes({ familyCode, subfamilyCode }),
+    ]);
     const hasCategoryFilter = itemNos !== null;
 
     if (hasCategoryFilter) {
       if (itemNos.length > 0) {
         docsWhere.lines = { some: { product_no: { in: itemNos } } };
         prevDocsWhere.lines = { some: { product_no: { in: itemNos } } };
-        budgetWhere.item_no = { in: itemNos };
       } else {
         docsWhere.document_no = 'NO_DOCS_FOUND';
         prevDocsWhere.document_no = 'NO_DOCS_FOUND';
-        budgetWhere.item_no = { in: ['NO_PRODUCTS_FOUND'] };
       }
+      budgetWhere.subfamily_code = subfamilies && subfamilies.length > 0
+        ? { in: subfamilies }
+        : { in: ['NO_SUBFAMILIES_FOUND'] };
     }
 
     const [salesDocsCurrent, budgetsByDay, salesDocsPrev] = await Promise.all([
@@ -1270,8 +1298,11 @@ export class SalesService {
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-    // 1. Resolver item_nos según filtros de PM / familia / subfamilia / código producto
-    const itemNos = await this.resolveItemNos({ pmCode, familyCode, subfamilyCode, productCode });
+    // 1. Resolver item_nos y subfamilias según filtros de PM / familia / subfamilia / código producto
+    const [itemNos, subfamilies] = await Promise.all([
+      this.resolveItemNos({ pmCode, familyCode, subfamilyCode, productCode }),
+      this.resolveSubfamilyCodes({ pmCode, familyCode, subfamilyCode }),
+    ]);
     const hasProductFilter = itemNos !== null;
     const itemNosSet = hasProductFilter && itemNos.length > 0 ? new Set(itemNos) : null;
 
@@ -1297,13 +1328,21 @@ export class SalesService {
       }
     }
 
-    // 4. Where clause para sales_budgets
+    // 4. Where clause para sales_budgets (usando pm_code y subfamily_code directos para incluir comodines GEN18000 / 99999999 / XXXXXXXX)
     const budgetWhere: any = {
       ...budgetDateFilter,
     };
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
-    if (hasProductFilter) {
-      budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
+    if (pmCode && String(pmCode).trim() !== '') {
+      budgetWhere.pm_code = String(pmCode).trim();
+    }
+    if (subfamilies !== null) {
+      budgetWhere.subfamily_code = subfamilies.length > 0
+        ? { in: subfamilies }
+        : { in: ['NO_SUBFAMILIES_FOUND'] };
+    }
+    if (productCode && String(productCode).trim() !== '') {
+      budgetWhere.item_no = { contains: String(productCode).trim(), mode: 'insensitive' };
     }
 
     // 5. Fechas y Where clause del año anterior (LYTD)
@@ -1787,8 +1826,11 @@ export class SalesService {
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-    // 1. Resolver item_nos
-    const itemNos = await this.resolveItemNos({ pmCode, familyCode, subfamilyCode, productCode });
+    // 1. Resolver item_nos y subfamilias
+    const [itemNos, subfamilies] = await Promise.all([
+      this.resolveItemNos({ pmCode, familyCode, subfamilyCode, productCode }),
+      this.resolveSubfamilyCodes({ pmCode, familyCode, subfamilyCode }),
+    ]);
     const hasProductFilter = itemNos !== null;
     const itemNosSet = hasProductFilter && itemNos.length > 0 ? new Set(itemNos) : null;
 
@@ -1812,8 +1854,16 @@ export class SalesService {
       budget_date: { gte: startDate, lte: endDate },
     };
     if (salespersonCode) budgetWhere.salesperson_code = salespersonCode;
-    if (hasProductFilter) {
-      budgetWhere.item_no = itemNos.length > 0 ? { in: itemNos } : { in: ['NO_PRODUCTS_FOUND'] };
+    if (pmCode && String(pmCode).trim() !== '') {
+      budgetWhere.pm_code = String(pmCode).trim();
+    }
+    if (subfamilies !== null) {
+      budgetWhere.subfamily_code = subfamilies.length > 0
+        ? { in: subfamilies }
+        : { in: ['NO_SUBFAMILIES_FOUND'] };
+    }
+    if (productCode && String(productCode).trim() !== '') {
+      budgetWhere.item_no = { contains: String(productCode).trim(), mode: 'insensitive' };
     }
 
     if (search && search.trim() !== '') {

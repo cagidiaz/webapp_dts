@@ -33,7 +33,7 @@ La pantalla se distribuye en:
 
 | Filtro | Tipo de Control | Descripción y Funcionamiento | Utilidad de Negocio |
 | :--- | :--- | :--- | :--- |
-| **Ejercicio** | Selector desplegable | Años fiscales disponibles (2024, 2025, 2026). Cambia el año de comparación. | Análisis de ejercicios anteriores o seguimiento del año actual. |
+| **Ejercicio** | Selector desplegable | Años fiscales disponibles (2024, 2025, 2026, 2027). Cambia el año de comparación. | Análisis de ejercicios anteriores, seguimiento del año actual o planificación de 2027. |
 | **Product Manager (PM)** | Botonera de códigos PM | Selector de código de Product Manager (ej. `ACI`, `JMO`, `JKU`, `JPG`). <br>• **Detección Automática:** Si el usuario que inicia sesión está identificado en el sistema como Product Manager, la vista fija automáticamente su código PM y oculta/bloquea el selector. <br>• Para Dirección o Administradores, permite alternar libremente entre cualquier PM o ver el catálogo global. | Control de acceso específico para que cada Product Manager se enfoque en su cartera de productos. |
 | **Meses** | Botonera interactiva (1 al 12) | Permite seleccionar meses específicos o acumulados (por defecto YTD hasta el mes en curso). | Evaluar estacionalidades y cumplimiento en periodos cerrados. |
 | **Vendedor** | Selector con búsqueda (`SearchableSelect`) | Filtra qué comercial ha generado las ventas de los productos del PM seleccionado. Dispone de botón "Limpiar" en cabecera. | Permite al PM analizar qué comerciales están vendiendo mejor sus productos o en qué zonas se requiere apoyo técnico. |
