@@ -220,13 +220,13 @@ export const ProductBudgetPage: React.FC = () => {
 
     const allRows = result?.rows || [];
     const placeholderRow = allRows.find(
-      (r: any) => r.customerCode === '99999999' || r.customerCode === '9999999' || r.customerName === 'CLIENTE NUEVO'
+      (r: any) => r.customerCode === '99999999'
     );
     const regularCustomerRows = allRows.filter(
-      (r: any) => !r.isNew && r.customerCode !== '99999999' && r.customerCode !== '9999999' && r.customerName !== 'CLIENTE NUEVO'
+      (r: any) => !r.isNew && r.customerCode !== '99999999'
     );
     const newCustomerRows = allRows.filter(
-      (r: any) => r.isNew && r.customerCode !== '99999999' && r.customerCode !== '9999999' && r.customerName !== 'CLIENTE NUEVO'
+      (r: any) => r.isNew && r.customerCode !== '99999999'
     );
 
     const totalNewClientsSales = newCustomerRows.reduce((acc, r) => acc + (r.facturacion || 0), 0);
@@ -525,7 +525,7 @@ export const ProductBudgetPage: React.FC = () => {
                  :
                   tableData.map((row, idx) => {
                     const isExpanded = expandedRows.has(row.customerCode);
-                    const isPlaceholderNew = row.customerCode === '99999999' || row.customerName === 'CLIENTE NUEVO' || (row as any).excludeFacturacionFromTotal;
+                    const isPlaceholderNew = row.customerCode === '99999999' || (row as any).excludeFacturacionFromTotal;
                     return (
                       <React.Fragment key={`${row.customerCode}-${idx}`}>
                         {/* Customer Row */}

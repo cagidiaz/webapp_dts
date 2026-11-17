@@ -45,7 +45,7 @@ export class CustomersService {
     // Construir el filtro de búsqueda
     const where: any = {};
     const and: any[] = [
-      // Excluir cliente ficticio / comodín de cliente nuevo (9999999 / 99999999)
+      // Excluir el comodín oficial y variantes técnicas antiguas del directorio
       {
         client_id: {
           notIn: ['9999999', '99999999', 'CLI-9999999', 'CLI-99999999']

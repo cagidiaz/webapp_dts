@@ -258,7 +258,7 @@ export const CustomersPage: React.FC = () => {
 
   const mapCustomers = useMemo(() => {
     return (mapData?.data || []).filter(
-      c => c.client_id !== '9999999' && c.client_id !== '99999999' && !c.client_id?.startsWith('999999')
+      c => !c.client_id?.startsWith('999999')
     );
   }, [mapData]);
 
@@ -297,7 +297,7 @@ export const CustomersPage: React.FC = () => {
   const customers = useMemo(() => {
     const currentData = isPlaceholderData ? undefined : data;
     return (currentData?.pages.flatMap(page => page.data) || []).filter(
-      c => c.client_id !== '9999999' && c.client_id !== '99999999' && !c.client_id?.startsWith('999999')
+      c => !c.client_id?.startsWith('999999')
     );
   }, [data, isPlaceholderData]);
 
@@ -412,7 +412,7 @@ export const CustomersPage: React.FC = () => {
     ];
 
     const exportData = (result.data || []).filter(
-      (c: CustomerDataRow) => c.client_id !== '9999999' && c.client_id !== '99999999' && !c.client_id?.startsWith('999999')
+      (c: CustomerDataRow) => !c.client_id?.startsWith('999999')
     );
 
     exportToXlsx(exportData, columns, 'cartera_clientes_dts');

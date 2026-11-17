@@ -14,6 +14,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 const SALES_DOC_TYPES = ['Sales Invoice', 'Sales Credit Memo'];
 const PURCHASE_DOC_TYPES = ['Purchase Invoice', 'Purchase Credit Memo'];
 const MIN_DATE_FOR_QUERIES = new Date('2022-01-01');
+const NEW_CUSTOMER_PLACEHOLDER = '99999999';
 
 @Injectable()
 export class SalesService {
@@ -453,7 +454,7 @@ export class SalesService {
       if (c.salesperson_code) {
         customerSalespersonMap.set(c.client_id, c.salesperson_code.trim());
       }
-      const isNew = Boolean(c.created_at && new Date(c.created_at) >= startDate && new Date(c.created_at) <= endDate);
+      const isNew = Boolean(c.client_id !== NEW_CUSTOMER_PLACEHOLDER && c.created_at && new Date(c.created_at) >= startDate && new Date(c.created_at) <= endDate);
       customerIsNewMap.set(c.client_id, isNew);
       customersDict[c.client_id] = { name: c.name, since: c.created_at };
     }
@@ -716,7 +717,7 @@ export class SalesService {
 
     // Cantidad real de clientes creados en el año actual (independientemente de si tienen ventas)
     const countNewClients = allCustomers.filter(c => 
-      c.created_at && new Date(c.created_at) >= startDate && new Date(c.created_at) <= endDate &&
+      c.client_id !== NEW_CUSTOMER_PLACEHOLDER && c.created_at && new Date(c.created_at) >= startDate && new Date(c.created_at) <= endDate &&
       (!salespersonCode || c.salesperson_code === salespersonCode)
     ).length;
 
@@ -1590,7 +1591,7 @@ export class SalesService {
       // Ordenar productos por facturación descendente
       productRows.sort((a, b) => b.facturacion - a.facturacion);
 
-      const isNew = Boolean(cInfo?.since && new Date(cInfo.since) >= startDate && new Date(cInfo.since) <= endDate);
+      const isNew = Boolean(customerCode !== NEW_CUSTOMER_PLACEHOLDER && cInfo?.since && new Date(cInfo.since) >= startDate && new Date(cInfo.since) <= endDate);
 
       return {
         customerCode,

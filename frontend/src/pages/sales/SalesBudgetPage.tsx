@@ -265,13 +265,13 @@ export const SalesBudgetPage: React.FC = () => {
 
     const allRows = result?.rows || [];
     const placeholderRow = allRows.find(
-      (r: any) => r.customerCode === '99999999' || r.customerCode === '9999999' || r.customerName === 'CLIENTE NUEVO'
+      (r: any) => r.customerCode === '99999999'
     );
     const regularRows = allRows.filter(
-      (r: any) => !r.isNew && r.customerCode !== '99999999' && r.customerCode !== '9999999' && r.customerName !== 'CLIENTE NUEVO'
+      (r: any) => !r.isNew && r.customerCode !== '99999999'
     );
     const newClientRows = allRows.filter(
-      (r: any) => r.isNew && r.customerCode !== '99999999' && r.customerCode !== '9999999' && r.customerName !== 'CLIENTE NUEVO'
+      (r: any) => r.isNew && r.customerCode !== '99999999'
     );
     const totalNewClientsSales = newClientRows.reduce((acc, r) => acc + (r.facturacion || 0), 0);
     const totalNewClientsPrev = newClientRows.reduce((acc, r) => acc + (r.facturacionAnioAnterior || 0), 0);
@@ -581,7 +581,7 @@ export const SalesBudgetPage: React.FC = () => {
                     <tr><td colSpan={6} className="py-20 text-center text-gray-400 opacity-60">Sin datos de rendimiento para los filtros aplicados</td></tr>
                    : 
                     tableData.map((row, idx) => {
-                      const isPlaceholderNew = row.customerCode === '99999999' || row.customerName === 'CLIENTE NUEVO' || (row as any).excludeFacturacionFromTotal;
+                      const isPlaceholderNew = row.customerCode === '99999999' || (row as any).excludeFacturacionFromTotal;
                       return (
                       <tr key={`${row.customerCode}-${idx}`} className={`transition-colors ${isPlaceholderNew ? 'bg-indigo-50/40 dark:bg-indigo-950/20 border-l-2 border-indigo-500' : row.isNew ? 'bg-emerald-50/30 dark:bg-emerald-500/5 hover:bg-emerald-100/50 dark:hover:bg-emerald-500/10' : 'hover:bg-gray-50/80 dark:hover:bg-white/5'}`}>
                         <td className="px-5 py-3 font-medium">
