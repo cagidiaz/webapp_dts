@@ -851,7 +851,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                           <h4 className={`text-xs font-bold text-gray-900 dark:text-white truncate ${pilotMode ? '' : 'mb-4'}`}>
                             {quote.customer_name}
                           </h4>
-                          {pilotMode && <p className="mt-1 text-[10px] text-gray-500 dark:text-gray-400 truncate">{quote.contacto_nombre || 'Sin contacto asignado'}</p>}
+                          {pilotMode && <div className="mt-1 flex min-w-0 items-center justify-between gap-2"><span className="min-w-0 truncate text-[10px] text-gray-500 dark:text-gray-400">{quote.contacto_nombre || 'Sin contacto asignado'}</span><span className="shrink-0 text-xs font-bold font-mono text-gray-900 dark:text-white" title="Importe total de la oferta sin IVA">{formatCurrency(quote.amount, 2)}</span></div>}
 
                           {!pilotMode && <><div className="flex justify-between items-end border-t border-gray-50 dark:border-white/5 pt-3">
                             <div>
