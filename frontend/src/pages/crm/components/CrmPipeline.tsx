@@ -57,6 +57,22 @@ const closingDay = (value: string | null | undefined): string => {
   const parsed = new Date(`${day}T00:00:00Z`);
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === day ? day : '';
 };
+const closingDateGroup = (value: string | null | undefined): 'vencida' | 'proxima' | 'restante' => {
+  const day = closingDay(value);
+  if (!day) return 'restante';
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = (Date.parse(`${day}T00:00:00Z`) - today) / 86400000;
+  if (days < 0) return 'vencida';
+  if (days < 5) return 'proxima';
+  return 'restante';
+};
+const closingDateStyle = (value: string | null | undefined): string => {
+  const group = closingDateGroup(value);
+  if (group === 'vencida') return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+  if (group === 'proxima') return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+  return 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400';
+};
 export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean; contactId?: string }> = ({ pilotMode = false, canEditPilot = false, contactId }) => {
   const navigate = useNavigate();
   const STAGES = pilotMode ? PILOT_STAGES : LEGACY_STAGES;
@@ -265,17 +281,14 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
     let lostAmount = 0;
     let wonCount = 0;
     let lostCount = 0;
-    let overdueCount = 0;
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const closingCounts = { vencida: 0, proxima: 0, restante: 0 };
 
     quotes.forEach(q => {
       const state = q.estado_oferta ? q.estado_oferta.toLowerCase().trim() : '';
       const amt = q.amount;
       
-      const isWon = state === 'ganada';
-      const isLost = state === 'perdida';
+      const isWon = state === 'ganada' || state === 'ganado';
+      const isLost = state === 'perdida' || state === 'perdido';
 
       if (!isWon && !isLost) {
         activePipeline += amt;
@@ -290,13 +303,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
         lostCount++;
       }
 
-      if (q.fecha_proxima_accion && !isWon && !isLost) {
-        const nextActionDate = new Date(q.fecha_proxima_accion);
-        nextActionDate.setHours(0,0,0,0);
-        if (nextActionDate < today) {
-          overdueCount++;
-        }
-      }
+      if (!isWon && !isLost) closingCounts[closingDateGroup(q.cierreprev_date)]++;
     });
 
     const totalClosed = wonCount + lostCount;
@@ -306,7 +313,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
       activePipeline,
       weightedForecast,
       winRate,
-      overdueCount,
+      closingCounts,
       wonAmount,
       lostAmount
     };
@@ -566,14 +573,13 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
 
         <div className="bg-white dark:bg-surface-card-dark p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-card-hover group">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Seguimiento Vencido</span>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Fecha de cierre previsto</span>
             <AlertTriangle size={18} className="text-gray-400 group-hover:text-rose-500 transition-colors" />
           </div>
-          <div className={`text-2xl font-black font-mono ${kpis.overdueCount > 0 ? 'text-rose-500' : 'text-slate-400'}`}>
-            {kpis.overdueCount}
-          </div>
-          <div className="text-[10px] text-gray-400 mt-1 font-medium">
-            Ofertas con acción de seguimiento retrasada
+          <div className="grid grid-cols-3 gap-2 text-center" title="Ofertas abiertas. Próximas: hoy y los siguientes cuatro días. Restantes incluye ofertas sin fecha válida.">
+            <div><span className="block text-2xl leading-7 font-black font-mono text-red-600 dark:text-red-400">{kpis.closingCounts.vencida}</span><span className="text-[10px] text-red-600 dark:text-red-400">Vencidas</span></div>
+            <div><span className="block text-2xl leading-7 font-black font-mono text-amber-600 dark:text-amber-400">{kpis.closingCounts.proxima}</span><span className="text-[10px] text-amber-600 dark:text-amber-400">Próximas</span></div>
+            <div><span className="block text-2xl leading-7 font-black font-mono text-gray-700 dark:text-gray-300">{kpis.closingCounts.restante}</span><span className="text-[10px] text-gray-700 dark:text-gray-300">Restantes</span></div>
           </div>
         </div>
       </div>
@@ -617,7 +623,10 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                 onChange={(e) => setSalespersonFilter(e.target.value)}
               >
                 <option value="">Todos</option>
-                {salespersons?.map(sp => (
+                {salespersons?.filter(sp => {
+                  const words = (sp.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z]+/);
+                  return !(words.includes('joaquim') && words.includes('pla'));
+                }).map(sp => (
                   <option key={sp.code} value={sp.code}>{sp.name}</option>
                 ))}
               </select>
@@ -843,7 +852,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
                               <span className="whitespace-nowrap">{quote.document_no}</span>
                               {!pilotMode && quote.followup_source && <span className="block text-[9px] font-normal text-gray-400">Seguimiento {quote.followup_source === 'APP' ? 'app' : 'BC'}</span>}
                             </span>
-                            <span title={pilotMode ? 'Fecha de cierre prevista' : 'Tipo de oferta'} className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 font-bold">
+                            <span title={pilotMode ? 'Fecha de cierre prevista' : 'Tipo de oferta'} className={`text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded font-bold ${pilotMode ? closingDateStyle(quote.cierreprev_date) : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400'}`}>
                               {pilotMode ? (closingDay(quote.cierreprev_date) ? closingDay(quote.cierreprev_date).split('-').reverse().join('/') : 'Sin fecha') : quote.oferta_type}
                             </span>
                           </div>

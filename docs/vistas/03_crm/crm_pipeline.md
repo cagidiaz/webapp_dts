@@ -102,6 +102,12 @@ El tablero Kanban organiza las ofertas comerciales abiertas en 6 columnas dispue
 | **Aprobación** | **75%** | Pendiente de aprobación presupuestaria o firma por el cliente |
 | **Aceptada** | **90%** | Conformidad verbal o pre-adjudicación (permanece viva en el embudo) |
 
+### Fechas de cierre y filtro comercial (18/11/2026)
+
+- La fecha prevista en cada tarjeta es roja si es anterior a hoy, amarilla si corresponde a hoy o a los cuatro días naturales siguientes y gris en los demás casos. Las tarjetas de cada columna se ordenan por fecha de cierre prevista.
+- El KPI **Fecha de cierre previsto** cuenta ofertas abiertas en **Vencidas**, **Próximas** y **Restantes**; este último grupo incluye las ofertas sin fecha válida. Los números y sus etiquetas comparten el color de cada categoría.
+- El selector de comercial de Oportunidades excluye a Joaquim Pla por su nombre. La exclusión de la lista no modifica roles, permisos ni registros.
+
 ### 3.2 Desacoplamiento de Ganadas y Perdidas
 * Las ofertas con resultado **Ganada (100%)** o **Perdida (0%)** ya no ocupan columnas en el Kanban para no saturar la vista operativa del comercial.
 * Se gestionan mediante selectores de estado, tablas analíticas y gráficos de causas de cierre.

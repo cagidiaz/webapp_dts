@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.18 · 18 de noviembre de 2026 · Uso interno
+Edición 1.19 · 18 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -957,6 +957,16 @@ Las ofertas se crean en Business Central y llegan por sincronización. La vista 
 4. Utiliza los accesos de abiertas, ganadas, perdidas o todas en tabla para revisar el grupo correspondiente.
 
 En el seguimiento nuevo las columnas abiertas son Preliminar, Presentada, Evaluación, Negociación, Aprobación y Aceptada. Ganada y Perdida se consultan en la tabla de cerradas. La probabilidad se calcula a partir de la fase; el importe ponderado es el importe sin IVA multiplicado por la probabilidad. Los importes mostrados no garantizan una venta futura.
+
+#### Interpretar las fechas previstas de cierre
+
+El indicador **Fecha de cierre previsto** cuenta las ofertas abiertas en tres grupos:
+
+- **Vencidas** (rojo): su fecha es anterior a hoy.
+- **Próximas** (amarillo): su fecha es hoy o alguno de los cuatro días naturales siguientes.
+- **Restantes** (gris): cierran más adelante o no tienen una fecha válida.
+
+En el Kanban, la fecha de cierre de cada tarjeta utiliza esos mismos colores. Las tarjetas de cada fase se ordenan por fecha prevista, con las más próximas primero. El filtro de comerciales de Oportunidades no ofrece a Joaquim Pla, que es product manager; esta exclusión afecta al selector y no modifica permisos ni datos.
 
 #### Registrar un cambio de fase
 
