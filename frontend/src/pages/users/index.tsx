@@ -1,3 +1,4 @@
+import { appTabClass, appTabListClass } from '../../components/shared/appTabs';
 import React, { useState, useEffect, useMemo } from 'react';
 import { OutlookLinksTab } from './OutlookLinksTab';
 import { useQueryClient } from '@tanstack/react-query';
@@ -318,29 +319,21 @@ export const UsersPage: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Navigation Tabs */}
-        <div className="flex overflow-x-auto border-b border-gray-100 dark:border-white/5 gap-2">
+        <div role="tablist" className={appTabListClass}>
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${
-              activeTab === 'users'
-                ? 'border-dts-secondary text-dts-secondary font-black'
-                : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-white'
-            }`}
+              role="tab" aria-selected={activeTab === 'users'} className={appTabClass(activeTab === 'users')}
           >
             Usuarios
           </button>
           <button
             onClick={() => setActiveTab('permissions')}
-            className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${
-              activeTab === 'permissions'
-                ? 'border-dts-secondary text-dts-secondary font-black'
-                : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-white'
-            }`}
+              role="tab" aria-selected={activeTab === 'permissions'} className={appTabClass(activeTab === 'permissions')}
           >
             Permisos de Rol
           </button>
           <button type="button" onClick={() => setActiveTab('outlook')}
-            className={`whitespace-nowrap px-6 py-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${activeTab === 'outlook' ? 'border-dts-secondary text-dts-secondary' : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-white'}`}>
+              role="tab" aria-selected={activeTab === 'outlook'} className={appTabClass(activeTab === 'outlook')}>
             Vinculaciones Outlook
           </button>
         </div>

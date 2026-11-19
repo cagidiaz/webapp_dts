@@ -160,6 +160,22 @@ Servicio backend (`budget-generator.service.ts`) que automatiza la confección d
 
 ---
 
+### 7.2 Ventas y presupuesto por segmento
+
+Ambas vistas usan `GET /sales/budget-segments`. La consulta clasifica las líneas antes de agregarlas por segmento y mes. La tabla y su Excel parten del mismo resultado. Los KPI y el gráfico general conservan sus consultas y su posición al alternar las pestañas.
+
+| Concepto | Origen y criterio |
+|---|---|
+| Presupuesto | Suma de `sales_budgets.monthly_budget`. Se utiliza la subfamilia de la línea presupuestaria, incluidos los códigos de producto genéricos `99999999`, `GEN18000` y `XXXXXXXX`. |
+| Ventas actuales y anteriores | Facturas menos abonos en líneas `Item`, mediante la subfamilia de la ficha actual del producto. El histórico usa los mismos meses del ejercicio anterior. |
+| Segmento explícito | Se toma la regla de `crm_segment_subcategories` para la combinación de familia y subfamilia. |
+| ETM sin segmento explícito | Para una subfamilia contemplada por las reglas del CRM, un modelo de negocio informado permite clasificar como OEM o Process. Si el cliente es el comodín `99999999` o la clasificación sigue sin resolverse, el presupuesto se asigna a dTSTemp → Process. En ventas, una línea que no se resuelve con las reglas del CRM queda en Sin segmento. |
+| Resto de líneas sin regla | Se agrupan en Sin segmento y forman parte del total. |
+
+El objetivo de captación del **cliente** `99999999` se reparte según sus propias líneas de presupuesto. Las ventas de clientes nuevos reales se clasifican por los productos vendidos y se suman una sola vez. La desviación es ventas menos presupuesto. El cumplimiento solo se calcula si el presupuesto es positivo y el total calcula su propio porcentaje sobre las sumas.
+
+El filtro de segmento actúa dentro de la pestaña **Por segmentos**. Las métricas de esa pestaña comparan exclusivamente facturación de producto y presupuesto. Para el seguimiento de cartera, prepagos y cuentas, se usa el detalle habitual.
+
 ## 8. Origen de Datos (PostgreSQL / Supabase)
 *   **Tablas de Balance**: `financial_balances` (Códigos 1... para Activo, 2... para Pasivo).
 *   **Tablas de PyG**: `income_statements` (Códigos A1, A4, A6, etc.).

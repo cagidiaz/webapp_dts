@@ -1,3 +1,5 @@
+import { appTabClass, appTabIconClass, appTabListClass } from '../../../components/shared/appTabs';
+import { budgetTableControlsClass } from './budgetShared';
 import React, { useState, useMemo } from 'react';
 import { 
   ChevronUp, ChevronDown, ArrowUpDown, TrendingUp, FileText, 
@@ -113,49 +115,47 @@ export const SalespersonPerformanceTable: React.FC<SalespersonPerformanceTablePr
   const totalCumplimiento = totals.objetivo > 0 ? (totals.facturacion / totals.objetivo) * 100 : 0;
   const totalDesviacionPct = totals.objetivo > 0 ? (totalDesviacion / totals.objetivo) * 100 : 0;
 
+  const columnCount = activeSubTab === 'pipeline' ? 7 : 8;
+  const columns = (
+    <colgroup>
+      <col className="w-1/5" />
+      {Array.from({ length: columnCount - 1 }, (_, index) => (
+        <col key={index} style={{ width: `${80 / (columnCount - 1)}%` }} />
+      ))}
+    </colgroup>
+  );
+
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Sub-Tabs Toolbar */}
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.02] flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 p-1 bg-gray-100/80 dark:bg-gray-800/60 rounded-lg">
+      <div className={budgetTableControlsClass}>
+        <div role="tablist" aria-label="Rendimiento comercial" className={`${appTabListClass} min-w-0 flex-nowrap overflow-x-auto whitespace-nowrap border-b-0 pb-0 [&>button]:shrink-0`}>
           <button
             onClick={() => setActiveSubTab('performance')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-              activeSubTab === 'performance'
-                ? 'bg-white dark:bg-dts-primary text-dts-primary dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+            type="button" role="tab" aria-selected={activeSubTab === 'performance'} className={appTabClass(activeSubTab === 'performance')}
           >
-            <TrendingUp size={14} className={activeSubTab === 'performance' ? 'text-dts-secondary' : ''} />
+            <TrendingUp size={16} className={appTabIconClass(activeSubTab === 'performance')} />
             <span>Rendimiento y Cumplimiento</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('accounting')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-              activeSubTab === 'accounting'
-                ? 'bg-white dark:bg-dts-primary text-dts-primary dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+            type="button" role="tab" aria-selected={activeSubTab === 'accounting'} className={appTabClass(activeSubTab === 'accounting')}
           >
-            <FileText size={14} className={activeSubTab === 'accounting' ? 'text-dts-secondary' : ''} />
+            <FileText size={16} className={appTabIconClass(activeSubTab === 'accounting')} />
             <span>Desglose Contable y Prepagos</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('pipeline')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-              activeSubTab === 'pipeline'
-                ? 'bg-white dark:bg-dts-primary text-dts-primary dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+            type="button" role="tab" aria-selected={activeSubTab === 'pipeline'} className={appTabClass(activeSubTab === 'pipeline')}
           >
-            <Package size={14} className={activeSubTab === 'pipeline' ? 'text-dts-secondary' : ''} />
+            <Package size={16} className={appTabIconClass(activeSubTab === 'pipeline')} />
             <span>Cartera y Previsión</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <div className="hidden shrink-0 items-center gap-2 text-xs text-gray-500 dark:text-gray-400 xl:flex">
           {isSalesperson ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 font-medium text-[11px] border border-cyan-200 dark:border-cyan-800/40">
               <User size={12} /> Mi Rendimiento Individual
@@ -169,42 +169,45 @@ export const SalespersonPerformanceTable: React.FC<SalespersonPerformanceTablePr
       </div>
 
       {/* Main Table Content */}
-      <div className="flex-1 overflow-auto custom-scrollbar relative">
-        <table className="w-full text-left text-sm border-separate border-spacing-0 table-fixed">
+      <div className="min-h-0 flex-1 overflow-x-auto custom-scrollbar">
+        <div className="flex h-full min-w-[960px] flex-col">
+        <div className="relative min-h-0 flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable]">
+        <table className="w-full table-fixed border-separate border-spacing-0 text-left text-sm">
+          {columns}
           {/* HEADER: SUBTAB RENDIMIENTO */}
           {activeSubTab === 'performance' && (
-            <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-md">
-              <tr>
-                <th className="w-[20%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('name')}>
+            <thead className="sticky top-0 z-20 bg-dts-primary text-white shadow-md">
+              <tr className="h-8">
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('name')}>
                   <div className="flex items-center">Comercial {getSortIcon('name')}</div>
                 </th>
-                <th className="w-[12%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('productoFacturas')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('productoFacturas')}>
                   <div className="flex items-center justify-end" title="Total facturado en líneas de producto (FV ordinarias)">
                     FV Producto {getSortIcon('productoFacturas')}
                   </div>
                 </th>
-                <th className="w-[11%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('productoAbonos')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('productoAbonos')}>
                   <div className="flex items-center justify-end" title="Total abonado en líneas de producto (AAV)">
                     AAV Producto {getSortIcon('productoAbonos')}
                   </div>
                 </th>
-                <th className="w-[13%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
                   <div className="flex items-center justify-end text-dts-secondary" title="Facturación neta de producto (FV Producto - AAV Producto)">
                     Fact. Neta Items {getSortIcon('facturacion')}
                   </div>
                 </th>
-                <th className="w-[11%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionAnioAnterior')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionAnioAnterior')}>
                   <div className="flex items-center justify-end" title={`Facturación de producto en el mismo periodo de ${year - 1}`}>
                     Fact. {year - 1} {getSortIcon('facturacionAnioAnterior')}
                   </div>
                 </th>
-                <th className="w-[11%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
                   <div className="flex items-center justify-end">Objetivo {getSortIcon('objetivo')}</div>
                 </th>
-                <th className="w-[11%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
                   <div className="flex items-center justify-end">Desviación {getSortIcon('desviacion')}</div>
                 </th>
-                <th className="w-[11%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('porcentajeCumplimiento')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('porcentajeCumplimiento')}>
                   <div className="flex items-center justify-end">% Cumpl. {getSortIcon('porcentajeCumplimiento')}</div>
                 </th>
               </tr>
@@ -213,42 +216,42 @@ export const SalespersonPerformanceTable: React.FC<SalespersonPerformanceTablePr
 
           {/* HEADER: SUBTAB DESGLOSE CONTABLE */}
           {activeSubTab === 'accounting' && (
-            <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-md">
-              <tr>
-                <th className="w-[20%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('name')}>
+            <thead className="sticky top-0 z-20 bg-dts-primary text-white shadow-md">
+              <tr className="h-8">
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('name')}>
                   <div className="flex items-center">Comercial {getSortIcon('name')}</div>
                 </th>
-                <th className="w-[11%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturasOrdinarias')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturasOrdinarias')}>
                   <div className="flex items-center justify-end" title="Facturas de venta ordinarias (FV cabeceras)">
                     Facturas (FV) {getSortIcon('facturasOrdinarias')}
                   </div>
                 </th>
-                <th className="w-[11%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('prepagosFacturados')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('prepagosFacturados')}>
                   <div className="flex items-center justify-end text-cyan-300" title="Facturas de anticipo emitidas (PFV)">
                     Prepagos (PFV) {getSortIcon('prepagosFacturados')}
                   </div>
                 </th>
-                <th className="w-[11%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('abonos')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('abonos')}>
                   <div className="flex items-center justify-end text-rose-300" title="Abonos y devoluciones documentales (AAV)">
                     Abonos (AAV) {getSortIcon('abonos')}
                   </div>
                 </th>
-                <th className="w-[13%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionTotal')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionTotal')}>
                   <div className="flex items-center justify-end" title="Total facturación documental (FV + PFV - AAV)">
                     Total Doc. {getSortIcon('facturacionTotal')}
                   </div>
                 </th>
-                <th className="w-[11%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('portes')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('portes')}>
                   <div className="flex items-center justify-end text-amber-300" title="Líneas de portes y transportes (Cuenta contable 624)">
                     Portes (624) {getSortIcon('portes')}
                   </div>
                 </th>
-                <th className="w-[11%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('otrasCuentas')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('otrasCuentas')}>
                   <div className="flex items-center justify-end text-purple-300" title="Otras líneas de cuentas contables (excluidas 438 y 624)">
                     Otras Ctas {getSortIcon('otrasCuentas')}
                   </div>
                 </th>
-                <th className="w-[12%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('prepagosVivos')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('prepagosVivos')}>
                   <div className="flex items-center justify-end text-cyan-200" title="Prepagos vivos no liquidados de clientes del comercial">
                     Prepagos Vivos {getSortIcon('prepagosVivos')}
                   </div>
@@ -259,37 +262,37 @@ export const SalespersonPerformanceTable: React.FC<SalespersonPerformanceTablePr
 
           {/* HEADER: SUBTAB CARTERA Y PREVISIÓN */}
           {activeSubTab === 'pipeline' && (
-            <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-md">
-              <tr>
-                <th className="w-[20%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('name')}>
+            <thead className="sticky top-0 z-20 bg-dts-primary text-white shadow-md">
+              <tr className="h-8">
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('name')}>
                   <div className="flex items-center">Comercial {getSortIcon('name')}</div>
                 </th>
-                <th className="w-[13%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
                   <div className="flex items-center justify-end" title="Facturación neta de producto ejecutada">
                     Fact. Items {getSortIcon('facturacion')}
                   </div>
                 </th>
-                <th className="w-[13%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('cartera')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('cartera')}>
                   <div className="flex items-center justify-end" title="Pedidos abiertos pendientes de servir (netos de prepagos aplicados)">
                     Cartera Neta {getSortIcon('cartera')}
                   </div>
                 </th>
-                <th className="w-[13%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('enviadosFacturar')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('enviadosFacturar')}>
                   <div className="flex items-center justify-end text-amber-300" title="Enviado pendiente de facturar (neto de prepagos aplicados)">
                     Pend. Facturar {getSortIcon('enviadosFacturar')}
                   </div>
                 </th>
-                <th className="w-[13%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('prepagosDescontados')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('prepagosDescontados')}>
                   <div className="flex items-center justify-end text-cyan-300" title="Prepagos vivos deducidos en pedidos abiertos y albaranes enviados">
                     Prepagos Deduc. {getSortIcon('prepagosDescontados')}
                   </div>
                 </th>
-                <th className="w-[13%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('countNuevosClientes')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('countNuevosClientes')}>
                   <div className="flex items-center justify-end" title="Clientes nuevos dados de alta en el año asignados a este comercial">
                     Clientes Nuevos {getSortIcon('countNuevosClientes')}
                   </div>
                 </th>
-                <th className="w-[15%] px-4 py-3.5 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('previsionCierre')}>
+                <th className="px-4 py-1 leading-tight font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('previsionCierre')}>
                   <div className="flex items-center justify-end text-emerald-300" title="Previsión = Facturación Items + Cartera + Pendiente Facturar">
                     Previsión Total {getSortIcon('previsionCierre')}
                   </div>
@@ -299,16 +302,16 @@ export const SalespersonPerformanceTable: React.FC<SalespersonPerformanceTablePr
           )}
 
           {/* TABLE BODY */}
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-xs text-dts-primary dark:text-gray-300">
+          <tbody className="divide-y divide-gray-100 text-xs text-dts-primary dark:divide-gray-800 dark:text-gray-300 [&>tr]:h-14">
             {isLoading ? (
               <tr>
-                <td colSpan={8} className="py-20 text-center text-gray-400">
+                <td colSpan={columnCount} className="py-20 text-center text-gray-400">
                   Cargando rendimiento de comerciales...
                 </td>
               </tr>
             ) : sortedData.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-20 text-center text-gray-400 opacity-60">
+                <td colSpan={columnCount} className="py-20 text-center text-gray-400 opacity-60">
                   Sin datos de comerciales para los filtros seleccionados
                 </td>
               </tr>
@@ -460,43 +463,42 @@ export const SalespersonPerformanceTable: React.FC<SalespersonPerformanceTablePr
             )}
           </tbody>
         </table>
-      </div>
-
-      {/* FOOTER TOTALES CONSOLIDADOS */}
-      {data.length > 0 && (
-        <div className="bg-dts-primary text-white font-bold text-xs uppercase shadow-[0_-5px_15px_rgba(0,0,0,0.2)] border-t border-white/10 z-30">
-          <table className="w-full text-left text-[10px] border-separate border-spacing-0 table-fixed">
+        </div>
+        {data.length > 0 && (
+          <div className="h-10 shrink-0 overflow-y-hidden border-t border-white/10 bg-dts-primary text-white [scrollbar-gutter:stable]">
+            <table className="h-full w-full table-fixed border-separate border-spacing-0 text-left text-[10px] leading-3 font-bold uppercase">
+          {columns}
             <tbody>
               <tr>
                 {activeSubTab === 'performance' && (
                   <>
-                    <td className="w-[20%] px-4 py-3.5 tracking-widest font-black">
+                    <td className="px-4 py-1 align-middle tracking-widest font-black">
                       TOTAL EQUIPO COMERCIAL
                     </td>
-                    <td className="w-[12%] px-4 py-3.5 text-right font-mono">
+                    <td className="px-4 py-1 align-middle text-right font-mono">
                       {formatCurrency(totals.productoFacturas, 0)}
                     </td>
-                    <td className="w-[11%] px-4 py-3.5 text-right font-mono text-rose-300">
+                    <td className="px-4 py-1 align-middle text-right font-mono text-rose-300">
                       {totals.productoAbonos > 0 ? `-${formatCurrency(totals.productoAbonos, 0)}` : '-'}
                     </td>
-                    <td className="w-[13%] px-4 py-3.5 text-right font-mono text-dts-secondary font-black">
+                    <td className="px-4 py-1 align-middle text-right font-mono text-dts-secondary font-black">
                       {formatCurrency(totals.facturacion, 0)}
                     </td>
-                    <td className="w-[11%] px-4 py-3.5 text-right font-mono opacity-70">
+                    <td className="px-4 py-1 align-middle text-right font-mono opacity-70">
                       {totals.facturacionAnioAnterior ? formatCurrency(totals.facturacionAnioAnterior, 0) : '-'}
                     </td>
-                    <td className="w-[11%] px-4 py-3.5 text-right font-mono">
+                    <td className="px-4 py-1 align-middle text-right font-mono">
                       {formatCurrency(totals.objetivo, 0)}
                     </td>
-                    <td className="w-[11%] px-4 py-3.5 text-right font-mono">
-                      <div className={totalDesviacion < 0 ? 'text-red-400' : 'text-emerald-400'}>
+                    <td className="px-4 py-1 align-middle text-right font-mono">
+                      <div className={`relative leading-3 ${totalDesviacion < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                         {totalDesviacion > 0 ? '+' : ''}{formatCurrency(totalDesviacion, 0)}
-                      </div>
-                      <div className={`text-[9px] ${totalDesviacionPct < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                        {totalDesviacionPct > 0 ? '+' : ''}{formatNumber(totalDesviacionPct, 1)}%
+                        <span className={`absolute right-0 top-full whitespace-nowrap text-[9px] leading-none ${totalDesviacionPct < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                          {totalDesviacionPct > 0 ? '+' : ''}{formatNumber(totalDesviacionPct, 1)}%
+                        </span>
                       </div>
                     </td>
-                    <td className="w-[11%] px-4 py-3.5 text-right font-mono">
+                    <td className="px-4 py-1 align-middle text-right font-mono">
                       <div className={totalCumplimiento < 100 ? 'text-red-400 font-black' : 'text-emerald-400 font-black'}>
                         {formatNumber(totalCumplimiento, 1)}%
                       </div>
@@ -506,28 +508,28 @@ export const SalespersonPerformanceTable: React.FC<SalespersonPerformanceTablePr
 
                 {activeSubTab === 'accounting' && (
                   <>
-                    <td className="w-[20%] px-4 py-3.5 tracking-widest font-black">
+                    <td className="px-4 py-1 align-middle tracking-widest font-black">
                       TOTAL EQUIPO COMERCIAL
                     </td>
-                    <td className="w-[11%] px-4 py-3.5 text-right font-mono">
+                    <td className="px-4 py-1 align-middle text-right font-mono">
                       {formatCurrency(totals.facturasOrdinarias, 0)}
                     </td>
-                    <td className="w-[11%] px-4 py-3.5 text-right font-mono text-cyan-300">
+                    <td className="px-4 py-1 align-middle text-right font-mono text-cyan-300">
                       {totals.prepagosFacturados > 0 ? formatCurrency(totals.prepagosFacturados, 0) : '-'}
                     </td>
-                    <td className="w-[11%] px-4 py-3.5 text-right font-mono text-rose-300">
+                    <td className="px-4 py-1 align-middle text-right font-mono text-rose-300">
                       {totals.abonos > 0 ? `-${formatCurrency(totals.abonos, 0)}` : '-'}
                     </td>
-                    <td className="w-[13%] px-4 py-3.5 text-right font-mono font-black text-dts-secondary">
+                    <td className="px-4 py-1 align-middle text-right font-mono font-black text-dts-secondary">
                       {formatCurrency(totals.facturacionTotal, 0)}
                     </td>
-                    <td className="w-[11%] px-4 py-3.5 text-right font-mono text-amber-300">
+                    <td className="px-4 py-1 align-middle text-right font-mono text-amber-300">
                       {formatCurrency(totals.portes, 0)}
                     </td>
-                    <td className="w-[11%] px-4 py-3.5 text-right font-mono text-purple-300">
+                    <td className="px-4 py-1 align-middle text-right font-mono text-purple-300">
                       {formatCurrency(totals.otrasCuentas, 0)}
                     </td>
-                    <td className="w-[12%] px-4 py-3.5 text-right font-mono text-cyan-200">
+                    <td className="px-4 py-1 align-middle text-right font-mono text-cyan-200">
                       {totals.prepagosVivos > 0 ? formatCurrency(totals.prepagosVivos, 0) : '-'}
                     </td>
                   </>
@@ -535,34 +537,36 @@ export const SalespersonPerformanceTable: React.FC<SalespersonPerformanceTablePr
 
                 {activeSubTab === 'pipeline' && (
                   <>
-                    <td className="w-[20%] px-4 py-3.5 tracking-widest font-black">
+                    <td className="px-4 py-1 align-middle tracking-widest font-black">
                       TOTAL EQUIPO COMERCIAL
                     </td>
-                    <td className="w-[13%] px-4 py-3.5 text-right font-mono">
+                    <td className="px-4 py-1 align-middle text-right font-mono">
                       {formatCurrency(totals.facturacion, 0)}
                     </td>
-                    <td className="w-[13%] px-4 py-3.5 text-right font-mono font-bold">
+                    <td className="px-4 py-1 align-middle text-right font-mono font-bold">
                       {formatCurrency(totals.cartera, 0)}
                     </td>
-                    <td className="w-[13%] px-4 py-3.5 text-right font-mono text-amber-300 font-bold">
+                    <td className="px-4 py-1 align-middle text-right font-mono text-amber-300 font-bold">
                       {formatCurrency(totals.enviadosFacturar, 0)}
                     </td>
-                    <td className="w-[13%] px-4 py-3.5 text-right font-mono text-cyan-300">
+                    <td className="px-4 py-1 align-middle text-right font-mono text-cyan-300">
                       {totals.prepagosDescontados > 0 ? `-${formatCurrency(totals.prepagosDescontados, 0)}` : '-'}
                     </td>
-                    <td className="w-[13%] px-4 py-3.5 text-right font-mono">
+                    <td className="px-4 py-1 align-middle text-right font-mono">
                       <span className="font-bold">{totals.countNuevosClientes} Clientes</span>
                     </td>
-                    <td className="w-[15%] px-4 py-3.5 text-right font-mono text-emerald-300 font-black">
+                    <td className="px-4 py-1 align-middle text-right font-mono text-emerald-300 font-black">
                       {formatCurrency(totals.previsionCierre, 0)}
                     </td>
                   </>
                 )}
               </tr>
             </tbody>
-          </table>
+            </table>
+          </div>
+        )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

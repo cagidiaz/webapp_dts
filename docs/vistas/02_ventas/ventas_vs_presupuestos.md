@@ -3,7 +3,7 @@
 > **Ubicación en la aplicación:** `/sales/budgets`  
 > **Componente Frontend:** [`SalesBudgetPage.tsx`](file:///c:/proyectos/webapp_dts/frontend/src/pages/sales/SalesBudgetPage.tsx)  
 > **Servicio Backend:** [`sales.service.ts`](file:///c:/proyectos/webapp_dts/backend/src/modules/sales/sales.service.ts) (`getSalesBudgetPerformance`, `getSalesBudgetEvolution`, `getSalesBudgetPerformanceExport`)  
-> **Última actualización:** Septiembre 2026
+> **Última actualización:** Noviembre 2026
 
 ---
 
@@ -122,11 +122,26 @@ Para máxima transparencia, al pulsar `ℹ️` en Facturación se muestra un des
 
 ## 5. Vista de Tablas: Pestañas Principales 📑
 
-En la sección central derecha se dispone de un selector de pestañas que permite alternar entre dos niveles de detalle:
+Las tres pestañas comparten la cabecera de la tabla. El botón **Exportar XLSX** está siempre a la derecha y descarga los datos de la pestaña activa. Debajo se muestran los controles de cada pestaña con la misma altura:
 1. **`[ 🏢 Por Clientes ]`**: Vista analítica clásica desagregada cliente a cliente con scroll infinito.
 2. **`[ 👥 Por Comercial ]`** (o **`[ 👤 Mi Rendimiento ]`** para usuarios con rol comercial): Vista de rendimiento y control del equipo comercial.
 
 ---
+
+### 5.1. Por segmentos
+
+Las pestañas y cabeceras siguen el diseño compartido del CRM. El panel usa las mismas medidas que **Presupuesto x Product Manager**.
+
+
+Abre **Por segmentos** en la cabecera de la tabla, junto a **Por Clientes** y **Por Comercial** (o **Mi Rendimiento**). Los filtros de ejercicio, meses, comercial, familia y subfamilia se combinan con la búsqueda por nombre o código de cliente y con el selector múltiple **Segmento**, situado junto al buscador de clientes. Al limpiar los filtros también se vacía esa selección.
+
+La tabla muestra ventas netas de producto del ejercicio, presupuesto, desviación, cumplimiento y ventas del año anterior para los mismos meses. El cumplimiento es ventas divididas por presupuesto y se muestra «—» si el presupuesto es cero o negativo. Al cambiar de pestaña, los KPI superiores y el gráfico de evolución siguen visibles en su posición habitual. El filtro **Segmento** se aplica a la tabla y a su Excel.
+
+Pulsa **Exportar** en **Por segmentos** para descargar la hoja `Por segmentos` con las filas y el total visibles. El filtro de segmento se aplica dentro de esa pestaña. Consulta [las reglas de clasificación y cálculo](../../Calculos_Tecnicos.md#72-ventas-y-presupuesto-por-segmento).
+
+---
+
+La fila de totales de las pestañas utiliza un pie compacto de 40 px. En **Por Comercial**, sus tres subpestañas comparten la misma altura y alineación del pie.
 
 ## 6. Tabla de Rendimiento por Comercial (`SalespersonPerformanceTable`) 👥
 
@@ -195,7 +210,7 @@ Accesible mediante la pestaña **`[ 🏢 Por Clientes ]`**. Permite analizar el 
 - Son clientes dados de alta en el ejercicio actual que no tenían compras registradas anteriormente.
 
 #### B) Meta Agrupada / Cliente Fantasma Comodín (`99999999` / `CLIENTE NUEVO`):
-- **¿Qué es?** En la planificación comercial de Business Central, la dirección establece un presupuesto global para la captación de nuevas cuentas asignado a un cliente ficticio llamado `CLIENTE NUEVO` (código `99999999` o `9999999`).
+- **¿Qué es?** En la planificación comercial de Business Central, la dirección establece un presupuesto global para la captación de nuevas cuentas asignado a un cliente ficticio llamado `CLIENTE NUEVO` (código `99999999`).
 - **Problema que resuelve:** Cuando un cliente nuevo real compra, su facturación se computa bajo su CIF real, pero el presupuesto estaba en la fila comodín.
 - **Tratamiento en la Aplicación:**
   - Se resalta visualmente con un borde índigo y el badge **"Meta Agrupada"**.

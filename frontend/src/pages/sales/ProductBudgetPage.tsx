@@ -1,3 +1,4 @@
+import { appTabClass, appTabIconClass, appTabListClass } from '../../components/shared/appTabs';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
@@ -19,7 +20,8 @@ import { exportMultiSheetToXlsx } from '../../utils/exportToXlsx';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { formatCurrency, formatNumber } from '../../api/formatters';
-import { KPICard, BudgetEvolutionChart } from './components/budgetShared';
+import { KPICard, BudgetEvolutionChart, budgetTableControlsClass, budgetTablePanelClass, budgetTableFooterClass } from './components/budgetShared';
+import { BudgetSegmentsPanel } from './components/BudgetSegmentsPanel';
 import { BudgetFiltersSidebar } from './components/BudgetFiltersSidebar';
 
 // --- Main Page Component ---
@@ -37,6 +39,9 @@ export const ProductBudgetPage: React.FC = () => {
 
   // Filters State
   const [year, setYear] = useState<number>(currentYear);
+  const [segmentExportTarget, setSegmentExportTarget] = useState<HTMLDivElement | null>(null);
+  const [showSegments, setShowSegments] = useState(false);
+  const [segmentCodes, setSegmentCodes] = useState<string[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<number[]>(initialMonths);
   const [familyFilter, setFamilyFilter] = useState<string>('');
   const [subfamilyFilter, setSubfamilyFilter] = useState<string[]>([]);
@@ -50,21 +55,6 @@ export const ProductBudgetPage: React.FC = () => {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const [sidebarHeight, setSidebarHeight] = useState<number>(600);
-
-  useEffect(() => {
-    if (!sidebarRef.current) return;
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target) {
-          setSidebarHeight(entry.target.clientHeight);
-        }
-      }
-    });
-    resizeObserver.observe(sidebarRef.current);
-    return () => resizeObserver.disconnect();
-  }, []);
 
 
   useEffect(() => {
@@ -434,7 +424,6 @@ export const ProductBudgetPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Filters Sidebar */}
         <BudgetFiltersSidebar
-          sidebarRef={sidebarRef}
           year={year}
           onYearChange={setYear}
           selectedMonths={selectedMonths}
@@ -454,65 +443,68 @@ export const ProductBudgetPage: React.FC = () => {
           onPmChange={setPmFilter}
           productCodeFilter={productCodeFilter}
           onProductCodeChange={setProductCodeFilter}
-          onClearFilters={clearFilters}
+          onClearFilters={() => { clearFilters(); setSegmentCodes([]); }}
           hasActiveFilters={hasActiveFilters}
         />
 
-        {/* Performance Table */}
-        <div 
-          className="lg:col-span-4 bg-white dark:bg-surface-card-dark rounded-xl shadow-card overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col"
-          style={{ height: `${sidebarHeight}px` }}
+        <div
+          className={budgetTablePanelClass}
         >
-          {/* Toolbar */}
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-transparent">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="w-full max-w-md relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  {isFetchingPerf && debouncedSearch ? (
-                    <Loader2 size={16} className="animate-spin text-dts-secondary" />
-                  ) : (
-                    <Search size={16} />
-                  )}
-                </div>
-                <input
-                  type="text"
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-text-primary-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-dts-secondary/50 sm:text-sm"
-                  placeholder="Buscar cliente por nombre o código..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="px-3 py-1.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10 rounded-lg transition-colors border border-dts-secondary/20"
-                  >
-                    LIMPIAR BÚSQUEDA
-                  </button>
-                )}
-                <ExportButton onExport={handleExport} />
-              </div>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 p-4 pb-0">
+            <div className={appTabListClass} role="tablist" aria-label="Desglose de presupuesto">
+              <button type="button" role="tab" aria-selected={!showSegments} className={appTabClass(!showSegments)}
+                onClick={() => { setShowSegments(false); }}>
+                <Package size={16} className={appTabIconClass(!showSegments)} />
+                Por clientes y productos
+              </button>
+              <button type="button" role="tab" aria-selected={showSegments} className={appTabClass(showSegments)} onClick={() => setShowSegments(true)}>
+                <PieChartIcon size={16} className={appTabIconClass(showSegments)} />
+                Por segmentos
+              </button>
+            </div>
+            <div className="justify-self-end whitespace-nowrap">
+              {showSegments ? <div ref={setSegmentExportTarget} /> : <ExportButton onExport={handleExport} />}
             </div>
           </div>
 
+          {!showSegments && (
+            <div className={budgetTableControlsClass}>
+              <div className="relative w-full min-w-0 max-w-md">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                  {isFetchingPerf && debouncedSearch ? <Loader2 size={16} className="animate-spin text-dts-secondary" /> : <Search size={16} />}
+                </div>
+                <input type="search" aria-label="Buscar cliente" placeholder="Buscar cliente por nombre o código..."
+                  className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-10 pr-3 text-xs dark:border-gray-700 dark:bg-dts-primary-dark"
+                  value={searchTerm} onChange={event => setSearchTerm(event.target.value)} />
+              </div>
+              {searchTerm && <button type="button" onClick={() => setSearchTerm('')} className="shrink-0 rounded-lg border border-dts-secondary/20 px-3 py-1.5 text-[10px] font-bold text-dts-secondary hover:bg-dts-secondary/10">LIMPIAR BÚSQUEDA</button>}
+            </div>
+          )}
+
+          {showSegments ? (
+          <BudgetSegmentsPanel view="product" year={year} months={selectedMonths}
+            salespersonCode={salespersonFilter || undefined} pmCode={effectivePmCode} productCode={debouncedProductCode}
+            familyCode={familyFilter} subfamilyCodes={subfamilyFilter}
+            search={debouncedSearch.trim()} inputSearch={searchTerm} onSearchChange={setSearchTerm}
+            segmentCodes={segmentCodes} onSegmentChange={setSegmentCodes} exportTarget={segmentExportTarget} />
+          ) : <>
           <div className="flex-1 overflow-auto custom-scrollbar relative">
             <table className="w-full text-left text-sm border-separate border-spacing-0 table-fixed">
               <thead className="bg-dts-primary text-white sticky top-0 z-20 shadow-lg">
                 <tr>
-                  <th className="w-[40%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('customerName')}>
+                  <th className="w-[40%] px-4 py-3 font-bold uppercase tracking-wider text-[10px] cursor-pointer group hover:bg-white/10" onClick={() => handleSort('customerName')}>
                     <div className="flex items-center">Nombre cliente {getSortIcon('customerName')}</div>
                   </th>
-                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
+                  <th className="w-[15%] px-4 py-3 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacion')}>
                     <div className="flex items-center justify-end">Fact. {year} {getSortIcon('facturacion')}</div>
                   </th>
-                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionAnioAnterior')}>
+                  <th className="w-[15%] px-4 py-3 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('facturacionAnioAnterior')}>
                     <div className="flex items-center justify-end">Fact. {year - 1} {getSortIcon('facturacionAnioAnterior')}</div>
                   </th>
-                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
+                  <th className="w-[15%] px-4 py-3 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('objetivo')}>
                     <div className="flex items-center justify-end">Objetivo {getSortIcon('objetivo')}</div>
                   </th>
-                  <th className="w-[15%] px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
+                  <th className="w-[15%] px-4 py-3 font-bold uppercase tracking-wider text-[10px] text-right cursor-pointer group hover:bg-white/10" onClick={() => handleSort('desviacion')}>
                     <div className="flex items-center justify-end">Desviación {getSortIcon('desviacion')}</div>
                   </th>
                 </tr>
@@ -605,15 +597,15 @@ export const ProductBudgetPage: React.FC = () => {
 
           {/* Fixed Footer Table */}
           {tableData.length > 0 && (
-            <div className="bg-dts-primary text-white font-bold text-xs uppercase shadow-[0_-5px_15px_rgba(0,0,0,0.2)] border-t border-white/10 z-30">
-              <table className="w-full text-left text-[10px] border-separate border-spacing-0 table-fixed">
+            <div className={budgetTableFooterClass}>
+              <table className="h-full w-full table-fixed border-separate border-spacing-0 whitespace-nowrap text-left text-[10px] leading-3">
                 <tbody>
                   <tr className="font-bold">
-                    <td className="w-[40%] px-6 py-4 tracking-widest">TOTALES FILTRADOS</td>
-                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency((performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas, 0)}</td>
-                    <td className="w-[15%] px-6 py-4 text-right font-mono opacity-60">{(performanceKPIs as any).facturacionAnioAnterior ? formatCurrency((performanceKPIs as any).facturacionAnioAnterior, 0) : '-'}</td>
-                    <td className="w-[15%] px-6 py-4 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
-                    <td className="w-[15%] px-6 py-4 text-right font-mono">
+                    <td className="w-[40%] px-4 py-0 tracking-widest">TOTALES FILTRADOS</td>
+                    <td className="w-[15%] px-4 py-0 text-right font-mono">{formatCurrency((performanceKPIs as any).ventasSinCuentas ?? performanceKPIs.ventas, 0)}</td>
+                    <td className="w-[15%] px-4 py-0 text-right font-mono opacity-60">{(performanceKPIs as any).facturacionAnioAnterior ? formatCurrency((performanceKPIs as any).facturacionAnioAnterior, 0) : '-'}</td>
+                    <td className="w-[15%] px-4 py-0 text-right font-mono">{formatCurrency(performanceKPIs.objetivo, 0)}</td>
+                    <td className="w-[15%] px-4 py-0 text-right font-mono">
                       <div className={performanceKPIs.desviacionEur < 0 ? 'text-red-400' : 'text-emerald-400'}>
                         {performanceKPIs.desviacionEur > 0 ? '+' : ''}{formatCurrency(performanceKPIs.desviacionEur, 0)}
                       </div>
@@ -626,6 +618,7 @@ export const ProductBudgetPage: React.FC = () => {
               </table>
             </div>
           )}
+          </>}
         </div>
       </div>
 

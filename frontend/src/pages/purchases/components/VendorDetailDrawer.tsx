@@ -1,3 +1,4 @@
+import { appTabClass, appTabListClass } from '../../../components/shared/appTabs';
 import React, { useState, useMemo } from 'react';
 import { Drawer } from '../../../components/shared';
 import { type VendorDataRow, getVendorByVendorId, getVendorAnalytics } from '../../../api/vendors';
@@ -137,36 +138,24 @@ export const VendorDetailDrawer: React.FC<VendorDetailDrawerProps> = ({
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex border-b border-gray-200 dark:border-white/10 gap-1 overflow-x-auto">
+          <div role="tablist" className={appTabListClass}>
             <button
               onClick={() => setActiveTab('general')}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === 'general'
-                  ? 'border-[#003E51] text-[#003E51] dark:border-[#00B0B9] dark:text-[#00B0B9]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'
-              }`}
+              role="tab" aria-selected={activeTab === 'general'} className={appTabClass(activeTab === 'general')}
             >
               <Building2 size={15} />
               Información General
             </button>
             <button
               onClick={() => setActiveTab('evolution')}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === 'evolution'
-                  ? 'border-[#003E51] text-[#003E51] dark:border-[#00B0B9] dark:text-[#00B0B9]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'
-              }`}
+              role="tab" aria-selected={activeTab === 'evolution'} className={appTabClass(activeTab === 'evolution')}
             >
               <TrendingUp size={15} />
               Evolución de Compras
             </button>
             <button
               onClick={() => setActiveTab('products')}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === 'products'
-                  ? 'border-[#003E51] text-[#003E51] dark:border-[#00B0B9] dark:text-[#00B0B9]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'
-              }`}
+              role="tab" aria-selected={activeTab === 'products'} className={appTabClass(activeTab === 'products')}
             >
               <Package size={15} />
               Productos Suministrados
@@ -178,11 +167,7 @@ export const VendorDetailDrawer: React.FC<VendorDetailDrawerProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('orders')}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === 'orders'
-                  ? 'border-[#003E51] text-[#003E51] dark:border-[#00B0B9] dark:text-[#00B0B9]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'
-              }`}
+              role="tab" aria-selected={activeTab === 'orders'} className={appTabClass(activeTab === 'orders')}
             >
               <ShoppingCart size={15} />
               Pedidos en Curso

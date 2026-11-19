@@ -44,7 +44,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
       disabled={loading || disabled}
       title="Descargar tabla como Excel (.xlsx)"
       className={`
-        inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border
+        inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg border
         text-[10px] font-bold uppercase tracking-wider transition-all
         ${
           loading || disabled

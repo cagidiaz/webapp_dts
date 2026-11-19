@@ -1,6 +1,7 @@
-import { Controller, Get, UseGuards, Query, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Controller, Get, UseGuards, Query, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { getBudgetSegments } from './budget-segments';
 import { SalesService } from './sales.service';
 import { BudgetGeneratorService } from './budget-generator.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -38,6 +39,32 @@ export class SalesController {
   @ApiOperation({ summary: 'Get aggregated sales budgets by year' })
   async getSalesBudgets(@Query('year') year?: number) {
     return this.salesService.getSalesBudgets(year ? Number(year) : undefined);
+  }
+
+  @Get('budget-segments')
+  async budgetSegments(@Req() req: any, @Query() query: Record<string, unknown>) {
+    const param = (key: string) => typeof query[key] === 'string' ? String(query[key]).trim() : '';
+    const list = (key: string) => param(key).split(',').filter(Boolean);
+    const year = Number(param('year'));
+    const months = list('months').map(Number);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100 || months.some(m => !Number.isInteger(m) || m < 1 || m > 12)) {
+      throw new BadRequestException('Ejercicio o meses no válidos');
+    }
+    const isProductView = param('view') === 'product';
+    const profileCode = await this.getSalespersonCode(req);
+    const pmCodes = isProductView && profileCode ? await this.salesService.getPmCodes() : [];
+    const lockedPm = pmCodes.some(pm => pm.code === profileCode) ? profileCode : undefined;
+    return getBudgetSegments(this.prisma, {
+      year,
+      months,
+      salespersonCode: (!isProductView ? profileCode : undefined) || param('salespersonCode') || undefined,
+      pmCode: isProductView ? (lockedPm || param('pmCode') || undefined) : undefined,
+      familyCode: param('familyCode') || undefined,
+      subfamilyCodes: list('subfamilyCode'),
+      segmentCodes: list('segmentCode'),
+      productCode: isProductView ? param('productCode') || undefined : undefined,
+      search: param('search') || undefined,
+    });
   }
 
   @Get('budget-performance')

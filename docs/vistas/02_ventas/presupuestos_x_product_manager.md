@@ -3,7 +3,7 @@
 > **Ubicación en la aplicación:** `/sales/product-budgets`  
 > **Componente Frontend:** [`ProductBudgetPage.tsx`](file:///c:/proyectos/webapp_dts/frontend/src/pages/sales/ProductBudgetPage.tsx)  
 > **Servicio Backend:** [`sales.service.ts`](file:///c:/proyectos/webapp_dts/backend/src/modules/sales/sales.service.ts) (`getProductBudgetPerformance`, `getProductBudgetEvolution`, `getProductBudgetExport`)  
-> **Última actualización:** Septiembre 2026
+> **Última actualización:** Noviembre 2026
 
 ---
 
@@ -123,6 +123,19 @@ La tabla de esta vista posee una arquitectura en dos niveles de información:
 
 ### 5.3. Pie de Tabla Fijo (Totales Consolidados)
 - Mantiene siempre a la vista los totales absolutos de todos los clientes y productos que cumplen los filtros, sincronizados con los KPIs superiores.
+
+---
+
+### 5.4. Por segmentos
+
+Las pestañas y cabeceras siguen el diseño compartido del CRM. El panel usa las mismas medidas que **Ventas vs Presupuestos**. El botón **Exportar XLSX** queda a la derecha de las pestañas.
+
+
+En la cabecera de la tabla puedes alternar entre **Por clientes y productos** y **Por segmentos**. En **Por segmentos**, la tabla respeta el ejercicio, los meses, el Product Manager, el comercial, la familia, la subfamilia y el código de producto. Junto al selector de uno o varios segmentos está el buscador por nombre o código de cliente. Al limpiar los filtros se vacía la selección de segmentos.
+
+La tabla presenta ventas netas de producto, presupuesto, desviación, cumplimiento y la facturación de los mismos meses del ejercicio anterior. Los KPI y el gráfico general permanecen en su posición al cambiar de pestaña. El botón **Exportar** de esta pestaña descarga la hoja `Por segmentos` con esos datos y sus totales. Para consultar el detalle por cliente y artículo y descargar su Excel, vuelve a **Por clientes y productos**.
+
+Consulta [las reglas de clasificación y cálculo](../../Calculos_Tecnicos.md#72-ventas-y-presupuesto-por-segmento).
 
 ---
 

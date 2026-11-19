@@ -82,6 +82,9 @@ Consulta la [guía paso a paso de filtros y totales](#ventas--clientes-guía-de-
 ---
 
 ### 2.2 Presupuestos y Seguimiento de Objetivos (Ventas vs Ppto)
+
+Las dos vistas de presupuestos usan el mismo diseño de tablas y pestañas que el CRM. **Exportar XLSX** está a la derecha de las pestañas y descarga la vista activa.
+
 Ubicado en `/sales/budgets`, es la pantalla neurálgica de seguimiento del grado de cumplimiento comercial frente al plan anual de dTS Instruments.
 
 * **Bandeja Superior de KPIs**:
@@ -92,14 +95,15 @@ Ubicado en `/sales/budgets`, es la pantalla neurálgica de seguimiento del grado
 * **Modal de Transparencia Contable e Información (`InfoPopover`)**:
   * Al pulsar el icono `ℹ️` en **Facturación**, se despliega una ventana informativa con el desglose completo del periodo: *Venta Neta de Producto*, *Portes y Transportes (Cuenta 624)*, *Otras Cuentas Contables*, *Prepagos Vivos (PFV)* y *Total Facturación Documental*.
   * Al pulsar el icono `ℹ️` en **Cartera Pedidos**, se despliega el desglose que distingue los pedidos de producto (*Items*), las líneas de cuentas contables del resto de clientes (*Cuentas G/L Diferentes a SEIKO*) y los pedidos en cartera de **SEIKO FLOWCONTROL GMBH (CL100427)**, totalizando de manera explícita la suma neta viva.
-* **Selector de Pestañas Principales**:
+* **Pestaña Por segmentos**. Ábrela en la cabecera de la tabla. Elige el ejercicio y los meses. Después selecciona uno o varios valores en **Segmento** o usa el buscador de clientes situado a su lado. Puedes combinar ambos filtros con comercial, familia y subfamilia. Revisa las ventas, el presupuesto, la desviación, el cumplimiento y las ventas del año anterior. **Exportar** descarga el resumen filtrado con su total. Los KPI y el gráfico general permanecen en su sitio al cambiar de pestaña. Si aparece **Sin segmento**, ese importe sigue incluido en el total.
+* **Pestañas de detalle de ventas**:
   * **`[ 🏢 Por Clientes ]`**: Vista analítica clásica desagregada cliente a cliente con scroll infinito reactivo, badges para clientes nuevos (`NUEVO`), detección de saldo en prepagos vivos (`Prepago: X €`), tratamiento de meta agregada para clientes nuevos (`99999999`) y fila de totales fijos.
   * **`[ 👥 Por Comercial ]`** (o **`[ 👤 Mi Rendimiento ]`** para usuarios con rol comercial): Tabla de control y productividad comercial con 3 sub-pestañas especializadas:
     1. *Rendimiento y Cumplimiento*: FV Producto, AAV Producto, Facturación Neta Items, Facturación Año Anterior (LYTD), Presupuesto, Desviación y Barra de Progreso de Cumplimiento.
     2. *Desglose Contable y Prepagos*: Facturas (FV), Prepagos (PFV), Abonos (AAV), Total Documental, Portes (624), Otras Cuentas y Prepagos Vivos.
     3. *Cartera y Previsión*: Facturación actual, Cartera Neta, Pendiente Facturar, Prepagos Deducidos, Clientes Nuevos captados y Previsión Total a Cierre de Ejercicio.
 * **Control de Acceso (RBAC)**: Los comerciales conectados sólo visualizan sus propios datos personales en la pestaña *Mi Rendimiento*, mientras que Dirección y Administradores disponen de la visión global del equipo y el sumatorio consolidado.
-* **Exportación a Excel Contextual**: Genera el archivo Excel adaptado a la pestaña activa (desglose de clientes o reporte de 18 columnas de comerciales).
+* **Exportación a Excel Contextual**: Genera el Excel correspondiente a la pestaña activa: resumen por segmentos, desglose de clientes o rendimiento por comercial.
 * **Rendimiento Ultrarrápido y Reactividad**: Incorpora caché en memoria para resolución de familias/artículos, optimización de consultas B-tree por rangos de fecha e indicadores de carga no destructivos (`Loader2`) en las tarjetas KPI.
 
 ---
@@ -112,6 +116,7 @@ Ubicado en `/sales/product-budgets`, enfocado al análisis presupuestario por l�
 * **Desglose Jerárquico por Cliente ➔ Producto (SKU)**:
   * Cada cliente se puede expandir mediante una flecha interactiva para auditar qué referencias concretas de catálogo ha comprado, su facturación por artículo, su presupuesto asignado y su desviación.
   * Se visualiza junto a cada cliente su saldo vivo en anticipos (`Prepago: X €`) y su condición de cliente nuevo si corresponde.
+* **Por segmentos**. Abre esta pestaña en la cabecera de la tabla para ver el resumen del PM seleccionado. Los KPI y el gráfico general conservan su posición. Combina **Segmento** con los filtros de periodo, comercial y producto. Usa **Exportar** para descargar el mismo resumen en Excel. Vuelve a **Por clientes y productos** para consultar el detalle de cada cliente y artículo.
 * **Detección Automática de Rol PM**:
   * Si el usuario conectado es Product Manager, el sistema fija automáticamente su código PM y restringe el ámbito a su catálogo de productos asignado.
 * **Gráfico de Evolución Mensual Unificado**:

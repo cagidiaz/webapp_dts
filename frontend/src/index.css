@@ -154,3 +154,26 @@ table th, table td {
   padding-top: 0.45rem !important; /* py-1.5 / py-2 compact */
   padding-bottom: 0.45rem !important;
 }
+
+/* Shared data table styling. Layout and column alignment stay with each view. */
+table > thead {
+  background-color: var(--color-dts-primary);
+  color: white;
+}
+
+table > thead > tr > :is(th, td) {
+  padding: 0.75rem 1rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+table:has(> thead) > tbody > tr:hover {
+  background-color: var(--color-gray-50);
+}
+
+.dark table:has(> thead) > tbody > tr:hover {
+  background-color: rgb(255 255 255 / 5%);
+}
