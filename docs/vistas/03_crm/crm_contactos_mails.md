@@ -135,7 +135,7 @@ En la pestaña de **Eventos** y en el botón **"Nueva Actividad"** de la ficha d
 - **Consistencia Visual Absoluta:** La barra de filtros por tipología de la pestaña de Eventos replica de forma exacta la experiencia y diseño de la pestaña de Emails con contadores dinámicos y separador para el estado (*Todos*, *Pendientes*, *Realizados*).
 
 ### 5.4 Estados de Finalización y Colores de Fondo en la WebApp
-1. **Completado / Realizado (`isCompleted === true` o con conclusiones registradas):** Fondo verde esmeralda sutil (`bg-emerald-500/8 dark:bg-emerald-950/20`), badge `✓ Realizado` y sincronización `Outlook (Completado)`.
+1. **Completado / Realizado (`isCompleted === true` o con conclusiones registradas):** Fondo verde esmeralda sutil (`bg-emerald-500/8 dark:bg-emerald-950/20`), badge `✓ Realizado`. En visitas a cliente, el CRM solicita el cambio de color en Outlook sin enviar las conclusiones.
 2. **Vencido pendiente de conclusiones (`isPastDate && !conclusions`):** Fondo ámbar (`bg-amber-500/8 dark:bg-amber-500/12`), badge `Vencido · Pendiente` y acceso rápido para agregar conclusiones.
 3. **Pendiente / Programado a futuro:** Fondo estándar limpio (`bg-white dark:bg-zinc-900/40`) y badge `Outlook` en azul corporativo dTS.
 4. **Checkbox de Realización Universal:** Alterna de forma ágil entre pendiente y realizado.
@@ -145,7 +145,7 @@ En la pestaña de **Eventos** y en el botón **"Nueva Actividad"** de la ficha d
 - **Categorías Maestras de Microsoft 365 (`outlook/masterCategories`):**
   - **Pendiente / Activo:** Categoría `"dTS CRM"` con preset **`preset7` (Azul corporativo dTS `#003E51`)**.
   - **Completado / Realizado:** Categoría `"dTS CRM - Completado"` con preset **`preset4` (Verde esmeralda)**.
-- **Cambio Automático de Color:** Al completar la actividad en la app, Microsoft Graph actualiza la categoría y tiñe el bloque en verde; al desmarcarla, retorna al azul corporativo.
+- **Cambio Automático de Color:** La finalización de una visita solicita una actualización exclusiva de categoría; falta comprobar con un destinatario de prueba que no se genere aviso.
 
 ### 5.6 Sincronización Automática de Eventos con Microsoft Outlook
 - Sincronización transparente bidireccional en segundo plano.
@@ -298,13 +298,13 @@ Si un correo necesita una acción futura, crear una tarea independiente desde el
 
 ### Conclusiones y color de los eventos en Outlook — 21/10/2026
 
-Al guardar conclusiones no vacías, el CRM completa la actividad y deja su actualización de calendario pendiente. Los eventos internos reciben las conclusiones y el prefijo de realizado; las visitas y videollamadas conservan el mensaje público sin notas internas. El evento del organizador recibe la categoría `dTS CRM - Completado` (`preset4`, verde). Las actividades abiertas usan `dTS CRM` (`preset7`, azul). Los correos EMAIL no se exportan como eventos.
+Al guardar conclusiones no vacías, el CRM completa la actividad. En **Visita a Cliente**, al finalizar o reabrir se prepara una actualización exclusiva de la categoría en Outlook; las conclusiones permanecen en el CRM. La ausencia de avisos al contacto está pendiente de prueba real. En otras actividades la sincronización depende del tipo; en videollamadas las conclusiones no se incluyen en el cuerpo público. Los correos EMAIL no se exportan como eventos.
 
 Si se guarda otra modificación mientras se está enviando la anterior, se conserva y se envía una nueva lectura de los datos al finalizar. Los errores de permisos, categorías o actualización ya no se ocultan como sincronización correcta. Sin cuenta o calendario habilitado se conserva el estado de falta de conexión.
 
 La sincronización habitual de Outlook/CRM vuelve a intentar hasta 20 actualizaciones pendientes, fallidas o sin conexión de eventos ya vinculados. No crea otra convocatoria para sustituir un evento cuya actualización falló. Una lectura desde Outlook no confirma que los cambios del CRM hayan llegado al calendario ni borra un envío pendiente. Si detecta una categoría distinta de la esperada en un evento CRM, registra `out_of_sync`; este estado histórico no dispara reparaciones masivas.
 
-**Comprobación del usuario:** reiniciar la app local, abrir una actividad exportada al calendario, escribir conclusiones y guardar. Comprobar en Outlook la categoría verde del mismo evento. En visitas y videollamadas, verificar que las conclusiones se conservan únicamente en el CRM. Para corregir una actividad antigua concreta, guardar de nuevo sus conclusiones. Si no hay conexión, reconectar Microsoft 365, activar sincronización de calendario y utilizar la sincronización existente.
+**Comprobación pendiente:** reiniciar la app local, finalizar una visita con invitación o registrar conclusiones y comprobar que quedan en el CRM y el contacto no recibe ninguna actualización. Separar la edición de fecha, hora, ubicación o invitados del cierre: guardar primero la convocatoria y después la finalización. Cambiar la convocatoria puede avisar a los invitados.
 
 Las pruebas automatizadas comprueban concurrencia, estados, reintentos y errores de Microsoft Graph. La aceptación real en Outlook queda pendiente de esa comprobación del usuario. No se ha realizado una reparación masiva ni modificado tablas de Business Central. No se necesita SQL adicional.
 
@@ -321,7 +321,7 @@ En la ficha de un contacto de cliente, **Eventos → Nueva actividad** permite c
 6. Guardar. El backend sincroniza una sola convocatoria con todos los invitados; las videollamadas incluyen Teams y las visitas no. Es necesario tener Microsoft 365 conectado y la sincronización de calendario habilitada. El contacto decide si acepta y su proveedor determina cómo incorpora el evento al calendario.
 7. Al editar fecha, mensaje, ubicación o participantes se actualiza el mismo evento. Al retirar invitados o borrar la actividad vinculada, Outlook gestiona las actualizaciones/cancelaciones. Desactivar el envío en una actividad ya invitada retira sus asistentes. Los participantes pueden ver a los demás invitados.
 
-**Privacidad y finalización:** completar una visita o videollamada cambia la categoría del organizador a verde sin incluir conclusiones en el cuerpo externo. Las actualizaciones evitan reenviar campos que no han cambiado y preservan el bloque generado por Teams. En eventos antiguos, si no se identifica de forma segura dicho bloque, se deja un fallo de sincronización para revisión en lugar de sobrescribirlo o compartir notas antiguas. No se ha reparado ni enviado ninguna convocatoria real durante estas pruebas.
+**Privacidad y finalización:** al completar o reabrir una visita se actualiza exclusivamente la categoría del calendario del comercial; las conclusiones permanecen en el CRM. La ausencia de avisos al contacto está pendiente de prueba real. En videollamadas, las conclusiones no se incluyen en el cuerpo externo. Las actualizaciones evitan reenviar campos que no han cambiado y preservan el bloque generado por Teams. En eventos antiguos, si no se identifica de forma segura dicho bloque, se deja un fallo de sincronización para revisión en lugar de sobrescribirlo o compartir notas antiguas. No se ha reparado ni enviado ninguna convocatoria real durante estas pruebas.
 
 **Datos y permisos:** la configuración y la lista resuelta se guardan en `crm_activities.attendees.calendarInvitation`. La fusión conserva el resto del JSON. No se necesitan tablas, columnas ni SQL nuevos. Los contactos y clientes de Business Central se consultan en solo lectura. Solo el propietario o Admin puede cambiar invitados; se mantiene la comprobación de cartera para el comercial.
 

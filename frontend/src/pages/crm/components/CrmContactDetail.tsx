@@ -2438,7 +2438,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                                   type="checkbox" 
                                   checked={isDone}
                                   onChange={() => handleToggleActivityCompletion(act)}
-                                  title={isDone ? 'Marcar como pendiente (en Outlook volverá a categoría azul dTS)' : 'Marcar como realizado (solicita conclusiones y sincroniza a verde en Outlook)'}
+                                  title={act.type === 'visita' ? (isDone ? 'Marcar como pendiente y actualizar el color en Outlook' : 'Marcar como realizado y actualizar el color en Outlook') : (isDone ? 'Marcar como pendiente (en Outlook volverá a categoría azul dTS)' : 'Marcar como realizado (solicita conclusiones y sincroniza a verde en Outlook)')}
                                   className="w-4 h-4 text-emerald-600 rounded border-gray-300 dark:border-gray-600 focus:ring-emerald-500 focus:ring-1 cursor-pointer transition-all shrink-0"
                                 />
                               ) : (
@@ -3622,7 +3622,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                   <p className="text-[11px] text-gray-500 dark:text-gray-400">
                     {completingActivity.done || completingActivity.is_completed
                       ? 'Registra las conclusiones de la reunión o acuerdo alcanzado'
-                      : 'Registra las conclusiones para cerrar el evento y sincronizar en verde en Outlook'}
+                      : completingActivity.type === 'visita' ? 'Registra las conclusiones para cerrar la visita y marcarla en verde en Outlook' : 'Registra las conclusiones para cerrar el evento y sincronizar en verde en Outlook'}
                   </p>
                 </div>
               </div>
@@ -3688,7 +3688,7 @@ export const CrmContactDetail: React.FC<CrmContactDetailProps> = ({ contactId, o
                 <ExpandConclusionsButton value={closingConclusions} onApply={setClosingConclusions} />
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <Info size={11} className="text-emerald-500 shrink-0" />
-                  {['visita', 'videollamada'].includes(completingActivity.type) ? 'Las conclusiones se guardarán de forma privada en el CRM.' : 'Las conclusiones se guardarán en el CRM y se sincronizarán con el evento en Outlook.'}
+                  {completingActivity.type === 'visita' ? 'Las conclusiones son privadas; en Outlook solo se actualizará el color.' : completingActivity.type === 'videollamada' ? 'Las conclusiones se guardarán de forma privada en el CRM.' : 'Las conclusiones se guardarán en el CRM y se sincronizarán con el evento en Outlook.'}
                 </p>
               </div>
             </div>

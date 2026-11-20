@@ -13,7 +13,7 @@ describe('Conclusiones y categoría verde del calendario', () => {
       },
       user_exchange_accounts: { findUnique: jest.fn().mockResolvedValue({ calendar_sync_enabled: true, mail_sync_enabled: false }), update: jest.fn() },
     };
-    const graph: any = { updateCalendarEvent: jest.fn().mockResolvedValue({ id: 'event', changeKey: 'v2' }), createCalendarEvent: jest.fn(), getCalendarEventsDelta: jest.fn().mockResolvedValue({ events: [] }) };
+    const graph: any = { updateCalendarEvent: jest.fn().mockResolvedValue({ id: 'event', changeKey: 'v2' }), updateCalendarCategoryOnly: jest.fn().mockResolvedValue(undefined), createCalendarEvent: jest.fn(), getCalendarEventsDelta: jest.fn().mockResolvedValue({ events: [] }) };
     const sync = new ExchangeSyncService(db, graph, { importRemote: jest.fn().mockResolvedValue(false) } as any, {} as any);
     return { db, graph, sync, read: () => row, set: (data: any) => { row = { ...row, ...data }; } };
   }
@@ -27,6 +27,48 @@ describe('Conclusiones y categoría verde del calendario', () => {
     await sync.syncActivityToOutlook('activity');
     for (let i = 0; i < 20 && read().exchange_sync_status !== 'synced'; i++) await Promise.resolve();
     expect(graph.updateCalendarEvent).toHaveBeenCalledWith('user', 'event', expect.objectContaining({ categories: ['dTS CRM - Completado'], description: expect.stringContaining('Propuesta aceptada') }));
+  });
+
+  it.each([{ conclusions: 'Acuerdo privado' }, { isCompleted: true }, { isCompleted: false }])('guarda el cierre y cambia solo el color de la visita: %o', async payload => {
+    const { db, graph, sync, set, read } = fixture();
+    set({ type: 'VISITA', is_completed: payload.isCompleted === false, conclusions: null });
+    const service = new CrmActivitiesService(db, sync, {} as any);
+    await service.update('activity', payload);
+    for (let i = 0; i < 20 && !graph.updateCalendarCategoryOnly.mock.calls.length; i++) await Promise.resolve();
+    expect(read().exchange_sync_status).toBe('synced');
+    expect(graph.updateCalendarCategoryOnly).toHaveBeenCalledWith('user', 'event', payload.isCompleted !== false);
+    expect(graph.updateCalendarEvent).not.toHaveBeenCalled();
+    expect(graph.createCalendarEvent).not.toHaveBeenCalled();
+  });
+
+  it('envía a Graph exclusivamente la categoría y conserva las categorías personales', async () => {
+    const originalFetch = global.fetch;
+    try {
+      const service = new MicrosoftGraphService(new ConfigService({}), {} as any);
+      jest.spyOn(service, 'getValidAccessToken').mockResolvedValue('test');
+      jest.spyOn(service, 'ensureDtsCategory').mockResolvedValue();
+      const request = jest.fn().mockResolvedValueOnce(new Response(JSON.stringify({ categories: ['Personal', 'dTS CRM'] }))).mockResolvedValueOnce(new Response(null, { status: 204 }));
+      global.fetch = request;
+      await service.updateCalendarCategoryOnly('user', 'event', true);
+      expect(JSON.parse(request.mock.calls[1][1].body)).toEqual({ categories: ['Personal', 'dTS CRM - Completado'] });
+      expect(request.mock.calls[1][1].method).toBe('PATCH');
+    } finally { global.fetch = originalFetch; }
+  });
+
+  it('impide cambiar la convocatoria y cerrar la visita en la misma operación', async () => {
+    const { db, graph, sync, set } = fixture();
+    set({ type: 'VISITA' });
+    await expect(new CrmActivitiesService(db, sync, {} as any).update('activity', { title: 'Nueva convocatoria', conclusions: 'Privado' })).rejects.toThrow('operaciones separadas');
+    expect(db.crm_activities.update).not.toHaveBeenCalled();
+    expect(graph.updateCalendarEvent).not.toHaveBeenCalled();
+  });
+
+  it('sincroniza un cambio deliberado de la convocatoria sin cierre', async () => {
+    const { db, graph, sync, set } = fixture();
+    set({ type: 'VISITA' });
+    await new CrmActivitiesService(db, sync, {} as any).update('activity', { title: 'Nueva convocatoria' });
+    await sync.syncActivityToOutlook('activity');
+    expect(graph.updateCalendarEvent).toHaveBeenCalled();
   });
 
   it('relee y exporta el último cambio si se guardan conclusiones durante otro envío', async () => {

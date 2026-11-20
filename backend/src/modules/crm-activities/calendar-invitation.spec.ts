@@ -47,7 +47,7 @@ describe('Cartera y persistencia de la convocatoria', () => {
       $executeRaw: jest.fn(),
     };
     db.$transaction = jest.fn(fn => fn(db));
-    const sync: any = { syncActivityToOutlook: jest.fn().mockResolvedValue(undefined) };
+    const sync: any = { syncActivityToOutlook: jest.fn().mockResolvedValue(undefined), syncVisitCategory: jest.fn().mockResolvedValue(undefined) };
     return { db, sync, service: new CrmActivitiesService(db, sync, {} as any) };
   }
   it('guarda destinatarios en JSON propio y no modifica clientes ni contactos BC', async () => {
@@ -77,6 +77,18 @@ describe('Cartera y persistencia de la convocatoria', () => {
     await service.update('event', { calendarInvitation: config({ message: 'Mensaje actualizado' }) }, 'user');
     expect(JSON.parse(db.$executeRaw.mock.calls[0][1]).calendarInvitation.message).toBe('Mensaje actualizado');
     expect(db.crm_activities.update.mock.calls[0][0].data.attendees).toBeUndefined();
+  });
+  it('guardar conclusiones desde el formulario completo no sincroniza una visita sin cambios en la convocatoria', async () => {
+    const { service, db, sync } = fixture();
+    const invitation = await resolveCalendarInvitation(db, config(), 'VISITA', 'CL1');
+    const row = { id: 'event', type: 'VISITA', title: 'Visita', created_by: 'user', client_id: 'CL1', due_date: new Date('2026-10-21'), time_scheduled: '10:00', location: null, conclusions: null, is_completed: false, attendees: { calendarInvitation: invitation } };
+    db.crm_activities.findUnique.mockResolvedValue(row);
+    db.crm_activities.findUniqueOrThrow.mockResolvedValue(row);
+    await service.update('event', { title: 'Visita', dueDate: '2026-10-21T00:00:00.000Z', timeScheduled: '10:00', location: null as any, conclusions: 'Privado', isCompleted: true, calendarInvitation: config() }, 'user');
+    expect(sync.syncActivityToOutlook).not.toHaveBeenCalled();
+    expect(sync.syncVisitCategory).toHaveBeenCalledWith('event');
+    expect(db.crm_activities.update.mock.calls[0][0].data).toMatchObject({ conclusions: 'Privado', is_completed: true });
+    expect(db.crm_activities.update.mock.calls[0][0].data).not.toHaveProperty('exchange_sync_status');
   });
 });
 

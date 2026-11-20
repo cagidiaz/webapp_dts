@@ -196,5 +196,5 @@ export const BudgetEvolutionChart: React.FC<BudgetEvolutionChartProps> = ({ year
 
 export const budgetTableControlsClass = "flex h-[71px] shrink-0 items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/50 px-4 dark:border-gray-800 dark:bg-white/[0.02]";
 
-export const budgetTablePanelClass = 'lg:col-span-4 flex h-[clamp(520px,65vh,760px)] min-w-0 flex-col rounded-xl border border-gray-100 bg-white shadow-card dark:border-gray-800 dark:bg-surface-card-dark';
+export const budgetTablePanelClass = 'lg:col-span-4 flex h-[clamp(520px,65vh,760px)] min-w-0 lg:h-auto lg:self-stretch lg:[contain:size] flex-col rounded-xl border border-gray-100 bg-white shadow-card dark:border-gray-800 dark:bg-surface-card-dark';
 export const budgetTableFooterClass = 'h-10 shrink-0 border-t border-white/10 bg-dts-primary font-bold uppercase text-white';

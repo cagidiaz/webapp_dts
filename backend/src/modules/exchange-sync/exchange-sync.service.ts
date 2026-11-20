@@ -13,6 +13,7 @@ export class ExchangeSyncService {
   private readonly logger = new Logger(ExchangeSyncService.name);
   private readonly inFlightSyncs = new Set<string>();
   private readonly pendingSyncs = new Set<string>();
+  private readonly visitCategoryInFlight = new Map<string, Promise<void>>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -121,6 +122,19 @@ export class ExchangeSyncService {
   /**
    * Sincroniza una actividad comercial del CRM (Reunión, Visita, Evento, Llamada, Tarea) hacia el calendario de Outlook.
    */
+  async syncVisitCategory(activityId: string) {
+    const previous = this.visitCategoryInFlight.get(activityId) || Promise.resolve();
+    const next = previous.catch(() => undefined).then(async () => {
+      const activity = await this.prisma.crm_activities.findUnique({ where: { id: activityId } });
+      if (!activity || activity.type !== 'VISITA' || !activity.exchange_item_id) return;
+      const account = await this.prisma.user_exchange_accounts.findUnique({ where: { user_id: activity.created_by } });
+      if (!account?.calendar_sync_enabled) return;
+      await this.graphService.updateCalendarCategoryOnly(activity.created_by, activity.exchange_item_id, Boolean(activity.is_completed || activity.conclusions?.trim()));
+    });
+    this.visitCategoryInFlight.set(activityId, next);
+    try { await next; } finally { if (this.visitCategoryInFlight.get(activityId) === next) this.visitCategoryInFlight.delete(activityId); }
+  }
+
   async syncActivityToOutlook(activityId: string) {
     if (this.inFlightSyncs.has(activityId)) {
       this.pendingSyncs.add(activityId);

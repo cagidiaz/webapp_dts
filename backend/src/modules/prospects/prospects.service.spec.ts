@@ -27,6 +27,18 @@ describe('Permisos y convivencia del piloto de Prospección', () => {
     service = new ProspectsService(db, config as any, { enabled: () => false, sync: jest.fn() } as any);
   });
 
+  it('guarda cierre y conclusiones de visita de prospecto sin sincronizar Outlook', async () => {
+    const current = { id: 'activity', prospect_id: 'prospect', type: 'VISITA', title: 'Visita', description: null, due_date: new Date('2026-11-20T00:00:00Z'), time_scheduled: '10:00', location: null, conclusions: null, is_completed: false, version: 1, exchange_sync_status: 'SYNCED', exchange_synced_version: 1, exchange_lock_token: null };
+    db.crm_prospect_activities.findFirst.mockResolvedValue(current);
+    db.crm_prospect_activities.findUniqueOrThrow.mockResolvedValue({ ...current, version: 2 });
+    const outlook = { sync: jest.fn(), syncVisitCategory: jest.fn().mockResolvedValue(undefined), enabled: () => true };
+    service = new ProspectsService(db, {} as any, outlook as any);
+    await service.saveActivity('pilot', 'prospect', { type: 'VISITA', title: 'Visita', due_date: '2026-11-20', time_scheduled: '10:00', conclusions: 'Privado', is_completed: true, version: 1 } as any, 'activity');
+    expect(outlook.sync).not.toHaveBeenCalled();
+    expect(outlook.syncVisitCategory).toHaveBeenCalledWith('activity');
+    expect(db.crm_prospect_activities.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ conclusions: 'Privado', is_completed: true, exchange_synced_version: 2 }) }));
+  });
+
   it('el acceso depende del rol y no del antiguo interruptor de piloto', async () => {
     enabled = false;
     expect((await service.access('pilot')).enabled).toBe(true);

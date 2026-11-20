@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.19 · 18 de noviembre de 2026 · Uso interno
+Edición 1.21 · 20 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -647,7 +647,9 @@ La recepción real de una invitación de visita ha sido confirmada por el usuari
 2. Pulsa la casilla de realizado o **Registrar conclusiones** cuando aparezca.
 3. Describe lo ocurrido, el resultado y el siguiente paso con su responsable.
 4. Guarda y comprueba el estado de la tarjeta.
-5. Cuando tenga sincronización con Outlook, revisa la categoría de completado en el calendario.
+5. Si es una **Visita a Cliente**, comprueba el estado en el CRM. Las conclusiones son internas. Para identificar la visita en Outlook se solicita solo el cambio de categoría a verde; la ausencia de avisos al contacto está pendiente de una prueba real. También se aplica a las visitas de prospectos. Para otros eventos, la sincronización con Outlook depende de su tipo y configuración.
+
+Para cambiar fecha, hora, ubicación o invitados de una visita y también cerrarla, guarda primero los cambios de la convocatoria y después registra la finalización o las conclusiones en otra operación. Una modificación de la convocatoria puede avisar a los invitados. La protección del cierre está preparada para la prueba local; su comprobación real con Outlook sigue pendiente.
 
 **Conclusión útil:** «El cliente confirma que necesita entrega en noviembre. Enviar alternativa el jueves; responsable: comercial». Es más útil que «Hecho».
 

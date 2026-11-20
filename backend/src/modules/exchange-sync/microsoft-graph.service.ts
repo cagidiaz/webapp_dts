@@ -418,6 +418,19 @@ export class MicrosoftGraphService {
   /**
    * Actualiza un evento existente en el calendario de Outlook.
    */
+  async updateCalendarCategoryOnly(userId: string, eventId: string, completed: boolean) {
+    const accessToken = await this.getValidAccessToken(userId);
+    if (!accessToken) throw new Error('Conexión de Outlook no disponible para actualizar el color.');
+    await this.ensureDtsCategory(userId);
+    const url = `https://graph.microsoft.com/v1.0/me/events/${encodeURIComponent(eventId)}`;
+    const current = await fetch(`${url}?$select=categories`, { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!current.ok) throw new Error(`No se pudieron consultar las categorías (HTTP ${current.status}).`);
+    const event = await current.json();
+    const categories = [...new Set([...(event.categories || []).filter((name: string) => !['dTS CRM', 'dTS CRM - Completado'].includes(name)), completed ? 'dTS CRM - Completado' : 'dTS CRM'])];
+    const result = await fetch(url, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ categories }) });
+    if (!result.ok) throw new Error(`Outlook rechazó actualizar el color (HTTP ${result.status}).`);
+  }
+
   async updateCalendarEvent(userId: string, eventId: string, eventData: Partial<CalendarEventPayload>) {
     const accessToken = await this.getValidAccessToken(userId);
     if (!accessToken) throw new Error('Conexión de Outlook no disponible para actualizar el evento.');

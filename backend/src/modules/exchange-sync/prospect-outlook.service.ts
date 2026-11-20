@@ -10,9 +10,26 @@ const html = (value: string | null | undefined) => (value || '').replace(/&/g, '
 
 @Injectable()
 export class ProspectOutlookService {
+  private readonly visitCategoryInFlight = new Map<string, Promise<void>>();
   constructor(private readonly prisma: PrismaService, private readonly graph: MicrosoftGraphService, private readonly config: ConfigService) {}
 
   enabled() { return this.config.get('CRM_PROSPECTS_OUTLOOK_ENABLED') === 'true'; }
+
+  async syncVisitCategory(id: string) {
+    const previous = this.visitCategoryInFlight.get(id) || Promise.resolve();
+    const next = previous.catch(() => undefined).then(async () => {
+      if (!this.enabled()) return;
+      const activity = await this.prisma.crm_prospect_activities.findUnique({ where: { id }, include: { prospect: true } });
+      if (!activity || activity.type !== 'VISITA' || !activity.exchange_item_id || activity.prospect.archived_at) return;
+      const ownerId = activity.prospect.owner_id;
+      if (!await this.ownerAllowed(ownerId)) return;
+      const account = await this.prisma.user_exchange_accounts.findUnique({ where: { user_id: ownerId } });
+      if (!account?.calendar_sync_enabled) return;
+      await this.graph.updateCalendarCategoryOnly(ownerId, activity.exchange_item_id, Boolean(activity.is_completed || activity.conclusions?.trim()));
+    });
+    this.visitCategoryInFlight.set(id, next);
+    try { await next; } finally { if (this.visitCategoryInFlight.get(id) === next) this.visitCategoryInFlight.delete(id); }
+  }
 
   private async ownerAllowed(userId: string) {
     const profile = await this.prisma.profiles.findUnique({ where: { id: userId }, include: { roles: true } });
@@ -52,8 +69,8 @@ export class ProspectOutlookService {
       const end = new Date(`${day}T${time}:00.000Z`); end.setUTCMinutes(end.getUTCMinutes() + 60);
       const payload: CalendarEventPayload = {
         transactionId: current.id,
-        title: `[${current.is_completed ? '✓ dTS CRM Prospecto - Realizado' : 'dTS CRM Prospecto'}: ${current.type}] ${current.title} (${current.prospect.company_name})`,
-        description: `<p><strong>Empresa:</strong> ${html(current.prospect.company_name)}</p><p><strong>Contacto:</strong> ${html(current.prospect.contact_name)}</p><p>${html(current.description)}</p><p><strong>Conclusiones:</strong> ${html(current.conclusions)}</p>`,
+        title: `[${current.type !== 'VISITA' && current.is_completed ? '✓ dTS CRM Prospecto - Realizado' : 'dTS CRM Prospecto'}: ${current.type}] ${current.title} (${current.prospect.company_name})`,
+        description: `<p><strong>Empresa:</strong> ${html(current.prospect.company_name)}</p><p><strong>Contacto:</strong> ${html(current.prospect.contact_name)}</p><p>${html(current.description)}</p>${current.type === 'VISITA' ? '' : `<p><strong>Conclusiones:</strong> ${html(current.conclusions)}</p>`}`,
         startDate: `${day}T${time}:00`, endDate: end.toISOString().slice(0, 19),
         location: current.location || '', isOnlineMeeting: invite,
         attendees: invite ? [{ email: current.prospect.email!, name: current.prospect.contact_name || undefined }] : [],

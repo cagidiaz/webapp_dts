@@ -542,16 +542,30 @@ export class CrmActivitiesService {
         }
       }
 
+      let invitationChanged = false;
       if (data.calendarInvitation !== undefined) {
         const access = await this.authorizeInvitationCompany(userId, existing.client_id);
         if (!access.canEditAll && existing.created_by !== userId) throw new ForbiddenException('Solo el propietario o Admin puede cambiar los invitados.');
         const invitation = await resolveCalendarInvitation(this.prisma, data.calendarInvitation, existing.type, existing.client_id);
+        const previous = (existing.attendees as any)?.calendarInvitation;
+        const comparable = (value: any) => value ? JSON.stringify({ enabled: value.enabled, contactIds: [...(value.contactIds || [])].sort(), externalEmails: [...(value.externalEmails || [])].sort(), message: value.message || '', durationMinutes: value.durationMinutes || 60 }) : null;
+        invitationChanged = previous ? comparable(previous) !== comparable(invitation) : invitation.enabled;
         const day = data.dueDate === undefined ? existing.due_date : data.dueDate;
         const time = data.timeScheduled === undefined ? existing.time_scheduled : data.timeScheduled;
         if (invitation.enabled && (!day || !/^\d{2}:\d{2}$/.test(time || '') || Number(time!.slice(0, 2)) > 23 || Number(time!.slice(3)) > 59)) throw new BadRequestException('Indica fecha y hora para la convocatoria.');
         prismaData.attendees = { ...(prismaData.attendees || {}), calendarInvitation: invitation };
       }
-      if (['EVENT', 'REUNION', 'VIDEOLLAMADA', 'VISITA', 'CALL', 'TASK'].includes(existing.type)) {
+      const visit = existing.type === 'VISITA';
+      const dateKey = (value: any) => value ? new Date(value).toISOString().slice(0, 10) : null;
+      const publicChanged = (data.title !== undefined && data.title !== existing.title)
+        || (data.dueDate !== undefined && dateKey(data.dueDate) !== dateKey(existing.due_date))
+        || (data.timeScheduled !== undefined && (data.timeScheduled || null) !== (existing.time_scheduled || null))
+        || (data.location !== undefined && (data.location || null) !== (existing.location || null)) || invitationChanged;
+      const internalChanged = (data.isCompleted !== undefined && data.isCompleted !== existing.is_completed)
+        || (data.conclusions !== undefined && (data.conclusions?.trim() || null) !== (existing.conclusions || null));
+      if (visit && internalChanged && publicChanged) throw new BadRequestException('Guarda primero los cambios de la convocatoria y después las conclusiones o la finalización, en operaciones separadas.');
+      const shouldSync = !visit || publicChanged;
+      if (shouldSync && ['EVENT', 'REUNION', 'VIDEOLLAMADA', 'VISITA', 'CALL', 'TASK'].includes(existing.type)) {
         prismaData.exchange_sync_status = 'pending';
       }
       const metadataPatch = prismaData.attendees;
@@ -570,8 +584,11 @@ export class CrmActivitiesService {
       }) : await update(this.prisma);
 
       // Sincronizar actualización hacia Outlook
-      this.exchangeSyncService.syncActivityToOutlook(updated.id).catch((err) =>
+      if (shouldSync) this.exchangeSyncService.syncActivityToOutlook(updated.id).catch((err) =>
         console.error(`[CRM Service] Error al sincronizar actualización ${updated.id} a Outlook:`, err)
+      );
+      else if (visit && internalChanged) this.exchangeSyncService.syncVisitCategory(updated.id).catch((err) =>
+        console.error(`[CRM Service] No se pudo actualizar el color de la visita ${updated.id} en Outlook:`, err)
       );
 
       return updated;

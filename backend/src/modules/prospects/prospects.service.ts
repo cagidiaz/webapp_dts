@@ -278,6 +278,8 @@ export class ProspectsService {
       location: data.location || null, conclusions: data.conclusions || null,
       is_completed: data.is_completed || !!data.conclusions?.trim(),
     };
+    let skipVisitSync = false;
+    let visitCompletionChanged = false;
     const saved = await this.prisma.$transaction(async tx => {
       // Bloquear la ficha y reevaluar el archivo/versionado frente a cambios concurrentes.
       const lock = await tx.crm_prospects.updateMany({ where: { id, archived_at: null, version: prospect.version }, data: { updated_at: prospect.updated_at } });
@@ -290,7 +292,18 @@ export class ProspectsService {
         before = current;
         if (current.type !== data.type) throw new BadRequestException('El tipo de actividad no puede cambiarse.');
         const version = (data as UpdateProspectActivityDto).version;
-        const result = await tx.crm_prospect_activities.updateMany({ where: { id: activityId, prospect_id: id, version }, data: { ...fields, updated_at: new Date(), version: { increment: 1 } } });
+        if (current.type === 'VISITA') {
+          const day = (value: Date | null) => value?.toISOString().slice(0, 10) || null;
+          const publicChanged = fields.title !== current.title || day(fields.due_date) !== day(current.due_date)
+            || fields.time_scheduled !== (current.time_scheduled || null) || fields.location !== (current.location || null)
+            || fields.description !== (current.description || null);
+          const internalChanged = fields.is_completed !== current.is_completed || fields.conclusions !== (current.conclusions || null);
+          visitCompletionChanged = internalChanged;
+          if (publicChanged && internalChanged) throw new BadRequestException('Guarda primero los cambios de la visita y después las conclusiones o la finalización, en operaciones separadas.');
+          skipVisitSync = !publicChanged;
+        }
+        const alreadySynced = skipVisitSync && current.exchange_sync_status === 'SYNCED' && current.exchange_synced_version === current.version && !current.exchange_lock_token;
+        const result = await tx.crm_prospect_activities.updateMany({ where: { id: activityId, prospect_id: id, version }, data: { ...fields, updated_at: new Date(), version: { increment: 1 }, ...(alreadySynced ? { exchange_synced_version: current.version + 1 } : {}) } });
         if (result.count !== 1) throw new ConflictException('La actividad cambió. Recarga antes de guardar.');
         activity = await tx.crm_prospect_activities.findUniqueOrThrow({ where: { id: activityId } });
       } else {
@@ -299,7 +312,8 @@ export class ProspectsService {
       await tx.crm_prospect_events.create({ data: { prospect_id: id, created_by: userId, type: 'AUDIT', title: activityId ? 'Actividad del prospecto actualizada' : 'Actividad del prospecto creada', description: JSON.stringify({ activity_id: activity.id, before, after: fields }) } });
       return activity;
     });
-    await this.outlook.sync(saved.id);
+    if (!skipVisitSync) await this.outlook.sync(saved.id);
+    else if (visitCompletionChanged) this.outlook.syncVisitCategory(saved.id).catch(err => console.error(`[CRM] No se pudo actualizar el color de la visita ${saved.id} en Outlook:`, err));
     return this.prisma.crm_prospect_activities.findUniqueOrThrow({ where: { id: saved.id } });
   }
 
