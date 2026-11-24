@@ -88,6 +88,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [salespersonFilter, setSalespersonFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [closingFilter, setClosingFilter] = useState<ReturnType<typeof closingDateGroup> | null>(null);
   const [selectedQuote, setSelectedQuote] = useState<CRMQuote | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -323,12 +324,14 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
   const groupedQuotes = useMemo(() => {
     const groups: Record<string, CRMQuote[]> = Object.fromEntries(STAGES.map(stage => [stage.id, []]));
     quotes.forEach(q => {
+      const state = (q.estado_oferta || '').trim().toLowerCase();
+      if (closingFilter && (['ganada', 'ganado', 'perdida', 'perdido'].includes(state) || closingDateGroup(q.cierreprev_date) !== closingFilter)) return;
       const stage = pilotMode ? displayPhase(q.estado_oferta) : (q.estado_oferta || 'borrador').toLowerCase().trim();
       if (groups[stage]) groups[stage].push(q);
       else if (!pilotMode) groups.borrador.push(q);
     });
     return groups;
-  }, [quotes, pilotMode]);
+  }, [quotes, pilotMode, closingFilter]);
 
   const tableQuotes = useMemo(() => {
     return quotes.filter(q => {
@@ -577,9 +580,19 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
             <AlertTriangle size={18} className="text-gray-400 group-hover:text-rose-500 transition-colors" />
           </div>
           <div className="grid grid-cols-3 gap-2 text-center" title="Ofertas abiertas. Próximas: hoy y los siguientes cuatro días. Restantes incluye ofertas sin fecha válida.">
-            <div><span className="block text-2xl leading-7 font-black font-mono text-red-600 dark:text-red-400">{kpis.closingCounts.vencida}</span><span className="text-[10px] text-red-600 dark:text-red-400">Vencidas</span></div>
-            <div><span className="block text-2xl leading-7 font-black font-mono text-amber-600 dark:text-amber-400">{kpis.closingCounts.proxima}</span><span className="text-[10px] text-amber-600 dark:text-amber-400">Próximas</span></div>
-            <div><span className="block text-2xl leading-7 font-black font-mono text-gray-700 dark:text-gray-300">{kpis.closingCounts.restante}</span><span className="text-[10px] text-gray-700 dark:text-gray-300">Restantes</span></div>
+            {([
+              ["vencida", "Vencidas", "text-red-600 dark:text-red-400"],
+              ["proxima","Próximas","text-amber-600 dark:text-amber-400"],
+              ["restante","Restantes","text-gray-700 dark:text-gray-300"],
+            ] as const).map(([key, label, color]) => (
+              <button key={key} type="button" aria-pressed={closingFilter === key} onClick={() => {
+                setClosingFilter(key);
+                setViewMode('kanban');
+              }} className={`rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-dts-secondary ${closingFilter === key ? 'ring-2 ring-dts-secondary' : ''} ${color}`}>
+                <span className="block text-2xl leading-7 font-black font-mono">{kpis.closingCounts[key]}</span>
+                <span className="text-[10px]">{label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -771,6 +784,20 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
         </div>
       </div>
       {/* Kanban / Table View Conditional Rendering */}
+      {viewMode === 'kanban' && (closingFilter || searchTerm || salespersonFilter || typeFilter || yearFilter !== new Date().getFullYear().toString()) && (
+        <div className="flex justify-end">
+          <button type="button" onClick={() => {
+            setClosingFilter(null);
+            setSearchTerm('');
+            setDebouncedSearch('');
+            setSalespersonFilter('');
+            setTypeFilter('');
+            setYearFilter(new Date().getFullYear().toString());
+          }} className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-white/10">
+            Eliminar filtros
+          </button>
+        </div>
+      )}
       {viewMode === 'kanban' ? (
         <div className={pilotMode ? "grid grid-cols-6 gap-0 min-w-0 h-[calc(100vh-390px)] min-h-[450px] pb-3" : "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-[calc(100vh-390px)] min-h-[450px]"}>
           {STAGES.map(stage => {

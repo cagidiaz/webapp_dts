@@ -104,6 +104,8 @@ El tablero Kanban organiza las ofertas comerciales abiertas en 6 columnas dispue
 
 ### Fechas de cierre y filtro comercial (18/11/2026)
 
+Pulsa el número de **Vencidas**, **Próximas** o **Restantes** para abrir el Kanban y mostrar solo las ofertas abiertas del grupo elegido. Se mantienen visibles todas las columnas y los demás filtros se aplican conjuntamente. Pulsa **Eliminar filtros** para limpiar el grupo, la búsqueda, el comercial y el tipo, y volver al año actual.
+
 - La fecha prevista en cada tarjeta es roja si es anterior a hoy, amarilla si corresponde a hoy o a los cuatro días naturales siguientes y gris en los demás casos. Las tarjetas de cada columna se ordenan por fecha de cierre prevista.
 - El KPI **Fecha de cierre previsto** cuenta ofertas abiertas en **Vencidas**, **Próximas** y **Restantes**; este último grupo incluye las ofertas sin fecha válida. Los números y sus etiquetas comparten el color de cada categoría.
 - El selector de comercial de Oportunidades excluye a Joaquim Pla por su nombre. La exclusión de la lista no modifica roles, permisos ni registros.

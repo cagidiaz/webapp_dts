@@ -1,7 +1,7 @@
 # Manual de usuario | CRM Clientes y Contactos
 
 **dTS Instruments · Guía práctica desde cero**  
-Edición 1.21 · 20 de noviembre de 2026 · Uso interno
+Edición 1.22 · 24 de noviembre de 2026 · Uso interno
 
 Este manual explica qué hacer, dónde pulsar y cómo comprobar el resultado. Está pensado para usuarios sin experiencia previa con un CRM. Las capturas proceden de la aplicación real, consultada el 19/10/2026; los nombres, importes y contadores cambiarán con el uso. Los diagramas son explicativos y no representan pantallas adicionales. La edición 1.2 añade contactos compactos, segmentos y potencialidad anual y una referencia diferenciada a Ventas-Clientes; no presenta las capturas antiguas como pantallas nuevas. Los esquemas de agenda y formulario incorporados el 22/10/2026 reflejan la nueva distribución; las capturas del 19/10 son una referencia de la edición anterior.
 
@@ -961,6 +961,8 @@ Las ofertas se crean en Business Central y llegan por sincronización. La vista 
 En el seguimiento nuevo las columnas abiertas son Preliminar, Presentada, Evaluación, Negociación, Aprobación y Aceptada. Ganada y Perdida se consultan en la tabla de cerradas. La probabilidad se calcula a partir de la fase; el importe ponderado es el importe sin IVA multiplicado por la probabilidad. Los importes mostrados no garantizan una venta futura.
 
 #### Interpretar las fechas previstas de cierre
+
+Pulsa el número de **Vencidas**, **Próximas** o **Restantes** para abrir el Kanban y mostrar solo las ofertas abiertas del grupo elegido. Se mantienen visibles todas las columnas y los demás filtros se aplican conjuntamente. Pulsa **Eliminar filtros** para limpiar el grupo, la búsqueda, el comercial y el tipo, y volver al año actual.
 
 El indicador **Fecha de cierre previsto** cuenta las ofertas abiertas en tres grupos:
 

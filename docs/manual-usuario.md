@@ -227,6 +227,7 @@ Gestiona las propuestas y cotizaciones vigentes garantizando rigor procedimental
   5. **Aprobación (75%)**: Aprobación presupuestaria interna en el cliente pendiente de firma.
   6. **Aceptada (90%)**: Conformidad verbal o pre-adjudicación (la oferta permanece viva en el embudo).
 * **Fecha de cierre previsto**: El indicador divide las ofertas abiertas en vencidas (anteriores a hoy), próximas (hoy y los cuatro días naturales siguientes) y restantes (posteriores o sin fecha válida). Las fechas de las tarjetas utilizan rojo, amarillo y gris respectivamente, y las tarjetas se ordenan por cierre previsto. El selector comercial de Oportunidades excluye a Joaquim Pla sin cambiar permisos ni datos.
+  * Pulsa el número de **Vencidas**, **Próximas** o **Restantes** para abrir el Kanban y mostrar solo las ofertas abiertas del grupo elegido. Se mantienen visibles todas las columnas y los demás filtros se aplican conjuntamente. Pulsa **Eliminar filtros** para limpiar el grupo, la búsqueda, el comercial y el tipo, y volver al año actual.
 * **Gestión de Ganadas y Perdidas fuera del Kanban**:
   Las ofertas cerradas (*Ganada 100%* y *Perdida 0%*) se desacoplan de las columnas del Kanban para mantener el foco en la cartera viva, presentándose en tablas dedicadas y métricas analíticas.
 * **Derivación Automática de Probabilidad**:
