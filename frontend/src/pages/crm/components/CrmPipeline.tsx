@@ -140,7 +140,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
 
   useEffect(() => {
     setVisibleTableRows(50);
-  }, [debouncedSearch, salespersonFilter, typeFilter, yearFilter, contactId, closedFilter, columnFilter, viewMode]);
+  }, [debouncedSearch, salespersonFilter, typeFilter, yearFilter, contactId, closedFilter, columnFilter, closingFilter, viewMode]);
 
   // Export functions
   const quoteColumns: ExportColumn[] = [
@@ -335,6 +335,8 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
 
   const tableQuotes = useMemo(() => {
     return quotes.filter(q => {
+      const state = (q.estado_oferta || '').trim().toLowerCase();
+      if (closingFilter && (['ganada', 'ganado', 'perdida', 'perdido'].includes(state) || closingDateGroup(q.cierreprev_date) !== closingFilter)) return false;
       // 1. Filtro superior de cerradas (ganadas / perdidas / todas)
       if (pilotMode && closedFilter) {
         if (q.estado_oferta !== closedFilter) return false;
@@ -346,7 +348,7 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
       }
       return true;
     });
-  }, [quotes, pilotMode, closedFilter, columnFilter]);
+  }, [quotes, pilotMode, closedFilter, columnFilter, closingFilter]);
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData('text/plain', id);
@@ -660,6 +662,36 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
             </select>
           </div>
 
+          <label className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+            Cierre previsto:
+            <select
+              className="block pl-2 pr-8 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dts-primary-dark text-gray-900 dark:text-white"
+              value={closingFilter ?? ''}
+              onChange={e => setClosingFilter((e.target.value || null) as typeof closingFilter)}
+            >
+              <option value="">Todos</option>
+              <option value="vencida">Vencidas</option>
+              <option value="proxima">Próximas</option>
+              <option value="restante">Restantes</option>
+            </select>
+          </label>
+
+      {(closingFilter || searchTerm || salespersonFilter || typeFilter || closedFilter || columnFilter || yearFilter !== new Date().getFullYear().toString()) && (
+        <div className="flex justify-end">
+          <button type="button" onClick={() => {
+            setClosingFilter(null);
+            setSearchTerm('');
+            setDebouncedSearch('');
+            setSalespersonFilter('');
+            setTypeFilter('');
+            setClosedFilter('');
+            setColumnFilter('');
+            setYearFilter(new Date().getFullYear().toString());
+          }} className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-white/10">
+            Eliminar filtros
+          </button>
+        </div>
+      )}
           <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-dts-primary-dark">
             <button
               onClick={() => setViewMode('kanban')}
@@ -784,20 +816,6 @@ export const CrmPipeline: React.FC<{ pilotMode?: boolean; canEditPilot?: boolean
         </div>
       </div>
       {/* Kanban / Table View Conditional Rendering */}
-      {viewMode === 'kanban' && (closingFilter || searchTerm || salespersonFilter || typeFilter || yearFilter !== new Date().getFullYear().toString()) && (
-        <div className="flex justify-end">
-          <button type="button" onClick={() => {
-            setClosingFilter(null);
-            setSearchTerm('');
-            setDebouncedSearch('');
-            setSalespersonFilter('');
-            setTypeFilter('');
-            setYearFilter(new Date().getFullYear().toString());
-          }} className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-white/10">
-            Eliminar filtros
-          </button>
-        </div>
-      )}
       {viewMode === 'kanban' ? (
         <div className={pilotMode ? "grid grid-cols-6 gap-0 min-w-0 h-[calc(100vh-390px)] min-h-[450px] pb-3" : "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-[calc(100vh-390px)] min-h-[450px]"}>
           {STAGES.map(stage => {
